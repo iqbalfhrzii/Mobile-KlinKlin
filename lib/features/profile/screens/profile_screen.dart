@@ -4,8 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
+import 'dart:io';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/change_pin_screen.dart';
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -20,6 +22,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _userBranch = '-';
   String _userEmail = 'memuat...';
   String _userId = 'KLK-CS-0...';
+  String? _userPhoto;
 
   @override
   void initState() {
@@ -35,6 +38,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _userBranch = prefs.getString('user_branch') ?? '-';
       _userEmail = prefs.getString('user_email') ?? '';
       _userId = prefs.getString('user_id') ?? '-';
+      _userPhoto = prefs.getString('user_photo');
     });
   }
 
@@ -77,16 +81,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildHeader() {
     return GradientHeader(
       padding: const EdgeInsets.fromLTRB(20, 52, 20, 24),
-      child: Column(
+      child: Stack(
+        alignment: Alignment.topCenter,
         children: [
-          InitialsAvatar(
-            name: _userName,
-            size: 72,
-            backgroundColor: Colors.white.withOpacity(0.2),
-            textColor: Colors.white,
-            borderColor: Colors.white.withOpacity(0.35),
+          Align(
+            alignment: Alignment.topRight,
+            child: HeaderIconButton(
+              icon: Icons.edit_outlined,
+              onTap: () async {
+                final updated = await Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => const EditProfileScreen()
+                ));
+                if (updated == true) _loadProfile();
+              },
+            ),
           ),
-          const SizedBox(height: 12),
+          Column(
+            children: [
+              if (_userPhoto != null && _userPhoto!.isNotEmpty)
+                ClipOval(
+                  child: Image.file(
+                    File(_userPhoto!),
+                    width: 72,
+                    height: 72,
+                    fit: BoxFit.cover,
+                  ),
+                )
+              else
+                InitialsAvatar(
+                  name: _userName,
+                  size: 72,
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  textColor: Colors.white,
+                  borderColor: Colors.white.withOpacity(0.35),
+                ),
+              const SizedBox(height: 12),
           Text(_userName, style: GoogleFonts.inter(
             fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white,
           )),
@@ -117,6 +146,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   )),
                 ),
               ],
+            ],
+          ),
             ],
           ),
         ],

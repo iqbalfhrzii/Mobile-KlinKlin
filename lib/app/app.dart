@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import '../core/theme/app_theme.dart';
+//import '../features/auth/screens/login_dummy_screen.dart';
 import '../features/auth/screens/login_screen.dart';
 
 import '../core/services/auth_service.dart';
@@ -16,16 +17,13 @@ class KlinklinApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       locale: const Locale('id', 'ID'),
-      supportedLocales: const [
-        Locale('id', 'ID'),
-        Locale('en', 'US'),
-      ],
+      supportedLocales: const [Locale('id', 'ID'), Locale('en', 'US')],
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      // Sengaja diarahkan ke LoginScreen terus sesuai permintaan
+      // Sengaja diarahkan ke LoginDummyScreen (demo login tanpa API)
       home: const LoginScreen(),
     );
   }

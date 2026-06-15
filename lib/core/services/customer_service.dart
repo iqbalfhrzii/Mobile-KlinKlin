@@ -8,8 +8,21 @@ class CustomerService {
 
   static Future<List<CustomerModel>> getCustomers() async {
     try {
-      final response = await _dio.get('/pelanggans');
-      final data = response.data['data'] as List;
+      final prefs = await SharedPreferences.getInstance();
+      final cabangId = prefs.getInt('user_cabang_id');
+
+      final response = await _dio.get('/pelanggans', queryParameters: cabangId != null ? {'cabang_id': cabangId} : null);
+      var data = response.data['data'] as List;
+      
+      // Local fallback filter if API doesn't support query params
+      if (cabangId != null) {
+        data = data.where((e) {
+          final cid = e['cabang_id'];
+          if (cid == null) return true; // If no cabang_id in data, include it to be safe
+          return cid.toString() == cabangId.toString();
+        }).toList();
+      }
+
       return data.map((e) => CustomerModel.fromJson(e)).toList();
     } catch (e) {
       throw Exception('Gagal memuat data pelanggan');
@@ -18,17 +31,29 @@ class CustomerService {
 
   static Future<CustomerModel> addCustomer(Map<String, dynamic> data) async {
     try {
-      // API requires cabang_id, so we pull it from shared preferences or default to 1
       final prefs = await SharedPreferences.getInstance();
-      final branchStr = prefs.getString('user_branch'); // Actually we just default to 1 since we don't have branch id saved.
-      // Override or add cabang_id
-      data['cabang_id'] = 1; // Assuming default branch ID = 1 for now
+      final cabangId = prefs.getInt('user_cabang_id') ?? 1;
+      data['cabang_id'] = cabangId;
 
       final response = await _dio.post('/pelanggans', data: data);
       return CustomerModel.fromJson(response.data['data']);
     } on DioException catch (e) {
       if (e.response != null && e.response?.data != null) {
         final message = e.response?.data['message'] ?? 'Gagal menambah pelanggan';
+        throw Exception(message);
+      }
+      throw Exception('Tidak dapat terhubung ke server');
+    }
+  }
+
+  static Future<CustomerModel> updateCustomer(String id, Map<String, dynamic> data) async {
+    try {
+      final realId = id.replaceAll('PLG-', '');
+      final response = await _dio.put('/pelanggans/$realId', data: data);
+      return CustomerModel.fromJson(response.data['data']);
+    } on DioException catch (e) {
+      if (e.response != null && e.response?.data != null) {
+        final message = e.response?.data['message'] ?? 'Gagal memperbarui pelanggan';
         throw Exception(message);
       }
       throw Exception('Tidak dapat terhubung ke server');

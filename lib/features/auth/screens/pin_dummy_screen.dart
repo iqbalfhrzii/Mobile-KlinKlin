@@ -1,21 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../shell/main_shell.dart';
 
-import '../../../core/services/auth_service.dart';
-
-import 'change_pin_screen.dart';
-
-class PinScreen extends StatefulWidget {
-  const PinScreen({super.key, required this.email});
+class PinDummyScreen extends StatefulWidget {
+  const PinDummyScreen({super.key, required this.email});
   final String email;
 
   @override
-  State<PinScreen> createState() => _PinScreenState();
+  State<PinDummyScreen> createState() => _PinDummyScreenState();
 }
 
-class _PinScreenState extends State<PinScreen> {
+class _PinDummyScreenState extends State<PinDummyScreen> {
   String _pin = '';
   String _error = '';
   bool _isLoading = false;
@@ -36,32 +33,24 @@ class _PinScreenState extends State<PinScreen> {
 
   Future<void> _verify() async {
     setState(() => _isLoading = true);
-    try {
-      final res = await AuthService.login(widget.email, _pin);
-      if (mounted) {
-        if (res['wajib_ganti_pin'] == true) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => MainShell(
-              requirePinChange: true,
-              currentPin: _pin,
-            )),
-            (route) => false,
-          );
-        } else {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const MainShell()),
-            (route) => false,
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString().replaceAll('Exception: ', '');
-          _pin = '';
-          _isLoading = false;
-        });
-      }
+    
+    // Simulate API delay
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    // Save dummy data to SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('auth_token', 'dummy_token_12345');
+    await prefs.setString('user_name', 'Admin Dummy');
+    await prefs.setString('user_email', widget.email);
+    await prefs.setString('user_role', 'Administrator');
+    await prefs.setString('user_branch', 'Pusat Dummy');
+    await prefs.setString('user_id', 'KLK-CS-000');
+
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const MainShell()),
+        (route) => false,
+      );
     }
   }
 
@@ -108,11 +97,11 @@ class _PinScreenState extends State<PinScreen> {
               const Spacer(),
 
               // Title
-              Text('Masukkan PIN', style: GoogleFonts.inter(
+              Text('Masukkan PIN Demo', style: GoogleFonts.inter(
                 fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white,
               )),
               const SizedBox(height: 6),
-              Text('6 digit PIN untuk masuk', style: GoogleFonts.inter(
+              Text('Masukkan 6 digit angka bebas', style: GoogleFonts.inter(
                 fontSize: 13, color: Colors.white.withOpacity(0.6),
               )),
 

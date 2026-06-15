@@ -54,7 +54,9 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
       return c.name.toLowerCase().contains(q) ||
           c.phone.contains(q);
     }).toList();
-    if (_filter != 'Semua') list = list.where((c) => c.status.toLowerCase() == _filter.toLowerCase()).toList();
+    if (_filter != 'Semua') {
+      list = list.where((c) => c.status.toLowerCase().replaceAll(' ', '') == _filter.toLowerCase().replaceAll(' ', '')).toList();
+    }
     return list;
   }
 

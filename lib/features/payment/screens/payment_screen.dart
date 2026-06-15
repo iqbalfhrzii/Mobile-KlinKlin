@@ -8,7 +8,8 @@ import '../../../core/data/order_model.dart';
 import 'payment_detail_screen.dart';
 
 class PaymentScreen extends StatefulWidget {
-  const PaymentScreen({super.key});
+  final bool isCancelMode;
+  const PaymentScreen({super.key, this.isCancelMode = false});
 
   @override
   State<PaymentScreen> createState() => _PaymentScreenState();
@@ -17,6 +18,7 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   String _method = 'Semua';
   DateTimeRange? _dateRange;
+  String _statusFilter = 'Semua';
 
   String _fmt(int n) => 'Rp ${n.toString().replaceAllMapped(
       RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
@@ -33,12 +35,20 @@ class _PaymentScreenState extends State<PaymentScreen> {
         !o.scheduleDateTime.isBefore(_dateRange!.start) &&
         !o.scheduleDateTime.isAfter(_dateRange!.end)
       );
+      
+      // Filter by cancel mode
+      if (widget.isCancelMode) {
+        if (o.status != 'cancelled') return false;
+      } else {
+        if (o.status == 'cancelled') return false;
+      }
+      
       return matchMethod && matchDate;
     }).toList();
   }
 
   List<OrderModel> get _pending =>
-      _filtered.where((o) => o.paymentStatus == 'unpaid' && o.status != 'cancelled').toList();
+      _filtered.where((o) => o.paymentStatus == 'unpaid').toList();
   List<OrderModel> get _paid =>
       _filtered.where((o) => o.paymentStatus == 'paid').toList();
   List<OrderModel> get _cancelled =>
@@ -58,24 +68,26 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildFilterRow(context),
-                  const SizedBox(height: 14),
-                  _buildSummaryCards(),
+                  if (!widget.isCancelMode) ...[
+                    const SizedBox(height: 14),
+                    _buildSummaryCards(),
+                  ],
                   const SizedBox(height: 16),
-                  if (_pending.isNotEmpty) ...[
+                  if (!widget.isCancelMode && _pending.isNotEmpty && (_statusFilter == 'Semua' || _statusFilter == 'unpaid')) ...[
                     _sectionLabel('BELUM LUNAS', AppColors.statusPending),
                     const SizedBox(height: 8),
                     ..._pending.map((o) => _PaymentCard(
                         order: o, onTap: () => _openDetail(context, o))),
                     const SizedBox(height: 16),
                   ],
-                  if (_paid.isNotEmpty) ...[
+                  if (!widget.isCancelMode && _paid.isNotEmpty && (_statusFilter == 'Semua' || _statusFilter == 'paid')) ...[
                     _sectionLabel('SUDAH LUNAS', AppColors.statusDone),
                     const SizedBox(height: 8),
                     ..._paid.map((o) => _PaymentCard(
                         order: o, onTap: () => _openDetail(context, o))),
                     const SizedBox(height: 16),
                   ],
-                  if (_cancelled.isNotEmpty) ...[
+                  if (widget.isCancelMode && _cancelled.isNotEmpty) ...[
                     _sectionLabel('DIBATALKAN', AppColors.error),
                     const SizedBox(height: 8),
                     ..._cancelled.map((o) => _PaymentCard(
@@ -101,21 +113,24 @@ class _PaymentScreenState extends State<PaymentScreen> {
       padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
       child: Row(
         children: [
+          HeaderBackButton(onTap: () => Navigator.pop(context)),
+          const SizedBox(width: 12),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Manajemen', style: GoogleFonts.inter(
+            Text(widget.isCancelMode ? 'Manajemen' : 'Manajemen', style: GoogleFonts.inter(
                 fontSize: 11, color: Colors.white.withOpacity(0.7))),
-            Text('Pembayaran', style: GoogleFonts.inter(
+            Text(widget.isCancelMode ? 'Cancel Pembayaran' : 'Pembayaran', style: GoogleFonts.inter(
                 fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
           ]),
           const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(20)),
-            child: Text('${_pending.length} Belum Lunas', style: GoogleFonts.inter(
-                fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600)),
-          ),
+          if (!widget.isCancelMode)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(20)),
+              child: Text('${_pending.length} Belum Lunas', style: GoogleFonts.inter(
+                  fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600)),
+            ),
         ],
       ),
     );
@@ -159,7 +174,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           ),
           const SizedBox(width: 8),
           // Method chips
-          ...methods.map((m) {
+          if (!widget.isCancelMode) ...methods.map((m) {
             final active = _method == m;
             return GestureDetector(
               onTap: () => setState(() => _method = m),
@@ -193,6 +208,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
         icon: Icons.pending_actions_rounded,
         color: AppColors.statusPending, bg: AppColors.statusPendingBg,
         count: _pending.length,
+        isActive: _statusFilter == 'Semua' || _statusFilter == 'unpaid',
+        onTap: () => setState(() => _statusFilter = _statusFilter == 'unpaid' ? 'Semua' : 'unpaid'),
       )),
       const SizedBox(width: 10),
       Expanded(child: _SmallCard(
@@ -200,6 +217,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
         icon: Icons.check_circle_rounded,
         color: AppColors.statusDone, bg: AppColors.statusDoneBg,
         count: _paid.length,
+        isActive: _statusFilter == 'Semua' || _statusFilter == 'paid',
+        onTap: () => setState(() => _statusFilter = _statusFilter == 'paid' ? 'Semua' : 'paid'),
       )),
     ]);
   }
@@ -323,38 +342,49 @@ class _SmallCard extends StatelessWidget {
     required this.color,
     required this.bg,
     required this.count,
+    this.isActive = true,
+    this.onTap,
   });
   final String label, value;
   final IconData icon;
   final Color color, bg;
   final int count;
+  final bool isActive;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [AppColors.cardShadow],
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 200),
+        opacity: isActive ? 1.0 : 0.4,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: isActive ? color : AppColors.border),
+            boxShadow: [if (isActive) AppColors.cardShadow],
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
+                  child: Icon(icon, color: color, size: 14)),
+              const Spacer(),
+              Text('$count transaksi',
+                  style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
+            ]),
+            const SizedBox(height: 8),
+            Text(value, style: GoogleFonts.inter(
+                fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+            Text(label,
+                style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+          ]),
+        ),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Container(
-              padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
-              child: Icon(icon, color: color, size: 14)),
-          const Spacer(),
-          Text('$count transaksi',
-              style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-        ]),
-        const SizedBox(height: 8),
-        Text(value, style: GoogleFonts.inter(
-            fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-        Text(label,
-            style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-      ]),
     );
   }
 }
