@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_colors.dart';
+import '../data/order_model.dart';
 
 class StatusBadge extends StatelessWidget {
   const StatusBadge({super.key, required this.status});
-  final String status; // 'pending' | 'assigned' | 'in_progress' | 'completed' | 'paid'
+  final OrderStatus status;
 
   static const _config = {
-    'pending':     _BadgeConfig('Menunggu',   AppColors.statusPending,  AppColors.statusPendingBg),
-    'assigned':    _BadgeConfig('Ditugaskan', AppColors.statusAssigned, AppColors.statusAssignedBg),
-    'in_progress': _BadgeConfig('Dikerjakan', AppColors.statusProgress, AppColors.statusProgressBg),
-    'completed':   _BadgeConfig('Selesai',    AppColors.statusDone,     AppColors.statusDoneBg),
-    'paid':        _BadgeConfig('Lunas',      AppColors.statusDone,     AppColors.statusDoneBg),
+    OrderStatus.draft: _BadgeConfig('Draft', AppColors.statusPending, AppColors.statusPendingBg),
+    OrderStatus.assigned: _BadgeConfig('Ditugaskan', AppColors.statusAssigned, AppColors.statusAssignedBg),
+    OrderStatus.inProgress: _BadgeConfig('Dikerjakan', AppColors.statusProgress, AppColors.statusProgressBg),
+    OrderStatus.finishedByCleaner: _BadgeConfig('Selesai (Cleaner)', AppColors.statusDone, AppColors.statusDoneBg),
+    OrderStatus.waitingPaymentApproval: _BadgeConfig('Menunggu Approval', AppColors.statusPending, AppColors.statusPendingBg),
+    OrderStatus.completed: _BadgeConfig('Selesai', AppColors.statusDone, AppColors.statusDoneBg),
+    OrderStatus.cancelled: _BadgeConfig('Dibatalkan', Colors.red, Color(0xFFFFEBEE)),
   };
 
   @override
   Widget build(BuildContext context) {
-    final cfg = _config[status] ?? _config['pending']!;
+    final cfg = _config[status] ?? _BadgeConfig(status.name, AppColors.statusPending, AppColors.statusPendingBg);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(

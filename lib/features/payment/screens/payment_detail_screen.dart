@@ -19,7 +19,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   String _fmt(int n) => 'Rp ${n.toString().replaceAllMapped(
       RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
-  bool get _canAct => _o.paymentStatus == 'unpaid' && _o.status != 'cancelled';
+  bool get _canAct => _o.paymentStatus == 'unpaid' && _o.status != OrderStatus.cancelled;
 
   @override
   Widget build(BuildContext context) {
@@ -82,7 +82,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   // ─── Amount hero card ────────────────────────────────────────────────────
   Widget _buildAmountHero() {
     final isPaid = _o.paymentStatus == 'paid';
-    final isCancelled = _o.status == 'cancelled';
+    final isCancelled = _o.status == OrderStatus.cancelled;
     final Color accent;
     final String statusText;
     final IconData statusIcon;
@@ -909,7 +909,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                     onTap: hasReason
                         ? () {
                             setState(() {
-                              _o.status = 'cancelled';
+                              _o.status = OrderStatus.cancelled;
                               _o.paymentStatus = 'cancelled';
                               _o.cancelReason = reasonCtrl.text.trim();
                               _o.paymentProof = hasProof ? proofName : null;

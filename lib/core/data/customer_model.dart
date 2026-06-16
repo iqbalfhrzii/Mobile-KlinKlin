@@ -1,3 +1,5 @@
+import 'order_model.dart';
+
 class CustomerModel {
   const CustomerModel({
     required this.id,
@@ -63,5 +65,5 @@ class CustomerOrder {
   final String date;
   final List<String> cleaners;
   final int amount;
-  final String status;
+  final OrderStatus status;
 }

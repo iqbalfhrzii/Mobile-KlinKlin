@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
 import '../../../core/data/order_model.dart';
+import '../services/order_service.dart';
 import 'edit_order_screen.dart';
 class OrderDetailScreen extends StatefulWidget {
   const OrderDetailScreen({super.key, required this.order});
@@ -14,12 +15,37 @@ class OrderDetailScreen extends StatefulWidget {
 }
 
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
+  final OrderService _orderService = OrderService();
+  late OrderModel _o;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _o = widget.order;
+    _fetchDetail();
+  }
+
+  Future<void> _fetchDetail() async {
+    setState(() => _isLoading = true);
+    try {
+      final updatedOrder = await _orderService.fetchOrderDetail(_o.id);
+      setState(() {
+        _o = updatedOrder;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      // Optional: show snackbar for error
+    }
+  }
+
   String _formatRupiah(int n) =>
       'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
   @override
   Widget build(BuildContext context) {
-    final o = widget.order;
+    final o = _o;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Column(
@@ -85,7 +111,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     MaterialPageRoute(builder: (_) => EditOrderScreen(order: o)),
                   );
                   if (result == true) {
-                    setState(() {});
+                    _fetchDetail();
                   }
                 },
                 child: Container(
@@ -99,6 +125,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ),
             ],
           ),
+          if (_isLoading)
+            const Padding(
+              padding: EdgeInsets.only(top: 10),
+              child: LinearProgressIndicator(backgroundColor: Colors.transparent, color: Colors.white),
+            )
         ],
       ),
     );

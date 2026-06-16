@@ -6,6 +6,7 @@ import '../../../core/widgets/badges.dart';
 import '../../../core/data/mock_data.dart';
 import '../../../core/data/order_model.dart';
 import '../../../core/data/customer_model.dart';
+import '../services/order_service.dart';
 
 class EditOrderScreen extends StatefulWidget {
   const EditOrderScreen({super.key, required this.order});
@@ -16,8 +17,10 @@ class EditOrderScreen extends StatefulWidget {
 }
 
 class _EditOrderScreenState extends State<EditOrderScreen> {
+  final OrderService _orderService = OrderService();
   int _step = 0; // 0=customer, 1=services, 2=schedule, 3=cleaner, 4=summary
   late final OrderDraft _draft;
+  bool _isSaving = false;
 
   static const _steps = ['Pelanggan', 'Layanan', 'Jadwal', 'Petugas', 'Ringkasan'];
 
@@ -199,7 +202,7 @@ class _EditOrderScreenState extends State<EditOrderScreen> {
           Expanded(
             flex: 2,
             child: ElevatedButton(
-              onPressed: canNext ? (_step == 4 ? _submit : _next) : null,
+              onPressed: (canNext && !_isSaving) ? (_step == 4 ? _submit : _next) : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 disabledBackgroundColor: AppColors.border,
@@ -207,12 +210,17 @@ class _EditOrderScreenState extends State<EditOrderScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
-              child: Text(
-                _step == 4 ? '✓ Simpan Perubahan' : 'Lanjut →',
-                style: GoogleFonts.inter(
-                  fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white,
-                ),
-              ),
+              child: _isSaving 
+                ? const SizedBox(
+                    width: 20, height: 20, 
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                  )
+                : Text(
+                    _step == 4 ? '✓ Simpan Perubahan' : 'Lanjut →',
+                    style: GoogleFonts.inter(
+                      fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white,
+                    ),
+                  ),
             ),
           ),
         ],
@@ -220,28 +228,39 @@ class _EditOrderScreenState extends State<EditOrderScreen> {
     );
   }
 
-  void _submit() {
-    // In a real app we'd save to the database here
-    widget.order.customer = _draft.customer!;
-    widget.order.services = List.from(_draft.services);
-    widget.order.total = _draft.total;
-    
-    if (_draft.scheduleDate != null) {
-      widget.order.schedule = '${_draft.scheduleDate}${_draft.scheduleTime != null ? ' · ${_draft.scheduleTime}' : ''}';
+  Future<void> _submit() async {
+    setState(() => _isSaving = true);
+    try {
+      if (_draft.scheduleDate != null && _draft.services.isNotEmpty) {
+        _draft.services.first.tanggalPengerjaan = _draft.scheduleDate!;
+        if (_draft.scheduleTime != null) {
+          _draft.services.first.waktuPengerjaan = _draft.scheduleTime!;
+        }
+      }
+      
+      await _orderService.updateOrder(widget.order.id, _draft);
+      
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Pesanan berhasil diperbarui!', style: GoogleFonts.inter(color: Colors.white)),
+          backgroundColor: AppColors.statusDone,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      Navigator.pop(context, true); // Pop back and pass a true result to signify update
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString(), style: GoogleFonts.inter(color: Colors.white)),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
-    
-    widget.order.cleaners = List.from(_draft.cleaners);
-    widget.order.notes = _draft.notes;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Pesanan berhasil diperbarui!', style: GoogleFonts.inter(color: Colors.white)),
-        backgroundColor: AppColors.statusDone,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-    Navigator.pop(context, true); // Pop back and pass a true result to signify update
   }
 }
 

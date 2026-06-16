@@ -1,8 +1,8 @@
 class AppConstants {
   AppConstants._();
 
-  // Base URL – ganti dengan URL API kamu saat production
-  static const String baseUrl = 'https://jsonplaceholder.typicode.com';
+  // Base URL – ganti dengan URL API atau IP kamu saat tes device / production
+  static const String baseUrl = 'http://10.0.2.2:8000/api';
 
   // Timeout dalam milidetik
   static const int connectTimeout = 10000;

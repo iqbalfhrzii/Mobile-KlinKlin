@@ -8,6 +8,7 @@ import '../../../core/data/order_model.dart';
 import '../../../core/widgets/weekly_date_picker.dart';
 import 'order_detail_screen.dart';
 import 'create_order_screen.dart';
+import '../services/order_service.dart';
 
 class OrderListScreen extends StatefulWidget {
   const OrderListScreen({super.key});
@@ -17,28 +18,69 @@ class OrderListScreen extends StatefulWidget {
 }
 
 class _OrderListScreenState extends State<OrderListScreen> {
+  final OrderService _orderService = OrderService();
+  List<OrderModel> _orders = [];
+  bool _isLoading = true;
+  String _error = '';
+
   String _query = '';
   String _statusFilter = 'Semua';
   DateTime? _filterStart;
   DateTime? _filterEnd;
 
-  static const _filters = ['Semua', 'pending', 'assigned', 'in_progress', 'completed', 'cancelled'];
+  static const _filters = [
+    'Semua', 
+    'draft', 
+    'assigned', 
+    'inProgress', 
+    'finishedByCleaner', 
+    'waitingPaymentApproval', 
+    'completed', 
+    'cancelled'
+  ];
   static const _filterLabels = {
     'Semua': 'Semua',
-    'pending': 'Menunggu',
+    'draft': 'Draft',
     'assigned': 'Ditugaskan',
-    'in_progress': 'Dikerjakan',
+    'inProgress': 'Dikerjakan',
+    'finishedByCleaner': 'Selesai (Cleaner)',
+    'waitingPaymentApproval': 'Menunggu Bayar',
     'completed': 'Selesai',
     'cancelled': 'Dibatalkan',
   };
 
+  @override
+  void initState() {
+    super.initState();
+    _fetchData();
+  }
+
+  Future<void> _fetchData() async {
+    setState(() {
+      _isLoading = true;
+      _error = '';
+    });
+    try {
+      final data = await _orderService.fetchOrders();
+      setState(() {
+        _orders = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
   List<OrderModel> get _filtered {
-    return mockOrders.where((o) {
+    return _orders.where((o) {
       final q = _query.toLowerCase();
       final matchQ = o.id.toLowerCase().contains(q) ||
           o.customer.name.toLowerCase().contains(q) ||
           o.services.any((s) => s.name.toLowerCase().contains(q));
-      final matchF = _statusFilter == 'Semua' || o.status == _statusFilter;
+      final matchF = _statusFilter == 'Semua' || o.status.name == _statusFilter;
       final matchDate = _filterStart == null || (
         !o.scheduleDateTime.isBefore(_filterStart!) &&
         !o.scheduleDateTime.isAfter(_filterEnd!)
@@ -73,22 +115,42 @@ class _OrderListScreenState extends State<OrderListScreen> {
                   const SizedBox(height: 16),
                   _buildFilterRow(context),
                   const SizedBox(height: 12),
-                  ..._filtered.map((o) => _OrderCard(
-                    order: o,
-                    onTap: () async {
-                      await Navigator.push(context, MaterialPageRoute(
-                        builder: (_) => OrderDetailScreen(order: o),
-                      ));
-                      setState(() {});
-                    },
-                  )),
-                  if (_filtered.isEmpty)
+                  if (_isLoading)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 40),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (_error.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 40),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            const Icon(Icons.error_outline, color: AppColors.error, size: 40),
+                            const SizedBox(height: 10),
+                            Text(_error, style: GoogleFonts.inter(color: AppColors.error)),
+                            TextButton(onPressed: _fetchData, child: const Text('Coba Lagi')),
+                          ],
+                        ),
+                      ),
+                    )
+                  else if (_filtered.isEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 40),
                       child: Center(child: Text('Tidak ada pesanan', style: GoogleFonts.inter(
                         color: AppColors.textMuted,
                       ))),
-                    ),
+                    )
+                  else
+                    ..._filtered.map((o) => _OrderCard(
+                      order: o,
+                      onTap: () async {
+                        await Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => OrderDetailScreen(order: o),
+                        ));
+                        _fetchData();
+                      },
+                    )),
                 ],
               ),
             ),
@@ -99,7 +161,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
         heroTag: 'order_fab',
         onPressed: () async {
           await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateOrderScreen()));
-          setState(() {});
+          _fetchData();
         },
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add, color: Colors.white),
@@ -183,7 +245,7 @@ class _OrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final o = order;
-    final isCancelled = o.status == 'cancelled';
+    final isCancelled = o.status == OrderStatus.cancelled;
     return GestureDetector(
       onTap: onTap,
       child: Container(
