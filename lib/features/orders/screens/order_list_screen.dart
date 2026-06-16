@@ -5,6 +5,7 @@ import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
 import '../../../core/data/mock_data.dart';
 import '../../../core/data/order_model.dart';
+import '../../../core/widgets/weekly_date_picker.dart';
 import 'order_detail_screen.dart';
 import 'create_order_screen.dart';
 
@@ -18,7 +19,8 @@ class OrderListScreen extends StatefulWidget {
 class _OrderListScreenState extends State<OrderListScreen> {
   String _query = '';
   String _statusFilter = 'Semua';
-  DateTimeRange? _dateRange;
+  DateTime? _filterStart;
+  DateTime? _filterEnd;
 
   static const _filters = ['Semua', 'pending', 'assigned', 'in_progress', 'completed', 'cancelled'];
   static const _filterLabels = {
@@ -37,18 +39,14 @@ class _OrderListScreenState extends State<OrderListScreen> {
           o.customer.name.toLowerCase().contains(q) ||
           o.services.any((s) => s.name.toLowerCase().contains(q));
       final matchF = _statusFilter == 'Semua' || o.status == _statusFilter;
-      final matchDate = _dateRange == null || (
-        !o.scheduleDateTime.isBefore(_dateRange!.start) &&
-        !o.scheduleDateTime.isAfter(_dateRange!.end)
+      final matchDate = _filterStart == null || (
+        !o.scheduleDateTime.isBefore(_filterStart!) &&
+        !o.scheduleDateTime.isAfter(_filterEnd!)
       );
       return matchQ && matchF && matchDate;
     }).toList();
   }
 
-  String _fmtDate(DateTime d) {
-    const m = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-    return '${d.day} ${m[d.month - 1]}';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +60,17 @@ class _OrderListScreenState extends State<OrderListScreen> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               child: Column(
                 children: [
+                  WeeklyDatePicker(
+                    searchQuery: _query,
+                    onSearchChanged: (val) => setState(() => _query = val),
+                    onFilterChanged: (start, end) {
+                      setState(() {
+                        _filterStart = start;
+                        _filterEnd = end;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
                   _buildFilterRow(context),
                   const SizedBox(height: 12),
                   ..._filtered.map((o) => _OrderCard(
@@ -125,71 +134,16 @@ class _OrderListScreenState extends State<OrderListScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          TextField(
-            onChanged: (v) => setState(() => _query = v),
-            style: GoogleFonts.inter(fontSize: 14, color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'Cari pesanan, pelanggan...',
-              hintStyle: GoogleFonts.inter(
-                  color: Colors.white.withOpacity(0.5), fontSize: 14),
-              filled: true,
-              fillColor: Colors.white.withOpacity(0.12),
-              prefixIcon: Icon(Icons.search,
-                  color: Colors.white.withOpacity(0.5), size: 18),
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white.withOpacity(0.2))),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white.withOpacity(0.2))),
-              focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.white)),
-              contentPadding: const EdgeInsets.symmetric(vertical: 10),
-            ),
-          ),
         ],
       ),
     );
   }
 
   Widget _buildFilterRow(BuildContext context) {
-    final hasDate = _dateRange != null;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          // Date chip — same height as other chips
-          DateChip(
-            active: hasDate,
-            label: hasDate
-                ? '${_fmtDate(_dateRange!.start)} - ${_fmtDate(_dateRange!.end)}'
-                : 'Tanggal',
-            onTap: () async {
-              final range = await showDateRangePicker(
-                context: context,
-                firstDate: DateTime(2025),
-                lastDate: DateTime(2027),
-                initialDateRange: _dateRange,
-                useRootNavigator: false,
-                locale: const Locale('id'),
-                builder: (ctx, child) => Theme(
-                  data: Theme.of(ctx).copyWith(
-                    colorScheme: const ColorScheme.light(
-                      primary: AppColors.primary,
-                      onPrimary: Colors.white,
-                      surface: AppColors.surface,
-                    ),
-                  ),
-                  child: child!,
-                ),
-              );
-              if (range != null) setState(() => _dateRange = range);
-            },
-            onClear: hasDate ? () => setState(() => _dateRange = null) : null,
-          ),
-          const SizedBox(width: 8),
           // Status filter chips
           ..._filters.map((f) {
             final active = _statusFilter == f;

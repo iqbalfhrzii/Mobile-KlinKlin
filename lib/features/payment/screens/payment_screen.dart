@@ -5,6 +5,7 @@ import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
 import '../../../core/data/mock_data.dart';
 import '../../../core/data/order_model.dart';
+import '../../../core/widgets/weekly_date_picker.dart';
 import 'payment_detail_screen.dart';
 
 class PaymentScreen extends StatefulWidget {
@@ -17,33 +18,37 @@ class PaymentScreen extends StatefulWidget {
 
 class _PaymentScreenState extends State<PaymentScreen> {
   String _method = 'Semua';
-  DateTimeRange? _dateRange;
+  String _query = '';
+  DateTime? _filterStart;
+  DateTime? _filterEnd;
   String _statusFilter = 'Semua';
 
   String _fmt(int n) => 'Rp ${n.toString().replaceAllMapped(
       RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
-  String _fmtDate(DateTime d) {
-    const m = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-    return '${d.day} ${m[d.month - 1]}';
-  }
+
 
   List<OrderModel> get _filtered {
     return mockOrders.where((o) {
+      final q = _query.toLowerCase();
+      final matchQ = o.id.toLowerCase().contains(q) ||
+          o.customer.name.toLowerCase().contains(q) ||
+          o.services.any((s) => s.name.toLowerCase().contains(q));
       final matchMethod = _method == 'Semua' || o.paymentMethod == _method;
-      final matchDate = _dateRange == null || (
-        !o.scheduleDateTime.isBefore(_dateRange!.start) &&
-        !o.scheduleDateTime.isAfter(_dateRange!.end)
+      final matchDate = _filterStart == null || (
+        !o.scheduleDateTime.isBefore(_filterStart!) &&
+        !o.scheduleDateTime.isAfter(_filterEnd!)
       );
       
       // Filter by cancel mode
+      bool matchStatus = true;
       if (widget.isCancelMode) {
-        if (o.status != 'cancelled') return false;
+        matchStatus = o.status == 'cancelled';
       } else {
-        if (o.status == 'cancelled') return false;
+        matchStatus = o.status != 'cancelled' && (_statusFilter == 'Semua' || o.paymentStatus == _statusFilter);
       }
       
-      return matchMethod && matchDate;
+      return matchQ && matchMethod && matchDate && matchStatus;
     }).toList();
   }
 
@@ -67,8 +72,19 @@ class _PaymentScreenState extends State<PaymentScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildFilterRow(context),
+                  WeeklyDatePicker(
+                    searchQuery: _query,
+                    onSearchChanged: (val) => setState(() => _query = val),
+                    onFilterChanged: (start, end) {
+                      setState(() {
+                        _filterStart = start;
+                        _filterEnd = end;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
                   if (!widget.isCancelMode) ...[
+                    _buildFilterRow(context),
                     const SizedBox(height: 14),
                     _buildSummaryCards(),
                   ],
@@ -137,42 +153,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Widget _buildFilterRow(BuildContext context) {
-    final hasDate = _dateRange != null;
     const methods = ['Semua', 'Transfer Bank', 'QRIS', 'Tunai'];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          // Date chip
-          DateChip(
-            active: hasDate,
-            label: hasDate
-                ? '${_fmtDate(_dateRange!.start)} - ${_fmtDate(_dateRange!.end)}'
-                : 'Tanggal',
-            onTap: () async {
-              final range = await showDateRangePicker(
-                context: context,
-                firstDate: DateTime(2025),
-                lastDate: DateTime(2027),
-                initialDateRange: _dateRange,
-                useRootNavigator: false,
-                locale: const Locale('id'),
-                builder: (ctx, child) => Theme(
-                  data: Theme.of(ctx).copyWith(
-                    colorScheme: const ColorScheme.light(
-                      primary: AppColors.primary,
-                      onPrimary: Colors.white,
-                      surface: AppColors.surface,
-                    ),
-                  ),
-                  child: child!,
-                ),
-              );
-              if (range != null) setState(() => _dateRange = range);
-            },
-            onClear: hasDate ? () => setState(() => _dateRange = null) : null,
-          ),
-          const SizedBox(width: 8),
           // Method chips
           if (!widget.isCancelMode) ...methods.map((m) {
             final active = _method == m;

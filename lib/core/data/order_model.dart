@@ -46,16 +46,16 @@ class OrderModel {
   });
 
   final String id;
-  final OrderCustomer customer;
-  final List<ServiceItem> services;
-  final String schedule; // "Rabu, 11 Jun 2026 · 09:00 - 11:00"
+  OrderCustomer customer;
+  List<ServiceItem> services;
+  String schedule; // "Rabu, 11 Jun 2026 · 09:00 - 11:00"
   final DateTime scheduleDateTime; // for date filtering
-  final List<OrderCleaner> cleaners;
+  List<OrderCleaner> cleaners;
   String status; // pending | assigned | in_progress | completed | cancelled | paid
-  final int total;
+  int total;
   String paymentMethod;
   String paymentStatus; // unpaid | paid | cancelled
-  final String notes;
+  String notes;
   String? cancelReason;
   String? paymentProof;
 }

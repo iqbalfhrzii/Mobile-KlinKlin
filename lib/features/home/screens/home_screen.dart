@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
 import '../../../core/data/mock_data.dart';
+import '../../../core/services/auth_service.dart';
 import '../../orders/screens/create_order_screen.dart';
 import '../../customers/screens/customer_list_screen.dart';
 
@@ -26,6 +27,13 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadProfile();
+    AuthService.profileUpdateNotifier.addListener(_loadProfile);
+  }
+
+  @override
+  void dispose() {
+    AuthService.profileUpdateNotifier.removeListener(_loadProfile);
+    super.dispose();
   }
 
   Future<void> _loadProfile() async {

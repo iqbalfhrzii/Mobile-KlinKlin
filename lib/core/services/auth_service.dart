@@ -1,20 +1,22 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../api/api_client.dart';
 
 class AuthService {
   static final Dio _dio = ApiClient.instance;
+  static final ValueNotifier<int> profileUpdateNotifier = ValueNotifier(0);
 
   /// Returns token and user data if successful
   static Future<Map<String, dynamic>> login(String email, String pin) async {
     try {
-      final response = await _dio.post('/login', data: {
-        'email': email,
-        'pin': pin,
-      });
-      
+      final response = await _dio.post(
+        '/login',
+        data: {'email': email, 'pin': pin},
+      );
+
       final data = response.data;
       if (data['token'] != null) {
         final prefs = await SharedPreferences.getInstance();
@@ -26,21 +28,47 @@ class AuthService {
           return val.toString();
         }
 
-        await prefs.setString('user_name', extractStr(data['data']['nama']) == '' ? 'Customer Service' : extractStr(data['data']['nama']));
+        await prefs.setString(
+          'user_name',
+          extractStr(data['data']['nama']) == ''
+              ? 'Customer Service'
+              : extractStr(data['data']['nama']),
+        );
         await prefs.setString('user_email', extractStr(data['data']['email']));
-        await prefs.setString('user_role', extractStr(data['data']['jabatan'], 'nama_jabatan') == '' ? 'Customer Service' : extractStr(data['data']['jabatan'], 'nama_jabatan'));
-        await prefs.setString('user_branch', extractStr(data['data']['cabang'], 'nama_cabang') == '' ? '-' : extractStr(data['data']['cabang'], 'nama_cabang'));
-        await prefs.setString('user_id', 'KLK-CS-0${data['data']['id'] ?? '0'}');
+        await prefs.setString(
+          'user_role',
+          extractStr(data['data']['jabatan'], 'nama_jabatan') == ''
+              ? 'Customer Service'
+              : extractStr(data['data']['jabatan'], 'nama_jabatan'),
+        );
+        await prefs.setString(
+          'user_branch',
+          extractStr(data['data']['cabang'], 'nama_cabang') == ''
+              ? '-'
+              : extractStr(data['data']['cabang'], 'nama_cabang'),
+        );
+        await prefs.setString(
+          'user_id',
+          'KLK-CS-0${data['data']['id'] ?? '0'}',
+        );
         if (data['data']['id'] != null) {
           await prefs.setString('karyawan_id', data['data']['id'].toString());
         }
         if (data['data']['cabang_id'] != null) {
-          await prefs.setInt('user_cabang_id', int.tryParse(data['data']['cabang_id'].toString()) ?? 1);
-        } else if (data['data']['cabang'] != null && data['data']['cabang'] is Map && data['data']['cabang']['id'] != null) {
-          await prefs.setInt('user_cabang_id', int.tryParse(data['data']['cabang']['id'].toString()) ?? 1);
+          await prefs.setInt(
+            'user_cabang_id',
+            int.tryParse(data['data']['cabang_id'].toString()) ?? 1,
+          );
+        } else if (data['data']['cabang'] != null &&
+            data['data']['cabang'] is Map &&
+            data['data']['cabang']['id'] != null) {
+          await prefs.setInt(
+            'user_cabang_id',
+            int.tryParse(data['data']['cabang']['id'].toString()) ?? 1,
+          );
         }
       }
-      
+
       return data;
     } on DioException catch (e) {
       if (e.response != null && e.response?.data != null) {
@@ -85,7 +113,7 @@ class AuthService {
         id = userIdStr.replaceFirst('KLK-CS-0', '');
       }
     }
-    
+
     if (id == null || id.isEmpty) {
       throw Exception('ID Karyawan tidak ditemukan, silakan login ulang.');
     }
@@ -99,13 +127,18 @@ class AuthService {
     final meData = res.data['data'] ?? res.data;
 
     final mapData = <String, dynamic>{
-      'cabang_id': meData['cabang_id'] ?? (meData['cabang'] is Map ? meData['cabang']['id'] : null),
-      'jabatan_id': meData['jabatan_id'] ?? (meData['jabatan'] is Map ? meData['jabatan']['id'] : null),
+      'cabang_id':
+          meData['cabang_id'] ??
+          (meData['cabang'] is Map ? meData['cabang']['id'] : null),
+      'jabatan_id':
+          meData['jabatan_id'] ??
+          (meData['jabatan'] is Map ? meData['jabatan']['id'] : null),
       'nama': name,
       'email': meData['email'],
       'no_wa': meData['no_wa'] ?? '',
       'status': meData['status'] ?? 'aktif',
-      'foto_profil': meData['foto_profil'], // Send original string or null to avoid 500 DB error
+      'foto_profil':
+          meData['foto_profil'], // Send original string or null to avoid 500 DB error
     };
 
     try {
@@ -115,18 +148,24 @@ class AuthService {
       if (photoPath != null && photoPath.isNotEmpty) {
         await prefs.setString('user_photo', photoPath);
       }
+      profileUpdateNotifier.value++;
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Gagal memperbarui profil');
+      throw Exception(
+        e.response?.data['message'] ?? 'Gagal memperbarui profil',
+      );
     }
   }
 
   static Future<void> changePin(String oldPin, String newPin) async {
     try {
-      final response = await _dio.post('/change-pin', data: {
-        'pin_lama': oldPin,
-        'pin_baru': newPin,
-        'pin_baru_confirmation': newPin,
-      });
+      final response = await _dio.post(
+        '/change-pin',
+        data: {
+          'pin_lama': oldPin,
+          'pin_baru': newPin,
+          'pin_baru_confirmation': newPin,
+        },
+      );
       // Sukses
     } on DioException catch (e) {
       if (e.response != null && e.response?.data != null) {

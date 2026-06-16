@@ -4,17 +4,22 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
 import '../../../core/data/order_model.dart';
-
-class OrderDetailScreen extends StatelessWidget {
+import 'edit_order_screen.dart';
+class OrderDetailScreen extends StatefulWidget {
   const OrderDetailScreen({super.key, required this.order});
   final OrderModel order;
 
+  @override
+  State<OrderDetailScreen> createState() => _OrderDetailScreenState();
+}
+
+class _OrderDetailScreenState extends State<OrderDetailScreen> {
   String _formatRupiah(int n) =>
       'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
   @override
   Widget build(BuildContext context) {
-    final o = order;
+    final o = widget.order;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Column(
@@ -72,6 +77,26 @@ class OrderDetailScreen extends StatelessWidget {
               ),
               const Spacer(),
               StatusBadge(status: o.status),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => EditOrderScreen(order: o)),
+                  );
+                  if (result == true) {
+                    setState(() {});
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.edit_rounded, color: Colors.white, size: 18),
+                ),
+              ),
             ],
           ),
         ],
