@@ -35,7 +35,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
       _error = '';
     });
     try {
-      final data = await CustomerService.getCustomers();
+      final data = await CustomerService.getCustomers(status: _filter);
       setState(() {
         _customers = data;
         _loading = false;
@@ -55,7 +55,11 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
           c.phone.contains(q);
     }).toList();
     if (_filter != 'Semua') {
-      list = list.where((c) => c.status.toLowerCase().replaceAll(' ', '') == _filter.toLowerCase().replaceAll(' ', '')).toList();
+      if (_filter == 'Aktif') {
+        list = list.where((c) => c.status.toLowerCase() == 'aktif').toList();
+      } else {
+        list = list.where((c) => c.status.toLowerCase() != 'aktif').toList();
+      }
     }
     return list;
   }
@@ -151,7 +155,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                   color: Colors.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text('${mockCustomers.length} Total', style: GoogleFonts.inter(
+                child: Text('${_customers.length} Total', style: GoogleFonts.inter(
                   fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600,
                 )),
               ),
@@ -196,7 +200,12 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
         children: filters.map((f) {
           final active = _filter == f;
           return GestureDetector(
-            onTap: () => setState(() => _filter = f),
+            onTap: () {
+              if (_filter != f) {
+                setState(() => _filter = f);
+                _fetchData();
+              }
+            },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               margin: const EdgeInsets.only(right: 8),
@@ -270,7 +279,7 @@ class _CustomerCard extends StatelessWidget {
                   Row(
                     children: [
                       Text(c.name, style: GoogleFonts.inter(
-                        fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark,
+                        fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark,
                       )),
                       const SizedBox(width: 6),
                       Container(

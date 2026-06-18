@@ -76,6 +76,7 @@ CustomerType _parseCustomerType(String? val) {
 class ServiceItem {
   ServiceItem({
     this.id = '',
+    this.layananId,
     required this.name,
     required this.price,
     required this.qty,
@@ -85,36 +86,71 @@ class ServiceItem {
   });
 
   String id;
+  String? layananId;
   String name;
   int price;
-  int qty;
+  String qty;
   String tanggalPengerjaan;
   String waktuPengerjaan;
   int bonusLayanan;
-  int get subtotal => price * qty;
+  int get subtotal => price; // Harga is now the total for this item
 
   factory ServiceItem.fromJson(Map<String, dynamic> json) {
     final layanan = json['layanan'] ?? {};
     return ServiceItem(
       id: json['id']?.toString() ?? '',
+      layananId: json['layanan_id']?.toString() ?? layanan['id']?.toString(),
       name: layanan['nama_layanan'] ?? json['nama_layanan'] ?? '-',
       price: (json['harga'] ?? layanan['harga'] ?? json['subtotal']) != null 
-          ? int.tryParse((json['harga'] ?? layanan['harga'] ?? json['subtotal']).toString()) ?? 0 
+          ? (double.tryParse((json['harga'] ?? layanan['harga'] ?? json['subtotal']).toString())?.toInt() ?? 0)
           : 0,
-      qty: json['qty'] != null ? int.tryParse(json['qty'].toString()) ?? 0 : 1,
+      qty: json['qty']?.toString() ?? '1',
       tanggalPengerjaan: json['tanggal_pengerjaan'] ?? '',
       waktuPengerjaan: json['waktu_pengerjaan'] ?? '',
-      bonusLayanan: json['bonus_layanan'] != null ? int.tryParse(json['bonus_layanan'].toString()) ?? 0 : 0,
+      bonusLayanan: json['bonus_layanan'] != null ? (double.tryParse(json['bonus_layanan'].toString())?.toInt() ?? 0) : 0,
     );
   }
 
   Map<String, dynamic> toJson() {
+    String fDate = tanggalPengerjaan;
+    final dParts = fDate.split(' ');
+    if (dParts.length >= 4) {
+      final day = dParts[1].padLeft(2, '0');
+      final mStr = dParts[2].toLowerCase();
+      int m = 6;
+      if (mStr.contains('jan')) m = 1;
+      else if (mStr.contains('feb')) m = 2;
+      else if (mStr.contains('mar')) m = 3;
+      else if (mStr.contains('apr')) m = 4;
+      else if (mStr.contains('mei') || mStr.contains('may')) m = 5;
+      else if (mStr.contains('jun')) m = 6;
+      else if (mStr.contains('jul')) m = 7;
+      else if (mStr.contains('agu') || mStr.contains('aug')) m = 8;
+      else if (mStr.contains('sep')) m = 9;
+      else if (mStr.contains('okt') || mStr.contains('oct')) m = 10;
+      else if (mStr.contains('nov')) m = 11;
+      else if (mStr.contains('des') || mStr.contains('dec')) m = 12;
+      fDate = '${dParts[3]}-${m.toString().padLeft(2, '0')}-$day';
+    }
+
+    String fTime = waktuPengerjaan;
+    if (fTime.contains(' - ')) {
+      fTime = fTime.split(' - ')[0];
+    }
+    // Ensure format is HH:mm by splitting and taking first 2 parts
+    if (fTime.contains(':')) {
+      final tParts = fTime.split(':');
+      if (tParts.length >= 2) {
+        fTime = '${tParts[0].padLeft(2, '0')}:${tParts[1].padLeft(2, '0')}';
+      }
+    }
+
     return {
-      'layanan_id': id, // Usually needed for API
+      'layanan_id': int.tryParse(layananId?.replaceAll(RegExp(r'[^0-9]'), '') ?? id.replaceAll(RegExp(r'[^0-9]'), '')) ?? 1, // Usually needed for API
       'qty': qty,
       'harga': price,
-      'tanggal_pengerjaan': tanggalPengerjaan,
-      'waktu_pengerjaan': waktuPengerjaan,
+      'tanggal_pengerjaan': fDate.isEmpty ? null : fDate,
+      'waktu_pengerjaan': fTime.isEmpty ? null : fTime,
       'bonus_layanan': bonusLayanan,
     };
   }
@@ -138,7 +174,7 @@ class CleanerBonus {
     return CleanerBonus(
       id: json['id']?.toString() ?? '',
       jenisBonus: jenis['nama_bonus'] ?? json['jenis_bonus'] ?? '-',
-      nominal: json['nominal'] != null ? int.tryParse(json['nominal'].toString()) ?? 0 : 0,
+      nominal: json['nominal'] != null ? (double.tryParse(json['nominal'].toString())?.toInt() ?? 0) : 0,
       keterangan: json['keterangan'] ?? '-',
     );
   }
@@ -272,7 +308,7 @@ class OrderModel {
       services: parsedServices,
       cleaners: parsedCleaners,
       status: _parseOrderStatus(json['status_pesanan']),
-      total: json['total'] != null ? int.tryParse(json['total'].toString()) ?? computedTotal : computedTotal,
+      total: json['subtotal'] != null ? (double.tryParse(json['subtotal'].toString())?.toInt() ?? computedTotal) : computedTotal,
       paymentMethod: json['metode_pembayaran'] ?? '-',
       paymentStatus: json['status_pembayaran'] ?? 'unpaid',
       notes: json['keterangan_order'] ?? '',
@@ -303,8 +339,6 @@ class OrderDraft {
     this.tipeCustomer = CustomerType.baru,
     List<ServiceItem>? services,
     List<OrderCleaner>? cleaners,
-    this.scheduleDate,
-    this.scheduleTime,
     this.notes = '',
   }) : services = services ?? [],
        cleaners = cleaners ?? [];
@@ -314,15 +348,14 @@ class OrderDraft {
   CustomerType tipeCustomer;
   List<ServiceItem> services;
   List<OrderCleaner> cleaners;
-  String? scheduleDate;
-  String? scheduleTime;
   String notes;
 
   int get total => services.fold(0, (sum, s) => sum + s.subtotal);
 
   Map<String, dynamic> toJson() {
+    final cleanId = customer?.id.replaceAll(RegExp(r'[^0-9]'), '');
     return {
-      'pelanggan_id': customer?.id,
+      'pelanggan_id': cleanId != null && cleanId.isNotEmpty ? int.parse(cleanId) : null,
       'chat_dari': chatDari.name,
       'tipe_customer': tipeCustomer.name,
       'keterangan_order': notes,

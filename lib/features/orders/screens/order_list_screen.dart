@@ -283,7 +283,7 @@ class _OrderCard extends StatelessWidget {
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: AppColors.textDark)),
-                  Text(o.services.map((s) => s.name).join(', '),
+                  Text(o.services.map((s) => '${s.qty}x ${s.name}').join(', '),
                       style: GoogleFonts.inter(
                           fontSize: 12, color: AppColors.textMuted),
                       overflow: TextOverflow.ellipsis),

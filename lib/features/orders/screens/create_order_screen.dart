@@ -6,21 +6,40 @@ import '../../../core/widgets/badges.dart';
 import '../../../core/data/mock_data.dart';
 import '../../../core/data/order_model.dart';
 import '../../../core/data/customer_model.dart';
+import '../../../core/services/customer_service.dart';
+import '../services/order_service.dart';
 
 class CreateOrderScreen extends StatefulWidget {
-  const CreateOrderScreen({super.key});
+  const CreateOrderScreen({super.key, this.existingOrder});
+  final OrderModel? existingOrder;
 
   @override
   State<CreateOrderScreen> createState() => _CreateOrderScreenState();
 }
 
 class _CreateOrderScreenState extends State<CreateOrderScreen> {
-  int _step = 0; // 0=customer, 1=services, 2=schedule, 3=cleaner, 4=summary
+  final OrderService _orderService = OrderService();
+  int _step = 0; // 0=info, 1=services, 2=summary
   final _draft = OrderDraft();
+  bool _isSaving = false;
 
-  static const _steps = ['Pelanggan', 'Layanan', 'Jadwal', 'Petugas', 'Ringkasan'];
+  static const _steps = ['Info Pesanan', 'Detail Layanan', 'Ringkasan'];
 
-  void _next() => setState(() => _step = (_step + 1).clamp(0, 4));
+  @override
+  void initState() {
+    super.initState();
+    if (widget.existingOrder != null) {
+      final o = widget.existingOrder!;
+      _draft.customer = o.customer;
+      _draft.chatDari = o.chatDari;
+      _draft.tipeCustomer = o.tipeCustomer;
+      _draft.notes = o.notes;
+      _draft.services = List.from(o.services);
+      // Cleaners cannot be edited through this form according to API (only assign cleaner endpoint)
+    }
+  }
+
+  void _next() => setState(() => _step = (_step + 1).clamp(0, 2));
   void _prev() {
     if (_step == 0) { Navigator.pop(context); return; }
     setState(() => _step--);
@@ -51,10 +70,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Buat Pesanan Baru', style: GoogleFonts.inter(
+              Text(widget.existingOrder == null ? 'Buat Pesanan Baru' : 'Edit Pesanan', style: GoogleFonts.inter(
                 fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white,
               )),
-              Text('Langkah ${_step + 1} dari 5 · ${_steps[_step]}', style: GoogleFonts.inter(
+              Text('Langkah ${_step + 1} dari 3 · ${_steps[_step]}', style: GoogleFonts.inter(
                 fontSize: 11, color: Colors.white.withOpacity(0.7),
               )),
             ],
@@ -99,7 +118,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                         fontSize: 9,
                         color: active ? AppColors.primary : AppColors.textMuted,
                         fontWeight: active ? FontWeight.w600 : FontWeight.normal,
-                      )),
+                      ), textAlign: TextAlign.center,),
                     ],
                   ),
                 ),
@@ -121,11 +140,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
   Widget _buildStep() {
     switch (_step) {
-      case 0: return _Step1Customer(draft: _draft, onChanged: () => setState(() {}));
+      case 0: return _Step1Info(draft: _draft, onChanged: () => setState(() {}));
       case 1: return _Step2Services(draft: _draft, onChanged: () => setState(() {}));
-      case 2: return _Step3Schedule(draft: _draft, onChanged: () => setState(() {}));
-      case 3: return _Step4Cleaner(draft: _draft, onChanged: () => setState(() {}));
-      case 4: return _Step5Summary(draft: _draft);
+      case 2: return _Step3Summary(draft: _draft);
       default: return const SizedBox();
     }
   }
@@ -134,8 +151,6 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     final canNext = switch (_step) {
       0 => _draft.customer != null,
       1 => _draft.services.isNotEmpty,
-      2 => _draft.scheduleDate != null,
-      3 => true, // cleaner optional
       _ => true,
     };
 
@@ -166,7 +181,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           Expanded(
             flex: 2,
             child: ElevatedButton(
-              onPressed: canNext ? (_step == 4 ? _submit : _next) : null,
+              onPressed: (canNext && !_isSaving) ? (_step == 2 ? _submit : _next) : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 disabledBackgroundColor: AppColors.border,
@@ -174,12 +189,17 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
-              child: Text(
-                _step == 4 ? '✓ Buat Pesanan' : 'Lanjut →',
-                style: GoogleFonts.inter(
-                  fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white,
-                ),
-              ),
+              child: _isSaving 
+                ? const SizedBox(
+                    width: 20, height: 20, 
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                  )
+                : Text(
+                    _step == 2 ? (widget.existingOrder == null ? '✓ Buat Pesanan' : '✓ Simpan Perubahan') : 'Lanjut →',
+                    style: GoogleFonts.inter(
+                      fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white,
+                    ),
+                  ),
             ),
           ),
         ],
@@ -187,144 +207,203 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     );
   }
 
-  void _submit() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Pesanan berhasil dibuat!', style: GoogleFonts.inter(color: Colors.white)),
-        backgroundColor: AppColors.statusDone,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-    Navigator.pop(context);
+  Future<void> _submit() async {
+    setState(() => _isSaving = true);
+    try {
+      if (widget.existingOrder == null) {
+        await _orderService.createOrder(_draft);
+      } else {
+        await _orderService.updateOrder(widget.existingOrder!.id, _draft);
+      }
+      
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(widget.existingOrder == null ? 'Pesanan berhasil dibuat!' : 'Pesanan berhasil diperbarui!', style: GoogleFonts.inter(color: Colors.white)),
+          backgroundColor: AppColors.statusDone,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString(), style: GoogleFonts.inter(color: Colors.white)),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 }
 
-// ─── Step 1: Pilih Pelanggan ───────────────────────────────────────────────
-class _Step1Customer extends StatefulWidget {
-  const _Step1Customer({required this.draft, required this.onChanged});
+// ─── Step 1: Info Pesanan ─────────────────────────────────────────────────
+class _Step1Info extends StatefulWidget {
+  const _Step1Info({required this.draft, required this.onChanged});
   final OrderDraft draft;
   final VoidCallback onChanged;
 
   @override
-  State<_Step1Customer> createState() => _Step1CustomerState();
+  State<_Step1Info> createState() => _Step1InfoState();
 }
 
-class _Step1CustomerState extends State<_Step1Customer> {
+class _Step1InfoState extends State<_Step1Info> {
   String _query = '';
+  List<CustomerModel> _customers = [];
+  bool _isLoading = true;
+  String? _error;
 
-  List<CustomerModel> get _filtered => mockCustomers.where((c) {
+  @override
+  void initState() {
+    super.initState();
+    _loadCustomers();
+  }
+
+  Future<void> _loadCustomers() async {
+    try {
+      final data = await CustomerService.getCustomers();
+      if (mounted) {
+        setState(() {
+          _customers = data;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  List<CustomerModel> get _filtered => _customers.where((c) {
     final q = _query.toLowerCase();
     return c.name.toLowerCase().contains(q) || c.phone.contains(q) || c.address.toLowerCase().contains(q);
   }).toList();
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: TextField(
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Pilih Pelanggan', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          const SizedBox(height: 8),
+          TextField(
             onChanged: (v) => setState(() => _query = v),
             decoration: InputDecoration(
               hintText: 'Cari nama, nomor HP, atau alamat...',
               prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textMuted),
               contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              filled: true,
+              fillColor: AppColors.surface,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
             ),
           ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            itemCount: _filtered.length,
-            itemBuilder: (_, i) {
-              final c = _filtered[i];
-              final selected = widget.draft.customer?.id == c.id;
-              final isAktif = c.status.toLowerCase() == 'aktif';
-              return GestureDetector(
-                onTap: () {
-                  widget.draft.customer = OrderCustomer(
-                    id: c.id, name: c.name, phone: c.phone,
-                    address: c.address, area: '-', // Set default area to pass compilation
-                  );
-                  widget.onChanged();
-                  setState(() {});
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: selected ? AppColors.surfaceBlue : AppColors.surface,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: selected ? AppColors.primary : AppColors.border,
-                      width: selected ? 1.5 : 1,
-                    ),
-                    boxShadow: selected ? [const BoxShadow(
-                      color: Color(0x1A004F91), blurRadius: 8,
-                    )] : [AppColors.cardShadow],
-                  ),
-                  child: Row(
+          const SizedBox(height: 12),
+          if (_isLoading) const Center(child: CircularProgressIndicator())
+          else if (_error != null) Center(child: Text(_error!, style: const TextStyle(color: AppColors.error)))
+          else Container(
+            height: 200,
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ListView.builder(
+              padding: const EdgeInsets.all(8),
+              itemCount: _filtered.length,
+              itemBuilder: (_, i) {
+                final c = _filtered[i];
+                final selected = widget.draft.customer?.id == c.id;
+                final isAktif = c.status.toLowerCase() == 'aktif';
+                return ListTile(
+                  dense: true,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  tileColor: selected ? AppColors.surfaceBlue : null,
+                  leading: Stack(
+                    clipBehavior: Clip.none,
                     children: [
-                      Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          InitialsAvatar(
-                            name: c.name, size: 44,
-                            backgroundColor: selected ? AppColors.primary : AppColors.surfaceBlue,
-                            textColor: selected ? Colors.white : AppColors.primary,
-                          ),
-                          Positioned(
-                            bottom: -2, right: -2,
-                            child: Container(
-                              width: 12, height: 12,
-                              decoration: BoxDecoration(
-                                color: isAktif ? AppColors.statusDone : AppColors.statusCancel,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 1.5),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(c.name, style: GoogleFonts.inter(
-                              fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark,
-                            )),
-                            Text(c.phone, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
-                            Row(
-                              children: [
-                                const Icon(Icons.location_on_outlined, size: 10, color: AppColors.textMuted),
-                                const SizedBox(width: 2),
-                                Expanded(child: Text(c.address, style: GoogleFonts.inter(
-                                  fontSize: 10, color: AppColors.textMuted,
-                                ), overflow: TextOverflow.ellipsis)),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      selected
-                          ? const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20)
-                          : const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 18),
+                      InitialsAvatar(name: c.name, size: 36, backgroundColor: selected ? AppColors.primary : AppColors.surfaceBlue, textColor: selected ? Colors.white : AppColors.primary),
+                      Positioned(bottom: -2, right: -2, child: Container(width: 10, height: 10, decoration: BoxDecoration(color: isAktif ? AppColors.statusDone : AppColors.statusCancel, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 1.5)))),
                     ],
                   ),
-                ),
-              );
-            },
+                  title: Text(c.name, style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                  subtitle: Text(c.phone, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                  trailing: selected ? const Icon(Icons.check_circle, color: AppColors.primary) : null,
+                  onTap: () {
+                    widget.draft.customer = OrderCustomer(id: c.id, name: c.name, phone: c.phone, address: c.address, area: '-');
+                    widget.onChanged();
+                  },
+                );
+              },
+            ),
           ),
-        ),
-      ],
+
+          const SizedBox(height: 20),
+          Text('Sumber Chat', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.border)),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<ChatSource>(
+                value: widget.draft.chatDari,
+                isExpanded: true,
+                items: ChatSource.values.map((e) => DropdownMenuItem(value: e, child: Text(e.name))).toList(),
+                onChanged: (v) {
+                  if (v != null) { widget.draft.chatDari = v; widget.onChanged(); }
+                },
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+          Text('Tipe Customer', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.border)),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<CustomerType>(
+                value: widget.draft.tipeCustomer,
+                isExpanded: true,
+                items: CustomerType.values.map((e) => DropdownMenuItem(value: e, child: Text(e.name))).toList(),
+                onChanged: (v) {
+                  if (v != null) { widget.draft.tipeCustomer = v; widget.onChanged(); }
+                },
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+          Text('Keterangan Order', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          const SizedBox(height: 8),
+          TextFormField(
+            initialValue: widget.draft.notes,
+            maxLines: 3,
+            onChanged: (v) { widget.draft.notes = v; widget.onChanged(); },
+            decoration: InputDecoration(
+              hintText: 'Opsional...',
+              filled: true,
+              fillColor: AppColors.surface,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-// ─── Step 2: Pilih Layanan ─────────────────────────────────────────────────
+// ─── Step 2: Detail Layanan ─────────────────────────────────────────────────
 class _Step2Services extends StatelessWidget {
   const _Step2Services({required this.draft, required this.onChanged});
   final OrderDraft draft;
@@ -333,326 +412,243 @@ class _Step2Services extends StatelessWidget {
   String _formatRupiah(int n) =>
       'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      itemCount: mockServices.length,
-      itemBuilder: (_, i) {
-        final s = mockServices[i];
-        final idx = draft.services.indexWhere((x) => x.name == s['name']);
-        final qty = idx >= 0 ? draft.services[idx].qty : 0;
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: qty > 0 ? AppColors.surfaceBlue : AppColors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: qty > 0 ? AppColors.primary : AppColors.border),
-            boxShadow: [AppColors.cardShadow],
-          ),
-          child: Row(
-            children: [
-              Text(s['icon'] as String, style: const TextStyle(fontSize: 22)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(s['name'] as String, style: GoogleFonts.inter(
-                      fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark,
-                    )),
-                    Text('${_formatRupiah(s['price'] as int)} / ${s['unit']}', style: GoogleFonts.inter(
-                      fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600,
-                    )),
-                  ],
-                ),
-              ),
-              if (qty == 0)
-                GestureDetector(
-                  onTap: () {
-                    draft.services.add(ServiceItem(name: s['name'] as String, price: s['price'] as int, qty: 1));
-                    onChanged();
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text('+ Tambah', style: GoogleFonts.inter(
-                      fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600,
-                    )),
-                  ),
-                )
-              else
-                Row(
-                  children: [
-                    _QtyBtn(Icons.remove, () {
-                      if (qty <= 1) draft.services.removeAt(idx);
-                      else draft.services[idx] = ServiceItem(name: s['name'] as String, price: s['price'] as int, qty: qty - 1);
-                      onChanged();
-                    }),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Text('$qty', style: GoogleFonts.inter(
-                        fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark,
-                      )),
-                    ),
-                    _QtyBtn(Icons.add, () {
-                      draft.services[idx] = ServiceItem(name: s['name'] as String, price: s['price'] as int, qty: qty + 1);
-                      onChanged();
-                    }),
-                  ],
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _QtyBtn extends StatelessWidget {
-  const _QtyBtn(this.icon, this.onTap);
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 28, height: 28,
-        decoration: BoxDecoration(
-          color: AppColors.surfaceBlue, borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, size: 16, color: AppColors.primary),
+  void _showAddServiceSheet(BuildContext context, {ServiceItem? existing, int? index}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _AddServiceSheet(
+        existing: existing,
+        onSave: (item) {
+          if (index != null) draft.services[index] = item;
+          else draft.services.add(item);
+          onChanged();
+        },
       ),
     );
   }
-}
-
-// ─── Step 3: Jadwal ────────────────────────────────────────────────────────
-class _Step3Schedule extends StatefulWidget {
-  const _Step3Schedule({required this.draft, required this.onChanged});
-  final OrderDraft draft;
-  final VoidCallback onChanged;
-
-  @override
-  State<_Step3Schedule> createState() => _Step3ScheduleState();
-}
-
-class _Step3ScheduleState extends State<_Step3Schedule> {
-  static const _dates = [
-    'Rabu, 11 Jun 2026', 'Kamis, 12 Jun 2026', 'Jumat, 13 Jun 2026',
-    'Sabtu, 14 Jun 2026', 'Senin, 16 Jun 2026', 'Selasa, 17 Jun 2026',
-  ];
-  static const _times = [
-    '07:00 - 09:00', '09:00 - 11:00', '10:00 - 12:00',
-    '13:00 - 15:00', '14:00 - 16:00', '15:00 - 17:00',
-  ];
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-      child: Column(
+    return Column(
+      children: [
+        Expanded(
+          child: draft.services.isEmpty
+              ? Center(child: Text('Belum ada layanan yang ditambahkan', style: GoogleFonts.inter(color: AppColors.textMuted)))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: draft.services.length,
+                  itemBuilder: (_, i) {
+                    final s = draft.services[i];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
+                        boxShadow: [AppColors.cardShadow],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(s.name, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                              Row(
+                                children: [
+                                  IconButton(icon: const Icon(Icons.edit, size: 16, color: AppColors.primary), onPressed: () => _showAddServiceSheet(context, existing: s, index: i), constraints: const BoxConstraints(), padding: EdgeInsets.zero),
+                                  const SizedBox(width: 12),
+                                  IconButton(icon: const Icon(Icons.delete, size: 16, color: AppColors.statusCancel), onPressed: () { draft.services.removeAt(i); onChanged(); }, constraints: const BoxConstraints(), padding: EdgeInsets.zero),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          _infoRow('Qty', s.qty),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
+        Container(
+          padding: const EdgeInsets.all(16),
+          child: ElevatedButton.icon(
+            onPressed: () => _showAddServiceSheet(context),
+            icon: const Icon(Icons.add, color: AppColors.primary),
+            label: Text('Tambah Layanan', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppColors.primary)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.surfaceBlue,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.primary)),
+              minimumSize: const Size(double.infinity, 50),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionLabel('Pilih Tanggal'),
-          const SizedBox(height: 10),
-          ..._dates.map((d) => _SelectRow(
-            label: d,
-            selected: widget.draft.scheduleDate == d,
-            icon: Icons.event_rounded,
-            onTap: () {
-              widget.draft.scheduleDate = d;
-              widget.onChanged();
-              setState(() {});
-            },
-          )),
-          const SizedBox(height: 16),
-          _sectionLabel('Pilih Waktu'),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _times.map((t) {
-              final sel = widget.draft.scheduleTime == t;
-              return GestureDetector(
-                onTap: () {
-                  widget.draft.scheduleTime = t;
-                  widget.onChanged();
-                  setState(() {});
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: sel ? AppColors.primary : AppColors.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: sel ? AppColors.primary : AppColors.border),
-                  ),
-                  child: Text(t, style: GoogleFonts.inter(
-                    fontSize: 13, fontWeight: FontWeight.w500,
-                    color: sel ? Colors.white : AppColors.textDark,
-                  )),
-                ),
-              );
-            }).toList(),
-          ),
+          SizedBox(width: 60, child: Text(label, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted))),
+          Expanded(child: Text(value, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textDark))),
         ],
       ),
     );
   }
-
-  Widget _sectionLabel(String t) => Text(t.toUpperCase(), style: GoogleFonts.inter(
-    fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMuted, letterSpacing: 0.5,
-  ));
 }
 
-class _SelectRow extends StatelessWidget {
-  const _SelectRow({required this.label, required this.selected, required this.icon, required this.onTap});
-  final String label;
-  final bool selected;
-  final IconData icon;
-  final VoidCallback onTap;
+class _AddServiceSheet extends StatefulWidget {
+  const _AddServiceSheet({this.existing, required this.onSave});
+  final ServiceItem? existing;
+  final Function(ServiceItem) onSave;
+
+  @override
+  State<_AddServiceSheet> createState() => _AddServiceSheetState();
+}
+
+class _AddServiceSheetState extends State<_AddServiceSheet> {
+  List<Map<String, dynamic>> _availableServices = [];
+  bool _isLoading = true;
+  String? _error;
+
+  Map<String, dynamic>? _selectedLayanan;
+  final _qtyCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLayanan();
+    if (widget.existing != null) {
+      _qtyCtrl.text = widget.existing!.qty;
+    }
+  }
+
+  Future<void> _fetchLayanan() async {
+    try {
+      final svc = OrderService();
+      final data = await svc.fetchLayanan();
+      if (mounted) {
+        setState(() {
+          _availableServices = data;
+          _isLoading = false;
+          if (_availableServices.isNotEmpty) {
+             if (widget.existing != null) {
+               _selectedLayanan = _availableServices.firstWhere(
+                 (e) => e['nama_layanan'] == widget.existing!.name, 
+                 orElse: () => _availableServices.first
+               );
+             } else {
+               _selectedLayanan = _availableServices.first;
+             }
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = e.toString();
+        });
+      }
+    }
+  }
+
+  void _submit() {
+    if (_qtyCtrl.text.isEmpty || _selectedLayanan == null) {
+      return;
+    }
+    widget.onSave(ServiceItem(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      layananId: _selectedLayanan!['id']?.toString() ?? '1',
+      name: _selectedLayanan!['nama_layanan'],
+      price: 0,
+      qty: _qtyCtrl.text,
+      tanggalPengerjaan: '',
+      waktuPengerjaan: '',
+      bonusLayanan: 0,
+    ));
+    Navigator.pop(context);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.surfaceBlue : AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? AppColors.primary : AppColors.border),
-        ),
-        child: Row(
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: selected ? AppColors.primary : AppColors.textMuted),
-            const SizedBox(width: 10),
-            Expanded(child: Text(label, style: GoogleFonts.inter(
-              fontSize: 13, color: AppColors.textDark,
-            ))),
-            if (selected) const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 18),
+            Text(widget.existing == null ? 'Tambah Layanan' : 'Edit Layanan', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            _label('Layanan'),
+            if (_isLoading)
+               const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
+            else if (_error != null)
+               Text(_error!, style: const TextStyle(color: Colors.red))
+            else if (_availableServices.isEmpty)
+               const Text('Tidak ada layanan di cabang ini.')
+            else 
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.border)),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<Map<String, dynamic>>(
+                  value: _selectedLayanan,
+                  isExpanded: true,
+                  items: _availableServices.map((e) => DropdownMenuItem(value: e, child: Text(e['nama_layanan']))).toList(),
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(() {
+                        _selectedLayanan = v;
+                      });
+                    }
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _label('Qty (Contoh: 3 jam 2 cleaner)'),
+            _textField(_qtyCtrl, hint: 'Teks bebas...'),
+            const SizedBox(height: 12),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text('Simpan', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
+            ),
           ],
         ),
       ),
     );
   }
+
+  Widget _label(String text) => Padding(padding: const EdgeInsets.only(bottom: 6), child: Text(text, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)));
+  Widget _textField(TextEditingController ctrl, {TextInputType type = TextInputType.text, String hint = ''}) => TextField(
+    controller: ctrl, keyboardType: type, decoration: InputDecoration(hintText: hint, filled: true, fillColor: AppColors.surface, contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border))),
+  );
 }
 
-// ─── Step 4: Pilih Petugas ─────────────────────────────────────────────────
-class _Step4Cleaner extends StatelessWidget {
-  const _Step4Cleaner({required this.draft, required this.onChanged});
-  final OrderDraft draft;
-  final VoidCallback onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      itemCount: mockCleaners.length,
-      itemBuilder: (_, i) {
-        final cl = mockCleaners[i];
-        final busy = cl['status'] == 'busy';
-        final sel = draft.cleaners.any((c) => c.id == cl['id']);
-        return GestureDetector(
-          onTap: busy ? null : () {
-            if (sel) {
-              draft.cleaners.removeWhere((c) => c.id == cl['id']);
-            } else {
-              draft.cleaners.add(OrderCleaner(
-                id: cl['id'] as String,
-                name: cl['name'] as String,
-                rating: (cl['rating'] as num).toDouble(),
-              ));
-            }
-            onChanged();
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: sel ? AppColors.surfaceBlue : busy ? AppColors.background : AppColors.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: sel ? AppColors.primary : AppColors.border),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 44, height: 44,
-                  decoration: BoxDecoration(
-                    color: busy ? const Color(0xFFF3F4F6) : AppColors.surfaceBlue,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(Icons.cleaning_services_rounded,
-                    color: busy ? AppColors.textMuted : AppColors.primary, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(cl['name'] as String, style: GoogleFonts.inter(
-                        fontSize: 14, fontWeight: FontWeight.w600,
-                        color: busy ? AppColors.textMuted : AppColors.textDark,
-                      )),
-                      Row(
-                        children: [
-                          const Icon(Icons.star_rounded, size: 13, color: Color(0xFFF59E0B)),
-                          const SizedBox(width: 2),
-                          Text('${cl['rating']}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
-                          const Text(' · ', style: TextStyle(color: AppColors.textMuted)),
-                          Text('${cl['orders']} order', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                if (busy)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: AppColors.statusPendingBg,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text('Sibuk', style: GoogleFonts.inter(
-                      fontSize: 11, color: AppColors.statusPending, fontWeight: FontWeight.w600,
-                    )),
-                  )
-                else if (sel)
-                  const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 22)
-                else
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: AppColors.statusDoneBg,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text('Tersedia', style: GoogleFonts.inter(
-                      fontSize: 11, color: AppColors.statusDone, fontWeight: FontWeight.w600,
-                    )),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-// ─── Step 5: Ringkasan ─────────────────────────────────────────────────────
-class _Step5Summary extends StatelessWidget {
-  const _Step5Summary({required this.draft});
+// ─── Step 3: Ringkasan ─────────────────────────────────────────────────────
+class _Step3Summary extends StatelessWidget {
+  const _Step3Summary({required this.draft});
   final OrderDraft draft;
 
   String _formatRupiah(int n) =>
@@ -661,55 +657,55 @@ class _Step5Summary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SummaryCard(title: 'Pelanggan', child: Text(
-            draft.customer?.name ?? '-',
-            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark),
+          _SummaryCard(title: 'Info Pesanan', child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Pelanggan: ${draft.customer?.name ?? '-'}', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark)),
+              const SizedBox(height: 4),
+              Text('Sumber: ${draft.chatDari.name} | Tipe: ${draft.tipeCustomer.name}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+              if (draft.notes.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text('Catatan: ${draft.notes}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+              ]
+            ],
           )),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           _SummaryCard(
-            title: 'Layanan',
+            title: 'Detail Layanan',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ...draft.services.map((s) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${s.qty}x ${s.name}', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark)),
-                      Text(_formatRupiah(s.subtotal), style: GoogleFonts.inter(
-                        fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark,
-                      )),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(s.name, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                          Text('-', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                        ],
+                      ),
+                      Text('Qty: ${s.qty}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
                     ],
                   ),
                 )),
-                const Divider(height: 12, color: AppColors.border),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Total', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                    Text(_formatRupiah(draft.total), style: GoogleFonts.inter(
-                      fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary,
-                    )),
-                  ],
-                ),
+                const Divider(height: 16, color: AppColors.border),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Total', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                      Text('Rp 0', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                    ],
+                  ),
               ],
             ),
           ),
-          const SizedBox(height: 10),
-          _SummaryCard(title: 'Jadwal', child: Text(
-            '${draft.scheduleDate ?? '-'} · ${draft.scheduleTime ?? '-'}',
-            style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
-          )),
-          const SizedBox(height: 10),
-          _SummaryCard(title: 'Petugas', child: Text(
-            draft.cleaners.isNotEmpty ? draft.cleaners.map((c) => c.name).join(', ') : 'Belum dipilih (akan diassign)',
-            style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
-          )),
         ],
       ),
     );
@@ -724,19 +720,13 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [AppColors.cardShadow],
-      ),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.border), boxShadow: [AppColors.cardShadow]),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title.toUpperCase(), style: GoogleFonts.inter(
-            fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textMuted, letterSpacing: 0.5,
-          )),
+          Text(title.toUpperCase(), style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textMuted, letterSpacing: 0.5)),
           const SizedBox(height: 8),
           child,
         ],

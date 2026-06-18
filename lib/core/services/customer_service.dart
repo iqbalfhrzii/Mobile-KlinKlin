@@ -6,12 +6,22 @@ import 'package:shared_preferences/shared_preferences.dart';
 class CustomerService {
   static final Dio _dio = ApiClient.instance;
 
-  static Future<List<CustomerModel>> getCustomers() async {
+  static Future<List<CustomerModel>> getCustomers({String? status}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final cabangId = prefs.getInt('user_cabang_id');
 
-      final response = await _dio.get('/pelanggans', queryParameters: cabangId != null ? {'cabang_id': cabangId} : null);
+      final params = <String, dynamic>{};
+      if (cabangId != null) params['cabang_id'] = cabangId;
+      if (status != null && status != 'Semua') {
+        params['status'] = status.toLowerCase().replaceAll(' ', '');
+      } else {
+        params['status'] = 'all';
+      }
+
+      final response = await _dio.get('/pelanggans', queryParameters: params);
+      print('--- GET /pelanggans params: $params ---');
+      print(response.data);
       var data = response.data['data'] as List;
       
       // Local fallback filter if API doesn't support query params

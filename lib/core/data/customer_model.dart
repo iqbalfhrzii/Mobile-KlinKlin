@@ -20,7 +20,7 @@ class CustomerModel {
       name: json['nama_pelanggan'] ?? '-',
       phone: json['no_wa'] ?? '-',
       address: json['alamat'] ?? '-',
-      status: json['status'] ?? 'aktif',
+      status: json['status']?.toString() ?? 'UNKNOWN',
       totalOrders: 0,
       totalSpending: 0,
       lastOrderDate: '-',

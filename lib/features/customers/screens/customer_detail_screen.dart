@@ -80,12 +80,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       final updated = await CustomerService.updateCustomerStatus(
         c.id,
         newStatus,
-        {
-          'nama_pelanggan': c.name,
-          'no_wa': c.phone,
-          'alamat': c.address,
-          'cabang_id': 1,
-        },
+        {},
       );
 
       if (mounted) {

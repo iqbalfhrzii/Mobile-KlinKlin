@@ -42,7 +42,7 @@ final List<OrderModel> mockOrders = [
     tipeCustomer: CustomerType.lama,
     services: [
       ServiceItem(
-        name: 'Deep Cleaning 3BR', price: 550000, qty: 1, 
+        name: 'Deep Cleaning 3BR', price: 550000, qty: '1', 
         tanggalPengerjaan: '2026-06-11', waktuPengerjaan: '09:00',
         bonusLayanan: 15000,
       )
@@ -65,7 +65,7 @@ final List<OrderModel> mockOrders = [
     tipeCustomer: CustomerType.baru,
     services: [
       ServiceItem(
-        name: 'Deep Cleaning 3BR', price: 550000, qty: 1, 
+        name: 'Deep Cleaning 3BR', price: 550000, qty: '1', 
         tanggalPengerjaan: '2026-06-11', waktuPengerjaan: '09:00',
         bonusLayanan: 15000,
       )
@@ -98,7 +98,7 @@ final List<OrderModel> mockOrders = [
     tipeCustomer: CustomerType.lama,
     services: [
       ServiceItem(
-        name: 'Regular Cleaning', price: 280000, qty: 1,
+        name: 'Regular Cleaning', price: 280000, qty: '1',
         tanggalPengerjaan: '2026-06-11', waktuPengerjaan: '13:00',
         bonusLayanan: 10000,
       ),
