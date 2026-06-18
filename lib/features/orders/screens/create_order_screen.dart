@@ -251,7 +251,6 @@ class _Step1Info extends StatefulWidget {
 }
 
 class _Step1InfoState extends State<_Step1Info> {
-  String _query = '';
   List<CustomerModel> _customers = [];
   bool _isLoading = true;
   String? _error;
@@ -267,7 +266,8 @@ class _Step1InfoState extends State<_Step1Info> {
       final data = await CustomerService.getCustomers();
       if (mounted) {
         setState(() {
-          _customers = data;
+          // Filter ONLY active customers directly
+          _customers = data.where((c) => c.status.toLowerCase() == 'aktif').toList();
           _isLoading = false;
         });
       }
@@ -281,10 +281,22 @@ class _Step1InfoState extends State<_Step1Info> {
     }
   }
 
-  List<CustomerModel> get _filtered => _customers.where((c) {
-    final q = _query.toLowerCase();
-    return c.name.toLowerCase().contains(q) || c.phone.contains(q) || c.address.toLowerCase().contains(q);
-  }).toList();
+  void _showCustomerSearchSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _CustomerSearchSheet(
+        customers: _customers,
+        selectedId: widget.draft.customer?.id,
+        onSelect: (c) {
+          widget.draft.customer = OrderCustomer(id: c.id, name: c.name, phone: c.phone, address: c.address, area: '-');
+          widget.onChanged();
+          Navigator.pop(ctx);
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -293,93 +305,132 @@ class _Step1InfoState extends State<_Step1Info> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Pilih Pelanggan', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-          const SizedBox(height: 8),
-          TextField(
-            onChanged: (v) => setState(() => _query = v),
-            decoration: InputDecoration(
-              hintText: 'Cari nama, nomor HP, atau alamat...',
-              prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textMuted),
-              contentPadding: const EdgeInsets.symmetric(vertical: 10),
-              filled: true,
-              fillColor: AppColors.surface,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-            ),
-          ),
+          Text('Data Pelanggan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
           const SizedBox(height: 12),
-          if (_isLoading) const Center(child: CircularProgressIndicator())
-          else if (_error != null) Center(child: Text(_error!, style: const TextStyle(color: AppColors.error)))
-          else Container(
-            height: 200,
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(12),
+          
+          if (_isLoading)
+            const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: AppColors.primary)))
+          else if (_error != null)
+            Center(child: Padding(padding: EdgeInsets.all(20), child: Text(_error!, style: const TextStyle(color: AppColors.error))))
+          else
+            GestureDetector(
+              onTap: _showCustomerSearchSheet,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: widget.draft.customer == null ? AppColors.surface : AppColors.surfaceBlue.withOpacity(0.5),
+                  border: Border.all(color: widget.draft.customer == null ? AppColors.border : AppColors.primary),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: widget.draft.customer == null ? [AppColors.cardShadow] : [],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: widget.draft.customer == null ? AppColors.background : AppColors.primary, shape: BoxShape.circle),
+                      child: Icon(Icons.person_outline, color: widget.draft.customer == null ? AppColors.textMuted : Colors.white),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: widget.draft.customer == null
+                          ? Text('Pilih Pelanggan...', style: GoogleFonts.inter(fontSize: 14, color: AppColors.textMuted))
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(widget.draft.customer!.name, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                                const SizedBox(height: 4),
+                                Text(widget.draft.customer!.phone, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+                              ],
+                            ),
+                    ),
+                    Icon(Icons.chevron_right, color: widget.draft.customer == null ? AppColors.textMuted : AppColors.primary),
+                  ],
+                ),
+              ),
             ),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(8),
-              itemCount: _filtered.length,
-              itemBuilder: (_, i) {
-                final c = _filtered[i];
-                final selected = widget.draft.customer?.id == c.id;
-                final isAktif = c.status.toLowerCase() == 'aktif';
-                return ListTile(
-                  dense: true,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  tileColor: selected ? AppColors.surfaceBlue : null,
-                  leading: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      InitialsAvatar(name: c.name, size: 36, backgroundColor: selected ? AppColors.primary : AppColors.surfaceBlue, textColor: selected ? Colors.white : AppColors.primary),
-                      Positioned(bottom: -2, right: -2, child: Container(width: 10, height: 10, decoration: BoxDecoration(color: isAktif ? AppColors.statusDone : AppColors.statusCancel, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 1.5)))),
-                    ],
-                  ),
-                  title: Text(c.name, style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                  subtitle: Text(c.phone, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                  trailing: selected ? const Icon(Icons.check_circle, color: AppColors.primary) : null,
-                  onTap: () {
-                    widget.draft.customer = OrderCustomer(id: c.id, name: c.name, phone: c.phone, address: c.address, area: '-');
-                    widget.onChanged();
-                  },
-                );
-              },
+
+          const SizedBox(height: 24),
+          Text('Cabang Pemroses', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.storefront_rounded, color: AppColors.textMuted, size: 20),
+                const SizedBox(width: 12),
+                Text('Surabaya', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark)),
+                const Spacer(),
+                const Icon(Icons.lock_outline_rounded, color: AppColors.textMuted, size: 16),
+              ],
             ),
           ),
 
           const SizedBox(height: 20),
           Text('Sumber Chat', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
           const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.border)),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<ChatSource>(
-                value: widget.draft.chatDari,
-                isExpanded: true,
-                items: ChatSource.values.map((e) => DropdownMenuItem(value: e, child: Text(e.name))).toList(),
-                onChanged: (v) {
-                  if (v != null) { widget.draft.chatDari = v; widget.onChanged(); }
-                },
-              ),
-            ),
+          Row(
+            children: ChatSource.values.map((e) {
+              final active = widget.draft.chatDari == e;
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () { widget.draft.chatDari = e; widget.onChanged(); },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: EdgeInsets.only(right: e == ChatSource.values.last ? 0 : 8),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: active ? AppColors.primary.withOpacity(0.08) : AppColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: active ? AppColors.primary : AppColors.border, width: active ? 1.5 : 1),
+                    ),
+                    child: Center(
+                      child: Text(e.name.toUpperCase(), style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                        color: active ? AppColors.primary : AppColors.textMuted,
+                      )),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Text('Tipe Customer', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
           const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.border)),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<CustomerType>(
-                value: widget.draft.tipeCustomer,
-                isExpanded: true,
-                items: CustomerType.values.map((e) => DropdownMenuItem(value: e, child: Text(e.name))).toList(),
-                onChanged: (v) {
-                  if (v != null) { widget.draft.tipeCustomer = v; widget.onChanged(); }
-                },
-              ),
-            ),
+          Row(
+            children: CustomerType.values.map((e) {
+              final active = widget.draft.tipeCustomer == e;
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () { widget.draft.tipeCustomer = e; widget.onChanged(); },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: EdgeInsets.only(right: e == CustomerType.values.last ? 0 : 12),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: active ? AppColors.primary.withOpacity(0.08) : AppColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: active ? AppColors.primary : AppColors.border, width: active ? 1.5 : 1),
+                    ),
+                    child: Center(
+                      child: Text(e.name.toUpperCase(), style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                        color: active ? AppColors.primary : AppColors.textMuted,
+                      )),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
           ),
 
           const SizedBox(height: 16),
@@ -395,7 +446,121 @@ class _Step1InfoState extends State<_Step1Info> {
               fillColor: AppColors.surface,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CustomerSearchSheet extends StatefulWidget {
+  const _CustomerSearchSheet({required this.customers, this.selectedId, required this.onSelect});
+  final List<CustomerModel> customers;
+  final String? selectedId;
+  final ValueChanged<CustomerModel> onSelect;
+
+  @override
+  State<_CustomerSearchSheet> createState() => _CustomerSearchSheetState();
+}
+
+class _CustomerSearchSheetState extends State<_CustomerSearchSheet> {
+  String _query = '';
+
+  List<CustomerModel> get _filtered => widget.customers.where((c) {
+    final q = _query.toLowerCase();
+    return c.name.toLowerCase().contains(q) || c.phone.contains(q) || c.address.toLowerCase().contains(q);
+  }).toList();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 12, bottom: 8),
+            width: 40, height: 4,
+            decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Pilih Pelanggan Aktif', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                GestureDetector(onTap: () => Navigator.pop(context), child: const Icon(Icons.close, color: AppColors.textMuted)),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: TextField(
+              onChanged: (v) => setState(() => _query = v),
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'Cari nama, nomor HP, atau alamat...',
+                prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textMuted),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                filled: true,
+                fillColor: AppColors.surface,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: AppColors.border),
+          Expanded(
+            child: _filtered.isEmpty
+                ? Center(child: Text('Tidak ada pelanggan aktif ditemukan.', style: GoogleFonts.inter(color: AppColors.textMuted)))
+                : ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _filtered.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (_, i) {
+                      final c = _filtered[i];
+                      final selected = widget.selectedId == c.id;
+                      return ListTile(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: selected ? AppColors.primary : AppColors.border),
+                        ),
+                        tileColor: selected ? AppColors.surfaceBlue : AppColors.surface,
+                        leading: InitialsAvatar(name: c.name, size: 40, backgroundColor: selected ? AppColors.primary : AppColors.surfaceBlue, textColor: selected ? Colors.white : AppColors.primary),
+                        title: Text(c.name, style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.phone_android, size: 12, color: AppColors.textMuted),
+                                const SizedBox(width: 4),
+                                Text(c.phone, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                const Icon(Icons.location_on_outlined, size: 12, color: AppColors.textMuted),
+                                const SizedBox(width: 4),
+                                Expanded(child: Text(c.address, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                              ],
+                            ),
+                          ],
+                        ),
+                        trailing: selected ? const Icon(Icons.check_circle, color: AppColors.primary) : null,
+                        onTap: () => widget.onSelect(c),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -408,9 +573,6 @@ class _Step2Services extends StatelessWidget {
   const _Step2Services({required this.draft, required this.onChanged});
   final OrderDraft draft;
   final VoidCallback onChanged;
-
-  String _formatRupiah(int n) =>
-      'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
   void _showAddServiceSheet(BuildContext context, {ServiceItem? existing, int? index}) {
     showModalBottomSheet(
@@ -432,47 +594,6 @@ class _Step2Services extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Expanded(
-          child: draft.services.isEmpty
-              ? Center(child: Text('Belum ada layanan yang ditambahkan', style: GoogleFonts.inter(color: AppColors.textMuted)))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: draft.services.length,
-                  itemBuilder: (_, i) {
-                    final s = draft.services[i];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.border),
-                        boxShadow: [AppColors.cardShadow],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(s.name, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                              Row(
-                                children: [
-                                  IconButton(icon: const Icon(Icons.edit, size: 16, color: AppColors.primary), onPressed: () => _showAddServiceSheet(context, existing: s, index: i), constraints: const BoxConstraints(), padding: EdgeInsets.zero),
-                                  const SizedBox(width: 12),
-                                  IconButton(icon: const Icon(Icons.delete, size: 16, color: AppColors.statusCancel), onPressed: () { draft.services.removeAt(i); onChanged(); }, constraints: const BoxConstraints(), padding: EdgeInsets.zero),
-                                ],
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          _infoRow('Qty', s.qty),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-        ),
         Container(
           padding: const EdgeInsets.all(16),
           child: ElevatedButton.icon(
@@ -488,20 +609,79 @@ class _Step2Services extends StatelessWidget {
             ),
           ),
         ),
+        Expanded(
+          child: draft.services.isEmpty
+              ? Center(child: Text('Belum ada layanan yang ditambahkan', style: GoogleFonts.inter(color: AppColors.textMuted)))
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: draft.services.length,
+                  itemBuilder: (_, i) {
+                    final s = draft.services[i];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
+                        boxShadow: [AppColors.cardShadow],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceBlue.withOpacity(0.5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.cleaning_services_rounded, color: AppColors.primary, size: 24),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(s.name, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.tag, size: 12, color: AppColors.textMuted),
+                                    const SizedBox(width: 4),
+                                    Text('Qty: ${s.qty}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              GestureDetector(
+                                onTap: () => _showAddServiceSheet(context, existing: s, index: i),
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                                  child: const Icon(Icons.edit_outlined, size: 18, color: AppColors.primary),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              GestureDetector(
+                                onTap: () { draft.services.removeAt(i); onChanged(); },
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(color: AppColors.error.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                                  child: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
       ],
-    );
-  }
-
-  Widget _infoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(width: 60, child: Text(label, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted))),
-          Expanded(child: Text(value, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textDark))),
-        ],
-      ),
     );
   }
 }
@@ -598,7 +778,7 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
             if (_isLoading)
                const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
             else if (_error != null)
-               Text(_error!, style: const TextStyle(color: Colors.red))
+               Text(_error!, style: const TextStyle(color: AppColors.error))
             else if (_availableServices.isEmpty)
                const Text('Tidak ada layanan di cabang ini.')
             else 
@@ -651,9 +831,6 @@ class _Step3Summary extends StatelessWidget {
   const _Step3Summary({required this.draft});
   final OrderDraft draft;
 
-  String _formatRupiah(int n) =>
-      'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
-
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -661,26 +838,38 @@ class _Step3Summary extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SummaryCard(title: 'Info Pesanan', child: Column(
+          _SummaryCard(title: 'Data Pelanggan', child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Pelanggan: ${draft.customer?.name ?? '-'}', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark)),
-              const SizedBox(height: 4),
-              Text('Sumber: ${draft.chatDari.name} | Tipe: ${draft.tipeCustomer.name}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+              _infoRow('Nama', draft.customer?.name ?? '-'),
+              const SizedBox(height: 8),
+              _infoRow('Telepon', draft.customer?.phone ?? '-'),
+              const SizedBox(height: 8),
+              _infoRow('Alamat', draft.customer?.address ?? '-'),
+              const SizedBox(height: 8),
+              const Divider(color: AppColors.border),
+              const SizedBox(height: 8),
+              _infoRow('Cabang', 'Surabaya'),
+              const SizedBox(height: 8),
+              _infoRow('Sumber Chat', draft.chatDari.name.toUpperCase()),
+              const SizedBox(height: 8),
+              _infoRow('Tipe Customer', draft.tipeCustomer.name.toUpperCase()),
               if (draft.notes.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text('Catatan: ${draft.notes}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+                const SizedBox(height: 8),
+                _infoRow('Keterangan', draft.notes),
               ]
             ],
           )),
           const SizedBox(height: 12),
           _SummaryCard(
-            title: 'Detail Layanan',
-            child: Column(
+            title: 'Layanan Terpilih',
+            child: draft.services.isEmpty
+                ? Text('Belum ada layanan yang dipilih.', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted))
+                : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ...draft.services.map((s) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.only(bottom: 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -688,26 +877,51 @@ class _Step3Summary extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(s.name, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                          Text('-', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(color: AppColors.surfaceBlue, borderRadius: BorderRadius.circular(4)),
+                            child: Text('Harga Menyusul', style: GoogleFonts.inter(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w500)),
+                          ),
                         ],
                       ),
+                      const SizedBox(height: 4),
                       Text('Qty: ${s.qty}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
                     ],
                   ),
                 )),
-                const Divider(height: 16, color: AppColors.border),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Total', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                      Text('Rp 0', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                    ],
-                  ),
               ],
             ),
           ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 20),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Setelah pesanan disimpan, Anda dapat menugaskan cleaner dan menginput total harga.', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 80),
         ],
       ),
+    );
+  }
+
+  Widget _infoRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(width: 100, child: Text(label, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted))),
+        const Text(': ', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+        Expanded(child: Text(value, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textDark))),
+      ],
     );
   }
 }

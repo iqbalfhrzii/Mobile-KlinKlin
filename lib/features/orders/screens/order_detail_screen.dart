@@ -7,6 +7,8 @@ import '../../../core/widgets/badges.dart';
 import '../../../core/data/order_model.dart';
 import '../services/order_service.dart';
 import 'create_order_screen.dart';
+import '../../payment/screens/payment_detail_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   const OrderDetailScreen({super.key, required this.order});
@@ -32,6 +34,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     setState(() => _isLoading = true);
     try {
       final updatedOrder = await _orderService.fetchOrderDetail(_o.id);
+      final prefs = await SharedPreferences.getInstance();
+      final cachedMethod = prefs.getString('order_payment_method_${_o.id}');
+      if (cachedMethod != null && updatedOrder.paymentMethod == '-') {
+        updatedOrder.paymentMethod = cachedMethod;
+      }
       if (mounted) {
         setState(() {
           _o = updatedOrder;
@@ -44,6 +51,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Future<void> _notifyCleaner() async {
+    final hasAssignedCleaner = _o.cleaners.any((c) => c.statusPengerjaan == CleanerWorkStatus.assigned);
+    
+    if (!hasAssignedCleaner) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Semua cleaner sudah dinotifikasi.'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
       await _orderService.notifyCleaner(_o.id);
@@ -70,7 +86,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     final canEdit = o.status == OrderStatus.draft || o.status == OrderStatus.assigned;
     return Scaffold(
       backgroundColor: AppColors.background,
-      bottomNavigationBar: _buildBottomActions(o),
       body: Column(
         children: [
           _buildHeader(context, o, canEdit),
@@ -95,45 +110,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     _buildNotesCard(o),
                   ],
                   const SizedBox(height: 20),
-                  // Cancellation and Payment Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {}, // Optional: implement cancel logic
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            side: const BorderSide(color: AppColors.statusCancel),
-                          ),
-                          child: Text('Batalkan', style: GoogleFonts.inter(
-                            fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.statusCancel,
-                          )),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            try {
-                              context.push('/payment-detail', extra: o.id);
-                            } catch (e) {
-                              context.push('/cash-flow'); // Fallback
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.statusDone,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            elevation: 0,
-                          ),
-                          child: Text('Pembayaran', style: GoogleFonts.inter(
-                            fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white,
-                          )),
-                        ),
-                      ),
-                    ],
-                  ),
+                  _buildProgressCard(o),
+                  const SizedBox(height: 16),
+                  _buildActionButtons(o),
                 ],
               ),
             ),
@@ -217,16 +196,28 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 Text(o.customer.phone, style: GoogleFonts.inter(
                   fontSize: 12, color: AppColors.textMuted,
                 )),
+                const SizedBox(height: 4),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.location_on_outlined, size: 11, color: AppColors.textMuted),
-                    const SizedBox(width: 2),
-                    Expanded(child: Text(o.customer.area, style: GoogleFonts.inter(
-                      fontSize: 11, color: AppColors.textMuted,
-                    ))),
+                    const Icon(Icons.location_on_outlined, size: 13, color: AppColors.textMuted),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(o.customer.address, style: GoogleFonts.inter(
+                            fontSize: 12, color: AppColors.textDark,
+                          )),
+                          Text(o.customer.area, style: GoogleFonts.inter(
+                            fontSize: 11, color: AppColors.textMuted,
+                          )),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(color: AppColors.surfaceBlue, borderRadius: BorderRadius.circular(4)),
@@ -277,16 +268,25 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark,
                     )),
                     if (o.status == OrderStatus.draft || o.status == OrderStatus.assigned) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       InkWell(
                         onTap: () => _showAturLayananSingleModal(o, s),
+                        borderRadius: BorderRadius.circular(12),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.primary),
+                            color: AppColors.surfaceBlue,
+                            border: Border.all(color: AppColors.primary.withOpacity(0.3)),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Text('Atur Harga & Bonus', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.edit_note_rounded, size: 14, color: AppColors.primary),
+                              const SizedBox(width: 4),
+                              Text('Atur Harga & Bonus', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -374,9 +374,36 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Metode', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                Text(o.paymentMethod, style: GoogleFonts.inter(
-                  fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark,
-                )),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(o.paymentMethod, style: GoogleFonts.inter(
+                      fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark,
+                    )),
+                    const SizedBox(width: 8),
+                    if (o.status == OrderStatus.draft || o.status == OrderStatus.assigned)
+                      InkWell(
+                        onTap: () => _showAturMetodePembayaran(o),
+                        borderRadius: BorderRadius.circular(4),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceBlue,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.edit_note_rounded, size: 12, color: AppColors.primary),
+                              const SizedBox(width: 4),
+                              Text('Atur', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -434,92 +461,150 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
-  Widget _buildBottomActions(OrderModel o) {
-    final showAssignBtn = o.status == OrderStatus.draft || o.status == OrderStatus.assigned;
-    final showNotifyBtn = o.status == OrderStatus.assigned && o.cleaners.isNotEmpty;
-
-    if (!showAssignBtn && !showNotifyBtn) return const SizedBox.shrink();
+  Widget _buildProgressCard(OrderModel o) {
+    final hasSchedule = o.services.isNotEmpty && o.services.first.tanggalPengerjaan.isNotEmpty && o.services.first.waktuPengerjaan.isNotEmpty;
+    final hasCleaner = o.cleaners.isNotEmpty;
+    final isPaid = o.paymentStatus == 'paid';
 
     return Container(
-      padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
-      decoration: const BoxDecoration(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
         color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.border)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (showAssignBtn) ...[
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => _showAturJadwalModal(o),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  side: const BorderSide(color: AppColors.primary),
-                ),
-                child: Text('Atur Jadwal', style: GoogleFonts.inter(
-                  fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary,
-                )),
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
-          Row(
+          Text('Progress Pesanan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+          const SizedBox(height: 16),
+          _buildProgressItem('Atur Jadwal', 'Tanggal dan waktu pengerjaan', hasSchedule),
+          const SizedBox(height: 16),
+          _buildProgressItem('Tugaskan Cleaner', 'Cleaner yang akan bertugas', hasCleaner),
+          const SizedBox(height: 16),
+          _buildProgressItem('Status Pembayaran', 'Pelunasan tagihan', isPaid),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressItem(String title, String subtitle, bool isDone) {
+    return Row(
+      children: [
+        Container(
+          width: 32, height: 32,
+          decoration: BoxDecoration(
+            color: isDone ? AppColors.statusDone.withOpacity(0.1) : AppColors.surfaceBlue,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(Icons.check_circle_rounded, color: isDone ? AppColors.statusDone : AppColors.primary.withOpacity(0.3), size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (showAssignBtn)
-                Expanded(
-                  flex: showNotifyBtn ? 1 : 2,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      final hasSchedule = o.services.isNotEmpty && 
-                          o.services.first.tanggalPengerjaan.isNotEmpty && 
-                          o.services.first.waktuPengerjaan.isNotEmpty;
-
-                      if (!hasSchedule) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Silakan Atur Jadwal terlebih dahulu sebelum menugaskan cleaner.'),
-                            backgroundColor: AppColors.error,
-                          ),
-                        );
-                        return;
-                      }
-
-                      _showAssignCleanerModal(o);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                    ),
-                    child: Text(o.cleaners.isEmpty ? 'Tugaskan Cleaner' : 'Ubah Cleaner', style: GoogleFonts.inter(
-                      fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white,
-                    )),
-                  ),
-                ),
-          if (showAssignBtn && showNotifyBtn) const SizedBox(width: 12),
-          if (showNotifyBtn)
-            Expanded(
-              flex: 1,
-              child: ElevatedButton(
-                onPressed: _notifyCleaner,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.surfaceBlue,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.primary)),
-                  elevation: 0,
-                ),
-                child: Text('Notify', style: GoogleFonts.inter(
-                  fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary,
-                )),
-              ),
-            ),
+              Text(title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: isDone ? AppColors.statusDone : AppColors.textDark)),
+              Text(subtitle, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
             ],
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons(OrderModel o) {
+    final hasSchedule = o.services.isNotEmpty && o.services.first.tanggalPengerjaan.isNotEmpty && o.services.first.waktuPengerjaan.isNotEmpty;
+    final hasCleaner = o.cleaners.isNotEmpty;
+    final showNotifyBtn = o.status == OrderStatus.assigned && o.cleaners.isNotEmpty;
+
+    return Column(
+      children: [
+        _buildBigActionBtn(
+          title: 'Atur Jadwal',
+          subtitle: 'Tentukan tanggal & jam pengerjaan',
+          icon: Icons.edit,
+          color: AppColors.statusDone,
+          enabled: true,
+          onTap: () => _showAturJadwalModal(o),
+        ),
+        const SizedBox(height: 12),
+        _buildBigActionBtn(
+          title: o.cleaners.isEmpty ? 'Tugaskan Cleaner' : 'Ubah Cleaner',
+          subtitle: 'Pilih cleaner yang akan bertugas',
+          icon: Icons.edit,
+          color: AppColors.statusDone,
+          enabled: hasSchedule,
+          onTap: () {
+            if (!hasSchedule) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Silakan Atur Jadwal terlebih dahulu.'), backgroundColor: AppColors.error));
+              return;
+            }
+            _showAssignCleanerModal(o);
+          },
+        ),
+        if (showNotifyBtn) ...[
+          const SizedBox(height: 12),
+          _buildBigActionBtn(
+            title: 'Beritahu Cleaner',
+            subtitle: 'Kirim notifikasi tugas',
+            icon: Icons.notifications_active,
+            color: AppColors.statusPending,
+            enabled: true,
+            onTap: _notifyCleaner,
+          ),
         ],
+        const SizedBox(height: 12),
+        _buildBigActionBtn(
+          title: 'Pembayaran',
+          subtitle: 'Langsung menuju halaman pembayaran',
+          icon: Icons.chevron_right,
+          color: AppColors.primary,
+          enabled: true,
+          onTap: () {
+            final hasUnpricedService = o.services.any((s) => s.subtotal <= 0);
+            if (hasUnpricedService || o.total <= 0) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Silakan atur harga untuk semua layanan terlebih dahulu.'), backgroundColor: AppColors.error));
+              return;
+            }
+            Navigator.push(context, MaterialPageRoute(builder: (_) => PaymentDetailScreen(order: o)));
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBigActionBtn({required String title, required String subtitle, required IconData icon, required Color color, required bool enabled, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: enabled ? color : color.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+              child: const Icon(Icons.check_circle, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withOpacity(0.8))),
+                ],
+              ),
+            ),
+            Icon(icon, color: Colors.white, size: 20),
+          ],
+        ),
       ),
     );
   }
@@ -1113,6 +1198,69 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           },
         );
       },
+    );
+  }
+
+  void _showAturMetodePembayaran(OrderModel o) {
+    final methods = [
+      {'id': 'Transfer Bank', 'icon': Icons.account_balance_rounded, 'desc': 'BCA, Mandiri, BRI, dll'},
+      {'id': 'QRIS', 'icon': Icons.qr_code_scanner_rounded, 'desc': 'Scan QR di kasir'},
+      {'id': 'Tunai', 'icon': Icons.payments_rounded, 'desc': 'Bayar langsung ke petugas'},
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 16),
+            Text('Pilih Metode Pembayaran', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+            const SizedBox(height: 16),
+            ...methods.map((m) {
+              final id = m['id'] as String;
+              final icon = m['icon'] as IconData;
+              final desc = m['desc'] as String;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: AppColors.surfaceBlue, borderRadius: BorderRadius.circular(8)),
+                    child: Icon(icon, color: AppColors.primary),
+                  ),
+                  title: Text(id, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                  subtitle: Text(desc, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  onTap: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setString('order_payment_method_${o.id}', id);
+                    setState(() {
+                      o.paymentMethod = id;
+                    });
+                    if (mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Metode pembayaran dipilih sementara'), backgroundColor: AppColors.statusPending));
+                    }
+                  },
+                ),
+              );
+            }).toList(),
+          ],
+        ),
+      ),
     );
   }
 }

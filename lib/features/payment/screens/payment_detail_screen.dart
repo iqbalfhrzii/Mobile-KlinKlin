@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import '../services/payment_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
@@ -19,7 +22,11 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   String _fmt(int n) => 'Rp ${n.toString().replaceAllMapped(
       RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
-  bool get _canAct => _o.paymentStatus == 'unpaid' && _o.status != OrderStatus.cancelled;
+  bool get _isPaid => _o.paymentStatus == 'paid' || _o.paymentStatus == 'approved';
+  bool get _isPending => _o.paymentStatus == 'pending' || _o.status == OrderStatus.waitingPaymentApproval;
+  bool get _isCancelled => _o.paymentStatus == 'cancelled' || _o.paymentStatus == 'rejected' || _o.status == OrderStatus.cancelled;
+
+  bool get _canAct => !_isPaid && !_isPending && !_isCancelled;
 
   @override
   Widget build(BuildContext context) {
@@ -81,24 +88,26 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
 
   // ─── Amount hero card ────────────────────────────────────────────────────
   Widget _buildAmountHero() {
-    final isPaid = _o.paymentStatus == 'paid';
-    final isCancelled = _o.status == OrderStatus.cancelled;
     final Color accent;
     final String statusText;
     final IconData statusIcon;
 
-    if (isCancelled) {
+    if (_isCancelled) {
       accent = AppColors.error;
       statusText = 'Pesanan Dibatalkan';
       statusIcon = Icons.cancel_rounded;
-    } else if (isPaid) {
+    } else if (_isPaid) {
       accent = AppColors.statusDone;
       statusText = 'Pembayaran Lunas';
       statusIcon = Icons.check_circle_rounded;
-    } else {
+    } else if (_isPending) {
       accent = AppColors.statusPending;
-      statusText = 'Menunggu Pembayaran';
+      statusText = 'Menunggu Persetujuan';
       statusIcon = Icons.hourglass_top_rounded;
+    } else {
+      accent = AppColors.primary;
+      statusText = 'Belum Lunas';
+      statusIcon = Icons.payment_rounded;
     }
 
     return Container(
@@ -205,10 +214,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
     ]));
   }
 
-  // ─── Payment info ────────────────────────────────────────────────────────
   Widget _buildPaymentInfo() {
-    final isPaid = _o.paymentStatus == 'paid';
-    final isCancelled = _o.paymentStatus == 'cancelled';
     return _card('Informasi Pembayaran', Column(children: [
       _infoRow('Metode Bayar',
           _o.paymentMethod == '-' ? 'Belum dipilih' : _o.paymentMethod,
@@ -218,13 +224,13 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
       const SizedBox(height: 10),
       _infoRow(
         'Status Pembayaran',
-        isCancelled ? 'Dibatalkan' : isPaid ? 'Lunas' : 'Belum Lunas',
-        icon: isCancelled
+        _isCancelled ? 'Dibatalkan' : _isPaid ? 'Lunas' : _isPending ? 'Menunggu Approval' : 'Belum Lunas',
+        icon: _isCancelled
             ? Icons.cancel_rounded
-            : isPaid ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
-        valueColor: isCancelled
+            : _isPaid ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
+        valueColor: _isCancelled
             ? AppColors.error
-            : isPaid ? AppColors.statusDone : AppColors.statusPending,
+            : _isPaid ? AppColors.statusDone : _isPending ? AppColors.statusPending : AppColors.primary,
       ),
       if (_o.cleaners.isNotEmpty) ...[
         const SizedBox(height: 12),
@@ -362,9 +368,10 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   // ─── PAYMENT SHEET ──────────────────────────────────────────────────────
   void _showPaymentSheet(BuildContext context) {
     final noteCtrl = TextEditingController();
-    bool hasProof = false;
-    bool uploading = false;
-    String proofName = '';
+    File? selectedProof;
+    bool isSubmitting = false;
+    String? errorMsg;
+    final ImagePicker picker = ImagePicker();
     final methods = [
       {'id': 'Transfer Bank', 'icon': Icons.account_balance_rounded, 'desc': 'BCA, Mandiri, BRI, dll'},
       {'id': 'QRIS', 'icon': Icons.qr_code_scanner_rounded, 'desc': 'Scan QR di kasir'},
@@ -571,45 +578,32 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                         color: AppColors.textDark)),
                     const SizedBox(height: 8),
                     GestureDetector(
-                      onTap: () {
-                        setModal(() => uploading = true);
-                        Future.delayed(const Duration(milliseconds: 1200), () {
+                      onTap: isSubmitting ? null : () async {
+                        final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+                        if (picked != null) {
                           setModal(() {
-                            uploading = false;
-                            hasProof = true;
-                            proofName = 'bukti_${_o.id}.jpg';
+                            selectedProof = File(picked.path);
                           });
-                        });
+                        }
                       },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         width: double.infinity,
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: hasProof
+                          color: selectedProof != null
                               ? AppColors.statusDoneBg
                               : AppColors.background,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                            color: hasProof
+                            color: selectedProof != null
                                 ? AppColors.statusDone
                                 : AppColors.border,
-                            width: hasProof ? 1.5 : 1,
+                            width: selectedProof != null ? 1.5 : 1,
                             // Dashed via custom painter below
                           ),
                         ),
-                        child: uploading
-                            ? Column(children: [
-                                const SizedBox(
-                                  width: 24, height: 24,
-                                  child: CircularProgressIndicator(
-                                      color: AppColors.primary, strokeWidth: 2.5),
-                                ),
-                                const SizedBox(height: 8),
-                                Text('Mengupload...', style: GoogleFonts.inter(
-                                    fontSize: 12, color: AppColors.textMuted)),
-                              ])
-                            : hasProof
+                        child: selectedProof != null
                                 ? Row(children: [
                                     Container(
                                       width: 44, height: 44,
@@ -624,10 +618,10 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                     Expanded(child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                      Text(proofName, style: GoogleFonts.inter(
+                                      Text(selectedProof!.path.split('/').last, style: GoogleFonts.inter(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
-                                          color: AppColors.statusDone)),
+                                          color: AppColors.statusDone), maxLines: 1, overflow: TextOverflow.ellipsis),
                                       Text('Tap untuk ganti foto',
                                           style: GoogleFonts.inter(
                                               fontSize: 11,
@@ -660,36 +654,75 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 24),
+                    if (errorMsg != null) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                        ),
+                        child: Row(children: [
+                          const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(errorMsg!, style: GoogleFonts.inter(fontSize: 12, color: AppColors.error))),
+                        ]),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
 
                     // Confirm button
                     GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _o.paymentStatus = 'paid';
-                          _o.paymentMethod = selectedMethod;
-                          _o.paymentProof = hasProof
-                              ? proofName
-                              : 'bukti_${_o.id}.jpg';
+                      onTap: isSubmitting ? null : () async {
+                        if (selectedProof == null) {
+                          setModal(() => errorMsg = 'Harap unggah bukti pembayaran');
+                          return;
+                        }
+                        setModal(() {
+                          isSubmitting = true;
+                          errorMsg = null;
                         });
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Row(children: [
-                              const Icon(Icons.check_circle_rounded,
-                                  color: Colors.white, size: 18),
-                              const SizedBox(width: 8),
-                              Text('Pembayaran ${_o.id} berhasil dicatat!',
-                                  style: GoogleFonts.inter(
-                                      color: Colors.white, fontSize: 13)),
-                            ]),
-                            backgroundColor: AppColors.statusDone,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            margin: const EdgeInsets.all(16),
-                          ),
-                        );
+                        try {
+                          final svc = PaymentService();
+                          
+                          String mappedMethod = 'transfer';
+                          if (selectedMethod == 'QRIS') mappedMethod = 'qris';
+                          if (selectedMethod == 'Tunai') mappedMethod = 'cash';
+
+                          await svc.submitPayment(
+                            orderId: _o.id,
+                            metodePembayaran: mappedMethod,
+                            diskonPersen: 0,
+                            ppn: 0,
+                            totalTagihan: _o.total,
+                            totalSetelahDiskon: _o.total,
+                            totalAkhir: _o.total,
+                            buktiTransfer: selectedProof!,
+                          );
+                          if (!context.mounted) return;
+                          
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(children: [
+                                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                                const SizedBox(width: 8),
+                                Text('Pembayaran ${_o.id} berhasil dikirim!', style: GoogleFonts.inter(color: Colors.white, fontSize: 13)),
+                              ]),
+                              backgroundColor: AppColors.statusDone,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              margin: const EdgeInsets.all(16),
+                            ),
+                          );
+                          Navigator.pop(context, true);
+                        } catch (e) {
+                          setModal(() {
+                            isSubmitting = false;
+                            errorMsg = e.toString().replaceFirst('Exception: ', '');
+                          });
+                        }
                       },
                       child: Container(
                         width: double.infinity,
@@ -707,15 +740,17 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                             ),
                           ],
                         ),
-                        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                          const Icon(Icons.check_rounded, color: Colors.white, size: 20),
-                          const SizedBox(width: 8),
-                          Text('Tandai Lunas · ${_fmt(_o.total)}',
-                              style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white)),
-                        ]),
+                        child: isSubmitting 
+                           ? const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)))
+                           : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                              const Icon(Icons.check_rounded, color: Colors.white, size: 20),
+                              const SizedBox(width: 8),
+                              Text('Konfirmasi & Kirim · ${_fmt(_o.total)}',
+                                  style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white)),
+                            ]),
                       ),
                     ),
                   ]),

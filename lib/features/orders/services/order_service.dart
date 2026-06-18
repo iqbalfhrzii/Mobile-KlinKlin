@@ -181,15 +181,8 @@ class OrderService {
                   if (pesanan != null && pesanan['details'] != null && pesanan['details'] is List) {
                     for (var detail in pesanan['details']) {
                       if (detail['tanggal_pengerjaan'] == tanggal) {
-                        String jWaktu = detail['waktu_pengerjaan']?.toString() ?? '';
-                        if (jWaktu.contains(':')) {
-                          final tParts = jWaktu.split(':');
-                          if (tParts.length >= 2) jWaktu = '${tParts[0].padLeft(2, '0')}:${tParts[1].padLeft(2, '0')}';
-                        }
-                        if (jWaktu == fWaktu) {
-                          c['status_pengerjaan'] = job['status_pengerjaan']?.toString() ?? 'free';
-                          break;
-                        }
+                        c['status_pengerjaan'] = job['status_pengerjaan']?.toString() ?? 'free';
+                        break;
                       }
                     }
                   }

@@ -3,9 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
-import '../../../core/data/mock_data.dart';
 import '../../../core/data/order_model.dart';
 import '../../../core/widgets/weekly_date_picker.dart';
+import '../../orders/services/order_service.dart';
 import 'payment_detail_screen.dart';
 
 class PaymentScreen extends StatefulWidget {
@@ -27,9 +27,36 @@ class _PaymentScreenState extends State<PaymentScreen> {
       RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
 
+  List<OrderModel> _allOrders = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    try {
+      final svc = OrderService();
+      final orders = await svc.fetchOrders();
+      setState(() {
+        _allOrders = orders;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error)
+        );
+      }
+    }
+  }
 
   List<OrderModel> get _filtered {
-    return mockOrders.where((o) {
+    return _allOrders.where((o) {
       final q = _query.toLowerCase();
       final matchQ = o.id.toLowerCase().contains(q) ||
           o.customer.name.toLowerCase().contains(q) ||
@@ -53,11 +80,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   List<OrderModel> get _pending =>
-      _filtered.where((o) => o.paymentStatus == 'unpaid').toList();
+      _filtered.where((o) => o.paymentStatus == 'unpaid' || o.paymentStatus == 'pending' || o.status == OrderStatus.waitingPaymentApproval).toList();
   List<OrderModel> get _paid =>
-      _filtered.where((o) => o.paymentStatus == 'paid').toList();
+      _filtered.where((o) => o.paymentStatus == 'paid' || o.paymentStatus == 'approved').toList();
   List<OrderModel> get _cancelled =>
-      _filtered.where((o) => o.status == 'cancelled').toList();
+      _filtered.where((o) => o.status == OrderStatus.cancelled || o.paymentStatus == 'cancelled' || o.paymentStatus == 'rejected').toList();
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +94,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
         children: [
           _buildHeader(),
           Expanded(
-            child: SingleChildScrollView(
+            child: _isLoading 
+                ? const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator(color: AppColors.primary)))
+                : SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,10 +246,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
   ]);
 
   Future<void> _openDetail(BuildContext context, OrderModel order) async {
-    await Navigator.push(context, MaterialPageRoute(
+    final result = await Navigator.push(context, MaterialPageRoute(
       builder: (_) => PaymentDetailScreen(order: order),
     ));
-    setState(() {});
+    if (result == true) {
+      _loadData();
+    }
   }
 }
 
@@ -235,8 +266,10 @@ class _PaymentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isCancelled = order.status == 'cancelled';
-    final isPaid = order.paymentStatus == 'paid';
+    final isCancelled = order.status == OrderStatus.cancelled || order.paymentStatus == 'cancelled' || order.paymentStatus == 'rejected';
+    final isPaid = order.paymentStatus == 'paid' || order.paymentStatus == 'approved';
+    final isPending = order.paymentStatus == 'pending' || order.status == OrderStatus.waitingPaymentApproval;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -297,16 +330,16 @@ class _PaymentCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isCancelled
                     ? const Color(0xFFFEF2F2)
-                    : isPaid ? AppColors.statusDoneBg : AppColors.statusPendingBg,
+                    : isPaid ? AppColors.statusDoneBg : isPending ? AppColors.statusPendingBg : AppColors.surfaceBlue,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                isCancelled ? 'Batal' : isPaid ? 'Lunas' : 'Belum',
+                isCancelled ? 'Batal' : isPaid ? 'Lunas' : isPending ? 'Menunggu Approval' : 'Belum',
                 style: GoogleFonts.inter(
                   fontSize: 11, fontWeight: FontWeight.w700,
                   color: isCancelled
                       ? AppColors.error
-                      : isPaid ? AppColors.statusDone : AppColors.statusPending,
+                      : isPaid ? AppColors.statusDone : isPending ? AppColors.statusPending : AppColors.primary,
                 ),
               ),
             ),

@@ -309,12 +309,12 @@ class OrderModel {
       cleaners: parsedCleaners,
       status: _parseOrderStatus(json['status_pesanan']),
       total: json['subtotal'] != null ? (double.tryParse(json['subtotal'].toString())?.toInt() ?? computedTotal) : computedTotal,
-      paymentMethod: json['metode_pembayaran'] ?? '-',
-      paymentStatus: json['status_pembayaran'] ?? 'unpaid',
+      paymentMethod: json['pembayaran']?['metode_pembayaran'] ?? json['metode_pembayaran'] ?? '-',
+      paymentStatus: json['pembayaran']?['status_pembayaran'] ?? json['status_pembayaran'] ?? 'unpaid',
       notes: json['keterangan_order'] ?? '',
       tanggalInput: json['tanggal_input'] != null ? DateTime.tryParse(json['tanggal_input']) ?? DateTime.now() : DateTime.now(),
       cancelReason: json['alasan_batal'],
-      paymentProof: json['file_invoice'],
+      paymentProof: json['pembayaran']?['bukti_transfer'] ?? json['file_invoice'],
     );
   }
 
@@ -349,6 +349,7 @@ class OrderDraft {
   List<ServiceItem> services;
   List<OrderCleaner> cleaners;
   String notes;
+  String? paymentMethod;
 
   int get total => services.fold(0, (sum, s) => sum + s.subtotal);
 
@@ -360,6 +361,7 @@ class OrderDraft {
       'tipe_customer': tipeCustomer.name,
       'keterangan_order': notes,
       'details': services.map((e) => e.toJson()).toList(),
+      if (paymentMethod != null) 'metode_pembayaran': paymentMethod,
     };
   }
 }
