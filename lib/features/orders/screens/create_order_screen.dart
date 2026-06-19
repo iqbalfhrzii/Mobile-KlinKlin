@@ -877,11 +877,6 @@ class _Step3Summary extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(s.name, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(color: AppColors.surfaceBlue, borderRadius: BorderRadius.circular(4)),
-                            child: Text('Harga Menyusul', style: GoogleFonts.inter(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w500)),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -904,7 +899,7 @@ class _Step3Summary extends StatelessWidget {
               children: [
                 const Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 20),
                 const SizedBox(width: 12),
-                Expanded(child: Text('Setelah pesanan disimpan, Anda dapat menugaskan cleaner dan menginput total harga.', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark))),
+                Expanded(child: Text('Setelah pesanan disimpan, Anda dapat menugaskan petugas kebersihan (cleaner).', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark))),
               ],
             ),
           ),

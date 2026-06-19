@@ -124,6 +124,38 @@ class OrderService {
     }
   }
 
+  /// Tambah Bonus Manual / Non-Layanan ke Cleaner
+  Future<void> addManualBonus(String pesananId, String pesananCleanerId, int nominal, String keterangan) async {
+    try {
+      final response = await _dio.post('/pesanan/$pesananId/bonus-manual', data: {
+        'items': [
+          {
+            'pesanan_cleaner_id': int.tryParse(pesananCleanerId) ?? pesananCleanerId,
+            'nominal': nominal,
+            if (keterangan.isNotEmpty) 'keterangan': keterangan,
+          }
+        ]
+      });
+      if (response.data is Map && response.data['status'] == false) {
+        throw Exception(response.data['message'] ?? 'Gagal memproses bonus dari server');
+      }
+    } catch (e) {
+      if (e is DioException) {
+        final resData = e.response?.data;
+        String errMsg = 'Terjadi kesalahan sistem';
+        if (resData is Map && resData.containsKey('message')) {
+          errMsg = resData['message'].toString();
+        } else if (resData != null) {
+          errMsg = 'Status ${e.response?.statusCode}: format response tidak dikenali';
+        } else {
+          errMsg = e.message ?? 'Unknown DioException';
+        }
+        throw Exception('Gagal menambah bonus: $errMsg');
+      }
+      throw Exception('Gagal menambah bonus: $e');
+    }
+  }
+
   /// Fetch Layanan
   Future<List<Map<String, dynamic>>> fetchLayanan() async {
     try {

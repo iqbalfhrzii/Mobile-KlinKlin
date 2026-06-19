@@ -217,7 +217,9 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   Widget _buildPaymentInfo() {
     return _card('Informasi Pembayaran', Column(children: [
       _infoRow('Metode Bayar',
-          _o.paymentMethod == '-' ? 'Belum dipilih' : _o.paymentMethod,
+          _o.paymentMethod == '-' 
+            ? 'Belum dipilih' 
+            : _o.paymentMethod.replaceAll('_', ' ').split(' ').map((s) => s.isNotEmpty ? '${s[0].toUpperCase()}${s.substring(1)}' : '').join(' '),
           icon: Icons.payment_rounded),
       const SizedBox(height: 10),
       Container(height: 1, color: AppColors.border),
@@ -368,17 +370,22 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   // ─── PAYMENT SHEET ──────────────────────────────────────────────────────
   void _showPaymentSheet(BuildContext context) {
     final noteCtrl = TextEditingController();
+    final diskonCtrl = TextEditingController();
+    final ppnCtrl = TextEditingController();
     File? selectedProof;
     bool isSubmitting = false;
     String? errorMsg;
     final ImagePicker picker = ImagePicker();
     final methods = [
-      {'id': 'Transfer Bank', 'icon': Icons.account_balance_rounded, 'desc': 'BCA, Mandiri, BRI, dll'},
+      {'id': 'Transfer BCA', 'icon': Icons.account_balance_rounded, 'desc': 'BCA 8640679949 a.n KLINKLIN INDONESIA GROUP'},
+      {'id': 'Transfer Mandiri', 'icon': Icons.account_balance_rounded, 'desc': 'Mandiri 1780022255554 a.n KLINKLIN INDONESIA GROUP'},
       {'id': 'QRIS', 'icon': Icons.qr_code_scanner_rounded, 'desc': 'Scan QR di kasir'},
       {'id': 'Tunai', 'icon': Icons.payments_rounded, 'desc': 'Bayar langsung ke petugas'},
     ];
-    String selectedMethod =
-        _o.paymentMethod == '-' ? 'Transfer Bank' : _o.paymentMethod;
+    String selectedMethod = 'Transfer BCA';
+    if (_o.paymentMethod.toLowerCase().contains('mandiri')) selectedMethod = 'Transfer Mandiri';
+    else if (_o.paymentMethod.toLowerCase().contains('qris')) selectedMethod = 'QRIS';
+    else if (_o.paymentMethod.toLowerCase().contains('cash') || _o.paymentMethod.toLowerCase().contains('tunai')) selectedMethod = 'Tunai';
 
     showModalBottomSheet(
       context: context,
@@ -386,6 +393,12 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModal) {
+          int diskonPersen = int.tryParse(diskonCtrl.text) ?? 0;
+          int ppnPersen = int.tryParse(ppnCtrl.text) ?? 0;
+          int diskonNominal = (_o.total * diskonPersen / 100).round();
+          int setelahDiskon = _o.total - diskonNominal;
+          int ppnNominal = (setelahDiskon * ppnPersen / 100).round();
+          int totalAkhir = setelahDiskon + ppnNominal;
           return Container(
             decoration: const BoxDecoration(
               color: AppColors.surface,
@@ -451,13 +464,61 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                         Text('Total yang harus dibayar',
                             style: GoogleFonts.inter(
                                 fontSize: 12, color: AppColors.textMuted)),
-                        Text(_fmt(_o.total),
+                        Text(_fmt(totalAkhir),
                             style: GoogleFonts.inter(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.primary)),
                       ]),
                     ),
+
+                    // Diskon dan PPN
+                    Row(children: [
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text('Diskon (%)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: diskonCtrl,
+                            keyboardType: TextInputType.number,
+                            onChanged: (_) => setModal(() {}),
+                            style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
+                            decoration: InputDecoration(
+                              hintText: '0',
+                              filled: true,
+                              fillColor: AppColors.background,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
+                            ),
+                          ),
+                        ]),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text('PPN (%)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: ppnCtrl,
+                            keyboardType: TextInputType.number,
+                            onChanged: (_) => setModal(() {}),
+                            style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
+                            decoration: InputDecoration(
+                              hintText: '0',
+                              filled: true,
+                              fillColor: AppColors.background,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
+                            ),
+                          ),
+                        ]),
+                      ),
+                    ]),
+                    const SizedBox(height: 16),
 
                     // Method selector
                     Text('Metode Pembayaran', style: GoogleFonts.inter(
@@ -686,18 +747,19 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                         try {
                           final svc = PaymentService();
                           
-                          String mappedMethod = 'transfer';
+                          String mappedMethod = 'transfer_bca';
                           if (selectedMethod == 'QRIS') mappedMethod = 'qris';
-                          if (selectedMethod == 'Tunai') mappedMethod = 'cash';
+                          else if (selectedMethod == 'Tunai') mappedMethod = 'cash';
+                          else if (selectedMethod == 'Transfer Mandiri') mappedMethod = 'transfer_mandiri';
 
                           await svc.submitPayment(
                             orderId: _o.id,
                             metodePembayaran: mappedMethod,
-                            diskonPersen: 0,
-                            ppn: 0,
+                            diskonPersen: diskonPersen,
+                            ppn: ppnPersen,
                             totalTagihan: _o.total,
-                            totalSetelahDiskon: _o.total,
-                            totalAkhir: _o.total,
+                            totalSetelahDiskon: setelahDiskon,
+                            totalAkhir: totalAkhir,
                             buktiTransfer: selectedProof!,
                           );
                           if (!context.mounted) return;
@@ -745,7 +807,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                            : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                               const Icon(Icons.check_rounded, color: Colors.white, size: 20),
                               const SizedBox(width: 8),
-                              Text('Konfirmasi & Kirim · ${_fmt(_o.total)}',
+                              Text('Konfirmasi & Kirim · ${_fmt(totalAkhir)}',
                                   style: GoogleFonts.inter(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w700,
@@ -1036,19 +1098,34 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
 
   Widget _infoRow(String label, String value,
       {IconData? icon, Color? valueColor}) {
-    return Row(children: [
-      if (icon != null) ...[
-        Icon(icon,
-            size: 14,
-            color: valueColor ?? AppColors.textMuted),
-        const SizedBox(width: 6),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (icon != null) ...[
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(icon,
+                size: 14,
+                color: valueColor ?? AppColors.textMuted),
+          ),
+          const SizedBox(width: 6),
+        ],
+        Expanded(
+          flex: 2,
+          child: Text(label, style: GoogleFonts.inter(
+              fontSize: 12, color: AppColors.textMuted)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 3,
+          child: Text(value, 
+            textAlign: TextAlign.right,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: valueColor ?? AppColors.textDark)),
+        ),
       ],
-      Expanded(child: Text(label, style: GoogleFonts.inter(
-          fontSize: 12, color: AppColors.textMuted))),
-      Text(value, style: GoogleFonts.inter(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: valueColor ?? AppColors.textDark)),
-    ]);
+    );
   }
 }

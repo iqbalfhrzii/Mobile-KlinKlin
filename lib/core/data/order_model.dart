@@ -210,6 +210,7 @@ class OrderCustomer {
 class OrderCleaner {
   OrderCleaner({
     required this.id,
+    required this.pesananCleanerId,
     required this.name,
     required this.rating,
     this.statusPengerjaan = CleanerWorkStatus.assigned,
@@ -218,6 +219,7 @@ class OrderCleaner {
   });
 
   String id;
+  String pesananCleanerId;
   String name;
   double rating;
   CleanerWorkStatus statusPengerjaan;
@@ -232,6 +234,7 @@ class OrderCleaner {
 
     return OrderCleaner(
       id: cleaner['id']?.toString() ?? json['id']?.toString() ?? '',
+      pesananCleanerId: json['id']?.toString() ?? '',
       name: cleaner['nama'] ?? '-',
       rating: cleaner['rating'] != null ? double.tryParse(cleaner['rating'].toString()) ?? 0.0 : 0.0,
       statusPengerjaan: _parseCleanerWorkStatus(json['status_pengerjaan']),

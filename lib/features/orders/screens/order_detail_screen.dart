@@ -99,7 +99,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   _buildServicesCard(o),
                   if (o.cleaners.isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    ...o.cleaners.expand((c) => [_buildCleanerCard(c), const SizedBox(height: 12)]).take(o.cleaners.length * 2 - 1),
+                    ...o.cleaners.expand((c) => [_buildCleanerCard(o, c), const SizedBox(height: 12)]).take(o.cleaners.length * 2 - 1),
                     const SizedBox(height: 12),
                     _buildAlokasiBonusButton(o),
                   ],
@@ -284,7 +284,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             children: [
                               const Icon(Icons.edit_note_rounded, size: 14, color: AppColors.primary),
                               const SizedBox(width: 4),
-                              Text('Atur Harga & Bonus', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                              Text('Atur Qty', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary)),
                             ],
                           ),
                         ),
@@ -312,7 +312,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
-  Widget _buildCleanerCard(OrderCleaner cleaner) {
+  Widget _buildCleanerCard(OrderModel o, OrderCleaner cleaner) {
     return _card(
       title: 'Petugas Kebersihan',
       child: Row(
@@ -344,21 +344,173 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   ],
                 ),
                 if (cleaner.totalBonus > 0)
-                  Text('Total Bonus: ${_formatRupiah(cleaner.totalBonus)}', style: GoogleFonts.inter(fontSize: 11, color: AppColors.statusDone)),
+                  Text('Total Bonus: ${_formatRupiah(cleaner.totalBonus)}', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.statusDone)),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: cleaner.statusPengerjaan == CleanerWorkStatus.finished ? AppColors.statusDoneBg : AppColors.surfaceBlue,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(cleaner.statusPengerjaan.name, style: GoogleFonts.inter(
-              fontSize: 11, fontWeight: FontWeight.w600, color: cleaner.statusPengerjaan == CleanerWorkStatus.finished ? AppColors.statusDone : AppColors.primary,
-            )),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: cleaner.statusPengerjaan == CleanerWorkStatus.finished ? AppColors.statusDoneBg : AppColors.surfaceBlue,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(cleaner.statusPengerjaan.name, style: GoogleFonts.inter(
+                  fontSize: 11, fontWeight: FontWeight.w600, color: cleaner.statusPengerjaan == CleanerWorkStatus.finished ? AppColors.statusDone : AppColors.primary,
+                )),
+              ),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () => _showAddBonusSheet(o, cleaner),
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.add_circle_outline_rounded, size: 12, color: AppColors.primary),
+                      const SizedBox(width: 4),
+                      Text('Bonus', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  void _showAddBonusSheet(OrderModel o, OrderCleaner cleaner) {
+    if (cleaner.pesananCleanerId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ID Cleaner tidak valid (belum tersimpan di database)')));
+      return;
+    }
+
+    final nominalCtrl = TextEditingController();
+    final noteCtrl = TextEditingController();
+    bool isSubmitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalCtx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(modalCtx).viewInsets.bottom),
+        child: StatefulBuilder(
+          builder: (stateCtx, setModalState) {
+            return Container(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+              decoration: const BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)))),
+                  const SizedBox(height: 20),
+                  Text('Beri Bonus', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                  Text(cleaner.name, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
+                  const SizedBox(height: 16),
+
+                  Text('Nominal (Rp)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: nominalCtrl,
+                    keyboardType: TextInputType.number,
+                    style: GoogleFonts.inter(fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: 'Misal: 20000',
+                      filled: true,
+                      fillColor: AppColors.background,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  Text('Keterangan', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: noteCtrl,
+                    maxLines: 2,
+                    style: GoogleFonts.inter(fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'Catatan tambahan (opsional)',
+                      filled: true,
+                      fillColor: AppColors.background,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      onPressed: isSubmitting ? null : () async {
+                        final nominalText = nominalCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
+                        if (nominalText.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Nominal bonus wajib diisi')));
+                          return;
+                        }
+
+                        setModalState(() => isSubmitting = true);
+                        try {
+                          await _orderService.addManualBonus(o.id, cleaner.pesananCleanerId, int.parse(nominalText), noteCtrl.text.trim());
+                          if (!context.mounted) return;
+                          Navigator.pop(modalCtx);
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bonus berhasil ditambahkan!'), backgroundColor: AppColors.statusDone));
+                          _fetchDetail();
+                        } catch (e) {
+                          setModalState(() => isSubmitting = false);
+                          showDialog(
+                            context: modalCtx,
+                            builder: (dialogCtx) => AlertDialog(
+                              title: const Text('Gagal'),
+                              content: Text(e.toString().replaceFirst('Exception: ', '')),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(dialogCtx),
+                                  child: const Text('OK'),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                      },
+                      child: isSubmitting 
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Text('Simpan Bonus', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
       ),
     );
   }
@@ -562,11 +714,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           color: AppColors.primary,
           enabled: true,
           onTap: () {
-            final hasUnpricedService = o.services.any((s) => s.subtotal <= 0);
-            if (hasUnpricedService || o.total <= 0) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Silakan atur harga untuk semua layanan terlebih dahulu.'), backgroundColor: AppColors.error));
-              return;
-            }
             Navigator.push(context, MaterialPageRoute(builder: (_) => PaymentDetailScreen(order: o)));
           },
         ),
@@ -725,8 +872,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   Future<void> _showAturLayananSingleModal(OrderModel o, ServiceItem targetService) async {
     final qtyCtrl = TextEditingController(text: targetService.qty);
-    final hargaCtrl = TextEditingController(text: targetService.price > 0 ? targetService.price.toString() : '');
-    final bonusCtrl = TextEditingController(text: targetService.bonusLayanan > 0 ? targetService.bonusLayanan.toString() : '');
 
     showModalBottomSheet(
       context: context,
@@ -765,36 +910,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    Text('Harga (Rp)', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: hargaCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        hintText: 'Masukkan Harga...',
-                        prefixText: 'Rp ',
-                        filled: true, fillColor: AppColors.background,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text('Bonus Layanan (Rp)', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: bonusCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        hintText: 'Opsional...',
-                        prefixText: 'Rp ',
-                        filled: true, fillColor: AppColors.background,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -811,11 +926,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           id: s.id,
                           layananId: s.layananId,
                           name: s.name,
-                          price: int.tryParse(hargaCtrl.text) ?? 0,
+                          price: s.price,
                           qty: qtyCtrl.text.isNotEmpty ? qtyCtrl.text : s.qty,
                           tanggalPengerjaan: s.tanggalPengerjaan,
                           waktuPengerjaan: s.waktuPengerjaan,
-                          bonusLayanan: int.tryParse(bonusCtrl.text) ?? 0,
+                          bonusLayanan: s.bonusLayanan,
                         );
                       }
                       return s;

@@ -312,7 +312,10 @@ class _PaymentCard extends StatelessWidget {
               const Icon(Icons.payment_rounded,
                   size: 11, color: AppColors.textMuted),
               const SizedBox(width: 4),
-              Text(order.paymentMethod == '-' ? 'Belum dipilih' : order.paymentMethod,
+              Text(
+                  order.paymentMethod == '-' 
+                      ? 'Belum dipilih' 
+                      : order.paymentMethod.replaceAll('_', ' ').split(' ').map((s) => s.isNotEmpty ? '${s[0].toUpperCase()}${s.substring(1)}' : '').join(' '),
                   style: GoogleFonts.inter(
                       fontSize: 11, color: AppColors.textMuted)),
             ]),

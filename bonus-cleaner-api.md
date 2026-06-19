@@ -83,6 +83,22 @@ Kolom penting:
 - `nominal`
 - `keterangan`
 
+## Catatan Penting untuk Frontend (Ringkas)
+
+- Penyimpanan: setiap bonus disimpan per-cleaner pada relasi `pesanan_cleaners` (lihat kolom `pesanan_cleaner_id` di tabel `bonus_cleaners`). Artinya setiap pesanan dapat memiliki beberapa `pesanan_cleaners`, dan masing-masing `pesanan_cleaner` punya `bonuses` sendiri.
+- Dampak ke pesanan/customer: bonus tidak mengubah `pesanan.subtotal` atau `pembayaran.total_tagihan`. Jangan mengandalkan nilai bonus untuk menghitung tagihan customer.
+- Ketika frontend hanya punya `cleaner_id` (bukan `pesanan_cleaner_id`), backend akan mencocokkan `pesanan_cleaners` yang terkait dengan `pesanan` tersebut dan `cleaner_id` yang dikirim untuk menemukan `pesanan_cleaner_id` yang benar.
+- Untuk bonus manual yang dikirim batch, backend akan menyimpan `nominal` persis seperti yang dikirim frontend, dan `tarif_bonus_cabang_id` akan diset ke `null` (ini menandakan bonus bersifat manual, bukan berasal dari master tarif).
+
+Contoh singkat pemetaan frontend → penyimpanan di DB:
+
+Frontend: `{ "cleaner_id": 7, "nominal": 50000 }`
+
+DB (bonus_cleaners): `{ "pesanan_cleaner_id": 31, "tarif_bonus_cabang_id": null, "nominal": 50000, "keterangan": "Bonus manual" }`
+
+Jika frontend sudah punya `pesanan_cleaner_id`, kirimlah langsung untuk kejelasan dan efisiensi.
+
+
 ## Ringkasan Endpoint
 
 | Method | Endpoint | Fungsi |
@@ -366,6 +382,65 @@ POST /api/pesanan-cleaners/{pesananCleaner}/bonus
   "message": "Tarif bonus cabang untuk jenis bonus ini belum tersedia",
   "data": {}
 }
+
+## 3. Tambah Bonus Manual (Batch) — format frontend baru
+
+### Tujuan
+
+Dipakai ketika frontend ingin mengirim daftar bonus per cleaner sekaligus (manual input nominal per cleaner). Contoh: cashier atau admin mengisi nilai bonus per cleaner lalu submit satu kali.
+
+### Endpoint
+
+```http
+POST /api/pesanan/{pesanan}/bonus-manual
+```
+
+### Request Body (contoh yang diminta frontend)
+
+Jika frontend hanya punya `cleaner_id` dan `bonus` per item:
+
+```json
+{
+  "items": [
+    {"cleaner_id": 7, "nominal": 50000},
+    {"cleaner_id": 8, "nominal": 20000}
+  ]
+}
+```
+
+Atau frontend dapat mengirim langsung `pesanan_cleaner_id` ketika tersedia:
+
+```json
+{
+  "items": [
+    {"pesanan_cleaner_id": 31, "nominal": 50000},
+    {"pesanan_cleaner_id": 32, "nominal": 20000}
+  ]
+}
+```
+
+### Arti Field
+
+| Field | Tipe | Wajib | Catatan |
+| --- | --- | --- | --- |
+| `items` | array | ya | daftar bonus per cleaner |
+| `items.*.cleaner_id` | number | ya salah satu dari dua | cleaner id global — controller akan mencari `pesanan_cleaners` milik `pesanan` tersebut |
+| `items.*.pesanan_cleaner_id` | number | ya salah satu dari dua | id relasi `pesanan_cleaners` (lebih langsung dan disarankan jika tersedia) |
+| `items.*.nominal` | number | ya | nominal final yang akan disimpan di `bonus_cleaners.nominal` |
+| `items.*.keterangan` | string | tidak | catatan tambahan |
+
+### Rule
+
+- pesanan harus berada di status: `assigned`, `in_progress`, atau `finished_by_cleaner`
+- backend akan menyimpan `nominal` yang dikirim frontend langsung ke `bonus_cleaners.nominal`
+- untuk record yang dibuat lewat endpoint ini, `tarif_bonus_cabang_id` akan diset `null` (riwayat bonus tetap tersimpan)
+
+### Success Response
+
+Response akan mirip dengan endpoint lain: `status`, `message`, dan data pesanan yang di-refresh termasuk relasi `cleaners.bonuses`.
+
+---
+
 ```
 
 ## Total Bonus vs Total Pesanan

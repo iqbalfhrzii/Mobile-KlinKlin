@@ -72,7 +72,7 @@ final List<OrderModel> mockOrders = [
     ],
     cleaners: [
       OrderCleaner(
-        id: 'CLN-001', name: 'Ani Rahayu', rating: 4.9,
+        id: 'CLN-001', pesananCleanerId: 'PC-123', name: 'Ani Rahayu', rating: 4.9,
         statusPengerjaan: CleanerWorkStatus.assigned,
         totalBonus: 25000,
         bonuses: [
@@ -105,7 +105,7 @@ final List<OrderModel> mockOrders = [
     ],
     cleaners: [
       OrderCleaner(
-        id: 'CLN-002', name: 'Dewi Safitri', rating: 4.8,
+        id: 'CLN-002', pesananCleanerId: 'PC-124', name: 'Dewi Safitri', rating: 4.8,
         statusPengerjaan: CleanerWorkStatus.finished,
         totalBonus: 10000,
         bonuses: [
