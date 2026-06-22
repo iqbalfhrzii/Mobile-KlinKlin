@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
@@ -22,6 +23,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   final OrderService _orderService = OrderService();
   late OrderModel _o;
   bool _isLoading = false;
+
+  bool get _canEdit {
+    final status = _o.status;
+    return status == OrderStatus.draft || 
+           status == OrderStatus.assigned || 
+           status == OrderStatus.inProgress || 
+           status == OrderStatus.finishedByCleaner;
+  }
 
   @override
   void initState() {
@@ -83,37 +92,44 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final o = _o;
-    final canEdit = o.status == OrderStatus.draft || o.status == OrderStatus.assigned;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Column(
         children: [
-          _buildHeader(context, o, canEdit),
+          _buildHeader(context, o, _canEdit),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              child: Column(
-                children: [
-                  _buildCustomerCard(o),
-                  const SizedBox(height: 12),
-                  _buildServicesCard(o),
-                  if (o.cleaners.isNotEmpty) ...[
+            child: RefreshIndicator(
+              onRefresh: _fetchDetail,
+              color: AppColors.primary,
+              backgroundColor: AppColors.surface,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                child: Column(
+                  children: [
+                    _buildCustomerCard(o),
                     const SizedBox(height: 12),
-                    ...o.cleaners.expand((c) => [_buildCleanerCard(o, c), const SizedBox(height: 12)]).take(o.cleaners.length * 2 - 1),
+                    _buildServicesCard(o),
+                    if (o.cleaners.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      ...o.cleaners.expand((c) => [_buildCleanerCard(o, c), const SizedBox(height: 12)]).take(o.cleaners.length * 2 - 1),
+                      if (_canEdit) ...[
+                        const SizedBox(height: 12),
+                        _buildAlokasiBonusButton(o),
+                      ],
+                    ],
                     const SizedBox(height: 12),
-                    _buildAlokasiBonusButton(o),
+                    _buildPaymentCard(o),
+                    if (o.notes.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _buildNotesCard(o),
+                    ],
+                    const SizedBox(height: 20),
+                    _buildProgressCard(o),
+                    const SizedBox(height: 16),
+                    _buildActionButtons(o),
                   ],
-                  const SizedBox(height: 12),
-                  _buildPaymentCard(o),
-                  if (o.notes.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    _buildNotesCard(o),
-                  ],
-                  const SizedBox(height: 20),
-                  _buildProgressCard(o),
-                  const SizedBox(height: 16),
-                  _buildActionButtons(o),
-                ],
+                ),
               ),
             ),
           ),
@@ -267,7 +283,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     Text(_formatRupiah(s.subtotal), style: GoogleFonts.inter(
                       fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark,
                     )),
-                    if (o.status == OrderStatus.draft || o.status == OrderStatus.assigned) ...[
+                    if (_canEdit) ...[
                       const SizedBox(height: 6),
                       InkWell(
                         onTap: () => _showAturLayananSingleModal(o, s),
@@ -284,7 +300,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             children: [
                               const Icon(Icons.edit_note_rounded, size: 14, color: AppColors.primary),
                               const SizedBox(width: 4),
-                              Text('Atur Qty', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                              Text('Atur Qty / Harga', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary)),
                             ],
                           ),
                         ),
@@ -361,9 +377,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   fontSize: 11, fontWeight: FontWeight.w600, color: cleaner.statusPengerjaan == CleanerWorkStatus.finished ? AppColors.statusDone : AppColors.primary,
                 )),
               ),
-              const SizedBox(height: 8),
-              InkWell(
-                onTap: () => _showAddBonusSheet(o, cleaner),
+              if (_canEdit) ...[
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () => _showAddBonusSheet(o, cleaner),
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -382,6 +399,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   ),
                 ),
               ),
+              ],
             ],
           ),
         ],
@@ -533,7 +551,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark,
                     )),
                     const SizedBox(width: 8),
-                    if (o.status == OrderStatus.draft || o.status == OrderStatus.assigned)
+                    if (_canEdit)
                       InkWell(
                         onTap: () => _showAturMetodePembayaran(o),
                         borderRadius: BorderRadius.circular(4),
@@ -668,45 +686,54 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   Widget _buildActionButtons(OrderModel o) {
     final hasSchedule = o.services.isNotEmpty && o.services.first.tanggalPengerjaan.isNotEmpty && o.services.first.waktuPengerjaan.isNotEmpty;
     final hasCleaner = o.cleaners.isNotEmpty;
-    final showNotifyBtn = o.status == OrderStatus.assigned && o.cleaners.isNotEmpty;
+    final showNotifyBtn = o.cleaners.isNotEmpty && o.status != OrderStatus.completed && o.status != OrderStatus.cancelled;
+    final isPriceQtyValid = o.services.isNotEmpty && o.services.every((s) => s.price > 0 && s.qty.trim().isNotEmpty && s.qty.trim() != '0');
 
     return Column(
       children: [
-        _buildBigActionBtn(
-          title: 'Atur Jadwal',
-          subtitle: 'Tentukan tanggal & jam pengerjaan',
-          icon: Icons.edit,
-          color: AppColors.statusDone,
-          enabled: true,
-          onTap: () => _showAturJadwalModal(o),
-        ),
-        const SizedBox(height: 12),
-        _buildBigActionBtn(
-          title: o.cleaners.isEmpty ? 'Tugaskan Cleaner' : 'Ubah Cleaner',
-          subtitle: 'Pilih cleaner yang akan bertugas',
-          icon: Icons.edit,
-          color: AppColors.statusDone,
-          enabled: hasSchedule,
-          onTap: () {
-            if (!hasSchedule) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Silakan Atur Jadwal terlebih dahulu.'), backgroundColor: AppColors.error));
-              return;
-            }
-            _showAssignCleanerModal(o);
-          },
-        ),
-        if (showNotifyBtn) ...[
+        if (_canEdit) ...[
+          _buildBigActionBtn(
+            title: 'Atur Jadwal',
+            subtitle: 'Tentukan tanggal & jam pengerjaan',
+            icon: Icons.edit,
+            color: AppColors.statusDone,
+            enabled: true,
+            onTap: () => _showAturJadwalModal(o),
+          ),
           const SizedBox(height: 12),
           _buildBigActionBtn(
-            title: 'Beritahu Cleaner',
-            subtitle: 'Kirim notifikasi tugas',
-            icon: Icons.notifications_active,
-            color: AppColors.statusPending,
-            enabled: true,
-            onTap: _notifyCleaner,
+            title: o.cleaners.isEmpty ? 'Tugaskan Cleaner' : 'Ubah Cleaner',
+            subtitle: 'Pilih cleaner yang akan bertugas',
+            icon: Icons.edit,
+            color: AppColors.statusDone,
+            enabled: hasSchedule,
+            onTap: () {
+              if (!hasSchedule) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Silakan Atur Jadwal terlebih dahulu.'), backgroundColor: AppColors.error));
+                return;
+              }
+              _showAssignCleanerModal(o);
+            },
           ),
+          if (showNotifyBtn) ...[
+            const SizedBox(height: 12),
+            _buildBigActionBtn(
+              title: 'Beritahu Cleaner',
+              subtitle: 'Kirim notifikasi tugas',
+              icon: Icons.notifications_active,
+              color: AppColors.statusPending,
+              enabled: isPriceQtyValid,
+              onTap: () {
+                if (!isPriceQtyValid) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Silakan atur Harga dan Qty layanan terlebih dahulu.'), backgroundColor: AppColors.error));
+                  return;
+                }
+                _notifyCleaner();
+              },
+            ),
+          ],
+          const SizedBox(height: 12),
         ],
-        const SizedBox(height: 12),
         _buildBigActionBtn(
           title: 'Pembayaran',
           subtitle: 'Langsung menuju halaman pembayaran',
@@ -723,7 +750,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   Widget _buildBigActionBtn({required String title, required String subtitle, required IconData icon, required Color color, required bool enabled, required VoidCallback onTap}) {
     return GestureDetector(
-      onTap: enabled ? onTap : null,
+      onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(16),
@@ -872,6 +899,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   Future<void> _showAturLayananSingleModal(OrderModel o, ServiceItem targetService) async {
     final qtyCtrl = TextEditingController(text: targetService.qty);
+    final String initialHarga = targetService.price > 0 
+        ? targetService.price.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')
+        : '';
+    final hargaCtrl = TextEditingController(text: initialHarga);
 
     showModalBottomSheet(
       context: context,
@@ -913,6 +944,30 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   ],
                 ),
               ),
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.border)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Harga Layanan', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: hargaCtrl,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [CurrencyInputFormatter()],
+                      decoration: InputDecoration(
+                        hintText: 'Misal: 150.000',
+                        filled: true, fillColor: AppColors.background,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 12),
               ElevatedButton(
                 onPressed: () async {
@@ -926,7 +981,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           id: s.id,
                           layananId: s.layananId,
                           name: s.name,
-                          price: s.price,
+                          price: int.tryParse(hargaCtrl.text.replaceAll('.', '')) ?? s.price,
                           qty: qtyCtrl.text.isNotEmpty ? qtyCtrl.text : s.qty,
                           tanggalPengerjaan: s.tanggalPengerjaan,
                           waktuPengerjaan: s.waktuPengerjaan,
@@ -1318,7 +1373,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   void _showAturMetodePembayaran(OrderModel o) {
     final methods = [
-      {'id': 'Transfer Bank', 'icon': Icons.account_balance_rounded, 'desc': 'BCA, Mandiri, BRI, dll'},
+      {'id': 'Transfer BCA', 'icon': Icons.account_balance_rounded, 'desc': 'BCA 8640679949 a.n KLINKLIN INDONESIA GROUP'},
+      {'id': 'Transfer Mandiri', 'icon': Icons.account_balance_rounded, 'desc': 'Mandiri 1780022255554 a.n KLINKLIN INDONESIA GROUP'},
       {'id': 'QRIS', 'icon': Icons.qr_code_scanner_rounded, 'desc': 'Scan QR di kasir'},
       {'id': 'Tunai', 'icon': Icons.payments_rounded, 'desc': 'Bayar langsung ke petugas'},
     ];
@@ -1376,6 +1432,35 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class CurrencyInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.text.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+    int selectionIndex = newValue.selection.end;
+    String cleanString = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanString.isEmpty) {
+       return newValue.copyWith(text: '');
+    }
+    final int value = int.parse(cleanString);
+    final String formatted = value.toString().replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
+    int diff = formatted.length - newValue.text.length;
+    selectionIndex += diff;
+    if (selectionIndex > formatted.length) {
+      selectionIndex = formatted.length;
+    }
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: selectionIndex),
     );
   }
 }

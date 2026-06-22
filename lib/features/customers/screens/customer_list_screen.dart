@@ -83,29 +83,35 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                           ElevatedButton(onPressed: _fetchData, child: const Text('Coba Lagi')),
                         ],
                       ))
-                    : SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                        child: Column(
-                          children: [
-                            _buildFilter(),
-                            const SizedBox(height: 12),
-                  ..._filtered.map((c) => _CustomerCard(
-                    customer: c,
-                    onTap: () async {
-                      await Navigator.push(context, MaterialPageRoute(
-                        builder: (_) => CustomerDetailScreen(customer: c),
-                      ));
-                      _fetchData();
-                    },
-                  )),
-                  if (_filtered.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 40),
-                      child: Center(child: Text('Tidak ada pelanggan', style: GoogleFonts.inter(
-                        color: AppColors.textMuted,
-                      ))),
-                    ),
-                ],
+                    : RefreshIndicator(
+                        onRefresh: _fetchData,
+                        color: AppColors.primary,
+                        backgroundColor: AppColors.surface,
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                          child: Column(
+                            children: [
+                              _buildFilter(),
+                              const SizedBox(height: 12),
+                    ..._filtered.map((c) => _CustomerCard(
+                      customer: c,
+                      onTap: () async {
+                        await Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => CustomerDetailScreen(customer: c),
+                        ));
+                        _fetchData();
+                      },
+                    )),
+                    if (_filtered.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 40),
+                        child: Center(child: Text('Tidak ada pelanggan', style: GoogleFonts.inter(
+                          color: AppColors.textMuted,
+                        ))),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),

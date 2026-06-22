@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/data/order_model.dart';
+import 'dart:io';
 
 class OrderService {
   final Dio _dio = ApiClient.instance;
@@ -242,6 +243,34 @@ class OrderService {
       await _dio.post('/pesanan/$id/notify-cleaner');
     } catch (e) {
       throw Exception('Gagal mengirim notifikasi ke cleaner: $e');
+    }
+  }
+
+  /// Batalkan pesanan
+  Future<void> cancelOrder(String id, String reason, File proof) async {
+    try {
+      String fileName = proof.path.split('/').last;
+      FormData formData = FormData.fromMap({
+        'alasan_cancel': reason,
+        'bukti_cancel': await MultipartFile.fromFile(proof.path, filename: fileName),
+      });
+
+      final response = await _dio.post('/pesanan/$id/pembatalan', data: formData);
+      if (response.data is Map && response.data['status'] == false) {
+        throw Exception(response.data['message'] ?? 'Gagal membatalkan pesanan');
+      }
+    } catch (e) {
+      if (e is DioException) {
+        final data = e.response?.data;
+        String errMsg = e.message ?? 'Terjadi kesalahan koneksi';
+        if (data is Map<String, dynamic>) {
+          errMsg = data['message'] ?? data.toString();
+        } else if (data != null) {
+          errMsg = data.toString();
+        }
+        throw Exception(errMsg);
+      }
+      throw Exception('Gagal membatalkan pesanan: $e');
     }
   }
 }

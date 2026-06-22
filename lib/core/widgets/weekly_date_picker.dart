@@ -9,6 +9,7 @@ class WeeklyDatePicker extends StatefulWidget {
     this.onSearchChanged,
     this.onSearchSubmit,
     this.searchQuery,
+    this.initialDate,
   });
 
   /// Called when the filter changes.
@@ -19,6 +20,7 @@ class WeeklyDatePicker extends StatefulWidget {
   final ValueChanged<String>? onSearchChanged;
   final VoidCallback? onSearchSubmit;
   final String? searchQuery;
+  final DateTime? initialDate;
 
   @override
   State<WeeklyDatePicker> createState() => _WeeklyDatePickerState();
@@ -39,7 +41,12 @@ class _WeeklyDatePickerState extends State<WeeklyDatePicker> {
   @override
   void initState() {
     super.initState();
-    _currentWeekStart = _getStartOfWeek(DateTime.now());
+    if (widget.initialDate != null) {
+      _currentWeekStart = _getStartOfWeek(widget.initialDate!);
+      _selectedDate = DateTime(widget.initialDate!.year, widget.initialDate!.month, widget.initialDate!.day);
+    } else {
+      _currentWeekStart = _getStartOfWeek(DateTime.now());
+    }
     if (widget.searchQuery != null) {
       _searchCtrl.text = widget.searchQuery!;
     }

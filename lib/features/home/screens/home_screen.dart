@@ -4,10 +4,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
+import 'dart:io';
+import 'dart:convert';
+import 'package:provider/provider.dart';
+import '../../orders/screens/order_list_screen.dart';
 import '../../../core/data/mock_data.dart';
 import '../../../core/services/auth_service.dart';
 import '../../orders/screens/create_order_screen.dart';
 import '../../customers/screens/customer_list_screen.dart';
+import '../../orders/services/order_service.dart';
+import '../../../core/data/order_model.dart';
+import '../../orders/screens/order_detail_screen.dart';
+import '../../profile/screens/kpi_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,17 +25,75 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final stats = mockDashboardStats;
+  bool _isLoadingStats = true;
+  int _omzetThisMonth = 0;
+  int _ordersToday = 0;
+  int _waiting = 0;
+  int _active = 0;
+  int _doneToday = 0;
+  List<OrderModel> _recentOrders = [];
   
   String _userName = 'Memuat...';
   String _userRole = 'Customer Service';
   String _userBranch = '-';
+  String? _userPhoto;
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
+    _loadStats();
     AuthService.profileUpdateNotifier.addListener(_loadProfile);
+  }
+
+  Future<void> _loadStats() async {
+    _loadProfile();
+    try {
+      final orders = await OrderService().fetchOrders();
+      final now = DateTime.now();
+      
+      int omzet = 0;
+      int countToday = 0;
+      int waiting = 0;
+      int active = 0;
+      int done = 0;
+
+      for (var o in orders) {
+        bool isToday = o.scheduleDateTime.year == now.year && o.scheduleDateTime.month == now.month && o.scheduleDateTime.day == now.day;
+        bool isThisMonth = o.scheduleDateTime.year == now.year && o.scheduleDateTime.month == now.month;
+        
+        if (isThisMonth) {
+          omzet += o.total;
+        }
+
+        if (isToday) {
+          countToday++;
+          if (o.status == OrderStatus.completed) done++;
+        }
+
+        if (o.status == OrderStatus.waitingPaymentApproval) {
+            waiting++;
+        }
+
+        if (o.status == OrderStatus.assigned || o.status == OrderStatus.inProgress || o.status == OrderStatus.draft) {
+          active++;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _omzetThisMonth = omzet;
+          _ordersToday = countToday;
+          _waiting = waiting;
+          _active = active;
+          _doneToday = done;
+          _recentOrders = orders.take(3).toList();
+          _isLoadingStats = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingStats = false);
+    }
   }
 
   @override
@@ -42,7 +108,21 @@ class _HomeScreenState extends State<HomeScreen> {
       _userName = prefs.getString('user_name') ?? 'CS';
       _userRole = prefs.getString('user_role') ?? 'Customer Service';
       _userBranch = prefs.getString('user_branch') ?? '-';
+      _userPhoto = prefs.getString('user_photo');
     });
+
+    try {
+      final meResponse = await AuthService.getMe();
+      final me = meResponse['data'] ?? meResponse;
+      if (mounted) {
+        setState(() {
+          _userName = me['nama'] ?? _userName;
+          _userPhoto = me['foto_profil'];
+          _userRole = me['jabatan'] is Map ? me['jabatan']['nama_jabatan'] ?? _userRole : _userRole;
+          _userBranch = me['cabang'] is Map ? me['cabang']['nama_cabang'] ?? _userBranch : _userBranch;
+        });
+      }
+    } catch (_) {}
   }
 
   String _formatRupiah(int n) =>
@@ -56,21 +136,29 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _buildHeader(),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildStatCards(),
-                  const SizedBox(height: 16),
-                  _buildOmzetCard(),
-                  const SizedBox(height: 16),
-                  _buildQuickActions(),
-                  const SizedBox(height: 16),
-                  _buildRecentOrders(),
-                ],
-              ),
-            ),
+            child: _isLoadingStats 
+              ? const Center(child: CircularProgressIndicator())
+              : RefreshIndicator(
+                  onRefresh: _loadStats,
+                  color: AppColors.primary,
+                  backgroundColor: AppColors.surface,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildStatCards(),
+                        const SizedBox(height: 16),
+                        _buildOmzetCard(),
+                        const SizedBox(height: 16),
+                        _buildQuickActions(),
+                        const SizedBox(height: 16),
+                        _buildRecentOrders(),
+                      ],
+                    ),
+                  ),
+                ),
           ),
         ],
       ),
@@ -144,17 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               const Spacer(),
-              // Notif icon
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withOpacity(0.2)),
-                ),
-                child: const Icon(Icons.notifications_outlined, color: Colors.white, size: 20),
-              ),
+              _buildAvatar(),
             ],
           ),
           const SizedBox(height: 16),
@@ -171,10 +249,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Omzet Hari Ini', style: GoogleFonts.inter(
+                    Text('Omzet Bulan Ini', style: GoogleFonts.inter(
                       fontSize: 11, color: Colors.white.withOpacity(0.7),
                     )),
-                    Text(_formatRupiah(stats['omzetToday'] as int), style: GoogleFonts.inter(
+                    Text(_formatRupiah(_omzetThisMonth), style: GoogleFonts.inter(
                       fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white,
                     )),
                   ],
@@ -187,7 +265,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    '+${stats['omzetChange']}%',
+                    'Aktif',
                     style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
                   ),
                 ),
@@ -199,12 +277,45 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildAvatar() {
+    if (_userPhoto == null || _userPhoto!.isEmpty) {
+      return InitialsAvatar(name: _userName, size: 48, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35));
+    }
+    
+    if (_userPhoto!.startsWith('data:image')) {
+      try {
+        final base64Str = _userPhoto!.split(',').last;
+        return ClipOval(child: Image.memory(base64Decode(base64Str), width: 48, height: 48, fit: BoxFit.cover));
+      } catch (_) {
+        return InitialsAvatar(name: _userName, size: 48, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35));
+      }
+    }
+    
+    if (_userPhoto!.startsWith('http')) {
+      return ClipOval(child: Image.network(_userPhoto!, width: 48, height: 48, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 48, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35))));
+    }
+    
+    if (_userPhoto!.startsWith('/')) {
+      return ClipOval(child: Image.file(File(_userPhoto!), width: 48, height: 48, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 48, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35))));
+    }
+    
+    return ClipOval(child: Image.network('http://192.168.1.242:8000/storage/$_userPhoto', width: 48, height: 48, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 48, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35))));
+  }
+
   Widget _buildStatCards() {
     final items = [
-      _Stat('Pesanan Hari Ini', '${stats['ordersToday']}', Icons.receipt_long_rounded, AppColors.primaryMid),
-      _Stat('Menunggu', '${stats['waiting']}', Icons.hourglass_empty_rounded, AppColors.statusPending),
-      _Stat('Dikerjakan', '${stats['inProgress']}', Icons.cleaning_services_rounded, AppColors.statusProgress),
-      _Stat('Selesai', '${stats['doneToday']}', Icons.check_circle_rounded, AppColors.statusDone),
+      _Stat('Pesanan Hari Ini', '$_ordersToday', Icons.receipt_long_rounded, AppColors.primaryMid, onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const OrderListScreen(isTodayOnly: true)));
+      }),
+      _Stat('Menunggu Approve', '$_waiting', Icons.hourglass_empty_rounded, AppColors.statusPending, onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const OrderListScreen(initialStatusFilter: 'waitingPaymentApproval')));
+      }),
+      _Stat('Dikerjakan', '$_active', Icons.cleaning_services_rounded, AppColors.statusProgress, onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const OrderListScreen(initialStatusFilter: 'inProgress')));
+      }),
+      _Stat('Selesai', '$_doneToday', Icons.check_circle_rounded, AppColors.statusDone, onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const OrderListScreen(initialStatusFilter: 'completed')));
+      }),
     ];
 
     return GridView.count(
@@ -219,8 +330,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildOmzetCard() {
-    final omzet = stats['omzetToday'] as int;
-    final target = stats['targetHarian'] as int;
+    final omzet = _omzetThisMonth;
+    final target = 15000000;
     final pct = (omzet / target).clamp(0.0, 1.0);
 
     return Container(
@@ -248,7 +359,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Omzet Hari Ini', style: GoogleFonts.inter(
+                  Text('Omzet Bulan Ini', style: GoogleFonts.inter(
                     fontSize: 12, color: AppColors.textMuted,
                   )),
                   Text(_formatRupiah(omzet), style: GoogleFonts.inter(
@@ -262,7 +373,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Progress target harian', style: GoogleFonts.inter(
+              Text('Progress target bulanan', style: GoogleFonts.inter(
                 fontSize: 11, color: AppColors.textMuted,
               )),
               Text('${(pct * 100).round()}%', style: GoogleFonts.inter(
@@ -293,7 +404,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final actions = [
       _QuickAction('Buat Pesanan', Icons.add_circle_outline_rounded, AppColors.primary, AppColors.surfaceBlue),
       _QuickAction('Kelola Pelanggan', Icons.people_outline_rounded, const Color(0xFF7C3AED), const Color(0xFFEDE9FE)),
-      _QuickAction('Assign Cleaner', Icons.cleaning_services_rounded, const Color(0xFF2E7D32), const Color(0xFFE8F5E9)),
+      _QuickAction('KPI Karyawan', Icons.analytics_rounded, const Color(0xFFE65100), const Color(0xFFFFF3E0)),
     ];
 
     return Column(
@@ -310,6 +421,8 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () {
                 if (a.label == 'Buat Pesanan') {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateOrderScreen()));
+                } else if (a.label == 'KPI Karyawan') {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const KpiScreen()));
                 }
               },
               child: Container(
@@ -343,7 +456,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildRecentOrders() {
-    final orders = mockOrders.take(3).toList();
+    if (_recentOrders.isEmpty) return const SizedBox.shrink();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -359,34 +473,39 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         const SizedBox(height: 10),
-        ...orders.map((o) => Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.border),
-            boxShadow: [AppColors.cardShadow],
-          ),
-          child: Row(
-            children: [
-              InitialsAvatar(name: o.customer.name, size: 38),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(o.customer.name, style: GoogleFonts.inter(
-                      fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark,
-                    )),
-                    Text(o.services.first.name, style: GoogleFonts.inter(
-                      fontSize: 11, color: AppColors.textMuted,
-                    )),
-                  ],
+        ..._recentOrders.map((o) => GestureDetector(
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => OrderDetailScreen(order: o)));
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.border),
+              boxShadow: [AppColors.cardShadow],
+            ),
+            child: Row(
+              children: [
+                InitialsAvatar(name: o.customer.name, size: 38),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(o.customer.name, style: GoogleFonts.inter(
+                        fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark,
+                      )),
+                      Text(o.services.isNotEmpty ? o.services.first.name : 'Pesanan', style: GoogleFonts.inter(
+                        fontSize: 11, color: AppColors.textMuted,
+                      )),
+                    ],
+                  ),
                 ),
-              ),
-              StatusBadge(status: o.status),
-            ],
+                StatusBadge(status: o.status),
+              ],
+            ),
           ),
         )),
       ],
@@ -395,10 +514,11 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _Stat {
-  const _Stat(this.label, this.value, this.icon, this.color);
+  const _Stat(this.label, this.value, this.icon, this.color, {this.onTap});
   final String label, value;
   final IconData icon;
   final Color color;
+  final VoidCallback? onTap;
 }
 
 class _StatCard extends StatelessWidget {
@@ -407,14 +527,17 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [AppColors.cardShadow],
-      ),
+    return InkWell(
+      onTap: stat.onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+          boxShadow: [AppColors.cardShadow],
+        ),
       child: Row(
         children: [
           Container(
@@ -439,6 +562,7 @@ class _StatCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
       ),
     );
   }

@@ -6,6 +6,8 @@ import '../../shell/main_shell.dart';
 import '../../../core/services/auth_service.dart';
 
 import 'change_pin_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../cleaner/shell/cleaner_main_shell.dart';
 
 class PinScreen extends StatefulWidget {
   const PinScreen({super.key, required this.email});
@@ -39,19 +41,48 @@ class _PinScreenState extends State<PinScreen> {
     try {
       final res = await AuthService.login(widget.email, _pin);
       if (mounted) {
+        String roleName = '';
+        if (res['data'] != null && res['data']['jabatan'] != null) {
+          final jab = res['data']['jabatan'];
+          if (jab is Map) {
+            roleName = (jab['nama_jabatan'] ?? '').toString().toLowerCase();
+          } else {
+            roleName = jab.toString().toLowerCase();
+          }
+        }
+        
+        final isCleaner = roleName.contains('cleaner');
+
         if (res['wajib_ganti_pin'] == true) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => MainShell(
-              requirePinChange: true,
-              currentPin: _pin,
-            )),
-            (route) => false,
-          );
+          if (isCleaner) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => CleanerMainShell(
+                requirePinChange: true,
+                currentPin: _pin,
+              )),
+              (route) => false,
+            );
+          } else {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => MainShell(
+                requirePinChange: true,
+                currentPin: _pin,
+              )),
+              (route) => false,
+            );
+          }
         } else {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const MainShell()),
-            (route) => false,
-          );
+          if (isCleaner) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const CleanerMainShell()),
+              (route) => false,
+            );
+          } else {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const MainShell()),
+              (route) => false,
+            );
+          }
         }
       }
     } catch (e) {

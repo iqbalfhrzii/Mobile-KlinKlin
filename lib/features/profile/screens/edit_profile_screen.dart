@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -37,7 +38,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 60,
+      maxWidth: 1024,
+      maxHeight: 1024,
+    );
     if (pickedFile != null) {
       setState(() {
         _photoPath = pickedFile.path;
@@ -102,20 +108,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             child: Stack(
                               alignment: Alignment.bottomRight,
                               children: [
-                                if (_photoPath != null && _photoPath!.isNotEmpty)
-                                  ClipOval(
-                                    child: Image.file(
-                                      File(_photoPath!),
-                                      width: 100,
-                                      height: 100,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  )
-                                else
-                                  InitialsAvatar(
-                                    name: _nameController.text.isEmpty ? 'CS' : _nameController.text,
-                                    size: 100,
-                                  ),
+                                _buildAvatar(),
                                 Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
@@ -191,5 +184,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ],
             ),
     );
+  }
+
+  Widget _buildAvatar() {
+    final nameFallback = _nameController.text.isEmpty ? 'CS' : _nameController.text;
+    if (_photoPath == null || _photoPath!.isEmpty) {
+      return InitialsAvatar(name: nameFallback, size: 100);
+    }
+    
+    if (_photoPath!.startsWith('data:image')) {
+      try {
+        final base64Str = _photoPath!.split(',').last;
+        return ClipOval(child: Image.memory(base64Decode(base64Str), width: 100, height: 100, fit: BoxFit.cover));
+      } catch (_) {
+        return InitialsAvatar(name: nameFallback, size: 100);
+      }
+    }
+    
+    if (_photoPath!.startsWith('http')) {
+      return ClipOval(child: Image.network(_photoPath!, width: 100, height: 100, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: nameFallback, size: 100)));
+    }
+    
+    if (_photoPath!.startsWith('/')) {
+      return ClipOval(child: Image.file(File(_photoPath!), width: 100, height: 100, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: nameFallback, size: 100)));
+    }
+    
+    return ClipOval(child: Image.network('http://192.168.1.242:8000/storage/$_photoPath', width: 100, height: 100, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: nameFallback, size: 100)));
   }
 }

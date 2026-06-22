@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/payment_service.dart';
+import '../../orders/services/order_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
@@ -23,10 +24,11 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
       RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
   bool get _isPaid => _o.paymentStatus == 'paid' || _o.paymentStatus == 'approved';
+  bool get _isWaitingCancel => _o.status == OrderStatus.waitingCancelApproval;
   bool get _isPending => _o.paymentStatus == 'pending' || _o.status == OrderStatus.waitingPaymentApproval;
   bool get _isCancelled => _o.paymentStatus == 'cancelled' || _o.paymentStatus == 'rejected' || _o.status == OrderStatus.cancelled;
 
-  bool get _canAct => !_isPaid && !_isPending && !_isCancelled;
+  bool get _canAct => !_isPaid && !_isPending && !_isCancelled && !_isWaitingCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -96,6 +98,10 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
       accent = AppColors.error;
       statusText = 'Pesanan Dibatalkan';
       statusIcon = Icons.cancel_rounded;
+    } else if (_isWaitingCancel) {
+      accent = AppColors.error.withOpacity(0.8);
+      statusText = 'Menunggu Approval Cancel';
+      statusIcon = Icons.pending_actions_rounded;
     } else if (_isPaid) {
       accent = AppColors.statusDone;
       statusText = 'Pembayaran Lunas';
@@ -371,7 +377,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   void _showPaymentSheet(BuildContext context) {
     final noteCtrl = TextEditingController();
     final diskonCtrl = TextEditingController();
-    final ppnCtrl = TextEditingController();
+    final ppnCtrl = TextEditingController(text: '12');
     File? selectedProof;
     bool isSubmitting = false;
     String? errorMsg;
@@ -503,16 +509,17 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                           TextField(
                             controller: ppnCtrl,
                             keyboardType: TextInputType.number,
+                            readOnly: true,
                             onChanged: (_) => setModal(() {}),
-                            style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
+                            style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted),
                             decoration: InputDecoration(
                               hintText: '0',
                               filled: true,
-                              fillColor: AppColors.background,
+                              fillColor: AppColors.surface,
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
                             ),
                           ),
                         ]),
@@ -747,14 +754,18 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                         try {
                           final svc = PaymentService();
                           
-                          String mappedMethod = 'transfer_bca';
-                          if (selectedMethod == 'QRIS') mappedMethod = 'qris';
-                          else if (selectedMethod == 'Tunai') mappedMethod = 'cash';
-                          else if (selectedMethod == 'Transfer Mandiri') mappedMethod = 'transfer_mandiri';
+                          String apiMethod;
+                          if (selectedMethod == 'Transfer BCA' || selectedMethod == 'Transfer Mandiri') {
+                            apiMethod = 'transfer';
+                          } else if (selectedMethod == 'QRIS') {
+                            apiMethod = 'qris';
+                          } else {
+                            apiMethod = 'cash';
+                          }
 
                           await svc.submitPayment(
                             orderId: _o.id,
-                            metodePembayaran: mappedMethod,
+                            metodePembayaran: apiMethod,
                             diskonPersen: diskonPersen,
                             ppn: ppnPersen,
                             totalTagihan: _o.total,
@@ -826,10 +837,8 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   // ─── CANCEL SHEET ───────────────────────────────────────────────────────
   void _showCancelSheet(BuildContext context) {
     final reasonCtrl = TextEditingController();
-    bool hasProof = false;
     bool uploading = false;
-    String proofName = '';
-    bool confirmed = false;
+    File? proofFile;
 
     showModalBottomSheet(
       context: context,
@@ -922,7 +931,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
 
                 const SizedBox(height: 16),
 
-                // Proof (optional)
+                // Proof (wajib)
                 Row(children: [
                   Text('Bukti Pembatalan', style: GoogleFonts.inter(
                       fontSize: 13, fontWeight: FontWeight.w600,
@@ -931,33 +940,37 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
-                      color: AppColors.border,
+                      color: AppColors.error.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text('opsional', style: GoogleFonts.inter(
-                        fontSize: 10, color: AppColors.textMuted)),
+                    child: Text('wajib', style: GoogleFonts.inter(
+                        fontSize: 10, color: AppColors.error, fontWeight: FontWeight.w600)),
                   ),
                 ]),
                 const SizedBox(height: 8),
                 GestureDetector(
-                  onTap: () {
-                    setModal(() => uploading = true);
-                    Future.delayed(const Duration(milliseconds: 1200), () {
+                  onTap: () async {
+                    final picker = ImagePicker();
+                    final pickedFile = await picker.pickImage(
+                      source: ImageSource.gallery,
+                      imageQuality: 60,
+                      maxWidth: 1024,
+                      maxHeight: 1024,
+                    );
+                    if (pickedFile != null) {
                       setModal(() {
-                        uploading = false;
-                        hasProof = true;
-                        proofName = 'bukti_cancel_${_o.id}.jpg';
+                        proofFile = File(pickedFile.path);
                       });
-                    });
+                    }
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                     decoration: BoxDecoration(
-                      color: hasProof ? const Color(0xFFFFF1F1) : AppColors.background,
+                      color: proofFile != null ? const Color(0xFFFFF1F1) : AppColors.background,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                          color: hasProof
+                          color: proofFile != null
                               ? AppColors.error.withOpacity(0.3)
                               : AppColors.border),
                     ),
@@ -969,16 +982,16 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                   color: AppColors.error, strokeWidth: 2),
                             ),
                             const SizedBox(width: 10),
-                            Text('Mengupload...',
+                            Text('Memproses...',
                                 style: GoogleFonts.inter(
                                     fontSize: 12, color: AppColors.textMuted)),
                           ])
-                        : hasProof
+                        : proofFile != null
                             ? Row(children: [
                                 const Icon(Icons.image_rounded,
                                     color: AppColors.error, size: 20),
                                 const SizedBox(width: 8),
-                                Expanded(child: Text(proofName,
+                                Expanded(child: Text(proofFile!.path.split('/').last,
                                     style: GoogleFonts.inter(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
@@ -990,7 +1003,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                 const Icon(Icons.add_photo_alternate_rounded,
                                     color: AppColors.textMuted, size: 18),
                                 const SizedBox(width: 8),
-                                Text('Upload foto bukti (opsional)',
+                                Text('Upload foto bukti (wajib)',
                                     style: GoogleFonts.inter(
                                         fontSize: 12, color: AppColors.textMuted)),
                               ]),
@@ -1001,34 +1014,49 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
 
                 // Confirm button — disabled until reason filled
                 Builder(builder: (bCtx) {
-                  final hasReason = reasonCtrl.text.trim().isNotEmpty;
+                  final hasReason = reasonCtrl.text.trim().isNotEmpty && proofFile != null;
                   return GestureDetector(
-                    onTap: hasReason
-                        ? () {
-                            setState(() {
-                              _o.status = OrderStatus.cancelled;
-                              _o.paymentStatus = 'cancelled';
-                              _o.cancelReason = reasonCtrl.text.trim();
-                              _o.paymentProof = hasProof ? proofName : null;
-                            });
-                            Navigator.pop(ctx);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Row(children: [
-                                  const Icon(Icons.cancel_rounded,
-                                      color: Colors.white, size: 18),
-                                  const SizedBox(width: 8),
-                                  Text('Pesanan ${_o.id} dibatalkan.',
-                                      style: GoogleFonts.inter(
-                                          color: Colors.white, fontSize: 13)),
-                                ]),
-                                backgroundColor: AppColors.error,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                                margin: const EdgeInsets.all(16),
-                              ),
-                            );
+                    onTap: hasReason && !uploading
+                        ? () async {
+                            setModal(() => uploading = true);
+                            try {
+                              await OrderService().cancelOrder(_o.id, reasonCtrl.text.trim(), proofFile!);
+                              if (!context.mounted) return;
+                              Navigator.pop(ctx); // close modal
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Row(children: [
+                                    const Icon(Icons.check_circle_rounded,
+                                        color: Colors.white, size: 18),
+                                    const SizedBox(width: 8),
+                                    Text('Pesanan ${_o.id} berhasil dibatalkan.',
+                                        style: GoogleFonts.inter(
+                                            color: Colors.white, fontSize: 13)),
+                                  ]),
+                                  backgroundColor: AppColors.statusDone,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
+                                  margin: const EdgeInsets.all(16),
+                                ),
+                              );
+                              Navigator.pop(context); // close screen and trigger loadData
+                            } catch (e) {
+                              setModal(() => uploading = false);
+                              showDialog(
+                                context: ctx,
+                                builder: (dCtx) => AlertDialog(
+                                  title: const Text('Gagal'),
+                                  content: Text(e.toString().replaceFirst('Exception: ', '')),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(dCtx),
+                                      child: const Text('OK'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
                           }
                         : null,
                     child: AnimatedContainer(
@@ -1061,8 +1089,8 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                 }),
                 const SizedBox(height: 8),
                 Center(child: Text(
-                  reasonCtrl.text.trim().isEmpty
-                      ? 'Isi alasan dulu untuk mengaktifkan tombol'
+                  reasonCtrl.text.trim().isEmpty || proofFile == null
+                      ? 'Lengkapi alasan dan foto bukti untuk membatalkan'
                       : 'Aksi ini tidak bisa dibatalkan setelah dikonfirmasi',
                   style: GoogleFonts.inter(
                       fontSize: 11, color: AppColors.textMuted),

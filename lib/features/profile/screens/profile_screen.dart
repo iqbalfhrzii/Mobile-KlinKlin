@@ -4,7 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
+import '../../../core/services/auth_service.dart';
 import 'dart:io';
+import 'dart:convert';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/change_pin_screen.dart';
 import 'edit_profile_screen.dart';
@@ -40,6 +42,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _userId = prefs.getString('user_id') ?? '-';
       _userPhoto = prefs.getString('user_photo');
     });
+
+    try {
+      final meResponse = await AuthService.getMe();
+      final me = meResponse['data'] ?? meResponse;
+      if (mounted) {
+        setState(() {
+          _userName = me['nama'] ?? _userName;
+          _userPhoto = me['foto_profil'];
+          _userRole = me['jabatan'] is Map ? me['jabatan']['nama_jabatan'] ?? _userRole : _userRole;
+          _userBranch = me['cabang'] is Map ? me['cabang']['nama_cabang'] ?? _userBranch : _userBranch;
+          _userEmail = me['email'] ?? _userEmail;
+        });
+      }
+    } catch (_) {
+      // Ignore if fetch fails
+    }
   }
 
   @override
@@ -50,26 +68,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           _buildHeader(),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-              child: Column(
-                children: [
-                  _buildInfoCard(),
-                  const SizedBox(height: 12),
-                  _buildMenuSection('Akun', [
-                    _MenuItem(Icons.lock_outline_rounded, 'Ganti PIN', onTap: () => _changePIN(context)),
-                    _MenuItem(Icons.notifications_outlined, 'Notifikasi', onTap: () {}),
-                    _MenuItem(Icons.language_outlined, 'Bahasa', trailing: 'Indonesia', onTap: () {}),
-                  ]),
-                  const SizedBox(height: 12),
-                  _buildMenuSection('Tentang', [
-                    _MenuItem(Icons.info_outline_rounded, 'Versi Aplikasi', trailing: '1.0.0'),
-                    _MenuItem(Icons.help_outline_rounded, 'Bantuan', onTap: () {}),
-                    _MenuItem(Icons.privacy_tip_outlined, 'Kebijakan Privasi', onTap: () {}),
-                  ]),
-                  const SizedBox(height: 12),
-                  _buildLogout(context),
-                ],
+            child: RefreshIndicator(
+              onRefresh: _loadProfile,
+              color: AppColors.primary,
+              backgroundColor: AppColors.surface,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+                child: Column(
+                  children: [
+                    _buildInfoCard(),
+                    const SizedBox(height: 12),
+                    _buildMenuSection('Akun', [
+                      _MenuItem(Icons.lock_outline_rounded, 'Ganti PIN', onTap: () => _changePIN(context)),
+                      _MenuItem(Icons.notifications_outlined, 'Notifikasi', onTap: () {}),
+                      _MenuItem(Icons.language_outlined, 'Bahasa', trailing: 'Indonesia', onTap: () {}),
+                    ]),
+                    const SizedBox(height: 12),
+                    _buildMenuSection('Tentang', [
+                      _MenuItem(Icons.info_outline_rounded, 'Versi Aplikasi', trailing: '1.0.0'),
+                      _MenuItem(Icons.help_outline_rounded, 'Bantuan', onTap: () {}),
+                      _MenuItem(Icons.privacy_tip_outlined, 'Kebijakan Privasi', onTap: () {}),
+                    ]),
+                    const SizedBox(height: 12),
+                    _buildLogout(context),
+                  ],
+                ),
               ),
             ),
           ),
@@ -98,23 +122,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           Column(
             children: [
-              if (_userPhoto != null && _userPhoto!.isNotEmpty)
-                ClipOval(
-                  child: Image.file(
-                    File(_userPhoto!),
-                    width: 72,
-                    height: 72,
-                    fit: BoxFit.cover,
-                  ),
-                )
-              else
-                InitialsAvatar(
-                  name: _userName,
-                  size: 72,
-                  backgroundColor: Colors.white.withOpacity(0.2),
-                  textColor: Colors.white,
-                  borderColor: Colors.white.withOpacity(0.35),
-                ),
+              _buildAvatar(),
               const SizedBox(height: 12),
           Text(_userName, style: GoogleFonts.inter(
             fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white,
@@ -153,6 +161,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildAvatar() {
+    if (_userPhoto == null || _userPhoto!.isEmpty) {
+      return InitialsAvatar(name: _userName, size: 72, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35));
+    }
+    
+    if (_userPhoto!.startsWith('data:image')) {
+      try {
+        final base64Str = _userPhoto!.split(',').last;
+        return ClipOval(child: Image.memory(base64Decode(base64Str), width: 72, height: 72, fit: BoxFit.cover));
+      } catch (_) {
+        return InitialsAvatar(name: _userName, size: 72, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35));
+      }
+    }
+    
+    if (_userPhoto!.startsWith('http')) {
+      return ClipOval(child: Image.network(_userPhoto!, width: 72, height: 72, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 72, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35))));
+    }
+    
+    if (_userPhoto!.startsWith('/')) {
+      return ClipOval(child: Image.file(File(_userPhoto!), width: 72, height: 72, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 72, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35))));
+    }
+    
+    return ClipOval(child: Image.network('http://192.168.1.242:8000/storage/$_userPhoto', width: 72, height: 72, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 72, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35))));
   }
 
   Widget _buildInfoCard() {

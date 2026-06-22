@@ -17,7 +17,6 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  String _method = 'Semua';
   String _query = '';
   DateTime? _filterStart;
   DateTime? _filterEnd;
@@ -61,7 +60,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
       final matchQ = o.id.toLowerCase().contains(q) ||
           o.customer.name.toLowerCase().contains(q) ||
           o.services.any((s) => s.name.toLowerCase().contains(q));
-      final matchMethod = _method == 'Semua' || o.paymentMethod == _method;
       final matchDate = _filterStart == null || (
         !o.scheduleDateTime.isBefore(_filterStart!) &&
         !o.scheduleDateTime.isAfter(_filterEnd!)
@@ -70,21 +68,30 @@ class _PaymentScreenState extends State<PaymentScreen> {
       // Filter by cancel mode
       bool matchStatus = true;
       if (widget.isCancelMode) {
-        matchStatus = o.status == 'cancelled';
+        matchStatus = o.status == OrderStatus.cancelled || o.status == OrderStatus.waitingCancelApproval;
       } else {
-        matchStatus = o.status != 'cancelled' && (_statusFilter == 'Semua' || o.paymentStatus == _statusFilter);
+        matchStatus = o.status != OrderStatus.cancelled && o.status != OrderStatus.waitingCancelApproval;
+        if (_statusFilter == 'Belum') {
+          matchStatus = matchStatus && (o.paymentStatus == 'unpaid' || o.paymentStatus == 'pending') && o.status != OrderStatus.waitingPaymentApproval;
+        } else if (_statusFilter == 'Menunggu Approve') {
+          matchStatus = matchStatus && (o.status == OrderStatus.waitingPaymentApproval);
+        } else if (_statusFilter == 'Lunas') {
+          matchStatus = matchStatus && (o.paymentStatus == 'paid' || o.paymentStatus == 'approved');
+        }
       }
       
-      return matchQ && matchMethod && matchDate && matchStatus;
+      return matchQ && matchDate && matchStatus;
     }).toList();
   }
 
-  List<OrderModel> get _pending =>
-      _filtered.where((o) => o.paymentStatus == 'unpaid' || o.paymentStatus == 'pending' || o.status == OrderStatus.waitingPaymentApproval).toList();
+  List<OrderModel> get _unpaid =>
+      _filtered.where((o) => (o.paymentStatus == 'unpaid' || o.paymentStatus == 'pending') && o.status != OrderStatus.waitingPaymentApproval).toList();
+  List<OrderModel> get _waitingApprove =>
+      _filtered.where((o) => o.status == OrderStatus.waitingPaymentApproval).toList();
   List<OrderModel> get _paid =>
       _filtered.where((o) => o.paymentStatus == 'paid' || o.paymentStatus == 'approved').toList();
   List<OrderModel> get _cancelled =>
-      _filtered.where((o) => o.status == OrderStatus.cancelled || o.paymentStatus == 'cancelled' || o.paymentStatus == 'rejected').toList();
+      _filtered.where((o) => o.status == OrderStatus.cancelled || o.status == OrderStatus.waitingCancelApproval || o.paymentStatus == 'cancelled' || o.paymentStatus == 'rejected').toList();
 
   @override
   Widget build(BuildContext context) {
@@ -96,11 +103,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
           Expanded(
             child: _isLoading 
                 ? const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator(color: AppColors.primary)))
-                : SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                : RefreshIndicator(
+                    onRefresh: _loadData,
+                    color: AppColors.primary,
+                    backgroundColor: AppColors.surface,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                   WeeklyDatePicker(
                     searchQuery: _query,
                     onSearchChanged: (val) => setState(() => _query = val),
@@ -118,14 +130,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     _buildSummaryCards(),
                   ],
                   const SizedBox(height: 16),
-                  if (!widget.isCancelMode && _pending.isNotEmpty && (_statusFilter == 'Semua' || _statusFilter == 'unpaid')) ...[
+                  if (!widget.isCancelMode && _unpaid.isNotEmpty && (_statusFilter == 'Semua' || _statusFilter == 'Belum')) ...[
                     _sectionLabel('BELUM LUNAS', AppColors.statusPending),
                     const SizedBox(height: 8),
-                    ..._pending.map((o) => _PaymentCard(
+                    ..._unpaid.map((o) => _PaymentCard(
                         order: o, onTap: () => _openDetail(context, o))),
                     const SizedBox(height: 16),
                   ],
-                  if (!widget.isCancelMode && _paid.isNotEmpty && (_statusFilter == 'Semua' || _statusFilter == 'paid')) ...[
+                  if (!widget.isCancelMode && _waitingApprove.isNotEmpty && (_statusFilter == 'Semua' || _statusFilter == 'Menunggu Approve')) ...[
+                    _sectionLabel('MENUNGGU APPROVE', AppColors.primary),
+                    const SizedBox(height: 8),
+                    ..._waitingApprove.map((o) => _PaymentCard(
+                        order: o, onTap: () => _openDetail(context, o))),
+                    const SizedBox(height: 16),
+                  ],
+                  if (!widget.isCancelMode && _paid.isNotEmpty && (_statusFilter == 'Semua' || _statusFilter == 'Lunas')) ...[
                     _sectionLabel('SUDAH LUNAS', AppColors.statusDone),
                     const SizedBox(height: 8),
                     ..._paid.map((o) => _PaymentCard(
@@ -148,10 +167,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildHeader() {
     return GradientHeader(
@@ -173,7 +193,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20)),
-              child: Text('${_pending.length} Belum Lunas', style: GoogleFonts.inter(
+              child: Text('${_unpaid.length + _waitingApprove.length} Belum Lunas', style: GoogleFonts.inter(
                   fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600)),
             ),
         ],
@@ -182,16 +202,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Widget _buildFilterRow(BuildContext context) {
-    const methods = ['Semua', 'Transfer Bank', 'QRIS', 'Tunai'];
+    const statuses = ['Semua', 'Belum', 'Menunggu Approve', 'Lunas'];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          // Method chips
-          if (!widget.isCancelMode) ...methods.map((m) {
-            final active = _method == m;
+          if (!widget.isCancelMode) ...statuses.map((m) {
+            final active = _statusFilter == m;
             return GestureDetector(
-              onTap: () => setState(() => _method = m),
+              onTap: () => setState(() => _statusFilter = m),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
                 margin: const EdgeInsets.only(right: 8),
@@ -214,16 +233,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Widget _buildSummaryCards() {
-    final totalPending = _pending.fold(0, (s, o) => s + o.total);
-    final totalPaid = _paid.fold(0, (s, o) => s + o.total);
+    final totalPending = _unpaid.fold<int>(0, (s, o) => s + o.total) + _waitingApprove.fold<int>(0, (s, o) => s + o.total);
+    final totalPaid = _paid.fold<int>(0, (s, o) => s + o.total);
     return Row(children: [
       Expanded(child: _SmallCard(
         label: 'Belum Lunas', value: _fmt(totalPending),
         icon: Icons.pending_actions_rounded,
         color: AppColors.statusPending, bg: AppColors.statusPendingBg,
-        count: _pending.length,
-        isActive: _statusFilter == 'Semua' || _statusFilter == 'unpaid',
-        onTap: () => setState(() => _statusFilter = _statusFilter == 'unpaid' ? 'Semua' : 'unpaid'),
+        count: _unpaid.length + _waitingApprove.length,
+        isActive: _statusFilter == 'Semua' || _statusFilter == 'Belum' || _statusFilter == 'Menunggu Approve',
+        onTap: () => setState(() => _statusFilter = (_statusFilter == 'Belum' || _statusFilter == 'Menunggu Approve') ? 'Semua' : 'Belum'),
       )),
       const SizedBox(width: 10),
       Expanded(child: _SmallCard(
@@ -231,8 +250,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
         icon: Icons.check_circle_rounded,
         color: AppColors.statusDone, bg: AppColors.statusDoneBg,
         count: _paid.length,
-        isActive: _statusFilter == 'Semua' || _statusFilter == 'paid',
-        onTap: () => setState(() => _statusFilter = _statusFilter == 'paid' ? 'Semua' : 'paid'),
+        isActive: _statusFilter == 'Semua' || _statusFilter == 'Lunas',
+        onTap: () => setState(() => _statusFilter = _statusFilter == 'Lunas' ? 'Semua' : 'Lunas'),
       )),
     ]);
   }
@@ -267,6 +286,7 @@ class _PaymentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isCancelled = order.status == OrderStatus.cancelled || order.paymentStatus == 'cancelled' || order.paymentStatus == 'rejected';
+    final isWaitingCancel = order.status == OrderStatus.waitingCancelApproval;
     final isPaid = order.paymentStatus == 'paid' || order.paymentStatus == 'approved';
     final isPending = order.paymentStatus == 'pending' || order.status == OrderStatus.waitingPaymentApproval;
 
@@ -331,16 +351,16 @@ class _PaymentCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: isCancelled
-                    ? const Color(0xFFFEF2F2)
+                color: isCancelled || isWaitingCancel
+                    ? AppColors.error.withOpacity(0.1)
                     : isPaid ? AppColors.statusDoneBg : isPending ? AppColors.statusPendingBg : AppColors.surfaceBlue,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                isCancelled ? 'Batal' : isPaid ? 'Lunas' : isPending ? 'Menunggu Approval' : 'Belum',
+                isCancelled ? 'Batal' : isWaitingCancel ? 'Menunggu Cancel' : isPaid ? 'Lunas' : isPending ? 'Menunggu Approval' : 'Belum',
                 style: GoogleFonts.inter(
                   fontSize: 11, fontWeight: FontWeight.w700,
-                  color: isCancelled
+                  color: isCancelled || isWaitingCancel
                       ? AppColors.error
                       : isPaid ? AppColors.statusDone : isPending ? AppColors.statusPending : AppColors.primary,
                 ),

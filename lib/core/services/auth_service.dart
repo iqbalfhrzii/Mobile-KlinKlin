@@ -137,12 +137,22 @@ class AuthService {
       'email': meData['email'],
       'no_wa': meData['no_wa'] ?? '',
       'status': meData['status'] ?? 'aktif',
-      'foto_profil':
-          meData['foto_profil'], // Send original string or null to avoid 500 DB error
     };
 
     try {
-      await _dio.put('/karyawans/$id', data: mapData);
+      if (photoPath != null && photoPath.isNotEmpty) {
+        mapData['_method'] = 'PUT';
+        mapData['foto_profil_file'] = await MultipartFile.fromFile(
+          photoPath,
+          filename: photoPath.split('/').last,
+        );
+        final formData = FormData.fromMap(mapData);
+        await _dio.post('/karyawans/$id', data: formData);
+      } else {
+        mapData['foto_profil'] = meData['foto_profil'];
+        await _dio.put('/karyawans/$id', data: mapData);
+      }
+      
       // Update local storage
       await prefs.setString('user_name', name);
       if (photoPath != null && photoPath.isNotEmpty) {
