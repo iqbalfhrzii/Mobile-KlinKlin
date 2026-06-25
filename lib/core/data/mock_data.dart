@@ -36,6 +36,7 @@ final List<OrderModel> mockOrders = [
   // 1. Pesanan Draft
   OrderModel(
     id: 'ORD-2356',
+    cabangId: '1',
     customer: OrderCustomer(id: 'CUS-001', name: 'Budi Santoso', phone: '0812-3456-7890',
       address: 'Jl. Raya Darmo No. 45, Wonokromo, Surabaya 60241', area: 'Wonokromo, Surabaya'),
     chatDari: ChatSource.organik,
@@ -59,6 +60,7 @@ final List<OrderModel> mockOrders = [
   // 2. Pesanan Assigned (dengan bonus)
   OrderModel(
     id: 'ORD-2355',
+    cabangId: '1',
     customer: OrderCustomer(id: 'CUS-004', name: 'Rina Wulandari', phone: '0813-5678-9012',
       address: 'Jl. Kenjeran No. 150, Surabaya 60129', area: 'Kenjeran, Surabaya'),
     chatDari: ChatSource.ads,
@@ -92,6 +94,7 @@ final List<OrderModel> mockOrders = [
   // 3. Pesanan Finished by Cleaner (siap lanjut pembayaran)
   OrderModel(
     id: 'ORD-2354',
+    cabangId: '1',
     customer: OrderCustomer(id: 'CUS-002', name: 'Sari Dewi', phone: '0857-9876-5432',
       address: 'Jl. Raya Gubeng No. 12, Surabaya 60281', area: 'Gubeng, Surabaya'),
     chatDari: ChatSource.organik,

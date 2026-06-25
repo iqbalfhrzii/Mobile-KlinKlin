@@ -32,8 +32,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() {
       _nameController.text = prefs.getString('user_name') ?? 'CS';
       _photoPath = prefs.getString('user_photo');
-      _isLoading = false;
     });
+
+    try {
+      final meResponse = await AuthService.getMe();
+      final me = meResponse['data'] ?? meResponse;
+      if (mounted) {
+        setState(() {
+          _nameController.text = me['nama'] ?? _nameController.text;
+          _photoPath = me['foto_profil'];
+        });
+      }
+    } catch (_) {
+      // Ignore
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _pickImage() async {

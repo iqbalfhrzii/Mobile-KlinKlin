@@ -359,8 +359,21 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     )),
                   ],
                 ),
-                if (cleaner.totalBonus > 0)
-                  Text('Total Bonus: ${_formatRupiah(cleaner.totalBonus)}', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.statusDone)),
+                if (cleaner.totalBonus > 0) ...[
+                  const SizedBox(height: 6),
+                  Text('Total Bonus: ${_formatRupiah(cleaner.totalBonus)}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.statusDone)),
+                  const SizedBox(height: 4),
+                  ...cleaner.bonuses.map((b) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('• ${b.jenisBonus}: ${_formatRupiah(b.nominal)}', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                        Text('  ${b.keterangan}', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted, fontStyle: FontStyle.italic)),
+                      ],
+                    ),
+                  )),
+                ],
               ],
             ),
           ),
@@ -373,7 +386,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   color: cleaner.statusPengerjaan == CleanerWorkStatus.finished ? AppColors.statusDoneBg : AppColors.surfaceBlue,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text(cleaner.statusPengerjaan.name, style: GoogleFonts.inter(
+                child: Text(cleaner.statusPengerjaan.label, style: GoogleFonts.inter(
                   fontSize: 11, fontWeight: FontWeight.w600, color: cleaner.statusPengerjaan == CleanerWorkStatus.finished ? AppColors.statusDone : AppColors.primary,
                 )),
               ),
@@ -381,24 +394,30 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 const SizedBox(height: 8),
                 InkWell(
                   onTap: () => _showAddBonusSheet(o, cleaner),
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.add_circle_outline_rounded, size: 12, color: AppColors.primary),
-                      const SizedBox(width: 4),
-                      Text('Bonus', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.primary)),
-                    ],
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.3),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.add_circle_outline_rounded, size: 14, color: Colors.white),
+                        const SizedBox(width: 6),
+                        Text('Tambah Bonus', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                      ],
+                    ),
                   ),
                 ),
-              ),
               ],
             ],
           ),
@@ -406,129 +425,20 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       ),
     );
   }
-
   void _showAddBonusSheet(OrderModel o, OrderCleaner cleaner) {
     if (cleaner.pesananCleanerId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ID Cleaner tidak valid (belum tersimpan di database)')));
       return;
     }
 
-    final nominalCtrl = TextEditingController();
-    final noteCtrl = TextEditingController();
-    bool isSubmitting = false;
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (modalCtx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(modalCtx).viewInsets.bottom),
-        child: StatefulBuilder(
-          builder: (stateCtx, setModalState) {
-            return Container(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)))),
-                  const SizedBox(height: 20),
-                  Text('Beri Bonus', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                  Text(cleaner.name, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
-                  const SizedBox(height: 16),
-
-                  Text('Nominal (Rp)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: nominalCtrl,
-                    keyboardType: TextInputType.number,
-                    style: GoogleFonts.inter(fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'Misal: 20000',
-                      filled: true,
-                      fillColor: AppColors.background,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  Text('Keterangan', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: noteCtrl,
-                    maxLines: 2,
-                    style: GoogleFonts.inter(fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Catatan tambahan (opsional)',
-                      filled: true,
-                      fillColor: AppColors.background,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
-                      ),
-                      onPressed: isSubmitting ? null : () async {
-                        final nominalText = nominalCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
-                        if (nominalText.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Nominal bonus wajib diisi')));
-                          return;
-                        }
-
-                        setModalState(() => isSubmitting = true);
-                        try {
-                          await _orderService.addManualBonus(o.id, cleaner.pesananCleanerId, int.parse(nominalText), noteCtrl.text.trim());
-                          if (!context.mounted) return;
-                          Navigator.pop(modalCtx);
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bonus berhasil ditambahkan!'), backgroundColor: AppColors.statusDone));
-                          _fetchDetail();
-                        } catch (e) {
-                          setModalState(() => isSubmitting = false);
-                          showDialog(
-                            context: modalCtx,
-                            builder: (dialogCtx) => AlertDialog(
-                              title: const Text('Gagal'),
-                              content: Text(e.toString().replaceFirst('Exception: ', '')),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(dialogCtx),
-                                  child: const Text('OK'),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-                      },
-                      child: isSubmitting 
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : Text('Simpan Bonus', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
+      builder: (modalCtx) => _AddBonusSheet(
+        order: o,
+        cleaner: cleaner,
+        onBonusAdded: _fetchDetail,
       ),
     );
   }
@@ -1460,7 +1370,251 @@ class CurrencyInputFormatter extends TextInputFormatter {
     }
     return TextEditingValue(
       text: formatted,
-      selection: TextSelection.collapsed(offset: selectionIndex),
     );
   }
 }
+
+class _AddBonusSheet extends StatefulWidget {
+  const _AddBonusSheet({required this.order, required this.cleaner, required this.onBonusAdded});
+  final OrderModel order;
+  final OrderCleaner cleaner;
+  final VoidCallback onBonusAdded;
+
+  @override
+  State<_AddBonusSheet> createState() => _AddBonusSheetState();
+}
+
+class _AddBonusSheetState extends State<_AddBonusSheet> {
+  final OrderService _orderService = OrderService();
+  final _nominalCtrl = TextEditingController();
+  final _noteCtrl = TextEditingController();
+
+  bool _isLoading = true;
+  bool _isSubmitting = false;
+  List<Map<String, dynamic>> _tarifBonuses = [];
+  Map<String, dynamic>? _selectedTarifBonus;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTarifBonus();
+    _onTarifSelected(null); // Trigger pre-fill for default 'Bonus Manual'
+  }
+
+  Future<void> _fetchTarifBonus() async {
+    try {
+      final tarif = await _orderService.fetchTarifBonus(widget.order.cabangId);
+      if (mounted) {
+        setState(() {
+          _tarifBonuses = tarif;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _onTarifSelected(Map<String, dynamic>? tarif) {
+    setState(() {
+      _selectedTarifBonus = tarif;
+      _noteCtrl.clear();
+      
+      if (tarif != null && tarif['nominal_default'] != null) {
+        final double nominalVal = double.tryParse(tarif['nominal_default'].toString()) ?? 0;
+        _nominalCtrl.text = nominalVal.toInt().toString();
+      } else {
+        _nominalCtrl.clear();
+      }
+
+      // Overwrite with existing bonus if present
+      final String targetJenis = tarif == null 
+          ? 'Bonus Manual' 
+          : (tarif['jenis_bonus']?['nama_bonus'] ?? '');
+          
+      if (targetJenis.isNotEmpty) {
+        try {
+          final existing = widget.cleaner.bonuses.firstWhere(
+            (b) => b.jenisBonus.toLowerCase() == targetJenis.toLowerCase()
+          );
+          _nominalCtrl.text = existing.nominal.toString();
+          if (existing.keterangan != '-' && existing.keterangan != 'Bonus manual' && existing.keterangan != targetJenis) {
+            _noteCtrl.text = existing.keterangan;
+          }
+        } catch (_) {}
+      }
+    });
+  }
+
+  Future<void> _submit() async {
+    final nominalText = _nominalCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (nominalText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Nominal bonus wajib diisi')));
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      if (_selectedTarifBonus == null) {
+        // Bonus Manual (Tidak ada jenis_bonus_id)
+        await _orderService.addManualBonus(
+          widget.order.id,
+          widget.cleaner.pesananCleanerId,
+          int.parse(nominalText),
+          _noteCtrl.text.trim(),
+        );
+      } else {
+        // Bonus dari Tarif
+        await _orderService.storeManualBonus(
+          widget.cleaner.pesananCleanerId,
+          _selectedTarifBonus!['jenis_bonus_id'] as int,
+          int.parse(nominalText),
+          _noteCtrl.text.trim(),
+        );
+      }
+
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Bonus berhasil ditambahkan!'),
+        backgroundColor: AppColors.statusDone,
+      ));
+      widget.onBonusAdded();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      showDialog(
+        context: context,
+        builder: (dialogCtx) => AlertDialog(
+          title: const Text('Gagal'),
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)))),
+              const SizedBox(height: 20),
+              Text('Beri Bonus', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+              Text(widget.cleaner.name, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
+              const SizedBox(height: 16),
+
+              if (_isLoading)
+                const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+              else ...[
+                Text('Jenis Bonus', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<Map<String, dynamic>>(
+                      isExpanded: true,
+                      value: _selectedTarifBonus,
+                      hint: Text('Pilih jenis bonus...', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 14)),
+                      items: [
+                        DropdownMenuItem(
+                          value: null,
+                          child: Text('Bonus Manual', style: GoogleFonts.inter(fontSize: 14)),
+                        ),
+                        ..._tarifBonuses.where((t) {
+                          final name = t['jenis_bonus']?['nama_bonus']?.toString().toLowerCase() ?? '';
+                          return name != 'bonus layanan' && name != 'bonus manual';
+                        }).map((t) {
+                          return DropdownMenuItem(
+                            value: t,
+                            child: Text(t['jenis_bonus']?['nama_bonus'] ?? 'Bonus', style: GoogleFonts.inter(fontSize: 14)),
+                          );
+                        }).toList(),
+                      ],
+                      onChanged: _onTarifSelected,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                Text('Nominal (Rp)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _nominalCtrl,
+                  keyboardType: TextInputType.number,
+                  style: GoogleFonts.inter(fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Misal: 20000',
+                    filled: true,
+                    fillColor: AppColors.background,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                Text('Keterangan', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _noteCtrl,
+                  maxLines: 2,
+                  style: GoogleFonts.inter(fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Catatan tambahan (opsional)',
+                    filled: true,
+                    fillColor: AppColors.background,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    onPressed: _isSubmitting ? null : _submit,
+                    child: _isSubmitting 
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Text('Simpan Bonus', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

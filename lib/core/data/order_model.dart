@@ -16,6 +16,21 @@ enum CleanerWorkStatus {
   finished
 }
 
+extension CleanerWorkStatusExt on CleanerWorkStatus {
+  String get label {
+    switch (this) {
+      case CleanerWorkStatus.assigned:
+        return 'Ditugaskan';
+      case CleanerWorkStatus.notified:
+        return 'Diberitahu';
+      case CleanerWorkStatus.inProgress:
+        return 'Sedang Dikerjakan';
+      case CleanerWorkStatus.finished:
+        return 'Selesai';
+    }
+  }
+}
+
 enum ChatSource { organik, ads, lama }
 enum CustomerType { lama, baru }
 
@@ -170,12 +185,24 @@ class CleanerBonus {
   String keterangan;
 
   factory CleanerBonus.fromJson(Map<String, dynamic> json) {
-    final jenis = json['jenis_bonus'] ?? {};
+    String jb = '-';
+    if (json['jenis_bonus'] is Map) {
+      jb = json['jenis_bonus']['nama_bonus'] ?? '-';
+    } else if (json['jenis_bonus'] is String) {
+      jb = json['jenis_bonus'];
+    } else if (json['tarif_bonus_cabang'] != null && json['tarif_bonus_cabang']['jenis_bonus'] != null) {
+      jb = json['tarif_bonus_cabang']['jenis_bonus']['nama_bonus'] ?? '-';
+    }
+
+    if (jb == '-' || jb.isEmpty) {
+      jb = 'Bonus Manual';
+    }
+
     return CleanerBonus(
       id: json['id']?.toString() ?? '',
-      jenisBonus: jenis['nama_bonus'] ?? json['jenis_bonus'] ?? '-',
+      jenisBonus: jb,
       nominal: json['nominal'] != null ? (double.tryParse(json['nominal'].toString())?.toInt() ?? 0) : 0,
-      keterangan: json['keterangan'] ?? '-',
+      keterangan: json['keterangan']?.toString().isNotEmpty == true ? json['keterangan'] : '-',
     );
   }
 }
@@ -247,6 +274,7 @@ class OrderCleaner {
 class OrderModel {
   OrderModel({
     required this.id,
+    required this.cabangId,
     required this.customer,
     this.chatDari = ChatSource.organik,
     this.tipeCustomer = CustomerType.baru,
@@ -263,6 +291,7 @@ class OrderModel {
   });
 
   String id;
+  String cabangId;
   OrderCustomer customer;
   ChatSource chatDari;
   CustomerType tipeCustomer;
@@ -305,6 +334,7 @@ class OrderModel {
 
     return OrderModel(
       id: json['id']?.toString() ?? '',
+      cabangId: json['cabang_id']?.toString() ?? '',
       customer: OrderCustomer.fromJson(customerData),
       chatDari: _parseChatSource(json['chat_dari']),
       tipeCustomer: _parseCustomerType(json['tipe_customer']),

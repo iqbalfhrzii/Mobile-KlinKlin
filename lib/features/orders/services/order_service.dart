@@ -157,6 +157,47 @@ class OrderService {
     }
   }
 
+  /// Fetch Tarif Bonus untuk Cabang tertentu
+  Future<List<Map<String, dynamic>>> fetchTarifBonus(String cabangId) async {
+    try {
+      final response = await _dio.get('/cabangs/$cabangId/tarif-bonus');
+      if (response.data is Map && response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      throw Exception('Gagal memuat tarif bonus: $e');
+    }
+  }
+
+  /// Tambah Bonus berdasarkan Jenis Bonus (menggunakan tarif bonus cabang)
+  Future<void> storeManualBonus(String pesananCleanerId, int jenisBonusId, int nominal, String keterangan) async {
+    try {
+      final response = await _dio.post('/pesanan-cleaners/$pesananCleanerId/bonus', data: {
+        'jenis_bonus_id': jenisBonusId,
+        'nominal': nominal,
+        if (keterangan.isNotEmpty) 'keterangan': keterangan,
+      });
+      if (response.data is Map && response.data['status'] == false) {
+        throw Exception(response.data['message'] ?? 'Gagal menyimpan bonus');
+      }
+    } catch (e) {
+      if (e is DioException) {
+        final resData = e.response?.data;
+        String errMsg = 'Terjadi kesalahan sistem';
+        if (resData is Map && resData.containsKey('message')) {
+          errMsg = resData['message'].toString();
+        } else if (resData != null) {
+          errMsg = 'Status ${e.response?.statusCode}: format response tidak dikenali';
+        } else {
+          errMsg = e.message ?? 'Unknown DioException';
+        }
+        throw Exception('Gagal menyimpan bonus: $errMsg');
+      }
+      throw Exception('Gagal menyimpan bonus: $e');
+    }
+  }
+
   /// Fetch Layanan
   Future<List<Map<String, dynamic>>> fetchLayanan() async {
     try {
