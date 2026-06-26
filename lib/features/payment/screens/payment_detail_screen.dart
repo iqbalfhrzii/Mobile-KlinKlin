@@ -147,7 +147,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
               Text('Total Tagihan', style: GoogleFonts.inter(
                   fontSize: 11, color: AppColors.textMuted)),
               const SizedBox(height: 2),
-              Text(_fmt(_o.total), style: GoogleFonts.inter(
+              Text(_fmt((_o.total * 1.11).round()), style: GoogleFonts.inter(
                   fontSize: 26, fontWeight: FontWeight.bold, color: AppColors.textDark)),
               const SizedBox(height: 4),
               Row(children: [
@@ -212,9 +212,26 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
       Container(height: 1, color: AppColors.border),
       const SizedBox(height: 10),
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text('Total', style: GoogleFonts.inter(
-            fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+        Text('Subtotal', style: GoogleFonts.inter(
+            fontSize: 13, color: AppColors.textMuted)),
         Text(_fmt(_o.total), style: GoogleFonts.inter(
+            fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+      ]),
+      const SizedBox(height: 6),
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text('PPN (11%)', style: GoogleFonts.inter(
+            fontSize: 13, color: AppColors.textMuted)),
+        Text(_fmt((_o.total * 0.11).round()), style: GoogleFonts.inter(
+            fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+      ]),
+      const Padding(
+        padding: EdgeInsets.symmetric(vertical: 10),
+        child: Divider(height: 1, color: AppColors.border),
+      ),
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text('Total Pembayaran', style: GoogleFonts.inter(
+            fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+        Text(_fmt((_o.total * 1.11).round()), style: GoogleFonts.inter(
             fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
       ]),
     ]));
@@ -343,29 +360,31 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
               const SizedBox(width: 8),
               Column(mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Konfirmasi Pembayaran', style: GoogleFonts.inter(
+                Text('Upload Bukti Bayar', style: GoogleFonts.inter(
                     fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
-                Text(_fmt(_o.total), style: GoogleFonts.inter(
+                Text(_fmt((_o.total * 1.11).round()), style: GoogleFonts.inter(
                     fontSize: 11, color: Colors.white.withOpacity(0.8))),
               ]),
             ]),
           ),
         ),
-        const SizedBox(height: 8),
-        // Secondary — Cancel (text only, less prominent)
+        const SizedBox(height: 12),
+        // Secondary — Cancel
         GestureDetector(
           onTap: () => _showCancelSheet(context),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Container(
+            width: double.infinity,
+            height: 52,
+            decoration: BoxDecoration(
+              color: AppColors.error.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.error.withOpacity(0.5)),
+            ),
             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(Icons.cancel_outlined, size: 14,
-                  color: AppColors.textMuted.withOpacity(0.7)),
-              const SizedBox(width: 4),
-              Text('Batalkan pesanan ini', style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: AppColors.textMuted,
-                  decoration: TextDecoration.underline,
-                  decorationColor: AppColors.textMuted.withOpacity(0.5))),
+              const Icon(Icons.cancel_outlined, size: 18, color: AppColors.error),
+              const SizedBox(width: 8),
+              Text('Upload Bukti Cancel', style: GoogleFonts.inter(
+                  fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.error)),
             ]),
           ),
         ),
@@ -377,7 +396,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   void _showPaymentSheet(BuildContext context) {
     final noteCtrl = TextEditingController();
     final diskonCtrl = TextEditingController();
-    final ppnCtrl = TextEditingController(text: '12');
+    final ppnCtrl = TextEditingController(text: '11');
     File? selectedProof;
     bool isSubmitting = false;
     String? errorMsg;
@@ -439,7 +458,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('Konfirmasi Pembayaran', style: GoogleFonts.inter(
+                        Text('Upload Bukti Bayar', style: GoogleFonts.inter(
                             fontSize: 16, fontWeight: FontWeight.bold,
                             color: AppColors.textDark)),
                         Text(_o.id, style: GoogleFonts.inter(
@@ -885,10 +904,10 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('Batalkan Pesanan', style: GoogleFonts.inter(
+                      Text('Upload Bukti Cancel', style: GoogleFonts.inter(
                           fontSize: 15, fontWeight: FontWeight.bold,
                           color: AppColors.error)),
-                      Text('${_o.id} · ${_fmt(_o.total)}',
+                      Text('${_o.id} · ${_fmt((_o.total * 1.11).round())}',
                           style: GoogleFonts.inter(
                               fontSize: 12, color: AppColors.textMuted)),
                     ])),

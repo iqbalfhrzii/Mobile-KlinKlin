@@ -180,8 +180,8 @@ class _HomeScreenState extends State<HomeScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Image.network(
-                    'https://www.klinklin.co.id/wp-content/uploads/2023/11/Logo-164-x-45-1.png',
+                  Image.asset(
+                    'assets/images/logo.png',
                     height: 24,
                   ),
                   const SizedBox(height: 4),

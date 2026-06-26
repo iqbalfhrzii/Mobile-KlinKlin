@@ -222,8 +222,8 @@ class OrderCustomer {
   String address;
   String area;
 
-  factory OrderCustomer.fromJson(Map<String, dynamic> json) {
-    final cabang = json['cabang'] ?? {};
+  factory OrderCustomer.fromJson(Map<String, dynamic> json, [Map<String, dynamic>? rootJson]) {
+    final cabang = (rootJson ?? json)['cabang'] ?? {};
     return OrderCustomer(
       id: json['id']?.toString() ?? '',
       name: json['nama_pelanggan'] ?? '-',
@@ -335,7 +335,7 @@ class OrderModel {
     return OrderModel(
       id: json['id']?.toString() ?? '',
       cabangId: json['cabang_id']?.toString() ?? '',
-      customer: OrderCustomer.fromJson(customerData),
+      customer: OrderCustomer.fromJson(customerData, json),
       chatDari: _parseChatSource(json['chat_dari']),
       tipeCustomer: _parseCustomerType(json['tipe_customer']),
       services: parsedServices,
