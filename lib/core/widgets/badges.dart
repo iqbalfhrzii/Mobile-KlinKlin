@@ -8,12 +8,13 @@ class StatusBadge extends StatelessWidget {
   final OrderStatus status;
 
   static const _config = {
-    OrderStatus.draft: _BadgeConfig('Draft', AppColors.statusPending, AppColors.statusPendingBg),
-    OrderStatus.assigned: _BadgeConfig('Ditugaskan', AppColors.statusAssigned, AppColors.statusAssignedBg),
-    OrderStatus.inProgress: _BadgeConfig('Dikerjakan', AppColors.statusProgress, AppColors.statusProgressBg),
-    OrderStatus.finishedByCleaner: _BadgeConfig('Selesai (Cleaner)', AppColors.statusDone, AppColors.statusDoneBg),
-    OrderStatus.waitingPaymentApproval: _BadgeConfig('Menunggu Approval', AppColors.statusPending, AppColors.statusPendingBg),
-    OrderStatus.completed: _BadgeConfig('Selesai', AppColors.statusDone, AppColors.statusDoneBg),
+    OrderStatus.draft: _BadgeConfig('Draf', AppColors.statusPending, AppColors.statusPendingBg),
+    OrderStatus.assigned: _BadgeConfig('Menunggu Pengerjaan', AppColors.statusAssigned, AppColors.statusAssignedBg),
+    OrderStatus.inProgress: _BadgeConfig('Sedang Dikerjakan', AppColors.statusProgress, AppColors.statusProgressBg),
+    OrderStatus.finishedByCleaner: _BadgeConfig('Selesai Dikerjakan', AppColors.statusDone, AppColors.statusDoneBg),
+    OrderStatus.waitingPaymentApproval: _BadgeConfig('Menunggu Pembayaran', AppColors.statusPending, AppColors.statusPendingBg),
+    OrderStatus.waitingCancelApproval: _BadgeConfig('Menunggu Batal', Colors.orange, Color(0xFFFFF3E0)),
+    OrderStatus.completed: _BadgeConfig('Selesai / Lunas', AppColors.statusDone, AppColors.statusDoneBg),
     OrderStatus.cancelled: _BadgeConfig('Dibatalkan', Colors.red, Color(0xFFFFEBEE)),
   };
 

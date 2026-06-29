@@ -10,6 +10,9 @@ import '../services/order_service.dart';
 import 'create_order_screen.dart';
 import '../../payment/screens/payment_detail_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:printing/printing.dart';
+import '../../../core/services/pdf_invoice_service.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   const OrderDetailScreen({super.key, required this.order});
@@ -692,8 +695,130 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             Navigator.push(context, MaterialPageRoute(builder: (_) => PaymentDetailScreen(order: o)));
           },
         ),
+        if (o.status != OrderStatus.cancelled && o.status != OrderStatus.waitingCancelApproval) ...[
+          const SizedBox(height: 12),
+          _buildBigActionBtn(
+            title: 'Kirim Invoice WA',
+            subtitle: 'Kirim rincian tagihan ke WhatsApp',
+            icon: Icons.send_rounded,
+            color: const Color(0xFF25D366),
+            enabled: true,
+            onTap: () => _sendInvoiceWA(o),
+          ),
+          const SizedBox(height: 12),
+          _buildBigActionBtn(
+            title: 'Lihat PDF Invoice',
+            subtitle: 'Cetak atau simpan tagihan dalam format PDF',
+            icon: Icons.picture_as_pdf_rounded,
+            color: const Color(0xFFE53935), // Red color for PDF
+            enabled: true,
+            onTap: () async {
+              await Printing.layoutPdf(
+                name: 'KLINKLIN-${o.customer.name}-${o.customer.area}-${o.id}'.replaceAll(' ', '_'),
+                onLayout: (format) => PdfInvoiceService.generateInvoice(o),
+              );
+            },
+          ),
+        ],
       ],
     );
+  }
+
+  Future<void> _sendInvoiceWA(OrderModel o) async {
+    final customerName = o.customer.name;
+    final branchName = o.customer.area.toUpperCase();
+    final orderId = o.id;
+    final address = o.customer.address;
+    
+    String rincian = '';
+    for (int i = 0; i < o.services.length; i++) {
+      final s = o.services[i];
+      rincian += '${i + 1}. ${s.name} : ${s.qty}\n';
+    }
+    if (rincian.isEmpty) {
+      rincian = '-';
+    }
+    
+    final tglRaw = o.services.isNotEmpty ? o.services.first.tanggalPengerjaan : '';
+    final waktu = o.services.isNotEmpty ? o.services.first.waktuPengerjaan : '-';
+    
+    final dateFmt = _formatWADate(tglRaw).split('|');
+    final hari = dateFmt[0];
+    final tanggal = dateFmt.length > 1 ? dateFmt[1] : '-';
+    
+    final subtotal = o.total;
+    final ppn = (subtotal * 0.11).round();
+    final totalAkhir = subtotal + ppn;
+    
+    final message = '''Halo Kak $customerName
+Terimakasih sudah melakukan pemesanan di Klinklin $branchName, Berikut Rinciannya :
+
+📄 *KLINKLIN $branchName*
+--------------------------------
+No. Order : $orderId
+Nama Customer : *$customerName*
+Alamat : *$address*
+
+*Rincian Pesanan:*
+${rincian.trim()}
+
+Hari : $hari
+Waktu : $waktu
+Tanggal : $tanggal
+--------------------------------
+Total Awal : ${_formatRupiah(subtotal).replaceAll('Rp ', '')}
+Diskon : 0
+PPn : ${_formatRupiah(ppn).replaceAll('Rp ', '')}
+*TOTAL BAYAR : ${_formatRupiah(totalAkhir).replaceAll(' ', '')}*
+--------------------------------
+
+Transfer hanya ke No. Rekening Berikut:
+*Mandiri 1780022255554*
+*BCA 8640679949*
+an. KLINKLIN INDONESIA GROUP
+
+
+
+
+⚠️ *PENTING & HARAP DIBACA :*
+Pembayaran ini SAH jika disertai Invoice Resmi Berupa file PDF.
+Jika Anda melakukan pembayaran tanpa menerima Invoice, maka transaksi dianggap TIDAK ADA / ILEGAL
+
+Silahkan klik Link berikut ini jika ada kendala pembayaran
+klinklin.co.id/aduanpayment''';
+
+    final phone = o.customer.phone.startsWith('0') 
+        ? '62${o.customer.phone.substring(1)}' 
+        : o.customer.phone;
+    final encodedMsg = Uri.encodeComponent(message);
+    final url = Uri.parse('https://wa.me/$phone?text=$encodedMsg');
+    
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback: just try to launch it anyway
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tidak dapat membuka WhatsApp'), backgroundColor: AppColors.error));
+      }
+    }
+  }
+
+  String _formatWADate(String dateString) {
+    if (dateString.isEmpty) return '-|-';
+    try {
+      final dt = DateTime.parse(dateString);
+      final days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      final months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+      final dayName = days[dt.weekday % 7];
+      final monthName = months[dt.month - 1];
+      return '$dayName|${dt.day.toString().padLeft(2, '0')} $monthName ${dt.year}';
+    } catch (e) {
+      return '-|-';
+    }
   }
 
   Widget _buildBigActionBtn({required String title, required String subtitle, required IconData icon, required Color color, required bool enabled, required VoidCallback onTap}) {
