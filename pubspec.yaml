@@ -60,6 +60,10 @@ dependencies:
   # Image Picker
   image_picker: ^1.1.2
 
+  # Firebase
+  firebase_core: ^3.9.0
+  firebase_messaging: ^15.2.0
+
   # PDF
   pdf: ^3.11.1
   printing: ^5.13.0
@@ -88,6 +92,7 @@ flutter:
 
   assets:
     - assets/images/logo.png
+    - assets/images/ttd_M_Aminuddin_Ghufron.png
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

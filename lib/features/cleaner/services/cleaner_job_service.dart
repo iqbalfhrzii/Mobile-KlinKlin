@@ -20,8 +20,12 @@ class CleanerJobService {
         'cleaner_id': cleanerId,
       });
 
-      if (response.data['status'] == true) {
-        return response.data['data'] as List<dynamic>;
+      final responseData = response.data['data'];
+      if (responseData is List) {
+        return responseData
+            .where((e) => e['status_pengerjaan'] != 'assigned')
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
       }
       throw Exception(response.data['message'] ?? 'Gagal mengambil data jobs');
     } on DioException catch (e) {
@@ -88,6 +92,29 @@ class CleanerJobService {
     } on DioException catch (e) {
       if (e.response != null && e.response?.data != null) {
         throw Exception(e.response?.data['message'] ?? 'Gagal menyelesaikan job');
+      }
+      throw Exception('Tidak dapat terhubung ke server');
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchHistory({int? month, int? year}) async {
+    final cleanerId = await _getCleanerId();
+    if (cleanerId == null) throw Exception('Cleaner ID tidak ditemukan');
+
+    try {
+      final response = await _dio.get('/cleaner/jobs/history', queryParameters: {
+        'cleaner_id': cleanerId,
+        if (month != null) 'month': month,
+        if (year != null) 'year': year,
+      });
+
+      if (response.data['status'] == true) {
+        return response.data['data'];
+      }
+      throw Exception(response.data['message'] ?? 'Gagal mengambil riwayat pekerjaan');
+    } on DioException catch (e) {
+      if (e.response != null && e.response?.data != null) {
+        throw Exception(e.response?.data['message'] ?? 'Gagal mengambil riwayat pekerjaan');
       }
       throw Exception('Tidak dapat terhubung ke server');
     }

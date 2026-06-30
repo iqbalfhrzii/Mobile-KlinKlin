@@ -24,7 +24,7 @@ class CustomerModel {
       totalOrders: 0,
       totalSpending: 0,
       lastOrderDate: '-',
-      notes: '',
+      notes: json['catatan'] ?? '',
       orders: const [],
     );
   }

@@ -261,6 +261,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
         'no_wa': _phoneCtrl.text.trim(),
         'alamat': _addressCtrl.text.trim(),
         'status': _status,
+        'catatan': _notesCtrl.text.trim(),
       });
 
       if (mounted) {

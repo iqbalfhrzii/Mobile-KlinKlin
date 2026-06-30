@@ -4,10 +4,12 @@ import '../../../core/theme/app_colors.dart';
 import '../../shell/main_shell.dart';
 
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/fcm_service.dart';
 
 import 'change_pin_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../cleaner/shell/cleaner_main_shell.dart';
+import '../../finance/shell/finance_main_shell.dart';
 
 class PinScreen extends StatefulWidget {
   const PinScreen({super.key, required this.email});
@@ -44,6 +46,7 @@ class _PinScreenState extends State<PinScreen> {
         String roleName = '';
         if (res['data'] != null && res['data']['jabatan'] != null) {
           final jab = res['data']['jabatan'];
+          debugPrint('DEBUG LOGIN JABATAN: $jab');
           if (jab is Map) {
             roleName = (jab['nama_jabatan'] ?? '').toString().toLowerCase();
           } else {
@@ -51,12 +54,30 @@ class _PinScreenState extends State<PinScreen> {
           }
         }
         
+        debugPrint('DEBUG LOGIN ROLENAME: $roleName');
+        
         final isCleaner = roleName.contains('cleaner');
+        final isFinance = roleName.contains('finance') || roleName.contains('keuangan');
+
+        debugPrint('DEBUG LOGIN isFinance: $isFinance');
+
+        if (isCleaner) {
+          // Send FCM token to backend
+          FcmService.instance.updateTokenToServer();
+        }
 
         if (res['wajib_ganti_pin'] == true) {
           if (isCleaner) {
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => CleanerMainShell(
+                requirePinChange: true,
+                currentPin: _pin,
+              )),
+              (route) => false,
+            );
+          } else if (isFinance) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => FinanceMainShell(
                 requirePinChange: true,
                 currentPin: _pin,
               )),
@@ -75,6 +96,11 @@ class _PinScreenState extends State<PinScreen> {
           if (isCleaner) {
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => const CleanerMainShell()),
+              (route) => false,
+            );
+          } else if (isFinance) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const FinanceMainShell()),
               (route) => false,
             );
           } else {

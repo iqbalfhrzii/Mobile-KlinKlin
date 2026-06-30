@@ -89,10 +89,42 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
     final details = pesanan['details'] as List? ?? [];
     
     final bonusList = _job['bonuses'] as List? ?? [];
-    final totalBonus = int.tryParse(_job['total_bonus']?.toString() ?? '0') ?? 0;
+    final num totalBonus = _job['total_bonus'] is num ? _job['total_bonus'] : (num.tryParse(_job['total_bonus']?.toString() ?? '0') ?? 0);
 
     final isStartable = status == 'assigned' || status == 'notified';
     final isFinishable = status == 'in_progress';
+
+    final List<Widget> bonusWidgets = [];
+    
+    for (var b in bonusList) {
+      String namaBonus = b['keterangan'] ?? 'Bonus';
+      if (b['tarif_bonus_cabang'] != null && b['tarif_bonus_cabang']['jenis_bonus'] != null) {
+        namaBonus = b['tarif_bonus_cabang']['jenis_bonus']['nama_bonus'] ?? namaBonus;
+      }
+      
+      // If it's a service bonus, make the name cleaner
+      if (namaBonus == 'Bonus Layanan' && b['keterangan'] != null) {
+        final parts = b['keterangan'].toString().split('|');
+        if (parts.length > 1) {
+          namaBonus = parts[1].trim(); 
+        }
+      }
+      
+      final num nominal = b['nominal'] is num ? b['nominal'] : (num.tryParse(b['nominal']?.toString() ?? '0') ?? 0);
+      
+      bonusWidgets.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(child: Text(namaBonus, style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFFAD6800)))),
+              Text(_formatRupiah(nominal.toInt()), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFFD48806))),
+            ],
+          ),
+        )
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -229,28 +261,13 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ...bonusList.map((b) {
-                            String namaBonus = b['keterangan'] ?? 'Bonus';
-                            if (b['tarif_bonus_cabang'] != null && b['tarif_bonus_cabang']['jenis_bonus'] != null) {
-                              namaBonus = b['tarif_bonus_cabang']['jenis_bonus']['nama_bonus'] ?? namaBonus;
-                            }
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(child: Text(namaBonus, style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFFAD6800)))),
-                                  Text(_formatRupiah(int.tryParse(b['nominal']?.toString() ?? '0') ?? 0), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFFD48806))),
-                                ],
-                              ),
-                            );
-                          }),
-                          if (bonusList.isNotEmpty) const Divider(color: Color(0xFFFFE58F)),
+                          ...bonusWidgets,
+                          if (bonusWidgets.isNotEmpty) const Divider(color: Color(0xFFFFE58F)),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text('Total Bonus', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFFAD6800))),
-                              Text(_formatRupiah(totalBonus), style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: const Color(0xFFD48806))),
+                              Text(_formatRupiah(totalBonus.toInt()), style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: const Color(0xFFD48806))),
                             ],
                           ),
                         ],

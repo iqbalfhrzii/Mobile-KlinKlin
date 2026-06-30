@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/payment_service.dart';
 import '../../orders/services/order_service.dart';
+import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
@@ -292,31 +293,145 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
         const SizedBox(height: 10),
         Text(_o.cancelReason!, style: GoogleFonts.inter(
             fontSize: 13, color: const Color(0xFF7A2020), height: 1.5)),
+        if (_o.cancelProof != null && _o.cancelProof!.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Divider(color: AppColors.error.withOpacity(0.2), thickness: 1),
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: () => _showImageDialog(context, _o.cancelProof!),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.image_outlined, color: AppColors.error, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Lihat Bukti Pembatalan',
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Ketuk untuk melihat foto',
+                          style: GoogleFonts.inter(
+                            color: AppColors.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios, color: AppColors.textMuted, size: 16),
+                ],
+              ),
+            ),
+          ),
+        ],
       ]),
     );
   }
 
   // ─── Proof card ──────────────────────────────────────────────────────────
   Widget _buildProofCard() {
-    return _card('Bukti Pembayaran', Row(children: [
-      Container(
-        width: 48, height: 48,
-        decoration: BoxDecoration(
-          color: AppColors.statusDoneBg,
-          borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      onTap: () {
+        if (_o.paymentProof != null && _o.paymentProof!.isNotEmpty) {
+          _showImageDialog(context, _o.paymentProof!);
+        }
+      },
+      child: _card('Bukti Pembayaran', Row(children: [
+        Container(
+          width: 48, height: 48,
+          decoration: BoxDecoration(
+            color: AppColors.statusDoneBg,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(Icons.receipt_long_rounded,
+              color: AppColors.statusDone, size: 24),
         ),
-        child: const Icon(Icons.receipt_long_rounded,
-            color: AppColors.statusDone, size: 24),
-      ),
-      const SizedBox(width: 12),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(_o.paymentProof!, style: GoogleFonts.inter(
-            fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-        Text('Terverifikasi · Tersimpan', style: GoogleFonts.inter(
-            fontSize: 11, color: AppColors.statusDone)),
+        const SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Lihat Bukti Pembayaran', style: GoogleFonts.inter(
+              fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          Text('Terverifikasi · Tersimpan', style: GoogleFonts.inter(
+              fontSize: 11, color: AppColors.statusDone)),
+        ])),
+        const Icon(Icons.check_circle_rounded, color: AppColors.statusDone, size: 20),
       ])),
-      const Icon(Icons.check_circle_rounded, color: AppColors.statusDone, size: 20),
-    ]));
+    );
+  }
+
+  void _showImageDialog(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                imageUrl.startsWith('http')
+                    ? imageUrl
+                    : '${ApiClient.baseUrl.replaceAll('/api', '')}/storage/${imageUrl.replaceFirst(RegExp(r'^/?storage/'), '')}',
+                fit: BoxFit.contain,
+                errorBuilder: (ctx, err, stack) => Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.broken_image, color: AppColors.textMuted, size: 48),
+                      const SizedBox(height: 16),
+                      Text('Gagal memuat gambar', style: GoogleFonts.inter(color: AppColors.textMuted)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(ctx),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 20),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ─── STICKY BOTTOM BAR ──────────────────────────────────────────────────

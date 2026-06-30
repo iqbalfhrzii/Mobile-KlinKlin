@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "882650938873",
+    "project_id": "api-klinklin",
+    "storage_bucket": "api-klinklin.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:882650938873:android:9920487ade582c85e21128",
+        "android_client_info": {
+          "package_name": "com.example.klinklin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCanboGzVLt0ozA7KqWIB1xgMR2fHc1D7Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

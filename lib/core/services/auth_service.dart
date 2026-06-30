@@ -186,6 +186,17 @@ class AuthService {
     }
   }
 
+  static Future<void> updateFcmToken(String fcmToken) async {
+    try {
+      await _dio.post(
+        '/cleaner/fcm-token',
+        data: {'fcm_token': fcmToken},
+      );
+    } catch (e) {
+      debugPrint('Failed to update FCM token: $e');
+    }
+  }
+
   static Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('auth_token') != null;

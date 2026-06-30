@@ -4,27 +4,27 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../auth/screens/change_pin_screen.dart';
 import '../../profile/screens/profile_screen.dart';
-import '../dashboard/cleaner_dashboard_screen.dart';
-import '../history/cleaner_history_screen.dart';
-import '../jobs/cleaner_job_list_screen.dart';
 
-class CleanerMainShell extends StatefulWidget {
-  const CleanerMainShell({
+import '../screens/finance_dashboard_screen.dart';
+import '../screens/finance_cash_flow_menu_screen.dart';
+
+class FinanceMainShell extends StatefulWidget {
+  const FinanceMainShell({
     super.key,
     this.initialIndex = 0,
     this.requirePinChange = false,
     this.currentPin,
   });
-
+  
   final int initialIndex;
   final bool requirePinChange;
   final String? currentPin;
 
   @override
-  State<CleanerMainShell> createState() => _CleanerMainShellState();
+  State<FinanceMainShell> createState() => _FinanceMainShellState();
 }
 
-class _CleanerMainShellState extends State<CleanerMainShell> {
+class _FinanceMainShellState extends State<FinanceMainShell> {
   late int _currentIndex;
 
   @override
@@ -35,16 +35,14 @@ class _CleanerMainShellState extends State<CleanerMainShell> {
   }
 
   final _screens = const [
-    CleanerDashboardScreen(),
-    CleanerJobListScreen(),
-    CleanerHistoryScreen(),
+    FinanceDashboardScreen(),
+    FinanceCashFlowMenuScreen(),
     ProfileScreen(),
   ];
 
   static const _navItems = [
     _NavItem(Icons.grid_view_rounded, Icons.grid_view_rounded, 'Dashboard'),
-    _NavItem(Icons.work_outline_rounded, Icons.work_rounded, 'Tugas'),
-    _NavItem(Icons.history_toggle_off_rounded, Icons.history_rounded, 'Riwayat'),
+    _NavItem(Icons.account_balance_wallet_outlined, Icons.account_balance_wallet_rounded, 'Cash Flow'),
     _NavItem(Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
   ];
 
@@ -176,10 +174,7 @@ class _CleanerMainShellState extends State<CleanerMainShell> {
               final selected = _currentIndex == i;
               return Expanded(
                 child: GestureDetector(
-                  onTap: () {
-                    if (widget.requirePinChange) return;
-                    setState(() => _currentIndex = i);
-                  },
+                  onTap: () => setState(() => _currentIndex = i),
                   behavior: HitTestBehavior.opaque,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -219,9 +214,8 @@ class _CleanerMainShellState extends State<CleanerMainShell> {
 }
 
 class _NavItem {
+  const _NavItem(this.icon, this.activeIcon, this.label);
   final IconData icon;
   final IconData activeIcon;
   final String label;
-
-  const _NavItem(this.icon, this.activeIcon, this.label);
 }

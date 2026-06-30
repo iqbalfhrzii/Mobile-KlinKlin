@@ -233,8 +233,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Widget _buildSummaryCards() {
-    final totalPending = _unpaid.fold<int>(0, (s, o) => s + o.total) + _waitingApprove.fold<int>(0, (s, o) => s + o.total);
-    final totalPaid = _paid.fold<int>(0, (s, o) => s + o.total);
+    final totalPending = _unpaid.fold<int>(0, (s, o) => s + (o.pembayaran?.total ?? (o.total + (o.total * 0.11).round()))) + _waitingApprove.fold<int>(0, (s, o) => s + (o.pembayaran?.total ?? (o.total + (o.total * 0.11).round())));
+    final totalPaid = _paid.fold<int>(0, (s, o) => s + (o.pembayaran?.total ?? (o.total + (o.total * 0.11).round())));
     return Row(children: [
       Expanded(child: _SmallCard(
         label: 'Belum Lunas', value: _fmt(totalPending),
@@ -342,7 +342,7 @@ class _PaymentCard extends StatelessWidget {
           ])),
           const SizedBox(width: 10),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(_fmt(order.total),
+            Text(_fmt(order.pembayaran?.total ?? (order.total + (order.total * 0.11).round())),
                 style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,

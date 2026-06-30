@@ -273,11 +273,11 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> {
       final branchStr = prefs.getString('user_branch'); 
       
       final updatedCustomer = await CustomerService.updateCustomer(widget.customer.id, {
-        'cabang_id': 1, // Assuming default branch ID = 1 for now like addCustomer
         'nama_pelanggan': _nameCtrl.text.trim(),
         'no_wa': _phoneCtrl.text.trim(),
         'alamat': _addressCtrl.text.trim(),
         'status': _status == 'non aktif' ? 'nonaktif' : _status,
+        'catatan': _notesCtrl.text.trim(),
       });
 
       if (mounted) {

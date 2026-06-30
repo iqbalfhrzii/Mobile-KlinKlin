@@ -6,14 +6,29 @@ import '../features/auth/screens/login_screen.dart';
 
 import '../core/services/auth_service.dart';
 import '../features/shell/main_shell.dart';
+import '../core/services/fcm_service.dart';
 
-class KlinklinApp extends StatelessWidget {
+final GlobalKey<NavigatorState> globalNavigatorKey = GlobalKey<NavigatorState>();
+
+class KlinklinApp extends StatefulWidget {
   const KlinklinApp({super.key});
+
+  @override
+  State<KlinklinApp> createState() => _KlinklinAppState();
+}
+
+class _KlinklinAppState extends State<KlinklinApp> {
+  @override
+  void initState() {
+    super.initState();
+    FcmService.instance.init(globalNavigatorKey);
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'KlinKlin CS App',
+      navigatorKey: globalNavigatorKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       locale: const Locale('id', 'ID'),

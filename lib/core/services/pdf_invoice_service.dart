@@ -17,12 +17,25 @@ class PdfInvoiceService {
       // Ignored if logo not found
     }
 
+    pw.MemoryImage? signatureImage;
+    try {
+      final sigData = await rootBundle.load(
+        'assets/images/ttd_M_Aminuddin_Ghufron.png',
+      );
+      signatureImage = pw.MemoryImage(sigData.buffer.asUint8List());
+    } catch (e) {
+      // Ignored if signature not found
+    }
+
     final branchName = order.customer.area.toUpperCase();
     final now = DateTime.now();
-    final tglCetak = '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
-    final jamCetak = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-    
-    final tglInput = '${order.tanggalInput.day.toString().padLeft(2, '0')}/${order.tanggalInput.month.toString().padLeft(2, '0')}/${order.tanggalInput.year}';
+    final tglCetak =
+        '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
+    final jamCetak =
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
+    final tglInput =
+        '${order.tanggalInput.day.toString().padLeft(2, '0')}/${order.tanggalInput.month.toString().padLeft(2, '0')}/${order.tanggalInput.year}';
 
     String formatRupiah(int amount) {
       final str = amount.toString();
@@ -37,7 +50,7 @@ class PdfInvoiceService {
       }
       return 'Rp$result';
     }
-    
+
     final ppnValue = (order.total * 0.11).round();
     final totalTagihan = order.total + ppnValue;
 
@@ -45,15 +58,10 @@ class PdfInvoiceService {
     if (cleanerNames.isEmpty) cleanerNames = '-';
 
     String getStatusText(OrderStatus status) {
-      switch (status) {
-        case OrderStatus.draft: return 'Draf / Belum Selesai';
-        case OrderStatus.assigned: return 'Menunggu Pengerjaan';
-        case OrderStatus.inProgress: return 'Sedang Dikerjakan';
-        case OrderStatus.finishedByCleaner: return 'Selesai Dikerjakan';
-        case OrderStatus.waitingPaymentApproval: return 'Menunggu Konfirmasi Bayar';
-        case OrderStatus.waitingCancelApproval: return 'Menunggu Konfirmasi Batal';
-        case OrderStatus.completed: return 'Selesai / Lunas';
-        case OrderStatus.cancelled: return 'Dibatalkan';
+      if (status == OrderStatus.completed) {
+        return 'Sudah Diverifikasi';
+      } else {
+        return 'Sudah Bayar';
       }
     }
 
@@ -77,7 +85,9 @@ class PdfInvoiceService {
                         padding: const pw.EdgeInsets.all(6),
                         decoration: pw.BoxDecoration(
                           color: PdfColor.fromHex('#002063'),
-                          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+                          borderRadius: const pw.BorderRadius.all(
+                            pw.Radius.circular(8),
+                          ),
                         ),
                         child: pw.Image(logoImage),
                       ),
@@ -85,10 +95,23 @@ class PdfInvoiceService {
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('KLINKLIN $branchName', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#002063'))),
+                        pw.Text(
+                          'KLINKLIN $branchName',
+                          style: pw.TextStyle(
+                            fontSize: 16,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColor.fromHex('#002063'),
+                          ),
+                        ),
                         pw.SizedBox(height: 4),
-                        pw.Text('Layanan Jasa Kebersihan Profesional', style: pw.TextStyle(fontSize: 10)),
-                        pw.Text('Website: www.klinklin.co.id', style: pw.TextStyle(fontSize: 10)),
+                        pw.Text(
+                          'Layanan Jasa Kebersihan Profesional',
+                          style: pw.TextStyle(fontSize: 10),
+                        ),
+                        pw.Text(
+                          'Website: www.klinklin.co.id',
+                          style: pw.TextStyle(fontSize: 10),
+                        ),
                       ],
                     ),
                   ],
@@ -96,22 +119,48 @@ class PdfInvoiceService {
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.end,
                   children: [
-                    pw.Text('Tgl Cetak: $tglCetak', style: pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                    pw.Text('Jam Cetak: $jamCetak', style: pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                    pw.Text(
+                      'Tgl Cetak: $tglCetak',
+                      style: pw.TextStyle(
+                        fontSize: 9,
+                        color: PdfColors.grey700,
+                      ),
+                    ),
+                    pw.Text(
+                      'Jam Cetak: $jamCetak',
+                      style: pw.TextStyle(
+                        fontSize: 9,
+                        color: PdfColors.grey700,
+                      ),
+                    ),
                   ],
-                )
-              ]
+                ),
+              ],
             ),
             pw.SizedBox(height: 24),
-            
+
             // TITLE
             pw.Center(
               child: pw.Column(
                 children: [
-                  pw.Text('RINCIAN BIAYA PESANAN', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, letterSpacing: 1.5)),
-                  pw.Text('INVOICE KLINKLIN', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.grey700)),
-                ]
-              )
+                  pw.Text(
+                    'RINCIAN BIAYA PESANAN',
+                    style: pw.TextStyle(
+                      fontSize: 14,
+                      fontWeight: pw.FontWeight.bold,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  pw.Text(
+                    'INVOICE KLINKLIN',
+                    style: pw.TextStyle(
+                      fontSize: 11,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.grey700,
+                    ),
+                  ),
+                ],
+              ),
             ),
             pw.SizedBox(height: 16),
 
@@ -145,10 +194,23 @@ class PdfInvoiceService {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        _buildInfoRow('Tanggal Pengerjaan', order.services.isNotEmpty ? order.services.first.tanggalPengerjaan : '-'),
-                        _buildInfoRow('Waktu Pengerjaan', order.services.isNotEmpty ? order.services.first.waktuPengerjaan : '-'),
-                        _buildInfoRow('Status Order', getStatusText(order.status).toUpperCase()),
-                        _buildInfoRow('Metode Pembayaran', order.paymentMethod.toUpperCase()),
+                        _buildInfoRow(
+                          'Tanggal Pengerjaan',
+                          order.services.isNotEmpty
+                              ? order.services.first.tanggalPengerjaan
+                              : '-',
+                        ),
+                        _buildInfoRow(
+                          'Waktu Pengerjaan',
+                          order.services.isNotEmpty
+                              ? order.services.first.waktuPengerjaan
+                              : '-',
+                        ),
+                        _buildInfoRow(
+                          'Status Order',
+                          getStatusText(order.status),
+                        ),
+                        _buildInfoRow('Metode Pembayaran', order.paymentMethod),
                         _buildInfoRow('Chat Dari', order.chatDari.name),
                         _buildInfoRow('Nama Cleaner', cleanerNames),
                       ],
@@ -165,31 +227,101 @@ class PdfInvoiceService {
                 border: pw.Border(
                   top: pw.BorderSide(width: 1.5),
                   bottom: pw.BorderSide(width: 1.5),
-                )
+                ),
               ),
-              padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+              padding: const pw.EdgeInsets.symmetric(
+                vertical: 6,
+                horizontal: 4,
+              ),
               child: pw.Row(
                 children: [
-                  pw.Expanded(flex: 3, child: pw.Text('Layanan / Deskripsi', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
-                  pw.Expanded(flex: 2, child: pw.Text('Qty / Detail', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
-                  pw.Expanded(flex: 1, child: pw.Text('Harga', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
-                  pw.Expanded(flex: 1, child: pw.Text('Subtotal', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
-                ]
-              )
+                  pw.Expanded(
+                    flex: 3,
+                    child: pw.Text(
+                      'Layanan / Deskripsi',
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                  pw.Expanded(
+                    flex: 2,
+                    child: pw.Text(
+                      'Qty / Detail',
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                  pw.Expanded(
+                    flex: 1,
+                    child: pw.Text(
+                      'Harga',
+                      textAlign: pw.TextAlign.right,
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                  pw.Expanded(
+                    flex: 1,
+                    child: pw.Text(
+                      'Subtotal',
+                      textAlign: pw.TextAlign.right,
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            
+
             // TABLE BODY
             ...order.services.map((s) {
               return pw.Container(
-                padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                padding: const pw.EdgeInsets.symmetric(
+                  vertical: 6,
+                  horizontal: 4,
+                ),
                 child: pw.Row(
                   children: [
-                    pw.Expanded(flex: 3, child: pw.Text(s.name, style: const pw.TextStyle(fontSize: 10))),
-                    pw.Expanded(flex: 2, child: pw.Text(s.qty, style: const pw.TextStyle(fontSize: 10))),
-                    pw.Expanded(flex: 1, child: pw.Text(formatRupiah(s.price), textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 10))),
-                    pw.Expanded(flex: 1, child: pw.Text(formatRupiah(s.subtotal), textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 10))),
-                  ]
-                )
+                    pw.Expanded(
+                      flex: 3,
+                      child: pw.Text(
+                        s.name,
+                        style: const pw.TextStyle(fontSize: 10),
+                      ),
+                    ),
+                    pw.Expanded(
+                      flex: 2,
+                      child: pw.Text(
+                        s.qty,
+                        style: const pw.TextStyle(fontSize: 10),
+                      ),
+                    ),
+                    pw.Expanded(
+                      flex: 1,
+                      child: pw.Text(
+                        formatRupiah(s.price),
+                        textAlign: pw.TextAlign.right,
+                        style: const pw.TextStyle(fontSize: 10),
+                      ),
+                    ),
+                    pw.Expanded(
+                      flex: 1,
+                      child: pw.Text(
+                        formatRupiah(s.subtotal),
+                        textAlign: pw.TextAlign.right,
+                        style: const pw.TextStyle(fontSize: 10),
+                      ),
+                    ),
+                  ],
+                ),
               );
             }).toList(),
 
@@ -206,7 +338,10 @@ class PdfInvoiceService {
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
                       pw.SizedBox(height: 8),
-                      _buildSummaryRow('Subtotal (Rp)', formatRupiah(order.total)),
+                      _buildSummaryRow(
+                        'Subtotal (Rp)',
+                        formatRupiah(order.total),
+                      ),
                       _buildSummaryRow('Diskon Nilai (Rp)', 'Rp0'),
                       _buildSummaryRow('PPN (11%)', formatRupiah(ppnValue)),
                       pw.SizedBox(height: 8),
@@ -215,16 +350,28 @@ class PdfInvoiceService {
                       pw.Row(
                         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                         children: [
-                          pw.Text('TOTAL TAGIHAN (Rp)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
-                          pw.Text(formatRupiah(totalTagihan), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
-                        ]
-                      )
-                    ]
-                  )
-                )
-              ]
+                          pw.Text(
+                            'TOTAL TAGIHAN (Rp)',
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          ),
+                          pw.Text(
+                            formatRupiah(totalTagihan),
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            
+
             pw.SizedBox(height: 40),
 
             // FOOTER (Signatures)
@@ -235,24 +382,48 @@ class PdfInvoiceService {
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text('KLINKLIN $branchName, $tglCetak', style: const pw.TextStyle(fontSize: 10)),
+                    pw.Text(
+                      'KLINKLIN $branchName, $tglCetak',
+                      style: const pw.TextStyle(fontSize: 10),
+                    ),
                     pw.SizedBox(height: 4),
-                    pw.Text('Terima kasih telah menggunakan jasa kami.', style: pw.TextStyle(fontSize: 10, fontStyle: pw.FontStyle.italic, color: PdfColors.grey700)),
-                  ]
+                    pw.Text(
+                      'Terima kasih telah menggunakan jasa kami.',
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        fontStyle: pw.FontStyle.italic,
+                        color: PdfColors.grey700,
+                      ),
+                    ),
+                  ],
                 ),
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.center,
                   children: [
-                    pw.Text('Di Cetak Oleh', style: const pw.TextStyle(fontSize: 10)),
-                    pw.SizedBox(height: 50), // space for signature
-                    pw.Text('Admin Klinklin', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                  ]
-                )
-              ]
-            )
+                    pw.Text(
+                      'Sincerely',
+                      style: const pw.TextStyle(fontSize: 10),
+                    ),
+                    pw.SizedBox(height: 4),
+                    if (signatureImage != null)
+                      pw.Image(signatureImage, width: 80, height: 40)
+                    else
+                      pw.SizedBox(height: 40),
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      'M. Aminuddin Ghufron',
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ];
         },
-      )
+      ),
     );
 
     return pdf.save();
@@ -264,11 +435,22 @@ class PdfInvoiceService {
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Container(width: 100, child: pw.Text(label, style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700))),
+          pw.Container(
+            width: 100,
+            child: pw.Text(
+              label,
+              style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+            ),
+          ),
           pw.Text(' : ', style: const pw.TextStyle(fontSize: 9)),
-          pw.Expanded(child: pw.Text(value, style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold))),
-        ]
-      )
+          pw.Expanded(
+            child: pw.Text(
+              value,
+              style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -280,8 +462,8 @@ class PdfInvoiceService {
         children: [
           pw.Text(label, style: const pw.TextStyle(fontSize: 10)),
           pw.Text(value, style: const pw.TextStyle(fontSize: 10)),
-        ]
-      )
+        ],
+      ),
     );
   }
 }

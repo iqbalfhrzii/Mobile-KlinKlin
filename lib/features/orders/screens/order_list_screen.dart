@@ -379,7 +379,7 @@ class _OrderCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  _fmt(o.total),
+                  _fmt(o.pembayaran?.total ?? (o.total + (o.total * 0.11).round())),
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,

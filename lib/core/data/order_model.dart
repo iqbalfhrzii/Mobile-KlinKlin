@@ -271,6 +271,38 @@ class OrderCleaner {
   }
 }
 
+class OrderPayment {
+  OrderPayment({
+    required this.id,
+    required this.metodePembayaran,
+    required this.statusPembayaran,
+    this.buktiTransfer,
+    this.catatanPembayaran,
+    this.total,
+    this.ppn,
+  });
+
+  int id;
+  String metodePembayaran;
+  String statusPembayaran;
+  String? buktiTransfer;
+  String? catatanPembayaran;
+  int? total;
+  int? ppn;
+
+  factory OrderPayment.fromJson(Map<String, dynamic> json) {
+    return OrderPayment(
+      id: json['id'] != null ? int.parse(json['id'].toString()) : 0,
+      metodePembayaran: json['metode_pembayaran'] ?? '-',
+      statusPembayaran: json['status_pembayaran'] ?? 'unpaid',
+      buktiTransfer: json['bukti_transfer'],
+      catatanPembayaran: json['catatan_pembayaran'],
+      total: json['total'] != null ? (double.tryParse(json['total'].toString())?.toInt()) : null,
+      ppn: json['ppn'] != null ? (double.tryParse(json['ppn'].toString())?.toInt()) : null,
+    );
+  }
+}
+
 class OrderModel {
   OrderModel({
     required this.id,
@@ -287,7 +319,10 @@ class OrderModel {
     required this.notes,
     required this.tanggalInput,
     this.cancelReason,
+    this.cancelProof,
     this.paymentProof,
+    this.pembayaran,
+    this.pembatalanId,
   });
 
   String id;
@@ -304,7 +339,10 @@ class OrderModel {
   String notes;
   DateTime tanggalInput;
   String? cancelReason;
+  String? cancelProof;
   String? paymentProof;
+  OrderPayment? pembayaran;
+  int? pembatalanId;
 
   String get schedule {
     if (services.isEmpty) return "-";
@@ -346,8 +384,11 @@ class OrderModel {
       paymentStatus: json['pembayaran']?['status_pembayaran'] ?? json['status_pembayaran'] ?? 'unpaid',
       notes: json['keterangan_order'] ?? '',
       tanggalInput: json['tanggal_input'] != null ? DateTime.tryParse(json['tanggal_input']) ?? DateTime.now() : DateTime.now(),
-      cancelReason: json['alasan_batal'],
-      paymentProof: json['pembayaran']?['bukti_transfer'] ?? json['file_invoice'],
+      cancelReason: json['alasan_batal'] ?? json['pembatalan']?['alasan_cancel'],
+      cancelProof: json['bukti_batal'] ?? json['pembatalan']?['bukti_cancel'],
+      paymentProof: json['pembayaran']?['bukti_transfer'] ?? json['pembayaran']?['bukti_pembayaran'] ?? json['file_invoice'],
+      pembayaran: json['pembayaran'] != null ? OrderPayment.fromJson(json['pembayaran']) : null,
+      pembatalanId: json['pembatalan']?['id'],
     );
   }
 

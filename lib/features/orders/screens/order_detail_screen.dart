@@ -705,6 +705,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             enabled: true,
             onTap: () => _sendInvoiceWA(o),
           ),
+        ],
+        if (o.status == OrderStatus.waitingPaymentApproval || o.status == OrderStatus.completed) ...[
           const SizedBox(height: 12),
           _buildBigActionBtn(
             title: 'Lihat PDF Invoice',
