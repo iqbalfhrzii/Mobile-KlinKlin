@@ -184,7 +184,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                                   ),
                                 ],
                               ),
-                              if (pelanggan['no_wa'] != null) ...[
+                              if (pelanggan['no_wa'] != null && (_job['show_wa'] == true || _job['show_wa'] == 1 || _job['show_wa'] == '1')) ...[
                                 const SizedBox(height: 12),
                                 Row(
                                   children: [

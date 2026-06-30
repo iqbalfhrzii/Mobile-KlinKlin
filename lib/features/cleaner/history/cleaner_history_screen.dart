@@ -449,6 +449,53 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
                     ),
                   );
                 }),
+                if (job['bonuses'] != null && (job['bonuses'] as List).isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  const Divider(height: 1, thickness: 1, color: AppColors.border),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Bonus Tambahan:',
+                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 12),
+                  ...(job['bonuses'] as List).map((b) {
+                    final tarif = b['tarif_bonus_cabang'] ?? {};
+                    final jenis = tarif['jenis_bonus'] ?? {};
+                    final namaBonus = jenis['nama_bonus'] ?? 'Bonus Manual';
+                    final keterangan = (b['keterangan'] ?? '').toString();
+                    final nominal = _parseNum(b['nominal']);
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  namaBonus,
+                                  style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
+                                ),
+                                if (keterangan.isNotEmpty && keterangan != '-' && keterangan != namaBonus)
+                                  Text(
+                                    keterangan,
+                                    style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          if (nominal > 0)
+                            Text(
+                              '+ ${_formatRupiah(nominal)}',
+                              style: GoogleFonts.inter(fontSize: 13, color: AppColors.success, fontWeight: FontWeight.w600),
+                            ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
               ],
             ),
           ),

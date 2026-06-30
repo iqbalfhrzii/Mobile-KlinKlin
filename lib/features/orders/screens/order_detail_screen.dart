@@ -91,6 +91,30 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
   }
 
+  Future<void> _toggleWa(OrderCleaner cleaner) async {
+    if (cleaner.pesananCleanerId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ID Cleaner tidak valid (belum tersimpan di database)')));
+      return;
+    }
+    
+    setState(() => _isLoading = true);
+    try {
+      await _orderService.toggleWa(cleaner.pesananCleanerId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(cleaner.showWa ? 'Akses WA disembunyikan' : 'Akses WA ditampilkan untuk cleaner'), 
+          backgroundColor: AppColors.statusDone
+        )
+      );
+      _fetchDetail();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error));
+    }
+  }
+
   String _formatRupiah(int n) =>
       'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
@@ -479,6 +503,27 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         const Icon(Icons.add_circle_outline_rounded, size: 14, color: Colors.white),
                         const SizedBox(width: 6),
                         Text('Tambah Bonus', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () => _toggleWa(cleaner),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: cleaner.showWa ? AppColors.statusDoneBg : AppColors.surfaceBlue,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: cleaner.showWa ? AppColors.statusDone : AppColors.primary),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(cleaner.showWa ? Icons.visibility_rounded : Icons.visibility_off_rounded, size: 14, color: cleaner.showWa ? AppColors.statusDone : AppColors.primary),
+                        const SizedBox(width: 6),
+                        Text('Tampilkan WA', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: cleaner.showWa ? AppColors.statusDone : AppColors.primary)),
                       ],
                     ),
                   ),

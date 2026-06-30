@@ -244,6 +244,7 @@ class OrderCleaner {
     this.bonuses = const [],
     this.totalBonus = 0,
     this.fotoProfil,
+    this.showWa = false,
   });
 
   String id;
@@ -254,6 +255,7 @@ class OrderCleaner {
   List<CleanerBonus> bonuses;
   int totalBonus;
   String? fotoProfil;
+  bool showWa;
 
   factory OrderCleaner.fromJson(Map<String, dynamic> json) {
     final cleaner = json['cleaner'] ?? {};
@@ -270,6 +272,7 @@ class OrderCleaner {
       bonuses: parsedBonuses,
       totalBonus: totalB,
       fotoProfil: cleaner['foto_profil'] ?? cleaner['foto'] ?? (cleaner['user'] != null && cleaner['user'] is Map ? cleaner['user']['foto_profil'] : null),
+      showWa: json['show_wa'] == true || json['show_wa'] == 1 || json['show_wa'] == '1',
     );
   }
 }

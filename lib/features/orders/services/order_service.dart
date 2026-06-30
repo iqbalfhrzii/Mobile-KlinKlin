@@ -198,6 +198,30 @@ class OrderService {
     }
   }
 
+  /// Toggle Show WA
+  Future<void> toggleWa(String pesananCleanerId) async {
+    try {
+      final response = await _dio.patch('/pesanan-cleaners/$pesananCleanerId/toggle-wa');
+      if (response.data is Map && response.data['status'] == false) {
+        throw Exception(response.data['message'] ?? 'Gagal mengubah status WA');
+      }
+    } catch (e) {
+      if (e is DioException) {
+        final resData = e.response?.data;
+        String errMsg = 'Terjadi kesalahan sistem';
+        if (resData is Map && resData.containsKey('message')) {
+          errMsg = resData['message'].toString();
+        } else if (resData != null) {
+          errMsg = 'Status ${e.response?.statusCode}: format response tidak dikenali';
+        } else {
+          errMsg = e.message ?? 'Unknown DioException';
+        }
+        throw Exception('Gagal mengubah status WA: $errMsg');
+      }
+      throw Exception('Gagal mengubah status WA: $e');
+    }
+  }
+
   /// Fetch Layanan
   Future<List<Map<String, dynamic>>> fetchLayanan() async {
     try {
