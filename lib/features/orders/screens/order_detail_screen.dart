@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:convert';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
@@ -13,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:printing/printing.dart';
 import '../../../core/services/pdf_invoice_service.dart';
+import '../../../core/api/api_client.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   const OrderDetailScreen({super.key, required this.order});
@@ -377,14 +379,42 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       title: 'Petugas Kebersihan',
       child: Row(
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceBlue,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.cleaning_services_rounded, color: AppColors.primary, size: 20),
+          Builder(
+            builder: (context) {
+              final String? foto = cleaner.fotoProfil?.replaceAll('\\', '/').trim();
+              final bool hasFoto = foto != null && foto.isNotEmpty && foto != 'null';
+              
+              Widget avatarContent = const Icon(Icons.cleaning_services_rounded, color: AppColors.primary, size: 20);
+              
+              if (hasFoto) {
+                if (foto.startsWith('data:image')) {
+                  try {
+                    final base64Str = foto.split(',').last;
+                    avatarContent = Image.memory(base64Decode(base64Str), fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.cleaning_services_rounded, color: AppColors.primary, size: 20));
+                  } catch (_) {}
+                } else {
+                  final String fullUrl = foto.startsWith('http')
+                      ? foto
+                      : '${ApiClient.baseUrl.replaceAll('/api', '')}/storage/${foto.replaceFirst(RegExp(r'^/?storage/'), '')}';
+                  avatarContent = Image.network(
+                    Uri.encodeFull(fullUrl),
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.cleaning_services_rounded, color: AppColors.primary, size: 20),
+                  );
+                }
+              }
+
+              return Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(color: AppColors.surfaceBlue, borderRadius: BorderRadius.circular(12)),
+                child: hasFoto
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: avatarContent,
+                      )
+                    : avatarContent,
+              );
+            },
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1209,7 +1239,7 @@ klinklin.co.id/aduanpayment''';
                                 final c = availableCleaners[index];
                                 final isSelected = selectedIds.contains(c['id']);
                                 final statusPengerjaan = c['status_pengerjaan']?.toString() ?? 'free';
-                                final isBusy = statusPengerjaan == 'notified' || statusPengerjaan == 'in_progress';
+                                final isBusy = statusPengerjaan == 'in_progress';
                                 
                                 return GestureDetector(
                                   onTap: isBusy ? null : () {
@@ -1234,10 +1264,42 @@ klinklin.co.id/aduanpayment''';
                                       opacity: isBusy ? 0.5 : 1.0,
                                       child: Row(
                                         children: [
-                                          Container(
-                                            width: 44, height: 44,
-                                            decoration: BoxDecoration(color: AppColors.surfaceBlue, borderRadius: BorderRadius.circular(12)),
-                                            child: const Icon(Icons.cleaning_services_rounded, color: AppColors.primary, size: 20),
+                                          Builder(
+                                            builder: (context) {
+                                              final String? foto = c['foto_profil']?.toString().replaceAll('\\', '/').trim();
+                                              final bool hasFoto = foto != null && foto.isNotEmpty && foto != 'null';
+                                              
+                                              Widget avatarContent = const Icon(Icons.cleaning_services_rounded, color: AppColors.primary, size: 20);
+                                              
+                                              if (hasFoto) {
+                                                if (foto.startsWith('data:image')) {
+                                                  try {
+                                                    final base64Str = foto.split(',').last;
+                                                    avatarContent = Image.memory(base64Decode(base64Str), fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.cleaning_services_rounded, color: AppColors.primary, size: 20));
+                                                  } catch (_) {}
+                                                } else {
+                                                  final String fullUrl = foto.startsWith('http')
+                                                      ? foto
+                                                      : '${ApiClient.baseUrl.replaceAll('/api', '')}/storage/${foto.replaceFirst(RegExp(r'^/?storage/'), '')}';
+                                                  avatarContent = Image.network(
+                                                    Uri.encodeFull(fullUrl),
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (_, __, ___) => const Icon(Icons.cleaning_services_rounded, color: AppColors.primary, size: 20),
+                                                  );
+                                                }
+                                              }
+
+                                              return Container(
+                                                width: 44, height: 44,
+                                                decoration: BoxDecoration(color: AppColors.surfaceBlue, borderRadius: BorderRadius.circular(12)),
+                                                child: hasFoto
+                                                    ? ClipRRect(
+                                                        borderRadius: BorderRadius.circular(12),
+                                                        child: avatarContent,
+                                                      )
+                                                    : avatarContent,
+                                              );
+                                            },
                                           ),
                                           const SizedBox(width: 12),
                                           Expanded(
@@ -1655,10 +1717,19 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
     setState(() => _isSubmitting = true);
     try {
       if (_selectedTarifBonus == null) {
-        // Bonus Manual (Tidak ada jenis_bonus_id)
-        await _orderService.addManualBonus(
-          widget.order.id,
+        // Coba cari tarif bonus manual dari data yang difetch, jika tidak ada fallback ke ID 4 sesuai request
+        final manualTarif = _tarifBonuses.firstWhere(
+          (t) => (t['jenis_bonus']?['nama_bonus']?.toString().toLowerCase() ?? '') == 'bonus manual',
+          orElse: () => <String, dynamic>{},
+        );
+
+        final int jenisBonusId = manualTarif.isNotEmpty && manualTarif['jenis_bonus_id'] != null
+            ? manualTarif['jenis_bonus_id'] as int
+            : 4;
+
+        await _orderService.storeManualBonus(
           widget.cleaner.pesananCleanerId,
+          jenisBonusId,
           int.parse(nominalText),
           _noteCtrl.text.trim(),
         );

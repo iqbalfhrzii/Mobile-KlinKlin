@@ -243,6 +243,7 @@ class OrderCleaner {
     this.statusPengerjaan = CleanerWorkStatus.assigned,
     this.bonuses = const [],
     this.totalBonus = 0,
+    this.fotoProfil,
   });
 
   String id;
@@ -252,6 +253,7 @@ class OrderCleaner {
   CleanerWorkStatus statusPengerjaan;
   List<CleanerBonus> bonuses;
   int totalBonus;
+  String? fotoProfil;
 
   factory OrderCleaner.fromJson(Map<String, dynamic> json) {
     final cleaner = json['cleaner'] ?? {};
@@ -267,6 +269,7 @@ class OrderCleaner {
       statusPengerjaan: _parseCleanerWorkStatus(json['status_pengerjaan']),
       bonuses: parsedBonuses,
       totalBonus: totalB,
+      fotoProfil: cleaner['foto_profil'] ?? cleaner['foto'] ?? (cleaner['user'] != null && cleaner['user'] is Map ? cleaner['user']['foto_profil'] : null),
     );
   }
 }

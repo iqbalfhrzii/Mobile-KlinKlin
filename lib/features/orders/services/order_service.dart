@@ -230,12 +230,15 @@ class OrderService {
         final cleaners = responseData.where((e) {
           final jab = e['jabatan']?['nama_jabatan']?.toString().toLowerCase() ?? '';
           return jab.contains('cleaner') || e['jabatan_id'] == 3;
-        }).map((e) => {
-          'id': e['id'].toString(),
-          'name': e['nama'] ?? e['nama_karyawan'] ?? '-',
-          'status_pengerjaan': 'free',
-          'rating': 5.0,
-          'orders': 0,
+        }).map((e) {
+          return {
+            'id': e['id'].toString(),
+            'name': e['nama'] ?? e['nama_karyawan'] ?? '-',
+            'status_pengerjaan': 'free',
+            'rating': 5.0,
+            'orders': 0,
+            'foto_profil': e['foto_profil'] ?? e['foto'] ?? (e['user'] != null && e['user'] is Map ? e['user']['foto_profil'] : null),
+          };
         }).toList();
 
         if (tanggal != null && waktu != null) {
