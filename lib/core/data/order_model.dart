@@ -286,6 +286,8 @@ class OrderPayment {
     this.catatanPembayaran,
     this.total,
     this.ppn,
+    this.diskonPersen,
+    this.totalSetelahDiskon,
   });
 
   int id;
@@ -295,6 +297,8 @@ class OrderPayment {
   String? catatanPembayaran;
   int? total;
   int? ppn;
+  double? diskonPersen;
+  int? totalSetelahDiskon;
 
   factory OrderPayment.fromJson(Map<String, dynamic> json) {
     return OrderPayment(
@@ -303,8 +307,10 @@ class OrderPayment {
       statusPembayaran: json['status_pembayaran'] ?? 'unpaid',
       buktiTransfer: json['bukti_transfer'],
       catatanPembayaran: json['catatan_pembayaran'],
-      total: json['total'] != null ? (double.tryParse(json['total'].toString())?.toInt()) : null,
+      total: json['total_akhir'] != null ? (double.tryParse(json['total_akhir'].toString())?.toInt()) : (json['total'] != null ? (double.tryParse(json['total'].toString())?.toInt()) : null),
       ppn: json['ppn'] != null ? (double.tryParse(json['ppn'].toString())?.toInt()) : null,
+      diskonPersen: json['diskon_persen'] != null ? double.tryParse(json['diskon_persen'].toString()) : 0.0,
+      totalSetelahDiskon: json['total_setelah_diskon'] != null ? (double.tryParse(json['total_setelah_diskon'].toString())?.toInt()) : null,
     );
   }
 }

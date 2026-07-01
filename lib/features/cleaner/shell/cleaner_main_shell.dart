@@ -26,6 +26,7 @@ class CleanerMainShell extends StatefulWidget {
 
 class _CleanerMainShellState extends State<CleanerMainShell> {
   late int _currentIndex;
+  int _dashKeyVal = 0;
 
   @override
   void initState() {
@@ -34,11 +35,11 @@ class _CleanerMainShellState extends State<CleanerMainShell> {
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
   }
 
-  final _screens = const [
-    CleanerDashboardScreen(),
-    CleanerJobListScreen(),
-    CleanerHistoryScreen(),
-    ProfileScreen(),
+  List<Widget> get _screens => [
+    CleanerDashboardScreen(key: ValueKey('dash_$_dashKeyVal')),
+    const CleanerJobListScreen(),
+    const CleanerHistoryScreen(),
+    const ProfileScreen(),
   ];
 
   static const _navItems = [
@@ -178,7 +179,10 @@ class _CleanerMainShellState extends State<CleanerMainShell> {
                 child: GestureDetector(
                   onTap: () {
                     if (widget.requirePinChange) return;
-                    setState(() => _currentIndex = i);
+                    setState(() {
+                      if (i == 0) _dashKeyVal++;
+                      _currentIndex = i;
+                    });
                   },
                   behavior: HitTestBehavior.opaque,
                   child: Column(

@@ -81,9 +81,14 @@ class FinanceProcessedDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final payment = order.pembayaran;
-    final int total = payment?.total ?? order.total;
-    final int subtotal = order.services.fold(0, (sum, item) => sum + item.subtotal);
-    final int ppn = payment?.ppn ?? (total - subtotal > 0 ? total - subtotal : 0);
+    final double diskonPersen = payment?.diskonPersen ?? 0.0;
+    final int subtotal = order.total;
+    final int diskonValue = (subtotal * (diskonPersen / 100)).round();
+    final int totalSetelahDiskon = subtotal - diskonValue;
+    
+    final int ppnPercentage = payment?.ppn ?? 11;
+    final int ppn = (totalSetelahDiskon * (ppnPercentage / 100)).round();
+    final int total = totalSetelahDiskon + ppn;
     
     final String dateStr = DateFormat('yyyy-MM-dd - HH:mm:ss').format(order.tanggalInput);
     
@@ -338,11 +343,21 @@ class FinanceProcessedDetailScreen extends StatelessWidget {
                         Text(_formatCurrency(subtotal), style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
                       ],
                     ),
+                    if (diskonValue > 0) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Diskon ${diskonPersen == diskonPersen.toInt() ? diskonPersen.toInt() : diskonPersen}%', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13)),
+                          Text('-${_formatCurrency(diskonValue)}', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.error)),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('PPN (11%)', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13)),
+                        Text('PPN ($ppnPercentage%)', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13)),
                         Text(_formatCurrency(ppn), style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
                       ],
                     ),

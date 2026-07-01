@@ -25,6 +25,24 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   void initState() {
     super.initState();
     _customer = widget.customer;
+    _loadCustomerDetail();
+  }
+
+  Future<void> _loadCustomerDetail() async {
+    setState(() => _isLoading = true);
+    try {
+      final fullData = await CustomerService.getCustomer(_customer.id);
+      if (mounted) {
+        setState(() {
+          _customer = fullData;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   String _formatRupiah(int n) =>
@@ -144,6 +162,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                   );
                   if (updated != null) {
                     setState(() => _customer = updated);
+                    _loadCustomerDetail();
                   }
                 },
               ),

@@ -51,7 +51,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
     'assigned': 'Ditugaskan',
     'inProgress': 'Dikerjakan',
     'finishedByCleaner': 'Selesai (Cleaner)',
-    'waitingPaymentApproval': 'Menunggu Bayar',
+    'waitingPaymentApproval': 'Menunggu Approve',
     'completed': 'Selesai',
     'cancelled': 'Dibatalkan',
   };
@@ -378,13 +378,24 @@ class _OrderCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Text(
-                  _fmt(o.pembayaran?.total ?? (o.total + (o.total * 0.11).round())),
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                  ),
+                Builder(
+                  builder: (context) {
+                    final double diskonPersen = o.pembayaran?.diskonPersen ?? 0.0;
+                    final int diskonValue = (o.total * (diskonPersen / 100)).round();
+                    final int totalSetelahDiskon = o.total - diskonValue;
+                    final int ppnPersen = o.pembayaran?.ppn ?? 11;
+                    final int ppnValue = (totalSetelahDiskon * (ppnPersen / 100)).round();
+                    final int totalAkhir = totalSetelahDiskon + ppnValue;
+
+                    return Text(
+                      _fmt(totalAkhir),
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    );
+                  }
                 ),
               ],
             ),

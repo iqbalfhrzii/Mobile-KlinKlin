@@ -12,7 +12,7 @@ class StatusBadge extends StatelessWidget {
     OrderStatus.assigned: _BadgeConfig('Menunggu Pengerjaan', AppColors.statusAssigned, AppColors.statusAssignedBg),
     OrderStatus.inProgress: _BadgeConfig('Sedang Dikerjakan', AppColors.statusProgress, AppColors.statusProgressBg),
     OrderStatus.finishedByCleaner: _BadgeConfig('Selesai Dikerjakan', AppColors.statusDone, AppColors.statusDoneBg),
-    OrderStatus.waitingPaymentApproval: _BadgeConfig('Menunggu Pembayaran', AppColors.statusPending, AppColors.statusPendingBg),
+    OrderStatus.waitingPaymentApproval: _BadgeConfig('Menunggu Approve', AppColors.statusPending, AppColors.statusPendingBg),
     OrderStatus.waitingCancelApproval: _BadgeConfig('Menunggu Batal', Colors.orange, Color(0xFFFFF3E0)),
     OrderStatus.completed: _BadgeConfig('Selesai / Lunas', AppColors.statusDone, AppColors.statusDoneBg),
     OrderStatus.cancelled: _BadgeConfig('Dibatalkan', Colors.red, Color(0xFFFFEBEE)),

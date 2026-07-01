@@ -51,8 +51,13 @@ class PdfInvoiceService {
       return 'Rp$result';
     }
 
-    final ppnValue = (order.total * 0.11).round();
-    final totalTagihan = order.total + ppnValue;
+    final diskonPersen = order.pembayaran?.diskonPersen ?? 0.0;
+    final diskonLayanan = (order.total * (diskonPersen / 100)).round();
+    final totalSetelahDiskon = order.total - diskonLayanan;
+    
+    final ppnPersen = order.pembayaran?.ppn ?? 11;
+    final ppnValue = (totalSetelahDiskon * (ppnPersen / 100)).round();
+    final totalTagihan = totalSetelahDiskon + ppnValue;
 
     String cleanerNames = order.cleaners.map((c) => c.name).join(', ');
     if (cleanerNames.isEmpty) cleanerNames = '-';
@@ -342,8 +347,9 @@ class PdfInvoiceService {
                         'Subtotal (Rp)',
                         formatRupiah(order.total),
                       ),
-                      _buildSummaryRow('Diskon Nilai (Rp)', 'Rp0'),
-                      _buildSummaryRow('PPN (11%)', formatRupiah(ppnValue)),
+                      if (diskonLayanan > 0)
+                        _buildSummaryRow('Diskon ${diskonPersen == diskonPersen.toInt() ? diskonPersen.toInt() : diskonPersen}% (Rp)', '-${formatRupiah(diskonLayanan)}'),
+                      _buildSummaryRow('PPN ($ppnPersen%)', formatRupiah(ppnValue)),
                       pw.SizedBox(height: 8),
                       pw.Container(height: 1.5, color: PdfColors.black),
                       pw.SizedBox(height: 8),

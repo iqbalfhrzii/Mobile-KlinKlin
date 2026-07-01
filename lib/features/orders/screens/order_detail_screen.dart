@@ -337,43 +337,73 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             ),
           )),
           const Divider(height: 12, color: AppColors.border),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Subtotal', style: GoogleFonts.inter(
-                fontSize: 13, color: AppColors.textMuted,
-              )),
-              Text(_formatRupiah(o.total), style: GoogleFonts.inter(
-                fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark,
-              )),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('PPN (11%)', style: GoogleFonts.inter(
-                fontSize: 13, color: AppColors.textMuted,
-              )),
-              Text(_formatRupiah((o.total * 0.11).round()), style: GoogleFonts.inter(
-                fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark,
-              )),
-            ],
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 10),
-            child: Divider(height: 1, color: AppColors.border),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Total Pembayaran', style: GoogleFonts.inter(
-                fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark,
-              )),
-              Text(_formatRupiah((o.total * 1.11).round()), style: GoogleFonts.inter(
-                fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary,
-              )),
-            ],
+          Builder(
+            builder: (context) {
+              final double diskonPersen = o.pembayaran?.diskonPersen ?? 0.0;
+              final int diskonValue = (o.total * (diskonPersen / 100)).round();
+              final int totalSetelahDiskon = o.total - diskonValue;
+              
+              final int ppnPersen = o.pembayaran?.ppn ?? 11;
+              final int ppnValue = (totalSetelahDiskon * (ppnPersen / 100)).round();
+              final int totalAkhir = totalSetelahDiskon + ppnValue;
+              
+              return Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Subtotal', style: GoogleFonts.inter(
+                        fontSize: 13, color: AppColors.textMuted,
+                      )),
+                      Text(_formatRupiah(o.total), style: GoogleFonts.inter(
+                        fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark,
+                      )),
+                    ],
+                  ),
+                  if (diskonValue > 0) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Diskon ${diskonPersen == diskonPersen.toInt() ? diskonPersen.toInt() : diskonPersen}%', style: GoogleFonts.inter(
+                          fontSize: 13, color: AppColors.textMuted,
+                        )),
+                        Text('-${_formatRupiah(diskonValue)}', style: GoogleFonts.inter(
+                          fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.error,
+                        )),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('PPN ($ppnPersen%)', style: GoogleFonts.inter(
+                        fontSize: 13, color: AppColors.textMuted,
+                      )),
+                      Text(_formatRupiah(ppnValue), style: GoogleFonts.inter(
+                        fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark,
+                      )),
+                    ],
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    child: Divider(height: 1, color: AppColors.border),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Total Pembayaran', style: GoogleFonts.inter(
+                        fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark,
+                      )),
+                      Text(_formatRupiah(totalAkhir), style: GoogleFonts.inter(
+                        fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary,
+                      )),
+                    ],
+                  ),
+                ],
+              );
+            },
           ),
           if (_canEdit) ...[
             const SizedBox(height: 16),
@@ -554,7 +584,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Widget _buildPaymentCard(OrderModel o) {
-    final isPaid = o.paymentStatus == 'paid';
+    final isPaid = o.paymentStatus == 'paid' || o.paymentStatus == 'approved';
     return _card(
       title: 'Status Pembayaran',
       child: Row(
@@ -656,7 +686,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     final isPriceQtyValid = o.services.isNotEmpty && o.services.every((s) => s.price > 0 && s.qty.trim().isNotEmpty && s.qty.trim() != '0');
     final hasCleaner = o.cleaners.isNotEmpty;
     final hasBonus = o.services.any((s) => s.bonusLayanan > 0) || o.cleaners.any((c) => c.totalBonus > 0);
-    final isPaid = o.paymentStatus == 'paid';
+    final isPaid = o.paymentStatus == 'paid' || o.paymentStatus == 'approved';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -714,24 +744,28 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     final hasCleaner = o.cleaners.isNotEmpty;
     final showNotifyBtn = o.cleaners.isNotEmpty && o.status != OrderStatus.completed && o.status != OrderStatus.cancelled;
     final isPriceQtyValid = o.services.isNotEmpty && o.services.every((s) => s.price > 0 && s.qty.trim().isNotEmpty && s.qty.trim() != '0');
+    final isPaid = o.paymentStatus == 'paid' || o.paymentStatus == 'approved';
+    final hasBonus = o.services.any((s) => s.bonusLayanan > 0) || o.cleaners.any((c) => c.totalBonus > 0);
 
     return Column(
       children: [
         if (_canEdit) ...[
           _buildBigActionBtn(
-            title: 'Atur Jadwal',
+            title: hasSchedule ? 'Ubah Jadwal' : 'Atur Jadwal',
             subtitle: 'Tentukan tanggal & jam pengerjaan',
             icon: Icons.edit,
-            color: AppColors.statusDone,
+            color: AppColors.primary,
+            isDone: hasSchedule,
             enabled: true,
             onTap: () => _showAturJadwalModal(o),
           ),
           const SizedBox(height: 12),
           _buildBigActionBtn(
-            title: o.cleaners.isEmpty ? 'Tugaskan Cleaner' : 'Ubah Cleaner',
+            title: hasCleaner ? 'Ubah Cleaner' : 'Tugaskan Cleaner',
             subtitle: 'Pilih cleaner yang akan bertugas',
             icon: Icons.edit,
-            color: AppColors.statusDone,
+            color: AppColors.primary,
+            isDone: hasCleaner && !o.cleaners.any((c) => c.statusPengerjaan == CleanerWorkStatus.assigned || c.statusPengerjaan == CleanerWorkStatus.notified),
             enabled: hasSchedule,
             onTap: () {
               if (!hasSchedule) {
@@ -747,14 +781,74 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               title: 'Beritahu Cleaner',
               subtitle: 'Kirim notifikasi tugas',
               icon: Icons.notifications_active,
-              color: AppColors.statusPending,
+              color: AppColors.primary,
+              isDone: !o.cleaners.any((c) => c.statusPengerjaan == CleanerWorkStatus.assigned),
               enabled: isPriceQtyValid,
               onTap: () {
                 if (!isPriceQtyValid) {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Silakan atur Harga dan Qty layanan terlebih dahulu.'), backgroundColor: AppColors.error));
                   return;
                 }
-                _notifyCleaner();
+                
+                if (!hasBonus) {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext ctx) {
+                      return AlertDialog(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        title: Row(
+                          children: [
+                            const Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 28),
+                            const SizedBox(width: 10),
+                            Text('Bonus Belum Diatur', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
+                          ],
+                        ),
+                        content: Text(
+                          'Anda belum mengatur alokasi bonus cleaner.\n\nYakin mau memberitahu cleaner sekarang? (Bonus tetap bisa diatur nanti)',
+                          style: GoogleFonts.inter(fontSize: 14, color: AppColors.textDark, height: 1.5),
+                        ),
+                        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        actions: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextButton(
+                                  style: TextButton.styleFrom(
+                                    backgroundColor: Colors.red.shade50,
+                                    foregroundColor: Colors.red.shade700,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: Text('Batal', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  onPressed: () {
+                                    Navigator.pop(ctx);
+                                    _notifyCleaner();
+                                  },
+                                  child: Text('Yakin', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                } else {
+                  _notifyCleaner();
+                }
               },
             ),
           ],
@@ -765,8 +859,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           subtitle: 'Langsung menuju halaman pembayaran',
           icon: Icons.chevron_right,
           color: AppColors.primary,
-          enabled: true,
+          isDone: isPaid,
+          enabled: o.status == OrderStatus.finishedByCleaner || o.status == OrderStatus.waitingPaymentApproval || o.status == OrderStatus.completed || isPaid,
           onTap: () {
+            if (!(o.status == OrderStatus.finishedByCleaner || o.status == OrderStatus.waitingPaymentApproval || o.status == OrderStatus.completed || isPaid)) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pembayaran hanya bisa dilakukan setelah tugas diselesaikan oleh Cleaner.'), backgroundColor: AppColors.error));
+              return;
+            }
             Navigator.push(context, MaterialPageRoute(builder: (_) => PaymentDetailScreen(order: o)));
           },
         ),
@@ -777,6 +876,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             subtitle: 'Kirim rincian tagihan ke WhatsApp',
             icon: Icons.send_rounded,
             color: const Color(0xFF25D366),
+            isDone: false,
             enabled: true,
             onTap: () => _sendInvoiceWA(o),
           ),
@@ -788,6 +888,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             subtitle: 'Cetak atau simpan tagihan dalam format PDF',
             icon: Icons.picture_as_pdf_rounded,
             color: const Color(0xFFE53935), // Red color for PDF
+            isDone: false,
             enabled: true,
             onTap: () async {
               await Printing.layoutPdf(
@@ -898,24 +999,26 @@ klinklin.co.id/aduanpayment''';
     }
   }
 
-  Widget _buildBigActionBtn({required String title, required String subtitle, required IconData icon, required Color color, required bool enabled, required VoidCallback onTap}) {
+  Widget _buildBigActionBtn({required String title, required String subtitle, required IconData icon, required Color color, required bool enabled, bool isDone = false, required VoidCallback onTap}) {
+    final bgColor = isDone ? AppColors.statusDone : color;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: enabled ? color : color.withOpacity(0.5),
+          color: enabled ? bgColor : bgColor.withOpacity(0.5),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-              child: const Icon(Icons.check_circle, color: Colors.white, size: 20),
-            ),
-            const SizedBox(width: 12),
+            if (isDone)
+              Container(
+                margin: const EdgeInsets.only(right: 12),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                child: const Icon(Icons.check_circle, color: Colors.white, size: 20),
+              ),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

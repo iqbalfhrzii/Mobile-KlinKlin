@@ -17,6 +17,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
   final CleanerJobService _service = CleanerJobService();
   late Map<String, dynamic> _job;
   bool _isLoading = false;
+  bool _hasChanged = false;
   String _error = '';
 
   @override
@@ -55,6 +56,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
         await _service.finishJob(_job['id']);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pekerjaan selesai!'), backgroundColor: AppColors.statusDone));
       }
+      _hasChanged = true;
       await _refreshDetail();
     } catch (e) {
       setState(() {
@@ -126,11 +128,17 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Column(
-        children: [
-          _buildHeader(context, pesanan['id']?.toString() ?? '-'),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        Navigator.pop(context, _hasChanged);
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: Column(
+          children: [
+            _buildHeader(context, pesanan['id']?.toString() ?? '-'),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -228,6 +236,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                   ...details.map((d) {
                     final l = d['layanan'] ?? {};
                     return Container(
+                      width: double.infinity,
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -307,6 +316,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
               ),
             )
           : null,
+      ),
     );
   }
 
@@ -318,7 +328,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
         children: [
           Row(
             children: [
-              HeaderBackButton(onTap: () => Navigator.pop(context)),
+              HeaderBackButton(onTap: () => Navigator.pop(context, _hasChanged)),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

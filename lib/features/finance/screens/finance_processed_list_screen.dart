@@ -43,7 +43,7 @@ class _FinanceProcessedListScreenState extends State<FinanceProcessedListScreen>
       });
     }
     try {
-      final orders = await _financeService.fetchProcessedOrders();
+      final orders = await _financeService.fetchProcessedOrders(statusApproval: 'approved');
       if (mounted) {
         setState(() {
           _orders = orders;

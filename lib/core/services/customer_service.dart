@@ -39,6 +39,16 @@ class CustomerService {
     }
   }
 
+  static Future<CustomerModel> getCustomer(String id) async {
+    try {
+      final realId = id.replaceAll('PLG-', '');
+      final response = await _dio.get('/pelanggans/$realId');
+      return CustomerModel.fromJson(response.data['data']);
+    } catch (e) {
+      throw Exception('Gagal memuat detail pelanggan');
+    }
+  }
+
   static Future<CustomerModel> addCustomer(Map<String, dynamic> data) async {
     try {
       final prefs = await SharedPreferences.getInstance();

@@ -308,8 +308,21 @@ class OrderService {
   /// Notify assigned cleaners
   Future<void> notifyCleaner(String id) async {
     try {
-      await _dio.post('/pesanan/$id/notify-cleaner');
+      final response = await _dio.post('/pesanan/$id/notify-cleaner');
+      if (response.data is Map && response.data['status'] == false) {
+        throw Exception(response.data['message'] ?? 'Gagal mengirim notifikasi');
+      }
     } catch (e) {
+      if (e is DioException) {
+        final data = e.response?.data;
+        String errMsg = e.message ?? 'Terjadi kesalahan koneksi';
+        if (data is Map<String, dynamic>) {
+          errMsg = data['message'] ?? data.toString();
+        } else if (data != null) {
+          errMsg = data.toString();
+        }
+        throw Exception(errMsg);
+      }
       throw Exception('Gagal mengirim notifikasi ke cleaner: $e');
     }
   }

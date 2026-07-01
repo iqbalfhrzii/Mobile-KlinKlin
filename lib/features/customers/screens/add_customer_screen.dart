@@ -120,32 +120,29 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                           return Expanded(
                             child: GestureDetector(
                               onTap: () => setState(() => _status = s),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 150),
-                                margin: EdgeInsets.only(right: s == _statuses.last ? 0 : 8),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: sel ? color.withOpacity(0.12) : AppColors.background,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: sel ? color : AppColors.border,
-                                    width: sel ? 1.5 : 1,
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  margin: EdgeInsets.only(right: s == 'aktif' ? 8 : 0, left: s == 'non aktif' ? 8 : 0),
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  decoration: BoxDecoration(
+                                    color: sel ? color.withOpacity(0.1) : AppColors.background,
+                                    border: Border.all(color: sel ? color : Colors.transparent, width: 1.5),
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        s == 'aktif' ? Icons.check_circle_outline_rounded : Icons.cancel_outlined,
+                                        size: 18, color: sel ? color : AppColors.textMuted,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(label, style: GoogleFonts.inter(
+                                        fontSize: 12, fontWeight: FontWeight.w600,
+                                        color: sel ? color : AppColors.textMuted,
+                                      )),
+                                    ],
                                   ),
                                 ),
-                                child: Column(
-                                  children: [
-                                    Icon(
-                                      s == 'aktif' ? Icons.check_circle_outline_rounded : Icons.cancel_outlined,
-                                      size: 18, color: sel ? color : AppColors.textMuted,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(label, style: GoogleFonts.inter(
-                                      fontSize: 12, fontWeight: FontWeight.w600,
-                                      color: sel ? color : AppColors.textMuted,
-                                    )),
-                                  ],
-                                ),
-                              ),
                             ),
                           );
                         }).toList(),
@@ -195,21 +192,40 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
 
   Widget _buildCard(String title, List<Widget> children) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [AppColors.cardShadow],
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border.withOpacity(0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title.toUpperCase(), style: GoogleFonts.inter(
-            fontSize: 10, fontWeight: FontWeight.w600,
-            color: AppColors.textMuted, letterSpacing: 0.5,
-          )),
-          const SizedBox(height: 12),
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(title.toUpperCase(), style: GoogleFonts.inter(
+                fontSize: 11, fontWeight: FontWeight.w700,
+                color: AppColors.textDark, letterSpacing: 0.5,
+              )),
+            ],
+          ),
+          const SizedBox(height: 16),
           ...children,
         ],
       ),
@@ -242,8 +258,26 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted),
-            prefixIcon: Icon(icon, size: 18, color: AppColors.textMuted),
-            contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+            prefixIcon: Icon(icon, size: 20, color: AppColors.primary.withOpacity(0.7)),
+            contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            filled: true,
+            fillColor: AppColors.background,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.transparent),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.statusCancel),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.statusCancel, width: 1.5),
+            ),
           ),
         ),
       ],

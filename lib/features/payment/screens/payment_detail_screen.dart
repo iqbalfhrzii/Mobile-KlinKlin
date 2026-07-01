@@ -148,8 +148,18 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
               Text('Total Tagihan', style: GoogleFonts.inter(
                   fontSize: 11, color: AppColors.textMuted)),
               const SizedBox(height: 2),
-              Text(_fmt((_o.total * 1.11).round()), style: GoogleFonts.inter(
-                  fontSize: 26, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+              Builder(
+                builder: (context) {
+                  final double diskonPersen = _o.pembayaran?.diskonPersen ?? 0.0;
+                  final int diskonValue = (_o.total * (diskonPersen / 100)).round();
+                  final int totalSetelahDiskon = _o.total - diskonValue;
+                  final int ppnPersen = _o.pembayaran?.ppn ?? 11;
+                  final int ppnValue = (totalSetelahDiskon * (ppnPersen / 100)).round();
+                  final int totalAkhir = totalSetelahDiskon + ppnValue;
+                  return Text(_fmt(totalAkhir), style: GoogleFonts.inter(
+                      fontSize: 26, fontWeight: FontWeight.bold, color: AppColors.textDark));
+                },
+              ),
               const SizedBox(height: 4),
               Row(children: [
                 const Icon(Icons.schedule_rounded, size: 11, color: AppColors.textMuted),
@@ -212,29 +222,53 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
       )),
       Container(height: 1, color: AppColors.border),
       const SizedBox(height: 10),
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text('Subtotal', style: GoogleFonts.inter(
-            fontSize: 13, color: AppColors.textMuted)),
-        Text(_fmt(_o.total), style: GoogleFonts.inter(
-            fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-      ]),
-      const SizedBox(height: 6),
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text('PPN (11%)', style: GoogleFonts.inter(
-            fontSize: 13, color: AppColors.textMuted)),
-        Text(_fmt((_o.total * 0.11).round()), style: GoogleFonts.inter(
-            fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-      ]),
-      const Padding(
-        padding: EdgeInsets.symmetric(vertical: 10),
-        child: Divider(height: 1, color: AppColors.border),
+      Builder(
+        builder: (context) {
+          final double diskonPersen = _o.pembayaran?.diskonPersen ?? 0.0;
+          final int diskonValue = (_o.total * (diskonPersen / 100)).round();
+          final int totalSetelahDiskon = _o.total - diskonValue;
+          final int ppnPersen = _o.pembayaran?.ppn ?? 11;
+          final int ppnValue = (totalSetelahDiskon * (ppnPersen / 100)).round();
+          final int totalAkhir = totalSetelahDiskon + ppnValue;
+          
+          return Column(
+            children: [
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text('Subtotal', style: GoogleFonts.inter(
+                    fontSize: 13, color: AppColors.textMuted)),
+                Text(_fmt(_o.total), style: GoogleFonts.inter(
+                    fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+              ]),
+              if (diskonValue > 0) ...[
+                const SizedBox(height: 6),
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  Text('Diskon ${diskonPersen == diskonPersen.toInt() ? diskonPersen.toInt() : diskonPersen}%', style: GoogleFonts.inter(
+                      fontSize: 13, color: AppColors.textMuted)),
+                  Text('-${_fmt(diskonValue)}', style: GoogleFonts.inter(
+                      fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.error)),
+                ]),
+              ],
+              const SizedBox(height: 6),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text('PPN ($ppnPersen%)', style: GoogleFonts.inter(
+                    fontSize: 13, color: AppColors.textMuted)),
+                Text(_fmt(ppnValue), style: GoogleFonts.inter(
+                    fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+              ]),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 10),
+                child: Divider(height: 1, color: AppColors.border),
+              ),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text('Total Pembayaran', style: GoogleFonts.inter(
+                    fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                Text(_fmt(totalAkhir), style: GoogleFonts.inter(
+                    fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
+              ]),
+            ],
+          );
+        },
       ),
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text('Total Pembayaran', style: GoogleFonts.inter(
-            fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-        Text(_fmt((_o.total * 1.11).round()), style: GoogleFonts.inter(
-            fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
-      ]),
     ]));
   }
 
