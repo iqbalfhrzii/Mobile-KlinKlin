@@ -6,15 +6,7 @@ import '../../auth/screens/change_pin_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../screens/hrd_data_master_screen.dart';
 
-// TODO: Create HrdDashboardScreen
-class HrdDashboardScreen extends StatelessWidget {
-  const HrdDashboardScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('Dashboard HRD'));
-  }
-}
+import '../screens/hrd_dashboard_screen.dart';
 
 class HrdMainShell extends StatefulWidget {
   const HrdMainShell({
