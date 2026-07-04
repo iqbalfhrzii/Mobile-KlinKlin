@@ -1362,7 +1362,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               o.status == OrderStatus.waitingPaymentApproval ||
               o.status == OrderStatus.completed ||
               isPaid,
-          onTap: () {
+          onTap: () async {
             if (!(o.status == OrderStatus.finishedByCleaner ||
                 o.status == OrderStatus.waitingPaymentApproval ||
                 o.status == OrderStatus.completed ||
@@ -1377,10 +1377,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               );
               return;
             }
-            Navigator.push(
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => PaymentDetailScreen(order: o)),
             );
+            if (result == true) {
+              _fetchOrderDetail();
+            }
           },
         ),
         if (o.status != OrderStatus.cancelled &&
