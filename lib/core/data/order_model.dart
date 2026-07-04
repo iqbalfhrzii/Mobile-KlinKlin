@@ -464,6 +464,8 @@ class OrderDraft {
       if (paymentMethod != null) 'metode_pembayaran': paymentMethod,
       'ppn': applyPpn ? 11 : 0,
     };
+  }
+
   String _formatDate(String fDate) {
     if (fDate.isEmpty) return '';
     final dParts = fDate.split(' ');

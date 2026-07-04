@@ -25,7 +25,12 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   final _draft = OrderDraft();
   bool _isSaving = false;
 
-  static const _steps = ['Info Pesanan', 'Detail Layanan', 'Pilih Cleaner', 'Ringkasan'];
+  static const _steps = [
+    'Info Pesanan',
+    'Detail Layanan',
+    'Pilih Cleaner',
+    'Ringkasan',
+  ];
 
   @override
   void initState() {
@@ -39,13 +44,21 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       _draft.services = List.from(o.services);
       _draft.cleaners = List.from(o.cleaners);
       _draft.applyPpn = (o.ppn ?? o.pembayaran?.ppn ?? 11) > 0;
+      
+      if (o.services.isNotEmpty) {
+        _draft.tanggalPengerjaan = o.services.first.tanggalPengerjaan;
+        _draft.waktuPengerjaan = o.services.first.waktuPengerjaan;
+      }
       // Cleaners cannot be edited through this form according to API (only assign cleaner endpoint)
     }
   }
 
   void _next() => setState(() => _step = (_step + 1).clamp(0, 3));
   void _prev() {
-    if (_step == 0) { Navigator.pop(context); return; }
+    if (_step == 0) {
+      Navigator.pop(context);
+      return;
+    }
     setState(() => _step--);
   }
 
@@ -74,12 +87,23 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(widget.existingOrder == null ? 'Buat Pesanan Baru' : 'Edit Pesanan', style: GoogleFonts.inter(
-                fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white,
-              )),
-              Text('Langkah ${_step + 1} dari 3 · ${_steps[_step]}', style: GoogleFonts.inter(
-                fontSize: 11, color: Colors.white.withOpacity(0.7),
-              )),
+              Text(
+                widget.existingOrder == null
+                    ? 'Buat Pesanan Baru'
+                    : 'Edit Pesanan',
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+              Text(
+                'Langkah ${_step + 1} dari 3 · ${_steps[_step]}',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: Colors.white.withOpacity(0.7),
+                ),
+              ),
             ],
           ),
         ],
@@ -106,23 +130,45 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                         width: 24,
                         height: 24,
                         decoration: BoxDecoration(
-                          color: done ? AppColors.statusDone : active ? AppColors.primary : AppColors.surfaceBlue,
+                          color: done
+                              ? AppColors.statusDone
+                              : active
+                              ? AppColors.primary
+                              : AppColors.surfaceBlue,
                           shape: BoxShape.circle,
                         ),
                         alignment: Alignment.center,
                         child: done
-                            ? const Icon(Icons.check, size: 14, color: Colors.white)
-                            : Text('${i + 1}', style: GoogleFonts.inter(
-                                fontSize: 11, fontWeight: FontWeight.bold,
-                                color: active ? Colors.white : AppColors.textMuted,
-                              )),
+                            ? const Icon(
+                                Icons.check,
+                                size: 14,
+                                color: Colors.white,
+                              )
+                            : Text(
+                                '${i + 1}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: active
+                                      ? Colors.white
+                                      : AppColors.textMuted,
+                                ),
+                              ),
                       ),
                       const SizedBox(height: 4),
-                      Text(_steps[i], style: GoogleFonts.inter(
-                        fontSize: 9,
-                        color: active ? AppColors.primary : AppColors.textMuted,
-                        fontWeight: active ? FontWeight.w600 : FontWeight.normal,
-                      ), textAlign: TextAlign.center,),
+                      Text(
+                        _steps[i],
+                        style: GoogleFonts.inter(
+                          fontSize: 9,
+                          color: active
+                              ? AppColors.primary
+                              : AppColors.textMuted,
+                          fontWeight: active
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ],
                   ),
                 ),
@@ -144,23 +190,36 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
   Widget _buildStep() {
     switch (_step) {
-      case 0: return _Step1Info(draft: _draft, onChanged: () => setState(() {}));
-      case 1: return _Step2Services(draft: _draft, onChanged: () => setState(() {}));
-      case 2: return _Step3Cleaner(draft: _draft, onChanged: () => setState(() {}));
-      case 3: return _Step4Summary(draft: _draft);
-      default: return const SizedBox();
+      case 0:
+        return _Step1Info(draft: _draft, onChanged: () => setState(() {}));
+      case 1:
+        return _Step2Services(draft: _draft, onChanged: () => setState(() {}));
+      case 2:
+        return _Step3Cleaner(draft: _draft, onChanged: () => setState(() {}));
+      case 3:
+        return _Step4Summary(draft: _draft);
+      default:
+        return const SizedBox();
     }
   }
 
   Widget _buildNavButtons() {
     final canNext = switch (_step) {
-      0 => _draft.customer != null && _draft.tanggalPengerjaan.isNotEmpty && _draft.waktuPengerjaan.isNotEmpty,
+      0 =>
+        _draft.customer != null &&
+            _draft.tanggalPengerjaan.isNotEmpty &&
+            _draft.waktuPengerjaan.isNotEmpty,
       1 => _draft.services.isNotEmpty,
       _ => true,
     };
 
     return Container(
-      padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        MediaQuery.of(context).padding.bottom + 12,
+      ),
       decoration: const BoxDecoration(
         color: AppColors.surface,
         border: Border(top: BorderSide(color: AppColors.border)),
@@ -173,12 +232,19 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 onPressed: _prev,
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   side: const BorderSide(color: AppColors.primary),
                 ),
-                child: Text('Kembali', style: GoogleFonts.inter(
-                  fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary,
-                )),
+                child: Text(
+                  'Kembali',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -186,7 +252,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           Expanded(
             flex: 2,
             child: ElevatedButton(
-              onPressed: (canNext && !_isSaving) ? (_step == 3 ? _submit : _next) : null,
+              onPressed: (canNext && !_isSaving)
+                  ? (_step == 3 ? _submit : _next)
+                  : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -194,25 +262,40 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 elevation: canNext && !_isSaving ? 4 : 0,
                 shadowColor: AppColors.primary.withOpacity(0.4),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: _isSaving 
-                ? const SizedBox(
-                    width: 20, height: 20, 
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(_step == 3 ? 'Simpan' : 'Lanjut', style: GoogleFonts.inter(
-                        fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white,
-                      )),
-                      if (_step < 3) ...[
-                        const SizedBox(width: 8),
-                        const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
+              child: _isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _step == 3 ? 'Simpan' : 'Lanjut',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        if (_step < 3) ...[
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
+                    ),
             ),
           ),
         ],
@@ -226,22 +309,35 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       if (widget.existingOrder == null) {
         final orderId = await _orderService.createOrder(_draft);
         if (_draft.cleaners.isNotEmpty) {
-          await _orderService.assignCleaner(orderId, _draft.cleaners.map((c) => c.id).toList());
+          await _orderService.assignCleaner(
+            orderId,
+            _draft.cleaners.map((c) => c.id).toList(),
+          );
         }
       } else {
         await _orderService.updateOrder(widget.existingOrder!.id, _draft);
         if (_draft.cleaners.isNotEmpty) {
-          await _orderService.assignCleaner(widget.existingOrder!.id, _draft.cleaners.map((c) => c.id).toList());
+          await _orderService.assignCleaner(
+            widget.existingOrder!.id,
+            _draft.cleaners.map((c) => c.id).toList(),
+          );
         }
       }
-      
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(widget.existingOrder == null ? 'Pesanan berhasil dibuat!' : 'Pesanan berhasil diperbarui!', style: GoogleFonts.inter(color: Colors.white)),
+          content: Text(
+            widget.existingOrder == null
+                ? 'Pesanan berhasil dibuat!'
+                : 'Pesanan berhasil diperbarui!',
+            style: GoogleFonts.inter(color: Colors.white),
+          ),
           backgroundColor: AppColors.statusDone,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       Navigator.pop(context, true);
@@ -250,7 +346,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString(), style: GoogleFonts.inter(color: Colors.white)),
+          content: Text(
+            e.toString(),
+            style: GoogleFonts.inter(color: Colors.white),
+          ),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -298,7 +397,9 @@ class _Step1InfoState extends State<_Step1Info> {
       if (mounted) {
         setState(() {
           // Filter ONLY active customers directly
-          _customers = data.where((c) => c.status.toLowerCase() == 'aktif').toList();
+          _customers = data
+              .where((c) => c.status.toLowerCase() == 'aktif')
+              .toList();
           _isLoading = false;
         });
       }
@@ -321,7 +422,13 @@ class _Step1InfoState extends State<_Step1Info> {
         customers: _customers,
         selectedId: widget.draft.customer?.id,
         onSelect: (c) {
-          widget.draft.customer = OrderCustomer(id: c.id, name: c.name, phone: c.phone, address: c.address, area: '-');
+          widget.draft.customer = OrderCustomer(
+            id: c.id,
+            name: c.name,
+            phone: c.phone,
+            address: c.address,
+            area: '-',
+          );
           widget.onChanged();
           Navigator.pop(ctx);
         },
@@ -336,52 +443,121 @@ class _Step1InfoState extends State<_Step1Info> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Data Pelanggan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+          Text(
+            'Data Pelanggan',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textDark,
+            ),
+          ),
           const SizedBox(height: 12),
-          
+
           if (_isLoading)
-            const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: AppColors.primary)))
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: CircularProgressIndicator(color: AppColors.primary),
+              ),
+            )
           else if (_error != null)
-            Center(child: Padding(padding: EdgeInsets.all(20), child: Text(_error!, style: const TextStyle(color: AppColors.error))))
+            Center(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Text(
+                  _error!,
+                  style: const TextStyle(color: AppColors.error),
+                ),
+              ),
+            )
           else
             GestureDetector(
               onTap: _showCustomerSearchSheet,
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: widget.draft.customer == null ? AppColors.surface : AppColors.surfaceBlue.withOpacity(0.5),
-                  border: Border.all(color: widget.draft.customer == null ? AppColors.border : AppColors.primary),
+                  color: widget.draft.customer == null
+                      ? AppColors.surface
+                      : AppColors.surfaceBlue.withOpacity(0.5),
+                  border: Border.all(
+                    color: widget.draft.customer == null
+                        ? AppColors.border
+                        : AppColors.primary,
+                  ),
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: widget.draft.customer == null ? [AppColors.cardShadow] : [],
+                  boxShadow: widget.draft.customer == null
+                      ? [AppColors.cardShadow]
+                      : [],
                 ),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: widget.draft.customer == null ? AppColors.background : AppColors.primary, shape: BoxShape.circle),
-                      child: Icon(Icons.person_outline, color: widget.draft.customer == null ? AppColors.textMuted : Colors.white),
+                      decoration: BoxDecoration(
+                        color: widget.draft.customer == null
+                            ? AppColors.background
+                            : AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.person_outline,
+                        color: widget.draft.customer == null
+                            ? AppColors.textMuted
+                            : Colors.white,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: widget.draft.customer == null
-                          ? Text('Pilih Pelanggan...', style: GoogleFonts.inter(fontSize: 14, color: AppColors.textMuted))
+                          ? Text(
+                              'Pilih Pelanggan...',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: AppColors.textMuted,
+                              ),
+                            )
                           : Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(widget.draft.customer!.name, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                                Text(
+                                  widget.draft.customer!.name,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
                                 const SizedBox(height: 4),
-                                Text(widget.draft.customer!.phone, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+                                Text(
+                                  widget.draft.customer!.phone,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: AppColors.textMuted,
+                                  ),
+                                ),
                               ],
                             ),
                     ),
-                    Icon(Icons.chevron_right, color: widget.draft.customer == null ? AppColors.textMuted : AppColors.primary),
+                    Icon(
+                      Icons.chevron_right,
+                      color: widget.draft.customer == null
+                          ? AppColors.textMuted
+                          : AppColors.primary,
+                    ),
                   ],
                 ),
               ),
             ),
 
           const SizedBox(height: 24),
-          Text('Cabang Pemroses', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          Text(
+            'Cabang Pemroses',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+            ),
+          ),
           const SizedBox(height: 8),
           Container(
             width: double.infinity,
@@ -393,39 +569,78 @@ class _Step1InfoState extends State<_Step1Info> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.storefront_rounded, color: AppColors.textMuted, size: 20),
+                const Icon(
+                  Icons.storefront_rounded,
+                  color: AppColors.textMuted,
+                  size: 20,
+                ),
                 const SizedBox(width: 12),
-                Text('Surabaya', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark)),
+                Text(
+                  'Surabaya',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textDark,
+                  ),
+                ),
                 const Spacer(),
-                const Icon(Icons.lock_outline_rounded, color: AppColors.textMuted, size: 16),
+                const Icon(
+                  Icons.lock_outline_rounded,
+                  color: AppColors.textMuted,
+                  size: 16,
+                ),
               ],
             ),
           ),
 
           const SizedBox(height: 20),
-          Text('Sumber Chat', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          Text(
+            'Sumber Chat',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+            ),
+          ),
           const SizedBox(height: 8),
           Row(
             children: ChatSource.values.map((e) {
               final active = widget.draft.chatDari == e;
               return Expanded(
                 child: GestureDetector(
-                  onTap: () { widget.draft.chatDari = e; widget.onChanged(); },
+                  onTap: () {
+                    widget.draft.chatDari = e;
+                    widget.onChanged();
+                  },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    margin: EdgeInsets.only(right: e == ChatSource.values.last ? 0 : 8),
+                    margin: EdgeInsets.only(
+                      right: e == ChatSource.values.last ? 0 : 8,
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
-                      color: active ? AppColors.primary.withOpacity(0.08) : AppColors.surface,
+                      color: active
+                          ? AppColors.primary.withOpacity(0.08)
+                          : AppColors.surface,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: active ? AppColors.primary : AppColors.border, width: active ? 1.5 : 1),
+                      border: Border.all(
+                        color: active ? AppColors.primary : AppColors.border,
+                        width: active ? 1.5 : 1,
+                      ),
                     ),
                     child: Center(
-                      child: Text(e.name.toUpperCase(), style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                        color: active ? AppColors.primary : AppColors.textMuted,
-                      )),
+                      child: Text(
+                        e.name.toUpperCase(),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: active
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: active
+                              ? AppColors.primary
+                              : AppColors.textMuted,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -434,29 +649,53 @@ class _Step1InfoState extends State<_Step1Info> {
           ),
 
           const SizedBox(height: 20),
-          Text('Tipe Customer', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          Text(
+            'Tipe Customer',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+            ),
+          ),
           const SizedBox(height: 8),
           Row(
             children: CustomerType.values.map((e) {
               final active = widget.draft.tipeCustomer == e;
               return Expanded(
                 child: GestureDetector(
-                  onTap: () { widget.draft.tipeCustomer = e; widget.onChanged(); },
+                  onTap: () {
+                    widget.draft.tipeCustomer = e;
+                    widget.onChanged();
+                  },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    margin: EdgeInsets.only(right: e == CustomerType.values.last ? 0 : 12),
+                    margin: EdgeInsets.only(
+                      right: e == CustomerType.values.last ? 0 : 12,
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
-                      color: active ? AppColors.primary.withOpacity(0.08) : AppColors.surface,
+                      color: active
+                          ? AppColors.primary.withOpacity(0.08)
+                          : AppColors.surface,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: active ? AppColors.primary : AppColors.border, width: active ? 1.5 : 1),
+                      border: Border.all(
+                        color: active ? AppColors.primary : AppColors.border,
+                        width: active ? 1.5 : 1,
+                      ),
                     ),
                     child: Center(
-                      child: Text(e.name.toUpperCase(), style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                        color: active ? AppColors.primary : AppColors.textMuted,
-                      )),
+                      child: Text(
+                        e.name.toUpperCase(),
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: active
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: active
+                              ? AppColors.primary
+                              : AppColors.textMuted,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -465,37 +704,76 @@ class _Step1InfoState extends State<_Step1Info> {
           ),
 
           const SizedBox(height: 16),
-          Text('Jadwal Pengerjaan', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          Text(
+            'Jadwal Pengerjaan',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+            ),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(child: _dateField(context, _tglCtrl, hint: 'Pilih Tanggal')),
+              Expanded(
+                child: _dateField(context, _tglCtrl, hint: 'Pilih Tanggal'),
+              ),
               const SizedBox(width: 12),
-              Expanded(child: _timeField(context, _waktuCtrl, hint: 'Pilih Waktu (Cth: 09:00 - 12:00)')),
+              Expanded(
+                child: _timeField(
+                  context,
+                  _waktuCtrl,
+                  hint: 'Pilih Waktu (Cth: 09:00 - 12:00)',
+                ),
+              ),
             ],
           ),
 
           const SizedBox(height: 16),
-          Text('Keterangan Order', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          Text(
+            'Keterangan Order',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+            ),
+          ),
           const SizedBox(height: 8),
           TextFormField(
             initialValue: widget.draft.notes,
             maxLines: 3,
-            onChanged: (v) { widget.draft.notes = v; widget.onChanged(); },
+            onChanged: (v) {
+              widget.draft.notes = v;
+              widget.onChanged();
+            },
             decoration: InputDecoration(
               hintText: 'Opsional...',
               filled: true,
               fillColor: AppColors.surface,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.primary),
+              ),
             ),
           ),
+        ],
       ),
     );
   }
 
-  Widget _dateField(BuildContext context, TextEditingController ctrl, {String hint = ''}) {
+  Widget _dateField(
+    BuildContext context,
+    TextEditingController ctrl, {
+    String hint = '',
+  }) {
     return TextField(
       controller: ctrl,
       readOnly: true,
@@ -508,7 +786,8 @@ class _Step1InfoState extends State<_Step1Info> {
           lastDate: DateTime(2100),
         );
         if (picked != null) {
-          ctrl.text = "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+          ctrl.text =
+              "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
           widget.draft.tanggalPengerjaan = ctrl.text;
           widget.onChanged();
         }
@@ -519,16 +798,36 @@ class _Step1InfoState extends State<_Step1Info> {
         hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13),
         filled: true,
         fillColor: AppColors.surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
-        suffixIcon: const Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textMuted),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+        suffixIcon: const Icon(
+          Icons.calendar_today_rounded,
+          size: 16,
+          color: AppColors.textMuted,
+        ),
       ),
     );
   }
 
-  Widget _timeField(BuildContext context, TextEditingController ctrl, {String hint = ''}) {
+  Widget _timeField(
+    BuildContext context,
+    TextEditingController ctrl, {
+    String hint = '',
+  }) {
     return TextField(
       controller: ctrl,
       readOnly: false, // Let user type freely because of "09:00 - 12:00" format
@@ -542,12 +841,24 @@ class _Step1InfoState extends State<_Step1Info> {
         hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13),
         filled: true,
         fillColor: AppColors.surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
         suffixIcon: GestureDetector(
-           onTap: () async {
+          onTap: () async {
             final picked = await showTimePicker(
               context: context,
               initialTime: TimeOfDay.now(),
@@ -560,7 +871,11 @@ class _Step1InfoState extends State<_Step1Info> {
               widget.onChanged();
             }
           },
-          child: const Icon(Icons.access_time_rounded, size: 16, color: AppColors.primary)
+          child: const Icon(
+            Icons.access_time_rounded,
+            size: 16,
+            color: AppColors.primary,
+          ),
         ),
       ),
     );
@@ -568,7 +883,11 @@ class _Step1InfoState extends State<_Step1Info> {
 }
 
 class _CustomerSearchSheet extends StatefulWidget {
-  const _CustomerSearchSheet({required this.customers, this.selectedId, required this.onSelect});
+  const _CustomerSearchSheet({
+    required this.customers,
+    this.selectedId,
+    required this.onSelect,
+  });
   final List<CustomerModel> customers;
   final String? selectedId;
   final ValueChanged<CustomerModel> onSelect;
@@ -582,7 +901,9 @@ class _CustomerSearchSheetState extends State<_CustomerSearchSheet> {
 
   List<CustomerModel> get _filtered => widget.customers.where((c) {
     final q = _query.toLowerCase();
-    return c.name.toLowerCase().contains(q) || c.phone.contains(q) || c.address.toLowerCase().contains(q);
+    return c.name.toLowerCase().contains(q) ||
+        c.phone.contains(q) ||
+        c.address.toLowerCase().contains(q);
   }).toList();
 
   @override
@@ -597,16 +918,30 @@ class _CustomerSearchSheetState extends State<_CustomerSearchSheet> {
         children: [
           Container(
             margin: const EdgeInsets.only(top: 12, bottom: 8),
-            width: 40, height: 4,
-            decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.border,
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Pilih Pelanggan Aktif', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                GestureDetector(onTap: () => Navigator.pop(context), child: const Icon(Icons.close, color: AppColors.textMuted)),
+                Text(
+                  'Pilih Pelanggan Aktif',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: const Icon(Icons.close, color: AppColors.textMuted),
+                ),
               ],
             ),
           ),
@@ -617,14 +952,33 @@ class _CustomerSearchSheetState extends State<_CustomerSearchSheet> {
               autofocus: true,
               decoration: InputDecoration(
                 hintText: 'Cari nama, nomor HP, atau alamat...',
-                hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 14),
-                prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.textMuted),
+                hintStyle: GoogleFonts.inter(
+                  color: AppColors.textMuted,
+                  fontSize: 14,
+                ),
+                prefixIcon: const Icon(
+                  Icons.search,
+                  size: 20,
+                  color: AppColors.textMuted,
+                ),
                 contentPadding: const EdgeInsets.symmetric(vertical: 14),
                 filled: true,
                 fillColor: AppColors.surface,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: AppColors.primary,
+                    width: 1.5,
+                  ),
+                ),
               ),
             ),
           ),
@@ -632,7 +986,12 @@ class _CustomerSearchSheetState extends State<_CustomerSearchSheet> {
           const Divider(height: 1, color: AppColors.border),
           Expanded(
             child: _filtered.isEmpty
-                ? Center(child: Text('Tidak ada pelanggan aktif ditemukan.', style: GoogleFonts.inter(color: AppColors.textMuted)))
+                ? Center(
+                    child: Text(
+                      'Tidak ada pelanggan aktif ditemukan.',
+                      style: GoogleFonts.inter(color: AppColors.textMuted),
+                    ),
+                  )
                 : ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: _filtered.length,
@@ -643,33 +1002,83 @@ class _CustomerSearchSheetState extends State<_CustomerSearchSheet> {
                       return ListTile(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(color: selected ? AppColors.primary : AppColors.border),
+                          side: BorderSide(
+                            color: selected
+                                ? AppColors.primary
+                                : AppColors.border,
+                          ),
                         ),
-                        tileColor: selected ? AppColors.surfaceBlue : AppColors.surface,
-                        leading: InitialsAvatar(name: c.name, size: 40, backgroundColor: selected ? AppColors.primary : AppColors.surfaceBlue, textColor: selected ? Colors.white : AppColors.primary),
-                        title: Text(c.name, style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                        tileColor: selected
+                            ? AppColors.surfaceBlue
+                            : AppColors.surface,
+                        leading: InitialsAvatar(
+                          name: c.name,
+                          size: 40,
+                          backgroundColor: selected
+                              ? AppColors.primary
+                              : AppColors.surfaceBlue,
+                          textColor: selected
+                              ? Colors.white
+                              : AppColors.primary,
+                        ),
+                        title: Text(
+                          c.name,
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textDark,
+                          ),
+                        ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                const Icon(Icons.phone_android, size: 12, color: AppColors.textMuted),
+                                const Icon(
+                                  Icons.phone_android,
+                                  size: 12,
+                                  color: AppColors.textMuted,
+                                ),
                                 const SizedBox(width: 4),
-                                Text(c.phone, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                                Text(
+                                  c.phone,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: AppColors.textMuted,
+                                  ),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 2),
                             Row(
                               children: [
-                                const Icon(Icons.location_on_outlined, size: 12, color: AppColors.textMuted),
+                                const Icon(
+                                  Icons.location_on_outlined,
+                                  size: 12,
+                                  color: AppColors.textMuted,
+                                ),
                                 const SizedBox(width: 4),
-                                Expanded(child: Text(c.address, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                                Expanded(
+                                  child: Text(
+                                    c.address,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      color: AppColors.textMuted,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                               ],
                             ),
                           ],
                         ),
-                        trailing: selected ? const Icon(Icons.check_circle, color: AppColors.primary) : null,
+                        trailing: selected
+                            ? const Icon(
+                                Icons.check_circle,
+                                color: AppColors.primary,
+                              )
+                            : null,
                         onTap: () => widget.onSelect(c),
                       );
                     },
@@ -687,7 +1096,11 @@ class _Step2Services extends StatelessWidget {
   final OrderDraft draft;
   final VoidCallback onChanged;
 
-  void _showAddServiceSheet(BuildContext context, {ServiceItem? existing, int? index}) {
+  void _showAddServiceSheet(
+    BuildContext context, {
+    ServiceItem? existing,
+    int? index,
+  }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -695,8 +1108,10 @@ class _Step2Services extends StatelessWidget {
       builder: (ctx) => _AddServiceSheet(
         existing: existing,
         onSave: (item) {
-          if (index != null) draft.services[index] = item;
-          else draft.services.add(item);
+          if (index != null)
+            draft.services[index] = item;
+          else
+            draft.services.add(item);
           onChanged();
         },
       ),
@@ -712,19 +1127,33 @@ class _Step2Services extends StatelessWidget {
           child: ElevatedButton.icon(
             onPressed: () => _showAddServiceSheet(context),
             icon: const Icon(Icons.add, color: AppColors.primary),
-            label: Text('Tambah Layanan', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppColors.primary)),
+            label: Text(
+              'Tambah Layanan',
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.surfaceBlue,
               elevation: 0,
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.primary)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: AppColors.primary),
+              ),
               minimumSize: const Size(double.infinity, 50),
             ),
           ),
         ),
         Expanded(
           child: draft.services.isEmpty
-              ? Center(child: Text('Belum ada layanan yang ditambahkan', style: GoogleFonts.inter(color: AppColors.textMuted)))
+              ? Center(
+                  child: Text(
+                    'Belum ada layanan yang ditambahkan',
+                    style: GoogleFonts.inter(color: AppColors.textMuted),
+                  ),
+                )
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: draft.services.length,
@@ -747,20 +1176,41 @@ class _Step2Services extends StatelessWidget {
                               color: AppColors.surfaceBlue.withOpacity(0.5),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.cleaning_services_rounded, color: AppColors.primary, size: 24),
+                            child: const Icon(
+                              Icons.cleaning_services_rounded,
+                              color: AppColors.primary,
+                              size: 24,
+                            ),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(s.name, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                                Text(
+                                  s.name,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
                                 const SizedBox(height: 4),
                                 Row(
                                   children: [
-                                    const Icon(Icons.tag, size: 12, color: AppColors.textMuted),
+                                    const Icon(
+                                      Icons.tag,
+                                      size: 12,
+                                      color: AppColors.textMuted,
+                                    ),
                                     const SizedBox(width: 4),
-                                    Text('Qty: ${s.qty}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+                                    Text(
+                                      'Qty: ${s.qty}',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: AppColors.textMuted,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ],
@@ -770,11 +1220,22 @@ class _Step2Services extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               GestureDetector(
-                                onTap: () => _showAddServiceSheet(context, existing: s, index: i),
+                                onTap: () => _showAddServiceSheet(
+                                  context,
+                                  existing: s,
+                                  index: i,
+                                ),
                                 child: Container(
                                   padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-                                  child: const Icon(Icons.edit_outlined, size: 18, color: AppColors.primary),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Icon(
+                                    Icons.edit_outlined,
+                                    size: 18,
+                                    color: AppColors.primary,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -783,13 +1244,30 @@ class _Step2Services extends StatelessWidget {
                                   showDialog(
                                     context: context,
                                     builder: (ctx) => AlertDialog(
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                      title: Text('Hapus Layanan?', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
-                                      content: Text('Apakah Anda yakin ingin menghapus layanan ini dari pesanan?', style: GoogleFonts.inter(fontSize: 14)),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      title: Text(
+                                        'Hapus Layanan?',
+                                        style: GoogleFonts.inter(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      content: Text(
+                                        'Apakah Anda yakin ingin menghapus layanan ini dari pesanan?',
+                                        style: GoogleFonts.inter(fontSize: 14),
+                                      ),
                                       actions: [
                                         TextButton(
                                           onPressed: () => Navigator.pop(ctx),
-                                          child: Text('Batal', style: GoogleFonts.inter(color: AppColors.textMuted, fontWeight: FontWeight.w600)),
+                                          child: Text(
+                                            'Batal',
+                                            style: GoogleFonts.inter(
+                                              color: AppColors.textMuted,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
                                         ),
                                         TextButton(
                                           onPressed: () {
@@ -797,7 +1275,13 @@ class _Step2Services extends StatelessWidget {
                                             draft.services.removeAt(i);
                                             onChanged();
                                           },
-                                          child: Text('Hapus', style: GoogleFonts.inter(color: AppColors.error, fontWeight: FontWeight.w600)),
+                                          child: Text(
+                                            'Hapus',
+                                            style: GoogleFonts.inter(
+                                              color: AppColors.error,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -805,8 +1289,15 @@ class _Step2Services extends StatelessWidget {
                                 },
                                 child: Container(
                                   padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(color: AppColors.error.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-                                  child: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.error.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Icon(
+                                    Icons.delete_outline,
+                                    size: 18,
+                                    color: AppColors.error,
+                                  ),
                                 ),
                               ),
                             ],
@@ -859,14 +1350,14 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
           _availableServices = data;
           _isLoading = false;
           if (_availableServices.isNotEmpty) {
-             if (widget.existing != null) {
-               _selectedLayanan = _availableServices.firstWhere(
-                 (e) => e['nama_layanan'] == widget.existing!.name, 
-                 orElse: () => _availableServices.first
-               );
-             } else {
-               _selectedLayanan = _availableServices.first;
-             }
+            if (widget.existing != null) {
+              _selectedLayanan = _availableServices.firstWhere(
+                (e) => e['nama_layanan'] == widget.existing!.name,
+                orElse: () => _availableServices.first,
+              );
+            } else {
+              _selectedLayanan = _availableServices.first;
+            }
           }
         });
       }
@@ -884,22 +1375,26 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
     if (_qtyCtrl.text.isEmpty || _selectedLayanan == null) {
       return;
     }
-    widget.onSave(ServiceItem(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      layananId: _selectedLayanan!['id']?.toString() ?? '1',
-      name: _selectedLayanan!['nama_layanan'],
-      price: int.tryParse(_hargaCtrl.text) ?? 0,
-      qty: _qtyCtrl.text,
-      tanggalPengerjaan: '',
-      waktuPengerjaan: '',
-      bonusLayanan: 0,
-    ));
+    widget.onSave(
+      ServiceItem(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        layananId: _selectedLayanan!['id']?.toString() ?? '1',
+        name: _selectedLayanan!['nama_layanan'],
+        price: int.tryParse(_hargaCtrl.text) ?? 0,
+        qty: _qtyCtrl.text,
+        tanggalPengerjaan: '',
+        waktuPengerjaan: '',
+        bonusLayanan: 0,
+      ),
+    );
     Navigator.pop(context);
   }
 
   Widget build(BuildContext context) {
     return AnimatedPadding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeOut,
       child: Container(
@@ -908,76 +1403,169 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.all(20),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(widget.existing == null ? 'Tambah Layanan' : 'Edit Layanan', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            _label('Layanan'),
-            if (_isLoading)
-               const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
-            else if (_error != null)
-               Text(_error!, style: const TextStyle(color: AppColors.error))
-            else if (_availableServices.isEmpty)
-               const Text('Tidak ada layanan di cabang ini.')
-            else 
-            DropdownButtonFormField<Map<String, dynamic>>(
-              value: _selectedLayanan,
-              isExpanded: true,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: AppColors.surface,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                widget.existing == null ? 'Tambah Layanan' : 'Edit Layanan',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
-              items: _availableServices.map((e) => DropdownMenuItem(value: e, child: Text(e['nama_layanan'], style: GoogleFonts.inter(fontSize: 14, color: AppColors.textDark)))).toList(),
-              onChanged: (v) {
-                if (v != null) {
-                  setState(() {
-                    _selectedLayanan = v;
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 12),
-            const SizedBox(height: 12),
-            _label('Harga Layanan (Rp)'),
-            _textField(_hargaCtrl, type: TextInputType.number, hint: 'Contoh: 150000'),
-            const SizedBox(height: 12),
-            _label('Qty (Contoh: 3 jam 2 cleaner)'),
-            _textField(_qtyCtrl, hint: 'Teks bebas...'),
-            const SizedBox(height: 12),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 52),
-                elevation: 4,
-                shadowColor: AppColors.primary.withOpacity(0.4),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              const SizedBox(height: 16),
+              _label('Layanan'),
+              if (_isLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(12),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else if (_error != null)
+                Text(_error!, style: const TextStyle(color: AppColors.error))
+              else if (_availableServices.isEmpty)
+                const Text('Tidak ada layanan di cabang ini.')
+              else
+                DropdownButtonFormField<Map<String, dynamic>>(
+                  value: _selectedLayanan,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: AppColors.surface,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: AppColors.primary,
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: AppColors.textMuted,
+                  ),
+                  items: _availableServices
+                      .map(
+                        (e) => DropdownMenuItem(
+                          value: e,
+                          child: Text(
+                            e['nama_layanan'],
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(() {
+                        _selectedLayanan = v;
+                      });
+                    }
+                  },
+                ),
+              const SizedBox(height: 12),
+              const SizedBox(height: 12),
+              _label('Harga Layanan (Rp)'),
+              _textField(
+                _hargaCtrl,
+                type: TextInputType.number,
+                hint: 'Contoh: 150000',
               ),
-              child: Text('Simpan', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
-            ),
-          ],
+              const SizedBox(height: 12),
+              _label('Qty (Contoh: 3 jam 2 cleaner)'),
+              _textField(_qtyCtrl, hint: 'Teks bebas...'),
+              const SizedBox(height: 12),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 52),
+                  elevation: 4,
+                  shadowColor: AppColors.primary.withOpacity(0.4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'Simpan',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
 
-  Widget _label(String text) => Padding(padding: const EdgeInsets.only(bottom: 6), child: Text(text, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)));
-  Widget _textField(TextEditingController ctrl, {TextInputType type = TextInputType.text, String hint = ''}) => TextField(
-    controller: ctrl, keyboardType: type, style: GoogleFonts.inter(fontSize: 14, color: AppColors.textDark), decoration: InputDecoration(hintText: hint, hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 14), filled: true, fillColor: AppColors.surface, contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5))),
+  Widget _label(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(
+      text,
+      style: GoogleFonts.inter(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textDark,
+      ),
+    ),
+  );
+  Widget _textField(
+    TextEditingController ctrl, {
+    TextInputType type = TextInputType.text,
+    String hint = '',
+  }) => TextField(
+    controller: ctrl,
+    keyboardType: type,
+    style: GoogleFonts.inter(fontSize: 14, color: AppColors.textDark),
+    decoration: InputDecoration(
+      hintText: hint,
+      hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 14),
+      filled: true,
+      fillColor: AppColors.surface,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+      ),
+    ),
   );
 
-  Widget _dateField(BuildContext context, TextEditingController ctrl, {String hint = ''}) {
+  Widget _dateField(
+    BuildContext context,
+    TextEditingController ctrl, {
+    String hint = '',
+  }) {
     return TextField(
       controller: ctrl,
       readOnly: true,
@@ -990,7 +1578,8 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
           lastDate: DateTime(2100),
         );
         if (picked != null) {
-          ctrl.text = "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+          ctrl.text =
+              "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
         }
       },
       decoration: InputDecoration(
@@ -998,16 +1587,36 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
         hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 14),
         filled: true,
         fillColor: AppColors.surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
-        suffixIcon: const Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textMuted),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+        suffixIcon: const Icon(
+          Icons.calendar_today_rounded,
+          size: 18,
+          color: AppColors.textMuted,
+        ),
       ),
     );
   }
 
-  Widget _timeField(BuildContext context, TextEditingController ctrl, {String hint = ''}) {
+  Widget _timeField(
+    BuildContext context,
+    TextEditingController ctrl, {
+    String hint = '',
+  }) {
     return TextField(
       controller: ctrl,
       readOnly: true,
@@ -1027,11 +1636,27 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
         hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 14),
         filled: true,
         fillColor: AppColors.surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
-        suffixIcon: const Icon(Icons.access_time_rounded, size: 18, color: AppColors.textMuted),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+        suffixIcon: const Icon(
+          Icons.access_time_rounded,
+          size: 18,
+          color: AppColors.textMuted,
+        ),
       ),
     );
   }
@@ -1066,7 +1691,7 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
       final hrdService = _HrdServiceStub();
       final prefs = await SharedPreferences.getInstance();
       final cabangId = prefs.getInt('user_cabang_id') ?? 1;
-      
+
       final data = await hrdService.fetchCleaners(cabangId);
       if (mounted) {
         setState(() {
@@ -1087,8 +1712,12 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
-    if (_error != null) return Center(child: Text(_error!, style: const TextStyle(color: AppColors.error)));
-    if (_availableCleaners.isEmpty) return const Center(child: Text('Tidak ada cleaner tersedia.'));
+    if (_error != null)
+      return Center(
+        child: Text(_error!, style: const TextStyle(color: AppColors.error)),
+      );
+    if (_availableCleaners.isEmpty)
+      return const Center(child: Text('Tidak ada cleaner tersedia.'));
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
@@ -1105,15 +1734,19 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
               if (isSelected) {
                 widget.draft.cleaners.removeWhere((x) => x.id == idStr);
               } else {
-                widget.draft.cleaners.add(OrderCleaner(
-                  id: idStr,
-                  pesananCleanerId: '',
-                  name: c['name'] ?? c['nama'] ?? 'Unknown',
-                  rating: c['rating'] != null ? double.tryParse(c['rating'].toString()) ?? 0.0 : 0.0,
-                  statusPengerjaan: CleanerWorkStatus.assigned,
-                  totalBonus: 0,
-                  bonuses: [],
-                ));
+                widget.draft.cleaners.add(
+                  OrderCleaner(
+                    id: idStr,
+                    pesananCleanerId: '',
+                    name: c['name'] ?? c['nama'] ?? 'Unknown',
+                    rating: c['rating'] != null
+                        ? double.tryParse(c['rating'].toString()) ?? 0.0
+                        : 0.0,
+                    statusPengerjaan: CleanerWorkStatus.assigned,
+                    totalBonus: 0,
+                    bonuses: [],
+                  ),
+                );
               }
               widget.onChanged();
             });
@@ -1121,11 +1754,21 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
           tileColor: isSelected ? AppColors.surfaceBlue : AppColors.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: isSelected ? AppColors.primary : AppColors.border),
+            side: BorderSide(
+              color: isSelected ? AppColors.primary : AppColors.border,
+            ),
           ),
-          leading: Icon(Icons.person, color: isSelected ? AppColors.primary : AppColors.textMuted),
-          title: Text(c['name'] ?? c['nama'] ?? '-', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-          trailing: isSelected ? const Icon(Icons.check_circle, color: AppColors.primary) : null,
+          leading: Icon(
+            Icons.person,
+            color: isSelected ? AppColors.primary : AppColors.textMuted,
+          ),
+          title: Text(
+            c['name'] ?? c['nama'] ?? '-',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          ),
+          trailing: isSelected
+              ? const Icon(Icons.check_circle, color: AppColors.primary)
+              : null,
         );
       },
     );
@@ -1160,57 +1803,100 @@ class _Step4SummaryState extends State<_Step4Summary> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SummaryCard(title: 'Data Pelanggan', child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _infoRow('Nama', widget.draft.customer?.name ?? '-'),
-              const SizedBox(height: 8),
-              _infoRow('Telepon', widget.draft.customer?.phone ?? '-'),
-              const SizedBox(height: 8),
-              _infoRow('Alamat', widget.draft.customer?.address ?? '-'),
-              const SizedBox(height: 8),
-              const Divider(color: AppColors.border),
-              const SizedBox(height: 8),
-              _infoRow('Cabang', 'Surabaya'),
-              const SizedBox(height: 8),
-              _infoRow('Sumber Chat', widget.draft.chatDari.name.toUpperCase()),
-              const SizedBox(height: 8),
-              _infoRow('Tipe Customer', widget.draft.tipeCustomer.name.toUpperCase()),
-              const SizedBox(height: 8),
-              _infoRow('Jadwal Pengerjaan', '${widget.draft.tanggalPengerjaan} ${widget.draft.waktuPengerjaan}'),
-              if (widget.draft.notes.isNotEmpty) ...[
+          _SummaryCard(
+            title: 'Data Pelanggan',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _infoRow('Nama', widget.draft.customer?.name ?? '-'),
                 const SizedBox(height: 8),
-                _infoRow('Keterangan', widget.draft.notes),
-              ]
-            ],
-          )),
+                _infoRow('Telepon', widget.draft.customer?.phone ?? '-'),
+                const SizedBox(height: 8),
+                _infoRow('Alamat', widget.draft.customer?.address ?? '-'),
+                const SizedBox(height: 8),
+                const Divider(color: AppColors.border),
+                const SizedBox(height: 8),
+                _infoRow('Cabang', 'Surabaya'),
+                const SizedBox(height: 8),
+                _infoRow(
+                  'Sumber Chat',
+                  widget.draft.chatDari.name.toUpperCase(),
+                ),
+                const SizedBox(height: 8),
+                _infoRow(
+                  'Tipe Customer',
+                  widget.draft.tipeCustomer.name.toUpperCase(),
+                ),
+                const SizedBox(height: 8),
+                _infoRow(
+                  'Jadwal Pengerjaan',
+                  '${widget.draft.tanggalPengerjaan} ${widget.draft.waktuPengerjaan}',
+                ),
+                if (widget.draft.notes.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _infoRow('Keterangan', widget.draft.notes),
+                ],
+              ],
+            ),
+          ),
           const SizedBox(height: 12),
           _SummaryCard(
             title: 'Layanan Terpilih',
             child: widget.draft.services.isEmpty
-                ? Text('Belum ada layanan yang dipilih.', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted))
+                ? Text(
+                    'Belum ada layanan yang dipilih.',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
+                  )
                 : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ...widget.draft.services.map((s) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(child: Text(s.name, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark))),
-                          Text('Rp ${s.price}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                        ],
+                      ...widget.draft.services.map(
+                        (s) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      s.name,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textDark,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    'Rp ${s.price}',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textDark,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Qty: ${s.qty}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      Text('Qty: ${s.qty}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
                     ],
                   ),
-                )),
-              ],
-            ),
           ),
           const SizedBox(height: 12),
           if (widget.draft.cleaners.isNotEmpty) ...[
@@ -1219,16 +1905,29 @@ class _Step4SummaryState extends State<_Step4Summary> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ...widget.draft.cleaners.map((c) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.person, size: 16, color: AppColors.primary),
-                        const SizedBox(width: 8),
-                        Text(c.name, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, fontWeight: FontWeight.w500)),
-                      ],
+                  ...widget.draft.cleaners.map(
+                    (c) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.person,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            c.name,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: AppColors.textDark,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  )),
+                  ),
                 ],
               ),
             ),
@@ -1242,8 +1941,21 @@ class _Step4SummaryState extends State<_Step4Summary> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Subtotal', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
-                    Text('Rp $subtotal', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, fontWeight: FontWeight.w500)),
+                    Text(
+                      'Subtotal',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                    Text(
+                      'Rp $subtotal',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: AppColors.textDark,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -1264,15 +1976,30 @@ class _Step4SummaryState extends State<_Step4Summary> {
                                 });
                               }
                             },
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(4),
+                            ),
                             activeColor: AppColors.primary,
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text('PPN (11%)', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
+                        Text(
+                          'PPN (11%)',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
                       ],
                     ),
-                    Text('Rp $ppn', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, fontWeight: FontWeight.w500)),
+                    Text(
+                      'Rp $ppn',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: AppColors.textDark,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ],
                 ),
                 const Padding(
@@ -1282,8 +2009,22 @@ class _Step4SummaryState extends State<_Step4Summary> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Total', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                    Text('Rp $totalAkhir', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                    Text(
+                      'Total',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    Text(
+                      'Rp $totalAkhir',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -1299,9 +2040,21 @@ class _Step4SummaryState extends State<_Step4Summary> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 20),
+                const Icon(
+                  Icons.info_outline_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
                 const SizedBox(width: 12),
-                Expanded(child: Text('Pesanan Anda akan disimpan beserta jadwal dan penugasan cleaner yang telah dipilih.', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark))),
+                Expanded(
+                  child: Text(
+                    'Pesanan Anda akan disimpan beserta jadwal dan penugasan cleaner yang telah dipilih.',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -1315,9 +2068,27 @@ class _Step4SummaryState extends State<_Step4Summary> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(width: 100, child: Text(label, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted))),
-        const Text(': ', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-        Expanded(child: Text(value, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textDark))),
+        SizedBox(
+          width: 100,
+          child: Text(
+            label,
+            style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+          ),
+        ),
+        const Text(
+          ': ',
+          style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textDark,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -1333,11 +2104,24 @@ class _SummaryCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.border), boxShadow: [AppColors.cardShadow]),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [AppColors.cardShadow],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title.toUpperCase(), style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textMuted, letterSpacing: 0.5)),
+          Text(
+            title.toUpperCase(),
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textMuted,
+              letterSpacing: 0.5,
+            ),
+          ),
           const SizedBox(height: 8),
           child,
         ],
