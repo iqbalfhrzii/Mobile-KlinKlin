@@ -379,7 +379,17 @@ class _FinanceCancelDetailScreenState extends State<FinanceCancelDetailScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('PPN', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13)),
+                      Row(
+                        children: [
+                          Icon(
+                            ppn > 0 ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+                            size: 16,
+                            color: ppn > 0 ? AppColors.primary : AppColors.textMuted,
+                          ),
+                          const SizedBox(width: 6),
+                          Text('PPN (11%)', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13)),
+                        ],
+                      ),
                         Text(_formatCurrency(ppn), style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
                       ],
                     ),

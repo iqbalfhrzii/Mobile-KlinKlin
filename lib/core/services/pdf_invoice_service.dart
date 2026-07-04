@@ -55,7 +55,7 @@ class PdfInvoiceService {
     final diskonLayanan = (order.total * (diskonPersen / 100)).round();
     final totalSetelahDiskon = order.total - diskonLayanan;
     
-    final ppnPersen = order.pembayaran?.ppn ?? 11;
+    final ppnPersen = order.pembayaran?.ppn ?? order.ppn ?? 11;
     final ppnValue = (totalSetelahDiskon * (ppnPersen / 100)).round();
     final totalTagihan = totalSetelahDiskon + ppnValue;
 

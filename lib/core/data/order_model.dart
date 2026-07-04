@@ -335,6 +335,7 @@ class OrderModel {
     this.paymentProof,
     this.pembayaran,
     this.pembatalanId,
+    this.ppn,
   });
 
   String id;
@@ -355,6 +356,7 @@ class OrderModel {
   String? paymentProof;
   OrderPayment? pembayaran;
   int? pembatalanId;
+  int? ppn;
 
   String get schedule {
     if (services.isEmpty) return "-";
@@ -401,6 +403,7 @@ class OrderModel {
       paymentProof: json['pembayaran']?['bukti_transfer'] ?? json['pembayaran']?['bukti_pembayaran'] ?? json['file_invoice'],
       pembayaran: json['pembayaran'] != null ? OrderPayment.fromJson(json['pembayaran']) : null,
       pembatalanId: json['pembatalan']?['id'],
+      ppn: json['ppn'] != null ? (double.tryParse(json['ppn'].toString())?.toInt()) : null,
     );
   }
 
@@ -426,6 +429,7 @@ class OrderDraft {
     List<ServiceItem>? services,
     List<OrderCleaner>? cleaners,
     this.notes = '',
+    this.applyPpn = true,
   }) : services = services ?? [],
        cleaners = cleaners ?? [];
 
@@ -436,6 +440,7 @@ class OrderDraft {
   List<OrderCleaner> cleaners;
   String notes;
   String? paymentMethod;
+  bool applyPpn;
 
   int get total => services.fold(0, (sum, s) => sum + s.subtotal);
 
@@ -448,6 +453,7 @@ class OrderDraft {
       'keterangan_order': notes,
       'details': services.map((e) => e.toJson()).toList(),
       if (paymentMethod != null) 'metode_pembayaran': paymentMethod,
+      'ppn': applyPpn ? 11 : 0,
     };
   }
 }

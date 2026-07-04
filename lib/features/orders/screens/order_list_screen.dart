@@ -383,7 +383,7 @@ class _OrderCard extends StatelessWidget {
                     final double diskonPersen = o.pembayaran?.diskonPersen ?? 0.0;
                     final int diskonValue = (o.total * (diskonPersen / 100)).round();
                     final int totalSetelahDiskon = o.total - diskonValue;
-                    final int ppnPersen = o.pembayaran?.ppn ?? 11;
+                    final int ppnPersen = o.ppn ?? o.pembayaran?.ppn ?? 11;
                     final int ppnValue = (totalSetelahDiskon * (ppnPersen / 100)).round();
                     final int totalAkhir = totalSetelahDiskon + ppnValue;
 

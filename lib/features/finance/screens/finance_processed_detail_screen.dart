@@ -86,7 +86,7 @@ class FinanceProcessedDetailScreen extends StatelessWidget {
     final int diskonValue = (subtotal * (diskonPersen / 100)).round();
     final int totalSetelahDiskon = subtotal - diskonValue;
     
-    final int ppnPercentage = payment?.ppn ?? 11;
+    final int ppnPercentage = order.ppn ?? payment?.ppn ?? 11;
     final int ppn = (totalSetelahDiskon * (ppnPercentage / 100)).round();
     final int total = totalSetelahDiskon + ppn;
     
@@ -357,7 +357,17 @@ class FinanceProcessedDetailScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('PPN ($ppnPercentage%)', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13)),
+                      Row(
+                        children: [
+                          Icon(
+                            ppnPercentage > 0 ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+                            size: 16,
+                            color: ppnPercentage > 0 ? AppColors.primary : AppColors.textMuted,
+                          ),
+                          const SizedBox(width: 6),
+                          Text('PPN (11%)', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13)),
+                        ],
+                      ),
                         Text(_formatCurrency(ppn), style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
                       ],
                     ),

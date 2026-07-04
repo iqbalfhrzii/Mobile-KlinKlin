@@ -72,7 +72,7 @@ class OrderService {
   }
 
   /// Create order
-  Future<void> createOrder(OrderDraft draft) async {
+  Future<String> createOrder(OrderDraft draft) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final cabangId = prefs.getInt('user_cabang_id') ?? 1;
@@ -83,7 +83,9 @@ class OrderService {
       data['cabang_id'] = cabangId;
       data['cs_id'] = csId;
 
-      await _dio.post('/pesanan', data: data);
+      final res = await _dio.post('/pesanan', data: data);
+      final resData = res.data['data'] ?? res.data;
+      return resData['id'].toString();
     } catch (e) {
       if (e is DioException) {
         throw Exception('Gagal membuat pesanan: ${e.response?.data}');

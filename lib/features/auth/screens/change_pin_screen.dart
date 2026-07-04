@@ -6,6 +6,7 @@ import '../../../core/services/auth_service.dart';
 import '../../shell/main_shell.dart';
 import '../../cleaner/shell/cleaner_main_shell.dart';
 import '../../finance/shell/finance_main_shell.dart';
+import '../../hrd/shell/hrd_main_shell.dart';
 
 class ChangePINScreen extends StatefulWidget {
   const ChangePINScreen({
@@ -122,10 +123,12 @@ class _ChangePINScreenState extends State<ChangePINScreen> {
           final roleName = (prefs.getString('user_role') ?? '').toLowerCase();
           final isCleaner = roleName.contains('cleaner');
           final isFinance = roleName.contains('finance') || roleName.contains('keuangan');
+          final isHrd = roleName == 'hrd' || roleName.contains('hrd');
 
           Widget targetShell = const MainShell();
           if (isCleaner) targetShell = const CleanerMainShell();
           if (isFinance) targetShell = const FinanceMainShell();
+          if (isHrd) targetShell = const HrdMainShell();
 
           Navigator.pushAndRemoveUntil(
             context,

@@ -8,6 +8,8 @@ import '../../../core/data/order_model.dart';
 import '../../../core/data/customer_model.dart';
 import '../../../core/services/customer_service.dart';
 import '../services/order_service.dart';
+import '../../../core/api/api_client.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CreateOrderScreen extends StatefulWidget {
   const CreateOrderScreen({super.key, this.existingOrder});
@@ -23,7 +25,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   final _draft = OrderDraft();
   bool _isSaving = false;
 
-  static const _steps = ['Info Pesanan', 'Detail Layanan', 'Ringkasan'];
+  static const _steps = ['Info Pesanan', 'Detail Layanan', 'Pilih Cleaner', 'Ringkasan'];
 
   @override
   void initState() {
@@ -35,11 +37,13 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       _draft.tipeCustomer = o.tipeCustomer;
       _draft.notes = o.notes;
       _draft.services = List.from(o.services);
+      _draft.cleaners = List.from(o.cleaners);
+      _draft.applyPpn = (o.ppn ?? o.pembayaran?.ppn ?? 11) > 0;
       // Cleaners cannot be edited through this form according to API (only assign cleaner endpoint)
     }
   }
 
-  void _next() => setState(() => _step = (_step + 1).clamp(0, 2));
+  void _next() => setState(() => _step = (_step + 1).clamp(0, 3));
   void _prev() {
     if (_step == 0) { Navigator.pop(context); return; }
     setState(() => _step--);
@@ -142,7 +146,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     switch (_step) {
       case 0: return _Step1Info(draft: _draft, onChanged: () => setState(() {}));
       case 1: return _Step2Services(draft: _draft, onChanged: () => setState(() {}));
-      case 2: return _Step3Summary(draft: _draft);
+      case 2: return _Step3Cleaner(draft: _draft, onChanged: () => setState(() {}));
+      case 3: return _Step4Summary(draft: _draft);
       default: return const SizedBox();
     }
   }
@@ -181,24 +186,32 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           Expanded(
             flex: 2,
             child: ElevatedButton(
-              onPressed: (canNext && !_isSaving) ? (_step == 2 ? _submit : _next) : null,
+              onPressed: (canNext && !_isSaving) ? (_step == 3 ? _submit : _next) : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
                 disabledBackgroundColor: AppColors.border,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                elevation: canNext && !_isSaving ? 4 : 0,
+                shadowColor: AppColors.primary.withOpacity(0.4),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
               ),
               child: _isSaving 
                 ? const SizedBox(
                     width: 20, height: 20, 
                     child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
                   )
-                : Text(
-                    _step == 2 ? (widget.existingOrder == null ? '✓ Buat Pesanan' : '✓ Simpan Perubahan') : 'Lanjut →',
-                    style: GoogleFonts.inter(
-                      fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white,
-                    ),
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(_step == 3 ? 'Simpan' : 'Lanjut', style: GoogleFonts.inter(
+                        fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white,
+                      )),
+                      if (_step < 3) ...[
+                        const SizedBox(width: 8),
+                        const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
+                      ],
+                    ],
                   ),
             ),
           ),
@@ -211,9 +224,15 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     setState(() => _isSaving = true);
     try {
       if (widget.existingOrder == null) {
-        await _orderService.createOrder(_draft);
+        final orderId = await _orderService.createOrder(_draft);
+        if (_draft.cleaners.isNotEmpty) {
+          await _orderService.assignCleaner(orderId, _draft.cleaners.map((c) => c.id).toList());
+        }
       } else {
         await _orderService.updateOrder(widget.existingOrder!.id, _draft);
+        if (_draft.cleaners.isNotEmpty) {
+          await _orderService.assignCleaner(widget.existingOrder!.id, _draft.cleaners.map((c) => c.id).toList());
+        }
       }
       
       if (!mounted) return;
@@ -505,13 +524,14 @@ class _CustomerSearchSheetState extends State<_CustomerSearchSheet> {
               autofocus: true,
               decoration: InputDecoration(
                 hintText: 'Cari nama, nomor HP, atau alamat...',
-                prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textMuted),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 14),
+                prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.textMuted),
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
                 filled: true,
                 fillColor: AppColors.surface,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
               ),
             ),
           ),
@@ -666,7 +686,30 @@ class _Step2Services extends StatelessWidget {
                               ),
                               const SizedBox(height: 8),
                               GestureDetector(
-                                onTap: () { draft.services.removeAt(i); onChanged(); },
+                                onTap: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      title: Text('Hapus Layanan?', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
+                                      content: Text('Apakah Anda yakin ingin menghapus layanan ini dari pesanan?', style: GoogleFonts.inter(fontSize: 14)),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(ctx),
+                                          child: Text('Batal', style: GoogleFonts.inter(color: AppColors.textMuted, fontWeight: FontWeight.w600)),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.pop(ctx);
+                                            draft.services.removeAt(i);
+                                            onChanged();
+                                          },
+                                          child: Text('Hapus', style: GoogleFonts.inter(color: AppColors.error, fontWeight: FontWeight.w600)),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
                                 child: Container(
                                   padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(color: AppColors.error.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
@@ -702,6 +745,9 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
 
   Map<String, dynamic>? _selectedLayanan;
   final _qtyCtrl = TextEditingController();
+  final _hargaCtrl = TextEditingController();
+  final _tglCtrl = TextEditingController();
+  final _waktuCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -709,6 +755,9 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
     _fetchLayanan();
     if (widget.existing != null) {
       _qtyCtrl.text = widget.existing!.qty;
+      _hargaCtrl.text = widget.existing!.price.toString();
+      _tglCtrl.text = widget.existing!.tanggalPengerjaan;
+      _waktuCtrl.text = widget.existing!.waktuPengerjaan;
     }
   }
 
@@ -750,23 +799,26 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       layananId: _selectedLayanan!['id']?.toString() ?? '1',
       name: _selectedLayanan!['nama_layanan'],
-      price: 0,
+      price: int.tryParse(_hargaCtrl.text) ?? 0,
       qty: _qtyCtrl.text,
-      tanggalPengerjaan: '',
-      waktuPengerjaan: '',
+      tanggalPengerjaan: _tglCtrl.text,
+      waktuPengerjaan: _waktuCtrl.text,
       bonusLayanan: 0,
     ));
     Navigator.pop(context);
   }
 
-  @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+    return AnimatedPadding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+      child: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(20),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -782,24 +834,37 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
             else if (_availableServices.isEmpty)
                const Text('Tidak ada layanan di cabang ini.')
             else 
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.border)),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<Map<String, dynamic>>(
-                  value: _selectedLayanan,
-                  isExpanded: true,
-                  items: _availableServices.map((e) => DropdownMenuItem(value: e, child: Text(e['nama_layanan']))).toList(),
-                  onChanged: (v) {
-                    if (v != null) {
-                      setState(() {
-                        _selectedLayanan = v;
-                      });
-                    }
-                  },
-                ),
+            DropdownButtonFormField<Map<String, dynamic>>(
+              value: _selectedLayanan,
+              isExpanded: true,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: AppColors.surface,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
               ),
+              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
+              items: _availableServices.map((e) => DropdownMenuItem(value: e, child: Text(e['nama_layanan'], style: GoogleFonts.inter(fontSize: 14, color: AppColors.textDark)))).toList(),
+              onChanged: (v) {
+                if (v != null) {
+                  setState(() {
+                    _selectedLayanan = v;
+                  });
+                }
+              },
             ),
+            const SizedBox(height: 12),
+            const SizedBox(height: 12),
+            _label('Harga Layanan (Rp)'),
+            _textField(_hargaCtrl, type: TextInputType.number, hint: 'Contoh: 150000'),
+            const SizedBox(height: 12),
+            _label('Tanggal Pengerjaan'),
+            _dateField(context, _tglCtrl, hint: 'Pilih Tanggal'),
+            const SizedBox(height: 12),
+            _label('Waktu Pengerjaan'),
+            _timeField(context, _waktuCtrl, hint: 'Pilih Waktu (contoh: 09:00 - 12:00)'),
             const SizedBox(height: 12),
             _label('Qty (Contoh: 3 jam 2 cleaner)'),
             _textField(_qtyCtrl, hint: 'Teks bebas...'),
@@ -809,7 +874,10 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
               onPressed: _submit,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                minimumSize: const Size(double.infinity, 50),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 52),
+                elevation: 4,
+                shadowColor: AppColors.primary.withOpacity(0.4),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: Text('Simpan', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
@@ -817,22 +885,193 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
           ],
         ),
       ),
+      ),
     );
   }
 
   Widget _label(String text) => Padding(padding: const EdgeInsets.only(bottom: 6), child: Text(text, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)));
   Widget _textField(TextEditingController ctrl, {TextInputType type = TextInputType.text, String hint = ''}) => TextField(
-    controller: ctrl, keyboardType: type, decoration: InputDecoration(hintText: hint, filled: true, fillColor: AppColors.surface, contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border))),
+    controller: ctrl, keyboardType: type, style: GoogleFonts.inter(fontSize: 14, color: AppColors.textDark), decoration: InputDecoration(hintText: hint, hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 14), filled: true, fillColor: AppColors.surface, contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5))),
   );
+
+  Widget _dateField(BuildContext context, TextEditingController ctrl, {String hint = ''}) {
+    return TextField(
+      controller: ctrl,
+      readOnly: true,
+      onTap: () async {
+        final initial = DateTime.tryParse(ctrl.text) ?? DateTime.now();
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: initial,
+          firstDate: DateTime(2000),
+          lastDate: DateTime(2100),
+        );
+        if (picked != null) {
+          ctrl.text = "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+        }
+      },
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 14),
+        filled: true,
+        fillColor: AppColors.surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+        suffixIcon: const Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textMuted),
+      ),
+    );
+  }
+
+  Widget _timeField(BuildContext context, TextEditingController ctrl, {String hint = ''}) {
+    return TextField(
+      controller: ctrl,
+      readOnly: true,
+      onTap: () async {
+        final picked = await showTimePicker(
+          context: context,
+          initialTime: TimeOfDay.now(),
+        );
+        if (picked != null) {
+          final hr = picked.hour.toString().padLeft(2, '0');
+          final mn = picked.minute.toString().padLeft(2, '0');
+          ctrl.text = "$hr:$mn";
+        }
+      },
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 14),
+        filled: true,
+        fillColor: AppColors.surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+        suffixIcon: const Icon(Icons.access_time_rounded, size: 18, color: AppColors.textMuted),
+      ),
+    );
+  }
 }
 
-// ─── Step 3: Ringkasan ─────────────────────────────────────────────────────
-class _Step3Summary extends StatelessWidget {
-  const _Step3Summary({required this.draft});
+// ─── Step 3: Pilih Cleaner ─────────────────────────────────────────────────────
+class _Step3Cleaner extends StatefulWidget {
+  const _Step3Cleaner({required this.draft, required this.onChanged});
   final OrderDraft draft;
+  final VoidCallback onChanged;
+
+  @override
+  State<_Step3Cleaner> createState() => _Step3CleanerState();
+}
+
+class _Step3CleanerState extends State<_Step3Cleaner> {
+  List<Map<String, dynamic>> _availableCleaners = [];
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCleaners();
+  }
+
+  Future<void> _fetchCleaners() async {
+    try {
+      // Typically fetch from HrdService, we can import it or use OrderService if we add it
+      // Let's assume we can use a basic Dio call here or add fetchCleaners to OrderService
+      // Wait, we can't easily fetch without HrdService. We'll use HrdService.
+      final hrdService = _HrdServiceStub();
+      final prefs = await SharedPreferences.getInstance();
+      final cabangId = prefs.getInt('user_cabang_id') ?? 1;
+      
+      final data = await hrdService.fetchCleaners(cabangId);
+      if (mounted) {
+        setState(() {
+          _availableCleaners = data;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = e.toString();
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) return Center(child: Text(_error!, style: const TextStyle(color: AppColors.error)));
+    if (_availableCleaners.isEmpty) return const Center(child: Text('Tidak ada cleaner tersedia.'));
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _availableCleaners.length,
+      itemBuilder: (context, index) {
+        final c = _availableCleaners[index];
+        final idStr = c['id'].toString();
+        // Since draft.cleaners is a List<OrderCleaner>, we'll just check if it's there
+        final isSelected = widget.draft.cleaners.any((x) => x.id == idStr);
+
+        return ListTile(
+          onTap: () {
+            setState(() {
+              if (isSelected) {
+                widget.draft.cleaners.removeWhere((x) => x.id == idStr);
+              } else {
+                widget.draft.cleaners.add(OrderCleaner(
+                  id: idStr,
+                  pesananCleanerId: '',
+                  name: c['name'] ?? c['nama'] ?? 'Unknown',
+                  rating: c['rating'] != null ? double.tryParse(c['rating'].toString()) ?? 0.0 : 0.0,
+                  statusPengerjaan: CleanerWorkStatus.assigned,
+                  totalBonus: 0,
+                  bonuses: [],
+                ));
+              }
+              widget.onChanged();
+            });
+          },
+          tileColor: isSelected ? AppColors.surfaceBlue : AppColors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: isSelected ? AppColors.primary : AppColors.border),
+          ),
+          leading: Icon(Icons.person, color: isSelected ? AppColors.primary : AppColors.textMuted),
+          title: Text(c['name'] ?? c['nama'] ?? '-', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          trailing: isSelected ? const Icon(Icons.check_circle, color: AppColors.primary) : null,
+        );
+      },
+    );
+  }
+}
+
+class _HrdServiceStub {
+  Future<List<Map<String, dynamic>>> fetchCleaners(int cabangId) async {
+    final svc = OrderService();
+    // Assuming fetchAvailableCleaners exists in OrderService
+    return await svc.fetchAvailableCleaners();
+  }
+}
+
+// ─── Step 4: Ringkasan ─────────────────────────────────────────────────────
+class _Step4Summary extends StatefulWidget {
+  const _Step4Summary({required this.draft});
+  final OrderDraft draft;
+
+  @override
+  State<_Step4Summary> createState() => _Step4SummaryState();
+}
+
+class _Step4SummaryState extends State<_Step4Summary> {
+  @override
+  Widget build(BuildContext context) {
+    final int subtotal = widget.draft.total;
+    final int ppn = widget.draft.applyPpn ? (subtotal * 0.11).round() : 0;
+    final int totalAkhir = subtotal + ppn;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -841,34 +1080,34 @@ class _Step3Summary extends StatelessWidget {
           _SummaryCard(title: 'Data Pelanggan', child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _infoRow('Nama', draft.customer?.name ?? '-'),
+              _infoRow('Nama', widget.draft.customer?.name ?? '-'),
               const SizedBox(height: 8),
-              _infoRow('Telepon', draft.customer?.phone ?? '-'),
+              _infoRow('Telepon', widget.draft.customer?.phone ?? '-'),
               const SizedBox(height: 8),
-              _infoRow('Alamat', draft.customer?.address ?? '-'),
+              _infoRow('Alamat', widget.draft.customer?.address ?? '-'),
               const SizedBox(height: 8),
               const Divider(color: AppColors.border),
               const SizedBox(height: 8),
               _infoRow('Cabang', 'Surabaya'),
               const SizedBox(height: 8),
-              _infoRow('Sumber Chat', draft.chatDari.name.toUpperCase()),
+              _infoRow('Sumber Chat', widget.draft.chatDari.name.toUpperCase()),
               const SizedBox(height: 8),
-              _infoRow('Tipe Customer', draft.tipeCustomer.name.toUpperCase()),
-              if (draft.notes.isNotEmpty) ...[
+              _infoRow('Tipe Customer', widget.draft.tipeCustomer.name.toUpperCase()),
+              if (widget.draft.notes.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                _infoRow('Keterangan', draft.notes),
+                _infoRow('Keterangan', widget.draft.notes),
               ]
             ],
           )),
           const SizedBox(height: 12),
           _SummaryCard(
             title: 'Layanan Terpilih',
-            child: draft.services.isEmpty
+            child: widget.draft.services.isEmpty
                 ? Text('Belum ada layanan yang dipilih.', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted))
                 : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ...draft.services.map((s) => Padding(
+                ...widget.draft.services.map((s) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -876,14 +1115,102 @@ class _Step3Summary extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(s.name, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                          Expanded(child: Text(s.name, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark))),
+                          Text('Rp ${s.price}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                         ],
                       ),
                       const SizedBox(height: 4),
                       Text('Qty: ${s.qty}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+                      if (s.tanggalPengerjaan.isNotEmpty || s.waktuPengerjaan.isNotEmpty)
+                        const SizedBox(height: 4),
+                      if (s.tanggalPengerjaan.isNotEmpty || s.waktuPengerjaan.isNotEmpty)
+                        Row(
+                          children: [
+                            const Icon(Icons.calendar_month_rounded, size: 14, color: AppColors.primary),
+                            const SizedBox(width: 4),
+                            Text('${s.tanggalPengerjaan} ${s.waktuPengerjaan}'.trim(), style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary)),
+                          ],
+                        ),
                     ],
                   ),
                 )),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (widget.draft.cleaners.isNotEmpty) ...[
+            _SummaryCard(
+              title: 'Petugas Kebersihan Terpilih',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ...widget.draft.cleaners.map((c) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.person, size: 16, color: AppColors.primary),
+                        const SizedBox(width: 8),
+                        Text(c.name, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  )),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          _SummaryCard(
+            title: 'Ringkasan Biaya',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Subtotal', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
+                    Text('Rp $subtotal', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, fontWeight: FontWeight.w500)),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: Checkbox(
+                            value: widget.draft.applyPpn,
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() {
+                                  widget.draft.applyPpn = val;
+                                });
+                              }
+                            },
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                            activeColor: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text('PPN (11%)', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
+                      ],
+                    ),
+                    Text('Rp $ppn', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, fontWeight: FontWeight.w500)),
+                  ],
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Divider(color: AppColors.border),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Total', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    Text('Rp $totalAkhir', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                  ],
+                ),
               ],
             ),
           ),
@@ -899,7 +1226,7 @@ class _Step3Summary extends StatelessWidget {
               children: [
                 const Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 20),
                 const SizedBox(width: 12),
-                Expanded(child: Text('Setelah pesanan disimpan, Anda dapat menugaskan petugas kebersihan (cleaner).', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark))),
+                Expanded(child: Text('Pesanan Anda akan disimpan beserta jadwal dan penugasan cleaner yang telah dipilih.', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark))),
               ],
             ),
           ),

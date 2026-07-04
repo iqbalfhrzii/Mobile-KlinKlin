@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/payment_service.dart';
@@ -50,6 +52,10 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                   const SizedBox(height: 14),
                   _buildCustomerCard(),
                   const SizedBox(height: 12),
+                  if (_o.cleaners.isNotEmpty) ...[
+                    _buildCleanersCard(),
+                    const SizedBox(height: 12),
+                  ],
                   _buildServicesCard(),
                   const SizedBox(height: 12),
                   _buildPaymentInfo(),
@@ -153,7 +159,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                   final double diskonPersen = _o.pembayaran?.diskonPersen ?? 0.0;
                   final int diskonValue = (_o.total * (diskonPersen / 100)).round();
                   final int totalSetelahDiskon = _o.total - diskonValue;
-                  final int ppnPersen = _o.pembayaran?.ppn ?? 11;
+                  final int ppnPersen = _o.ppn ?? _o.pembayaran?.ppn ?? 11;
                   final int ppnValue = (totalSetelahDiskon * (ppnPersen / 100)).round();
                   final int totalAkhir = totalSetelahDiskon + ppnValue;
                   return Text(_fmt(totalAkhir), style: GoogleFonts.inter(
@@ -194,6 +200,74 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
     ]));
   }
 
+  // ─── Cleaners ────────────────────────────────────────────────────────────
+  Widget _buildCleanersCard() {
+    return _card('Petugas Kebersihan', Column(children: [
+      ..._o.cleaners.map((c) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceBlue,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.cleaning_services_rounded, color: AppColors.primary, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(c.name, style: GoogleFonts.inter(
+                fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+            if (c.totalBonus > 0) ...[
+              const SizedBox(height: 4),
+              Text('Total Bonus: ${_fmt(c.totalBonus)}', style: GoogleFonts.inter(
+                  fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.statusDone)),
+              ...c.bonuses.map((b) => Text('• ${b.jenisBonus}: ${_fmt(b.nominal)}', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark))),
+            ]
+          ])),
+          if (!_isPaid)
+            InkWell(
+              onTap: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => _AddBonusSheet(
+                    order: _o,
+                    cleaner: c,
+                    onBonusAdded: () {
+                      // Note: you may need a way to refresh payment detail
+                      // Or just rely on the parent's reload
+                      Navigator.pop(context, true); // this signals a refresh to the caller
+                    },
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 4, offset: const Offset(0, 2)),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.add_circle_outline_rounded, size: 14, color: Colors.white),
+                    const SizedBox(width: 6),
+                    Text('Atur Bonus', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                  ],
+                ),
+              ),
+            ),
+        ]),
+      )),
+    ]));
+  }
+
   // ─── Services ────────────────────────────────────────────────────────────
   Widget _buildServicesCard() {
     return _card('Rincian Layanan', Column(children: [
@@ -227,7 +301,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
           final double diskonPersen = _o.pembayaran?.diskonPersen ?? 0.0;
           final int diskonValue = (_o.total * (diskonPersen / 100)).round();
           final int totalSetelahDiskon = _o.total - diskonValue;
-          final int ppnPersen = _o.pembayaran?.ppn ?? 11;
+          final int ppnPersen = _o.ppn ?? _o.pembayaran?.ppn ?? 11;
           final int ppnValue = (totalSetelahDiskon * (ppnPersen / 100)).round();
           final int totalAkhir = totalSetelahDiskon + ppnValue;
           
@@ -545,7 +619,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   void _showPaymentSheet(BuildContext context) {
     final noteCtrl = TextEditingController();
     final diskonCtrl = TextEditingController();
-    final ppnCtrl = TextEditingController(text: '11');
+    bool applyPpn = (_o.ppn ?? _o.pembayaran?.ppn ?? 11) > 0;
     File? selectedProof;
     bool isSubmitting = false;
     String? errorMsg;
@@ -568,7 +642,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModal) {
           int diskonPersen = int.tryParse(diskonCtrl.text) ?? 0;
-          int ppnPersen = int.tryParse(ppnCtrl.text) ?? 0;
+          int ppnPersen = applyPpn ? 11 : 0;
           int diskonNominal = (_o.total * diskonPersen / 100).round();
           int setelahDiskon = _o.total - diskonNominal;
           int ppnNominal = (setelahDiskon * ppnPersen / 100).round();
@@ -671,26 +745,36 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('PPN (%)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: ppnCtrl,
-                            keyboardType: TextInputType.number,
-                            readOnly: true,
-                            onChanged: (_) => setModal(() {}),
-                            style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted),
-                            decoration: InputDecoration(
-                              hintText: '0',
-                              filled: true,
-                              fillColor: AppColors.surface,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                        child: InkWell(
+                          onTap: () {
+                            setModal(() { applyPpn = !applyPpn; });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: applyPpn ? AppColors.primary : AppColors.border, width: applyPpn ? 1.5 : 1.0),
+                            ),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 24, height: 24,
+                                  child: Checkbox(
+                                    value: applyPpn,
+                                    onChanged: (val) {
+                                      if (val != null) setModal(() { applyPpn = val; });
+                                    },
+                                    activeColor: AppColors.primary,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text('PPN (11%)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark))),
+                              ],
                             ),
                           ),
-                        ]),
+                        ),
                       ),
                     ]),
                     const SizedBox(height: 16),
@@ -1322,6 +1406,414 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
               color: valueColor ?? AppColors.textDark)),
         ),
       ],
+    );
+  }
+}
+class CurrencyInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+    int selectionIndex = newValue.selection.end;
+    String cleanString = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanString.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+    final int value = int.parse(cleanString);
+    final String formatted = value.toString().replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
+    int diff = formatted.length - newValue.text.length;
+    selectionIndex += diff;
+    if (selectionIndex > formatted.length) {
+      selectionIndex = formatted.length;
+    }
+    return TextEditingValue(text: formatted);
+  }
+}
+
+class _AddBonusSheet extends StatefulWidget {
+  const _AddBonusSheet({
+    required this.order,
+    required this.cleaner,
+    required this.onBonusAdded,
+  });
+  final OrderModel order;
+  final OrderCleaner cleaner;
+  final VoidCallback onBonusAdded;
+
+  @override
+  State<_AddBonusSheet> createState() => _AddBonusSheetState();
+}
+
+class _AddBonusSheetState extends State<_AddBonusSheet> {
+  final OrderService _orderService = OrderService();
+  final _nominalCtrl = TextEditingController();
+  final _noteCtrl = TextEditingController();
+
+  bool _isLoading = true;
+  bool _isSubmitting = false;
+  List<Map<String, dynamic>> _tarifBonuses = [];
+  Map<String, dynamic>? _selectedTarifBonus;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTarifBonus();
+    _onTarifSelected(null); // Trigger pre-fill for default 'Bonus Manual'
+  }
+
+  Future<void> _fetchTarifBonus() async {
+    try {
+      final tarif = await _orderService.fetchTarifBonus(widget.order.cabangId);
+      if (mounted) {
+        setState(() {
+          _tarifBonuses = tarif;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _onTarifSelected(Map<String, dynamic>? tarif) {
+    setState(() {
+      _selectedTarifBonus = tarif;
+      _noteCtrl.clear();
+
+      if (tarif != null && tarif['nominal_default'] != null) {
+        final double nominalVal =
+            double.tryParse(tarif['nominal_default'].toString()) ?? 0;
+        _nominalCtrl.text = nominalVal.toInt().toString();
+      } else {
+        _nominalCtrl.clear();
+      }
+
+      // Overwrite with existing bonus if present
+      final String targetJenis = tarif == null
+          ? 'Bonus Manual'
+          : (tarif['jenis_bonus']?['nama_bonus'] ?? '');
+
+      if (targetJenis.isNotEmpty) {
+        try {
+          final existing = widget.cleaner.bonuses.firstWhere(
+            (b) => b.jenisBonus.toLowerCase() == targetJenis.toLowerCase(),
+          );
+          _nominalCtrl.text = existing.nominal.toString();
+          if (existing.keterangan != '-' &&
+              existing.keterangan != 'Bonus manual' &&
+              existing.keterangan != targetJenis) {
+            _noteCtrl.text = existing.keterangan;
+          }
+        } catch (_) {}
+      }
+    });
+  }
+
+  Future<void> _submit() async {
+    final nominalText = _nominalCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (nominalText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nominal bonus wajib diisi')),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      if (_selectedTarifBonus == null) {
+        // Coba cari tarif bonus manual dari data yang difetch, jika tidak ada fallback ke ID 4 sesuai request
+        final manualTarif = _tarifBonuses.firstWhere(
+          (t) =>
+              (t['jenis_bonus']?['nama_bonus']?.toString().toLowerCase() ??
+                  '') ==
+              'bonus manual',
+          orElse: () => <String, dynamic>{},
+        );
+
+        final int jenisBonusId =
+            manualTarif.isNotEmpty && manualTarif['jenis_bonus_id'] != null
+            ? manualTarif['jenis_bonus_id'] as int
+            : 4;
+
+        await _orderService.storeManualBonus(
+          widget.cleaner.pesananCleanerId,
+          jenisBonusId,
+          int.parse(nominalText),
+          _noteCtrl.text.trim(),
+        );
+      } else {
+        // Bonus dari Tarif
+        await _orderService.storeManualBonus(
+          widget.cleaner.pesananCleanerId,
+          _selectedTarifBonus!['jenis_bonus_id'] as int,
+          int.parse(nominalText),
+          _noteCtrl.text.trim(),
+        );
+      }
+
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bonus berhasil ditambahkan!'),
+          backgroundColor: AppColors.statusDone,
+        ),
+      );
+      widget.onBonusAdded();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      showDialog(
+        context: context,
+        builder: (dialogCtx) => AlertDialog(
+          title: const Text('Gagal'),
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Beri Bonus',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              Text(
+                widget.cleaner.name,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              if (_isLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else ...[
+                Text(
+                  'Jenis Bonus',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<Map<String, dynamic>>(
+                      isExpanded: true,
+                      value: _selectedTarifBonus,
+                      hint: Text(
+                        'Pilih jenis bonus...',
+                        style: GoogleFonts.inter(
+                          color: AppColors.textMuted,
+                          fontSize: 14,
+                        ),
+                      ),
+                      items: [
+                        DropdownMenuItem(
+                          value: null,
+                          child: Text(
+                            'Bonus Manual',
+                            style: GoogleFonts.inter(fontSize: 14),
+                          ),
+                        ),
+                        ..._tarifBonuses
+                            .where((t) {
+                              final name =
+                                  t['jenis_bonus']?['nama_bonus']
+                                      ?.toString()
+                                      .toLowerCase() ??
+                                  '';
+                              return name != 'bonus layanan' &&
+                                  name != 'bonus manual';
+                            })
+                            .map((t) {
+                              return DropdownMenuItem(
+                                value: t,
+                                child: Text(
+                                  t['jenis_bonus']?['nama_bonus'] ?? 'Bonus',
+                                  style: GoogleFonts.inter(fontSize: 14),
+                                ),
+                              );
+                            })
+                            .toList(),
+                      ],
+                      onChanged: _onTarifSelected,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                Text(
+                  'Nominal (Rp)',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _nominalCtrl,
+                  keyboardType: TextInputType.number,
+                  style: GoogleFonts.inter(fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Misal: 20000',
+                    filled: true,
+                    fillColor: AppColors.background,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.primary),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                Text(
+                  'Keterangan',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _noteCtrl,
+                  maxLines: 2,
+                  style: GoogleFonts.inter(fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Catatan tambahan (opsional)',
+                    filled: true,
+                    fillColor: AppColors.background,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.primary),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    onPressed: _isSubmitting ? null : _submit,
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            'Simpan Bonus',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiClient {
   // Gunakan IP teman Anda (192.168.1.18) sebagai base URL
-  static const String baseUrl = 'http://192.168.1.243:10000/api';
+  static const String baseUrl = 'http://159.223.59.109/api';
 
   static final Dio _dio =
       Dio(
