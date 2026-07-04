@@ -48,10 +48,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   Future<void> _togglePpn() async {
     if (_o.paymentStatus == 'paid') return;
-    
+
     final bool currentPpnStatus = (_o.ppn ?? _o.pembayaran?.ppn ?? 11) > 0;
     final int newPpn = currentPpnStatus ? 0 : 11;
-    
+
     setState(() {
       _o.ppn = newPpn;
     });
@@ -66,7 +66,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         notes: _o.notes,
         applyPpn: newPpn > 0,
       );
-      
+
       await _orderService.updateOrder(_o.id, draft);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -75,9 +75,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memperbarui PPN: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal memperbarui PPN: $e')));
         setState(() {
           _o.ppn = currentPpnStatus ? 11 : 0;
         });
@@ -564,13 +564,20 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         },
                         borderRadius: BorderRadius.circular(4),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 4,
+                            horizontal: 2,
+                          ),
                           child: Row(
                             children: [
                               Icon(
-                                ppnPersen > 0 ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+                                ppnPersen > 0
+                                    ? Icons.check_box_rounded
+                                    : Icons.check_box_outline_blank_rounded,
                                 size: 18,
-                                color: ppnPersen > 0 ? AppColors.primary : AppColors.textMuted,
+                                color: ppnPersen > 0
+                                    ? AppColors.primary
+                                    : AppColors.textMuted,
                               ),
                               const SizedBox(width: 8),
                               Text(
@@ -1191,6 +1198,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       children: [
         if (_canEdit) ...[
           _buildBigActionBtn(
+            isLoading: _isLoading,
             title: hasSchedule ? 'Ubah Jadwal' : 'Atur Jadwal',
             subtitle: 'Tentukan tanggal & jam pengerjaan',
             icon: Icons.edit,
@@ -1201,6 +1209,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           ),
           const SizedBox(height: 12),
           _buildBigActionBtn(
+            isLoading: _isLoading,
             title: hasCleaner ? 'Ubah Cleaner' : 'Tugaskan Cleaner',
             subtitle: 'Pilih cleaner yang akan bertugas',
             icon: Icons.edit,
@@ -1229,6 +1238,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           if (showNotifyBtn) ...[
             const SizedBox(height: 12),
             _buildBigActionBtn(
+              isLoading: _isLoading,
               title: 'Beritahu Cleaner',
               subtitle: 'Kirim notifikasi tugas',
               icon: Icons.notifications_active,
@@ -1354,6 +1364,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           const SizedBox(height: 12),
         ],
         _buildBigActionBtn(
+          isLoading: _isLoading,
           title: 'Pembayaran',
           subtitle: 'Langsung menuju halaman pembayaran',
           icon: Icons.chevron_right,
@@ -1392,6 +1403,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             o.status != OrderStatus.waitingCancelApproval) ...[
           const SizedBox(height: 12),
           _buildBigActionBtn(
+            isLoading: _isLoading,
             title: 'Kirim Invoice WA',
             subtitle: 'Kirim rincian tagihan ke WhatsApp',
             icon: Icons.send_rounded,
@@ -1405,6 +1417,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             o.status == OrderStatus.completed) ...[
           const SizedBox(height: 12),
           _buildBigActionBtn(
+            isLoading: _isLoading,
             title: 'Lihat PDF Invoice',
             subtitle: 'Cetak atau simpan tagihan dalam format PDF',
             icon: Icons.picture_as_pdf_rounded,
@@ -1559,16 +1572,17 @@ klinklin.co.id/aduanpayment''';
     required Color color,
     required bool enabled,
     bool isDone = false,
+    bool isLoading = false,
     required VoidCallback onTap,
   }) {
     final bgColor = isDone ? AppColors.statusDone : color;
     return GestureDetector(
-      onTap: onTap,
+      onTap: (enabled && !isLoading) ? onTap : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: enabled ? bgColor : bgColor.withOpacity(0.5),
+          color: (enabled && !isLoading) ? bgColor : bgColor.withOpacity(0.5),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -1610,7 +1624,14 @@ klinklin.co.id/aduanpayment''';
                 ],
               ),
             ),
-            Icon(icon, color: Colors.white, size: 20),
+            if (isLoading)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+              )
+            else
+              Icon(icon, color: Colors.white, size: 20),
           ],
         ),
       ),
@@ -2858,7 +2879,6 @@ klinklin.co.id/aduanpayment''';
       ),
     );
   }
-}
 }
 
 class _AddBonusSheet extends StatefulWidget {
