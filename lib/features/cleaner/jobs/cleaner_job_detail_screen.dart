@@ -90,6 +90,13 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
     final pelanggan = pesanan['pelanggan'] ?? {};
     final details = pesanan['details'] as List? ?? [];
     
+    String globalTgl = '-';
+    String globalWaktu = '-';
+    if (details.isNotEmpty) {
+      globalTgl = details.first['tanggal_pengerjaan'] ?? '-';
+      globalWaktu = details.first['waktu_pengerjaan'] ?? '-';
+    }
+    
     final bonusList = _job['bonuses'] as List? ?? [];
     final num totalBonus = _job['total_bonus'] is num ? _job['total_bonus'] : (num.tryParse(_job['total_bonus']?.toString() ?? '0') ?? 0);
 
@@ -277,6 +284,47 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                           ),
                         ),
                   const SizedBox(height: 24),
+                  
+                  // Jadwal Pengerjaan
+                  Text('Jadwal Pengerjaan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white, 
+                      borderRadius: BorderRadius.circular(16), 
+                      border: Border.all(color: AppColors.border),
+                      boxShadow: [AppColors.cardShadow],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
+                          child: const Icon(Icons.calendar_month, color: AppColors.primary, size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(globalTgl, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(Icons.access_time_outlined, size: 14, color: AppColors.textMuted),
+                                  const SizedBox(width: 4),
+                                  Text(globalWaktu, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
 
                   // Detail Layanan
                   Text('Layanan Dipesan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
@@ -315,18 +363,6 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              const Icon(Icons.calendar_month_outlined, size: 16, color: AppColors.primary),
-                              const SizedBox(width: 6),
-                              Text('${d['tanggal_pengerjaan'] ?? '-'}', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, fontWeight: FontWeight.w500)),
-                              const SizedBox(width: 16),
-                              const Icon(Icons.access_time_outlined, size: 16, color: AppColors.primary),
-                              const SizedBox(width: 6),
-                              Text('${d['waktu_pengerjaan'] ?? '-'}', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, fontWeight: FontWeight.w500)),
-                            ],
                           ),
                         ],
                       ),
