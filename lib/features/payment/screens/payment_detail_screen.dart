@@ -21,7 +21,32 @@ class PaymentDetailScreen extends StatefulWidget {
 }
 
 class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
-  OrderModel get _o => widget.order;
+  late OrderModel _o;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _o = widget.order;
+  }
+
+  Future<void> _refreshOrder() async {
+    setState(() => _isLoading = true);
+    try {
+      final updatedOrder = await OrderService().fetchOrderDetail(_o.id);
+      if (mounted) {
+        setState(() {
+          _o = updatedOrder;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memperbarui data: $e')));
+      }
+    }
+  }
 
   String _fmt(int n) => 'Rp ${n.toString().replaceAllMapped(
       RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
@@ -39,7 +64,9 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
       backgroundColor: AppColors.background,
       // ── Sticky bottom action bar ──────────────────────────────────────
       bottomNavigationBar: _canAct ? _buildBottomBar(context) : null,
-      body: Column(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          : Column(
         children: [
           _buildHeader(context),
           Expanded(
@@ -236,9 +263,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                     order: _o,
                     cleaner: c,
                     onBonusAdded: () {
-                      // Note: you may need a way to refresh payment detail
-                      // Or just rely on the parent's reload
-                      Navigator.pop(context, true); // this signals a refresh to the caller
+                      _refreshOrder();
                     },
                   ),
                 );
