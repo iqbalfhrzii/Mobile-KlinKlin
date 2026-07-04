@@ -154,7 +154,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
   Widget _buildNavButtons() {
     final canNext = switch (_step) {
-      0 => _draft.customer != null,
+      0 => _draft.customer != null && _draft.tanggalPengerjaan.isNotEmpty && _draft.waktuPengerjaan.isNotEmpty,
       1 => _draft.services.isNotEmpty,
       _ => true,
     };
@@ -274,10 +274,22 @@ class _Step1InfoState extends State<_Step1Info> {
   bool _isLoading = true;
   String? _error;
 
+  late final TextEditingController _tglCtrl;
+  late final TextEditingController _waktuCtrl;
+
   @override
   void initState() {
     super.initState();
+    _tglCtrl = TextEditingController(text: widget.draft.tanggalPengerjaan);
+    _waktuCtrl = TextEditingController(text: widget.draft.waktuPengerjaan);
     _loadCustomers();
+  }
+
+  @override
+  void dispose() {
+    _tglCtrl.dispose();
+    _waktuCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _loadCustomers() async {
@@ -453,6 +465,17 @@ class _Step1InfoState extends State<_Step1Info> {
           ),
 
           const SizedBox(height: 16),
+          Text('Jadwal Pengerjaan', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(child: _dateField(context, _tglCtrl, hint: 'Pilih Tanggal')),
+              const SizedBox(width: 12),
+              Expanded(child: _timeField(context, _waktuCtrl, hint: 'Pilih Waktu (Cth: 09:00 - 12:00)')),
+            ],
+          ),
+
+          const SizedBox(height: 16),
           Text('Keterangan Order', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
           const SizedBox(height: 8),
           TextFormField(
@@ -468,7 +491,77 @@ class _Step1InfoState extends State<_Step1Info> {
               focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
             ),
           ),
-        ],
+      ),
+    );
+  }
+
+  Widget _dateField(BuildContext context, TextEditingController ctrl, {String hint = ''}) {
+    return TextField(
+      controller: ctrl,
+      readOnly: true,
+      onTap: () async {
+        final initial = DateTime.tryParse(ctrl.text) ?? DateTime.now();
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: initial,
+          firstDate: DateTime(2000),
+          lastDate: DateTime(2100),
+        );
+        if (picked != null) {
+          ctrl.text = "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+          widget.draft.tanggalPengerjaan = ctrl.text;
+          widget.onChanged();
+        }
+      },
+      style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13),
+        filled: true,
+        fillColor: AppColors.surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+        suffixIcon: const Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textMuted),
+      ),
+    );
+  }
+
+  Widget _timeField(BuildContext context, TextEditingController ctrl, {String hint = ''}) {
+    return TextField(
+      controller: ctrl,
+      readOnly: false, // Let user type freely because of "09:00 - 12:00" format
+      onChanged: (v) {
+        widget.draft.waktuPengerjaan = v;
+        widget.onChanged();
+      },
+      style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13),
+        filled: true,
+        fillColor: AppColors.surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+        suffixIcon: GestureDetector(
+           onTap: () async {
+            final picked = await showTimePicker(
+              context: context,
+              initialTime: TimeOfDay.now(),
+            );
+            if (picked != null) {
+              final hr = picked.hour.toString().padLeft(2, '0');
+              final mn = picked.minute.toString().padLeft(2, '0');
+              ctrl.text = "$hr:$mn";
+              widget.draft.waktuPengerjaan = ctrl.text;
+              widget.onChanged();
+            }
+          },
+          child: const Icon(Icons.access_time_rounded, size: 16, color: AppColors.primary)
+        ),
       ),
     );
   }
@@ -746,8 +839,6 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
   Map<String, dynamic>? _selectedLayanan;
   final _qtyCtrl = TextEditingController();
   final _hargaCtrl = TextEditingController();
-  final _tglCtrl = TextEditingController();
-  final _waktuCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -756,8 +847,6 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
     if (widget.existing != null) {
       _qtyCtrl.text = widget.existing!.qty;
       _hargaCtrl.text = widget.existing!.price.toString();
-      _tglCtrl.text = widget.existing!.tanggalPengerjaan;
-      _waktuCtrl.text = widget.existing!.waktuPengerjaan;
     }
   }
 
@@ -801,8 +890,8 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
       name: _selectedLayanan!['nama_layanan'],
       price: int.tryParse(_hargaCtrl.text) ?? 0,
       qty: _qtyCtrl.text,
-      tanggalPengerjaan: _tglCtrl.text,
-      waktuPengerjaan: _waktuCtrl.text,
+      tanggalPengerjaan: '',
+      waktuPengerjaan: '',
       bonusLayanan: 0,
     ));
     Navigator.pop(context);
@@ -859,12 +948,6 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
             const SizedBox(height: 12),
             _label('Harga Layanan (Rp)'),
             _textField(_hargaCtrl, type: TextInputType.number, hint: 'Contoh: 150000'),
-            const SizedBox(height: 12),
-            _label('Tanggal Pengerjaan'),
-            _dateField(context, _tglCtrl, hint: 'Pilih Tanggal'),
-            const SizedBox(height: 12),
-            _label('Waktu Pengerjaan'),
-            _timeField(context, _waktuCtrl, hint: 'Pilih Waktu (contoh: 09:00 - 12:00)'),
             const SizedBox(height: 12),
             _label('Qty (Contoh: 3 jam 2 cleaner)'),
             _textField(_qtyCtrl, hint: 'Teks bebas...'),
@@ -1093,6 +1176,8 @@ class _Step4SummaryState extends State<_Step4Summary> {
               _infoRow('Sumber Chat', widget.draft.chatDari.name.toUpperCase()),
               const SizedBox(height: 8),
               _infoRow('Tipe Customer', widget.draft.tipeCustomer.name.toUpperCase()),
+              const SizedBox(height: 8),
+              _infoRow('Jadwal Pengerjaan', '${widget.draft.tanggalPengerjaan} ${widget.draft.waktuPengerjaan}'),
               if (widget.draft.notes.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 _infoRow('Keterangan', widget.draft.notes),
@@ -1121,16 +1206,6 @@ class _Step4SummaryState extends State<_Step4Summary> {
                       ),
                       const SizedBox(height: 4),
                       Text('Qty: ${s.qty}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
-                      if (s.tanggalPengerjaan.isNotEmpty || s.waktuPengerjaan.isNotEmpty)
-                        const SizedBox(height: 4),
-                      if (s.tanggalPengerjaan.isNotEmpty || s.waktuPengerjaan.isNotEmpty)
-                        Row(
-                          children: [
-                            const Icon(Icons.calendar_month_rounded, size: 14, color: AppColors.primary),
-                            const SizedBox(width: 4),
-                            Text('${s.tanggalPengerjaan} ${s.waktuPengerjaan}'.trim(), style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary)),
-                          ],
-                        ),
                     ],
                   ),
                 )),

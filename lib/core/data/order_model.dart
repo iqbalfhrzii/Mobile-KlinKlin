@@ -430,6 +430,8 @@ class OrderDraft {
     List<OrderCleaner>? cleaners,
     this.notes = '',
     this.applyPpn = true,
+    this.tanggalPengerjaan = '',
+    this.waktuPengerjaan = '',
   }) : services = services ?? [],
        cleaners = cleaners ?? [];
 
@@ -441,6 +443,8 @@ class OrderDraft {
   String notes;
   String? paymentMethod;
   bool applyPpn;
+  String tanggalPengerjaan;
+  String waktuPengerjaan;
 
   int get total => services.fold(0, (sum, s) => sum + s.subtotal);
 
@@ -451,9 +455,50 @@ class OrderDraft {
       'chat_dari': chatDari.name,
       'tipe_customer': tipeCustomer.name,
       'keterangan_order': notes,
-      'details': services.map((e) => e.toJson()).toList(),
+      'details': services.map((e) {
+         final detailJson = e.toJson();
+         if (tanggalPengerjaan.isNotEmpty) detailJson['tanggal_pengerjaan'] = _formatDate(tanggalPengerjaan);
+         if (waktuPengerjaan.isNotEmpty) detailJson['waktu_pengerjaan'] = _formatTime(waktuPengerjaan);
+         return detailJson;
+      }).toList(),
       if (paymentMethod != null) 'metode_pembayaran': paymentMethod,
       'ppn': applyPpn ? 11 : 0,
     };
+  String _formatDate(String fDate) {
+    if (fDate.isEmpty) return '';
+    final dParts = fDate.split(' ');
+    if (dParts.length >= 4) {
+      final day = dParts[1].padLeft(2, '0');
+      final mStr = dParts[2].toLowerCase();
+      int m = 6;
+      if (mStr.contains('jan')) m = 1;
+      else if (mStr.contains('feb')) m = 2;
+      else if (mStr.contains('mar')) m = 3;
+      else if (mStr.contains('apr')) m = 4;
+      else if (mStr.contains('mei') || mStr.contains('may')) m = 5;
+      else if (mStr.contains('jun')) m = 6;
+      else if (mStr.contains('jul')) m = 7;
+      else if (mStr.contains('agu') || mStr.contains('aug')) m = 8;
+      else if (mStr.contains('sep')) m = 9;
+      else if (mStr.contains('okt') || mStr.contains('oct')) m = 10;
+      else if (mStr.contains('nov')) m = 11;
+      else if (mStr.contains('des') || mStr.contains('dec')) m = 12;
+      return '${dParts[3]}-${m.toString().padLeft(2, '0')}-$day';
+    }
+    return fDate;
+  }
+
+  String _formatTime(String fTime) {
+    if (fTime.isEmpty) return '';
+    if (fTime.contains(' - ')) {
+      fTime = fTime.split(' - ')[0];
+    }
+    if (fTime.contains(':')) {
+      final tParts = fTime.split(':');
+      if (tParts.length >= 2) {
+        return '${tParts[0].padLeft(2, '0')}:${tParts[1].padLeft(2, '0')}';
+      }
+    }
+    return fTime;
   }
 }

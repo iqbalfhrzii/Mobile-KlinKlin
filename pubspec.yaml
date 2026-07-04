@@ -68,6 +68,9 @@ dependencies:
   pdf: ^3.11.1
   printing: ^5.13.0
 
+  # UI
+  shimmer: ^3.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
