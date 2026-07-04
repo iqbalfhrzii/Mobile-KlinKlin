@@ -189,26 +189,50 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  const Icon(Icons.person, color: AppColors.primary, size: 20),
-                                  const SizedBox(width: 8),
-                                  Text(pelanggan['nama_pelanggan'] ?? '-', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.person, color: AppColors.primary, size: 24),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(pelanggan['nama_pelanggan'] ?? '-', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                                  ),
                                 ],
                               ),
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 16),
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(Icons.location_on, color: AppColors.error, size: 20),
+                                  Container(
+                                    margin: const EdgeInsets.only(top: 2),
+                                    child: const Icon(Icons.location_on, color: AppColors.error, size: 20),
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(pelanggan['alamat_pelanggan'] ?? pelanggan['alamat'] ?? 'Alamat tidak tersedia', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark)),
-                                        if (pelanggan['patokan_alamat'] != null) ...[
-                                          const SizedBox(height: 4),
-                                          Text('Patokan: ${pelanggan['patokan_alamat']}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+                                        Text(pelanggan['alamat_pelanggan'] ?? pelanggan['alamat'] ?? 'Alamat tidak tersedia', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, height: 1.4)),
+                                        if (pelanggan['patokan_alamat'] != null && pelanggan['patokan_alamat'].toString().trim().isNotEmpty) ...[
+                                          const SizedBox(height: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                            decoration: BoxDecoration(color: AppColors.surfaceBlue, borderRadius: BorderRadius.circular(6)),
+                                            child: Row(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                const Icon(Icons.flag_outlined, size: 14, color: AppColors.primary),
+                                                const SizedBox(width: 6),
+                                                Expanded(child: Text('${pelanggan['patokan_alamat']}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600))),
+                                              ],
+                                            ),
+                                          ),
                                         ]
                                       ],
                                     ),
@@ -216,7 +240,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                                 ],
                               ),
                               if (pelanggan['no_wa'] != null && (_job['show_wa'] == true || _job['show_wa'] == 1 || _job['show_wa'] == '1')) ...[
-                                const SizedBox(height: 12),
+                                const SizedBox(height: 16),
                                 Row(
                                   children: [
                                     const Icon(Icons.phone, color: AppColors.statusDone, size: 20),
@@ -226,7 +250,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                                       onTap: () => _launchWA(pelanggan['no_wa']),
                                       borderRadius: BorderRadius.circular(8),
                                       child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                         decoration: BoxDecoration(
                                           color: const Color(0xFF25D366).withOpacity(0.1),
                                           borderRadius: BorderRadius.circular(8),
@@ -238,6 +262,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                                             Image.network(
                                               'https://www.edigitalagency.com.au/wp-content/uploads/WhatsApp-logo-webp-green-small-size.webp',
                                               height: 16,
+                                              errorBuilder: (_, __, ___) => const Icon(Icons.message, size: 16, color: Color(0xFF1DA851)),
                                             ),
                                             const SizedBox(width: 6),
                                             Text('Chat Pelanggan', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF1DA851))),
@@ -271,11 +296,38 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(l['nama_layanan'] ?? '-', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                          const SizedBox(height: 4),
-                          Text('Qty: ${d['qty'] ?? '-'}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
-                          const SizedBox(height: 4),
-                          Text('Tanggal: ${d['tanggal_pengerjaan'] ?? '-'} | Waktu: ${d['waktu_pengerjaan'] ?? '-'}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+                          Text(l['nama_layanan'] ?? '-', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFFBE6),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFFFE58F)),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.info_outline, size: 18, color: Color(0xFFD48806)),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text('Qty/Catatan: ${d['qty'] ?? '-'}', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFFAD6800))),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              const Icon(Icons.calendar_month_outlined, size: 16, color: AppColors.primary),
+                              const SizedBox(width: 6),
+                              Text('${d['tanggal_pengerjaan'] ?? '-'}', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, fontWeight: FontWeight.w500)),
+                              const SizedBox(width: 16),
+                              const Icon(Icons.access_time_outlined, size: 16, color: AppColors.primary),
+                              const SizedBox(width: 6),
+                              Text('${d['waktu_pengerjaan'] ?? '-'}', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, fontWeight: FontWeight.w500)),
+                            ],
+                          ),
                         ],
                       ),
                     );
