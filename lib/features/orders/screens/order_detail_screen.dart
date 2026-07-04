@@ -106,19 +106,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Future<void> _notifyCleaner() async {
-    final hasAssignedCleaner = _o.cleaners.any(
-      (c) => c.statusPengerjaan == CleanerWorkStatus.assigned,
-    );
-
-    if (!hasAssignedCleaner) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Semua cleaner sudah dinotifikasi.'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
 
     setState(() => _isLoading = true);
     try {
