@@ -200,6 +200,33 @@ class OrderService {
     }
   }
 
+  /// Update Bonus Manual
+  Future<void> updateManualBonus(String bonusId, int nominal, String keterangan) async {
+    try {
+      final response = await _dio.patch('/bonus-cleaners/$bonusId', data: {
+        'nominal': nominal,
+        if (keterangan.isNotEmpty) 'keterangan': keterangan,
+      });
+      if (response.data is Map && response.data['status'] == false) {
+        throw Exception(response.data['message'] ?? 'Gagal mengubah bonus');
+      }
+    } catch (e) {
+      if (e is DioException) {
+        final resData = e.response?.data;
+        String errMsg = 'Terjadi kesalahan sistem';
+        if (resData is Map && resData.containsKey('message')) {
+          errMsg = resData['message'].toString();
+        } else if (resData != null) {
+          errMsg = 'Status ${e.response?.statusCode}: format response tidak dikenali';
+        } else {
+          errMsg = e.message ?? 'Unknown DioException';
+        }
+        throw Exception('Gagal mengubah bonus: $errMsg');
+      }
+      throw Exception('Gagal mengubah bonus: $e');
+    }
+  }
+
   /// Toggle Show WA
   Future<void> toggleWa(String pesananCleanerId) async {
     try {

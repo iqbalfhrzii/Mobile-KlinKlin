@@ -2912,6 +2912,7 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
   bool _isSubmitting = false;
   List<Map<String, dynamic>> _tarifBonuses = [];
   Map<String, dynamic>? _selectedTarifBonus;
+  String? _existingBonusId;
 
   @override
   void initState() {
@@ -2938,6 +2939,7 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
     setState(() {
       _selectedTarifBonus = tarif;
       _noteCtrl.clear();
+      _existingBonusId = null;
 
       if (tarif != null && tarif['nominal_default'] != null) {
         final double nominalVal =
@@ -2957,6 +2959,7 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
           final existing = widget.cleaner.bonuses.firstWhere(
             (b) => b.jenisBonus.toLowerCase() == targetJenis.toLowerCase(),
           );
+          _existingBonusId = existing.id;
           _nominalCtrl.text = existing.nominal.toString();
           if (existing.keterangan != '-' &&
               existing.keterangan != 'Bonus manual' &&
@@ -2979,35 +2982,43 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
 
     setState(() => _isSubmitting = true);
     try {
-      if (_selectedTarifBonus == null) {
-        // Coba cari tarif bonus manual dari data yang difetch, jika tidak ada fallback ke ID 4 sesuai request
-        final manualTarif = _tarifBonuses.firstWhere(
-          (t) =>
-              (t['jenis_bonus']?['nama_bonus']?.toString().toLowerCase() ??
-                  '') ==
-              'bonus manual',
-          orElse: () => <String, dynamic>{},
-        );
-
-        final int jenisBonusId =
-            manualTarif.isNotEmpty && manualTarif['jenis_bonus_id'] != null
-            ? manualTarif['jenis_bonus_id'] as int
-            : 4;
-
-        await _orderService.storeManualBonus(
-          widget.cleaner.pesananCleanerId,
-          jenisBonusId,
+      if (_existingBonusId != null && _existingBonusId!.isNotEmpty) {
+        await _orderService.updateManualBonus(
+          _existingBonusId!,
           int.parse(nominalText),
           _noteCtrl.text.trim(),
         );
       } else {
-        // Bonus dari Tarif
-        await _orderService.storeManualBonus(
-          widget.cleaner.pesananCleanerId,
-          _selectedTarifBonus!['jenis_bonus_id'] as int,
-          int.parse(nominalText),
-          _noteCtrl.text.trim(),
-        );
+        if (_selectedTarifBonus == null) {
+          // Coba cari tarif bonus manual dari data yang difetch, jika tidak ada fallback ke ID 4 sesuai request
+          final manualTarif = _tarifBonuses.firstWhere(
+            (t) =>
+                (t['jenis_bonus']?['nama_bonus']?.toString().toLowerCase() ??
+                    '') ==
+                'bonus manual',
+            orElse: () => <String, dynamic>{},
+          );
+
+          final int jenisBonusId =
+              manualTarif.isNotEmpty && manualTarif['jenis_bonus_id'] != null
+              ? manualTarif['jenis_bonus_id'] as int
+              : 4;
+
+          await _orderService.storeManualBonus(
+            widget.cleaner.pesananCleanerId,
+            jenisBonusId,
+            int.parse(nominalText),
+            _noteCtrl.text.trim(),
+          );
+        } else {
+          // Bonus dari Tarif
+          await _orderService.storeManualBonus(
+            widget.cleaner.pesananCleanerId,
+            _selectedTarifBonus!['jenis_bonus_id'] as int,
+            int.parse(nominalText),
+            _noteCtrl.text.trim(),
+          );
+        }
       }
 
       if (!mounted) return;
