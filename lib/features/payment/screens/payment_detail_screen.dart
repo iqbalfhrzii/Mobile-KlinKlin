@@ -11,6 +11,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
 import '../../../core/data/order_model.dart';
+import '../../../core/utils/currency_formatter.dart';
 
 class PaymentDetailScreen extends StatefulWidget {
   const PaymentDetailScreen({super.key, required this.order});
@@ -1519,7 +1520,7 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
       if (tarif != null && tarif['nominal_default'] != null) {
         final double nominalVal =
             double.tryParse(tarif['nominal_default'].toString()) ?? 0;
-        _nominalCtrl.text = nominalVal.toInt().toString();
+        _nominalCtrl.text = CurrencyInputFormatter.format(nominalVal.toInt());
       } else {
         _nominalCtrl.clear();
       }
@@ -1535,7 +1536,7 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
             (b) => b.jenisBonus.toLowerCase() == targetJenis.toLowerCase(),
           );
           _existingBonusId = existing.id;
-          _nominalCtrl.text = existing.nominal.toString();
+          _nominalCtrl.text = CurrencyInputFormatter.format(existing.nominal);
           if (existing.keterangan != '-' &&
               existing.keterangan != 'Bonus manual' &&
               existing.keterangan != targetJenis) {
@@ -1754,6 +1755,7 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
                 TextField(
                   controller: _nominalCtrl,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [CurrencyInputFormatter()],
                   style: GoogleFonts.inter(fontSize: 14),
                   decoration: InputDecoration(
                     hintText: 'Misal: 20000',

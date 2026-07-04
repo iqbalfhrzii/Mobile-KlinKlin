@@ -15,6 +15,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:printing/printing.dart';
 import '../../../core/services/pdf_invoice_service.dart';
 import '../../../core/api/api_client.dart';
+import '../../../core/widgets/badges.dart';
+import '../../../core/utils/currency_formatter.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   const OrderDetailScreen({super.key, required this.order});
@@ -1382,7 +1384,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               MaterialPageRoute(builder: (_) => PaymentDetailScreen(order: o)),
             );
             if (result == true) {
-              _fetchOrderDetail();
+              _fetchDetail();
             }
           },
         ),
@@ -1833,10 +1835,7 @@ klinklin.co.id/aduanpayment''';
     ServiceItem selectedService = o.services.first;
     final qtyCtrl = TextEditingController(text: selectedService.qty);
     final String initialHarga = selectedService.price > 0
-        ? selectedService.price.toString().replaceAllMapped(
-            RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-            (m) => '${m[1]}.',
-          )
+        ? CurrencyInputFormatter.format(selectedService.price)
         : '';
     final hargaCtrl = TextEditingController(text: initialHarga);
 
@@ -1913,10 +1912,7 @@ klinklin.co.id/aduanpayment''';
                               selectedService = val;
                               qtyCtrl.text = val.qty;
                               hargaCtrl.text = val.price > 0
-                                  ? val.price.toString().replaceAllMapped(
-                                      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-                                      (m) => '${m[1]}.',
-                                    )
+                                  ? CurrencyInputFormatter.format(val.price)
                                   : '';
                             });
                           }
@@ -2863,33 +2859,6 @@ klinklin.co.id/aduanpayment''';
     );
   }
 }
-
-class CurrencyInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    if (newValue.text.isEmpty) {
-      return newValue.copyWith(text: '');
-    }
-    int selectionIndex = newValue.selection.end;
-    String cleanString = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (cleanString.isEmpty) {
-      return newValue.copyWith(text: '');
-    }
-    final int value = int.parse(cleanString);
-    final String formatted = value.toString().replaceAllMapped(
-      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]}.',
-    );
-    int diff = formatted.length - newValue.text.length;
-    selectionIndex += diff;
-    if (selectionIndex > formatted.length) {
-      selectionIndex = formatted.length;
-    }
-    return TextEditingValue(text: formatted);
-  }
 }
 
 class _AddBonusSheet extends StatefulWidget {
@@ -2947,7 +2916,7 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
       if (tarif != null && tarif['nominal_default'] != null) {
         final double nominalVal =
             double.tryParse(tarif['nominal_default'].toString()) ?? 0;
-        _nominalCtrl.text = nominalVal.toInt().toString();
+        _nominalCtrl.text = CurrencyInputFormatter.format(nominalVal.toInt());
       } else {
         _nominalCtrl.clear();
       }
@@ -2963,7 +2932,7 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
             (b) => b.jenisBonus.toLowerCase() == targetJenis.toLowerCase(),
           );
           _existingBonusId = existing.id;
-          _nominalCtrl.text = existing.nominal.toString();
+          _nominalCtrl.text = CurrencyInputFormatter.format(existing.nominal);
           if (existing.keterangan != '-' &&
               existing.keterangan != 'Bonus manual' &&
               existing.keterangan != targetJenis) {
@@ -3182,6 +3151,7 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
                 TextField(
                   controller: _nominalCtrl,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [CurrencyInputFormatter()],
                   style: GoogleFonts.inter(fontSize: 14),
                   decoration: InputDecoration(
                     hintText: 'Misal: 20000',

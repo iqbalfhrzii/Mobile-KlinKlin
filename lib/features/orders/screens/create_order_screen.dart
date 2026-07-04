@@ -10,6 +10,8 @@ import '../../../core/services/customer_service.dart';
 import '../services/order_service.dart';
 import '../../../core/api/api_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/services/map_service.dart';
+import '../../../core/utils/currency_formatter.dart';
 
 class CreateOrderScreen extends StatefulWidget {
   const CreateOrderScreen({super.key, this.existingOrder});
@@ -1337,7 +1339,7 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
     _fetchLayanan();
     if (widget.existing != null) {
       _qtyCtrl.text = widget.existing!.qty;
-      _hargaCtrl.text = widget.existing!.price.toString();
+      _hargaCtrl.text = CurrencyInputFormatter.format(widget.existing!.price);
     }
   }
 
@@ -1380,7 +1382,7 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         layananId: _selectedLayanan!['id']?.toString() ?? '1',
         name: _selectedLayanan!['nama_layanan'],
-        price: int.tryParse(_hargaCtrl.text) ?? 0,
+        price: int.tryParse(_hargaCtrl.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0,
         qty: _qtyCtrl.text,
         tanggalPengerjaan: '',
         waktuPengerjaan: '',
@@ -1488,6 +1490,7 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
                 _hargaCtrl,
                 type: TextInputType.number,
                 hint: 'Contoh: 150000',
+                inputFormatters: [CurrencyInputFormatter()],
               ),
               const SizedBox(height: 12),
               _label('Qty (Contoh: 3 jam 2 cleaner)'),
@@ -1536,9 +1539,11 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
     TextEditingController ctrl, {
     TextInputType type = TextInputType.text,
     String hint = '',
+    List<TextInputFormatter>? inputFormatters,
   }) => TextField(
     controller: ctrl,
     keyboardType: type,
+    inputFormatters: inputFormatters,
     style: GoogleFonts.inter(fontSize: 14, color: AppColors.textDark),
     decoration: InputDecoration(
       hintText: hint,
