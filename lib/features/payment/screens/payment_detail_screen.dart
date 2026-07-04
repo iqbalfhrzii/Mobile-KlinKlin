@@ -746,7 +746,9 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                     ),
 
                     // Diskon dan PPN
-                    Row(children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text('Diskon (%)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
