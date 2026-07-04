@@ -100,15 +100,26 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
     
     for (var b in bonusList) {
       String namaBonus = b['keterangan'] ?? 'Bonus';
+      String? catatan;
+      
       if (b['tarif_bonus_cabang'] != null && b['tarif_bonus_cabang']['jenis_bonus'] != null) {
         namaBonus = b['tarif_bonus_cabang']['jenis_bonus']['nama_bonus'] ?? namaBonus;
+        if (b['keterangan'] != null && b['keterangan'].toString().trim().isNotEmpty) {
+           String raw = b['keterangan'].toString().trim();
+           if (!raw.startsWith('[BONUS_LAYANAN]') && raw != namaBonus) {
+              catatan = raw;
+           }
+        }
       }
       
-      // If it's a service bonus, make the name cleaner
-      if (namaBonus == 'Bonus Layanan' && b['keterangan'] != null) {
+      // If it's a service bonus, extract the real name and note
+      if (b['keterangan'] != null && b['keterangan'].toString().startsWith('[BONUS_LAYANAN]')) {
         final parts = b['keterangan'].toString().split('|');
         if (parts.length > 1) {
           namaBonus = parts[1].trim(); 
+        }
+        if (parts.length > 2 && parts[2].trim().isNotEmpty) {
+          catatan = parts[2].trim();
         }
       }
       
@@ -119,8 +130,20 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
           padding: const EdgeInsets.only(bottom: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: Text(namaBonus, style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFFAD6800)))),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(namaBonus, style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFFAD6800))),
+                    if (catatan != null) ...[
+                      const SizedBox(height: 2),
+                      Text('Catatan: $catatan', style: GoogleFonts.inter(fontSize: 11, fontStyle: FontStyle.italic, color: const Color(0xFFAD6800).withOpacity(0.8))),
+                    ]
+                  ],
+                ),
+              ),
               Text(_formatRupiah(nominal.toInt()), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFFD48806))),
             ],
           ),

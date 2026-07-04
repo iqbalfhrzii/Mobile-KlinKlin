@@ -461,14 +461,36 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
                   ...(job['bonuses'] as List).map((b) {
                     final tarif = b['tarif_bonus_cabang'] ?? {};
                     final jenis = tarif['jenis_bonus'] ?? {};
-                    final namaBonus = jenis['nama_bonus'] ?? 'Bonus Manual';
-                    final keterangan = (b['keterangan'] ?? '').toString();
+                    String namaBonus = b['keterangan'] ?? 'Bonus';
+                    String? catatan;
+                    
+                    if (tarif.isNotEmpty && jenis.isNotEmpty) {
+                      namaBonus = jenis['nama_bonus'] ?? namaBonus;
+                      if (b['keterangan'] != null && b['keterangan'].toString().trim().isNotEmpty) {
+                         String raw = b['keterangan'].toString().trim();
+                         if (!raw.startsWith('[BONUS_LAYANAN]') && raw != namaBonus) {
+                            catatan = raw;
+                         }
+                      }
+                    }
+                    
+                    if (b['keterangan'] != null && b['keterangan'].toString().startsWith('[BONUS_LAYANAN]')) {
+                      final parts = b['keterangan'].toString().split('|');
+                      if (parts.length > 1) {
+                        namaBonus = parts[1].trim(); 
+                      }
+                      if (parts.length > 2 && parts[2].trim().isNotEmpty) {
+                        catatan = parts[2].trim();
+                      }
+                    }
+
                     final nominal = _parseNum(b['nominal']);
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
                             child: Column(
@@ -478,10 +500,10 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
                                   namaBonus,
                                   style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
                                 ),
-                                if (keterangan.isNotEmpty && keterangan != '-' && keterangan != namaBonus)
+                                if (catatan != null)
                                   Text(
-                                    keterangan,
-                                    style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                                    'Catatan: $catatan',
+                                    style: GoogleFonts.inter(fontSize: 11, fontStyle: FontStyle.italic, color: AppColors.textMuted),
                                   ),
                               ],
                             ),
