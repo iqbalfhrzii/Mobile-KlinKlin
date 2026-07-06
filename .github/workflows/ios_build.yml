@@ -1,0 +1,57 @@
+name: Build iOS (No Codesign)
+
+on:
+  workflow_dispatch: # Memungkinkan kamu menjalankan build ini secara manual dari tab Actions di GitHub
+
+jobs:
+  build:
+    name: Build iOS App
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set Up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      # (Opsional) Jika memakai Firebase, letakkan GoogleService-Info.plist lewat GitHub Secrets (Base64)
+      - name: Add GoogleService-Info.plist
+        env:
+          GOOGLE_SERVICE_INFO: ${{ secrets.IOS_GOOGLE_SERVICE_INFO }}
+        run: |
+          if [ -n "$GOOGLE_SERVICE_INFO" ]; then
+            echo "$GOOGLE_SERVICE_INFO" | base64 --decode > ios/Runner/GoogleService-Info.plist
+            echo "GoogleService-Info.plist berhasil ditambahkan."
+          else
+            echo "Warning: Secret IOS_GOOGLE_SERVICE_INFO tidak diset. Build mungkin gagal jika Firebase membutuhkan file ini secara native."
+          fi
+
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install --repo-update
+          cd ..
+
+      - name: Build iOS App
+        # Perintah ini melakukan build tanpa memerlukan Apple Developer Account (unsigned)
+        run: flutter build ios --release --no-codesign
+
+      - name: Compress Payload to IPA
+        # File .app dibungkus ke dalam .ipa agar bisa didownload sebagai satu file
+        run: |
+          mkdir -p Payload
+          mv build/ios/iphoneos/Runner.app Payload/
+          zip -qq -r klinklin_ios_unsigned.ipa Payload
+          rm -rf Payload
+
+      - name: Upload iOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: klinklin-ios-unsigned-ipa
+          path: klinklin_ios_unsigned.ipa
