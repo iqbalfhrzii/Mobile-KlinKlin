@@ -39,6 +39,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         status == OrderStatus.finishedByCleaner;
   }
 
+  bool get _isPaid {
+    final s = _o.paymentStatus.toLowerCase();
+    return s == 'paid' || s == 'lunas' || s == 'settlement';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -47,7 +52,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Future<void> _togglePpn() async {
-    if (_o.paymentStatus == 'paid') return;
+    if (_isPaid) return;
 
     final bool currentPpnStatus = (_o.ppn ?? _o.pembayaran?.ppn ?? 11) > 0;
     final int newPpn = currentPpnStatus ? 0 : 11;
@@ -75,12 +80,19 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Gagal memperbarui PPN: $e')));
-        setState(() {
-          _o.ppn = currentPpnStatus ? 11 : 0;
-        });
+        final errorMsg = e.toString().toLowerCase();
+        if (errorMsg.contains('selesai') || errorMsg.contains('pembayaran') || _o.status == OrderStatus.finishedByCleaner) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('PPN diubah lokal, akan disimpan saat pembayaran.')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Gagal memperbarui PPN: $e')),
+          );
+          setState(() {
+            _o.ppn = currentPpnStatus ? 11 : 0;
+          });
+        }
       }
     }
   }
@@ -545,7 +557,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     children: [
                       InkWell(
                         onTap: () {
-                          if (_o.paymentStatus != 'paid') {
+                          if (!_isPaid) {
                             _togglePpn();
                           }
                         },
