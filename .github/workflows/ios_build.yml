@@ -28,13 +28,15 @@ jobs:
         run: |
           flutter build ios --release --no-codesign
           
-      - name: Compress iOS App
+      - name: Create Unsigned IPA
         run: |
           cd build/ios/iphoneos
-          tar -zcvf ios-app.tar.gz Runner.app
+          mkdir -p Payload
+          mv Runner.app Payload/
+          zip -r ios-app-unsigned.ipa Payload
           
       - name: Upload iOS App Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ios-app-release
-          path: build/ios/iphoneos/ios-app.tar.gz
+          path: build/ios/iphoneos/ios-app-unsigned.ipa
