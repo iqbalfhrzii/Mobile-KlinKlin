@@ -27,9 +27,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // Tutup keyboard sebelum navigate agar pin_screen tidak overflow
     FocusScope.of(context).unfocus();
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => PinScreen(email: email)),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => PinScreen(email: email)));
   }
 
   @override
@@ -73,67 +73,110 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20),
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 20,
+                          ),
                         ],
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('K', style: GoogleFonts.inter(
-                            fontSize: 24, fontWeight: FontWeight.w900, color: AppColors.primary,
-                          )),
-                          Text('linKlin', style: GoogleFonts.inter(
-                            fontSize: 24, fontWeight: FontWeight.w400, color: AppColors.primary,
-                          )),
+                          Text(
+                            'K',
+                            style: GoogleFonts.inter(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          Text(
+                            'linKlin',
+                            style: GoogleFonts.inter(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w400,
+                              color: AppColors.primary,
+                            ),
+                          ),
                         ],
                       ),
                     ),
 
                     const SizedBox(height: 32),
-                    Text('Selamat Datang,', style: GoogleFonts.inter(
-                      fontSize: 14, color: Colors.white.withOpacity(0.7),
-                    )),
+                    Text(
+                      'Selamat Datang,',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.7),
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text('Masuk ke Akun\nAnda', style: GoogleFonts.inter(
-                      fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white,
-                      height: 1.2,
-                    )),
+                    Text(
+                      'Masuk ke Akun\nAnda',
+                      style: GoogleFonts.inter(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        height: 1.2,
+                      ),
+                    ),
                     const SizedBox(height: 40),
 
                     // Email input
-                    Text('Email', style: GoogleFonts.inter(
-                      fontSize: 12, fontWeight: FontWeight.w600,
-                      color: Colors.white.withOpacity(0.7),
-                      letterSpacing: 0.5,
-                    )),
+                    Text(
+                      'Email',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withOpacity(0.7),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     TextField(
                       controller: _emailCtrl,
                       keyboardType: TextInputType.emailAddress,
-                      style: GoogleFonts.inter(fontSize: 14, color: Colors.white),
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.white,
+                      ),
                       onChanged: (_) => setState(() => _errorMsg = null),
                       decoration: InputDecoration(
                         hintText: 'Masukkan email kamu',
                         hintStyle: GoogleFonts.inter(
-                          color: Colors.white.withOpacity(0.4), fontSize: 14,
+                          color: Colors.white.withOpacity(0.4),
+                          fontSize: 14,
                         ),
                         filled: true,
                         fillColor: Colors.white.withOpacity(0.15),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+                          borderSide: BorderSide(
+                            color: Colors.white.withOpacity(0.2),
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+                          borderSide: BorderSide(
+                            color: Colors.white.withOpacity(0.2),
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Colors.white, width: 1.5),
+                          borderSide: const BorderSide(
+                            color: Colors.white,
+                            width: 1.5,
+                          ),
                         ),
-                        prefixIcon: Icon(Icons.email_outlined,
-                          color: Colors.white.withOpacity(0.5), size: 18),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        prefixIcon: Icon(
+                          Icons.email_outlined,
+                          color: Colors.white.withOpacity(0.5),
+                          size: 18,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                       ),
                     ),
 
@@ -141,11 +184,19 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Icon(Icons.error_outline, color: Color(0xFFFF6B6B), size: 14),
+                          const Icon(
+                            Icons.error_outline,
+                            color: Color(0xFFFF6B6B),
+                            size: 14,
+                          ),
                           const SizedBox(width: 6),
-                          Text(_errorMsg!, style: GoogleFonts.inter(
-                            fontSize: 12, color: const Color(0xFFFF6B6B),
-                          )),
+                          Text(
+                            _errorMsg!,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: const Color(0xFFFF6B6B),
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -166,18 +217,24 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           elevation: 0,
                         ),
-                        child: Text('Lanjut', style: GoogleFonts.inter(
-                          fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primary,
-                        )),
+                        child: Text(
+                          'Lanjut',
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
                       ),
                     ),
 
                     const Spacer(),
                     Center(
                       child: Text(
-                        '© 2026 KlinKlin · Customer Service App',
+                        '© 2026 KlinKlin · Cleaning Service App',
                         style: GoogleFonts.inter(
-                          fontSize: 11, color: Colors.white.withOpacity(0.4),
+                          fontSize: 11,
+                          color: Colors.white.withOpacity(0.4),
                         ),
                       ),
                     ),
