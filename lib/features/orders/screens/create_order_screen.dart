@@ -12,6 +12,7 @@ import '../services/order_service.dart';
 import '../../../core/api/api_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/utils/currency_formatter.dart';
+import 'order_detail_screen.dart';
 
 class CreateOrderScreen extends StatefulWidget {
   const CreateOrderScreen({super.key, this.existingOrder});
@@ -308,11 +309,12 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   Future<void> _submit() async {
     setState(() => _isSaving = true);
     try {
+      String? createdOrderId;
       if (widget.existingOrder == null) {
-        final orderId = await _orderService.createOrder(_draft);
+        createdOrderId = await _orderService.createOrder(_draft);
         if (_draft.cleaners.isNotEmpty) {
           await _orderService.assignCleaner(
-            orderId,
+            createdOrderId,
             _draft.cleaners.map((c) => c.id).toList(),
           );
         }
@@ -342,7 +344,20 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           ),
         ),
       );
-      Navigator.pop(context, true);
+
+      if (createdOrderId != null) {
+        final newOrder = await _orderService.fetchOrderDetail(createdOrderId);
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OrderDetailScreen(order: newOrder),
+          ),
+          result: true, // triggers reload in order_list_screen
+        );
+      } else {
+        Navigator.pop(context, true);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
