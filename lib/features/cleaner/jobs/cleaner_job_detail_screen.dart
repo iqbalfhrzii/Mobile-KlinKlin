@@ -279,7 +279,33 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                                     ),
                                   ],
                                 ),
-                              ]
+                              ],
+
+                              if (_job['notes'] != null && _job['notes'].toString().trim().isNotEmpty) ...[
+                                const SizedBox(height: 16),
+                                const Divider(color: AppColors.border),
+                                const SizedBox(height: 12),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Icon(Icons.sticky_note_2_rounded, color: AppColors.primary, size: 20),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('Catatan Pesanan', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            _job['notes'].toString(),
+                                            style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, fontStyle: FontStyle.italic),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ],
                           ),
                         ),
