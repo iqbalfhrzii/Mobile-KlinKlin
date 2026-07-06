@@ -664,6 +664,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModal) {
@@ -978,7 +979,9 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                     const Icon(Icons.check_circle_rounded,
                                         color: AppColors.statusDone, size: 22),
                                   ])
-                                : Column(children: [
+                                : Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
                                     Container(
                                       width: 48, height: 48,
                                       decoration: BoxDecoration(
@@ -1123,6 +1126,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModal) {
