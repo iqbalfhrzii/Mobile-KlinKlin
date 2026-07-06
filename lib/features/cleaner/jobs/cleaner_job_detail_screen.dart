@@ -281,7 +281,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                                 ),
                               ],
 
-                              if (_job['notes'] != null && _job['notes'].toString().trim().isNotEmpty) ...[
+                              if (pesanan['notes'] != null && pesanan['notes'].toString().trim().isNotEmpty) ...[
                                 const SizedBox(height: 16),
                                 const Divider(color: AppColors.border),
                                 const SizedBox(height: 12),
@@ -297,7 +297,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                                           Text('Catatan Pesanan', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
                                           const SizedBox(height: 4),
                                           Text(
-                                            _job['notes'].toString(),
+                                            pesanan['notes'].toString(),
                                             style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, fontStyle: FontStyle.italic),
                                           ),
                                         ],
