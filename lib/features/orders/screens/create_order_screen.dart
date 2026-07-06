@@ -725,7 +725,7 @@ class _Step1InfoState extends State<_Step1Info> {
                 child: _timeField(
                   context,
                   _waktuCtrl,
-                  hint: 'Pilih Waktu (Cth: 09:00 - 12:00)',
+                  hint: 'Pilih Jam',
                 ),
               ),
             ],
@@ -832,10 +832,19 @@ class _Step1InfoState extends State<_Step1Info> {
   }) {
     return TextField(
       controller: ctrl,
-      readOnly: false, // Let user type freely because of "09:00 - 12:00" format
-      onChanged: (v) {
-        widget.draft.waktuPengerjaan = v;
-        widget.onChanged();
+      readOnly: true,
+      onTap: () async {
+        final picked = await showTimePicker(
+          context: context,
+          initialTime: TimeOfDay.now(),
+        );
+        if (picked != null) {
+          final hr = picked.hour.toString().padLeft(2, '0');
+          final mn = picked.minute.toString().padLeft(2, '0');
+          ctrl.text = "$hr:$mn";
+          widget.draft.waktuPengerjaan = ctrl.text;
+          widget.onChanged();
+        }
       },
       style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
       decoration: InputDecoration(
@@ -859,25 +868,10 @@ class _Step1InfoState extends State<_Step1Info> {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
-        suffixIcon: GestureDetector(
-          onTap: () async {
-            final picked = await showTimePicker(
-              context: context,
-              initialTime: TimeOfDay.now(),
-            );
-            if (picked != null) {
-              final hr = picked.hour.toString().padLeft(2, '0');
-              final mn = picked.minute.toString().padLeft(2, '0');
-              ctrl.text = "$hr:$mn";
-              widget.draft.waktuPengerjaan = ctrl.text;
-              widget.onChanged();
-            }
-          },
-          child: const Icon(
-            Icons.access_time_rounded,
-            size: 16,
-            color: AppColors.primary,
-          ),
+        suffixIcon: const Icon(
+          Icons.access_time_rounded,
+          size: 16,
+          color: AppColors.primary,
         ),
       ),
     );
