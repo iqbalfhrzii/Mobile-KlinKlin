@@ -1027,6 +1027,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   Widget _card({required String title, required Widget child}) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.surface,
