@@ -7,6 +7,7 @@ import '../../profile/screens/profile_screen.dart';
 
 import '../screens/finance_dashboard_screen.dart';
 import '../screens/finance_cash_flow_menu_screen.dart';
+import '../../attendance/screens/admin_attendance_list_screen.dart';
 
 class FinanceMainShell extends StatefulWidget {
   const FinanceMainShell({
@@ -37,12 +38,14 @@ class _FinanceMainShellState extends State<FinanceMainShell> {
   final _screens = const [
     FinanceDashboardScreen(),
     FinanceCashFlowMenuScreen(),
+    AdminAttendanceListScreen(),
     ProfileScreen(),
   ];
 
   static const _navItems = [
     _NavItem(Icons.grid_view_rounded, Icons.grid_view_rounded, 'Dashboard'),
     _NavItem(Icons.account_balance_wallet_outlined, Icons.account_balance_wallet_rounded, 'Cash Flow'),
+    _NavItem(Icons.fingerprint_rounded, Icons.fingerprint_rounded, 'Absensi'),
     _NavItem(Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
   ];
 

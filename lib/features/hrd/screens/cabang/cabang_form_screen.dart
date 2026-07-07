@@ -4,6 +4,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/gradient_header.dart';
 import '../../../../../core/data/hrd_models.dart';
 import '../../services/hrd_service.dart';
+import 'package:geolocator/geolocator.dart';
 
 class CabangFormScreen extends StatefulWidget {
   final CabangModel? cabang;
@@ -19,6 +20,9 @@ class _CabangFormScreenState extends State<CabangFormScreen> {
   
   late TextEditingController _namaCtrl;
   late TextEditingController _alamatCtrl;
+  late TextEditingController _latCtrl;
+  late TextEditingController _lngCtrl;
+  late TextEditingController _radiusCtrl;
   String _status = 'aktif';
   bool _isLoading = false;
 
@@ -27,6 +31,9 @@ class _CabangFormScreenState extends State<CabangFormScreen> {
     super.initState();
     _namaCtrl = TextEditingController(text: widget.cabang?.namaCabang);
     _alamatCtrl = TextEditingController(text: widget.cabang?.alamat);
+    _latCtrl = TextEditingController(text: widget.cabang?.latitude?.toString() ?? '');
+    _lngCtrl = TextEditingController(text: widget.cabang?.longitude?.toString() ?? '');
+    _radiusCtrl = TextEditingController(text: widget.cabang?.radiusAbsensiMeter?.toString() ?? (widget.cabang == null ? '100' : ''));
     if (widget.cabang != null) {
       _status = widget.cabang!.status;
     }
@@ -36,18 +43,106 @@ class _CabangFormScreenState extends State<CabangFormScreen> {
   void dispose() {
     _namaCtrl.dispose();
     _alamatCtrl.dispose();
+    _latCtrl.dispose();
+    _lngCtrl.dispose();
+    _radiusCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _getLocation() async {
+    setState(() => _isLoading = true);
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw Exception('GPS belum aktif.');
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw Exception('Izin lokasi ditolak.');
+        }
+      }
+      
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception('Izin lokasi ditolak secara permanen. Silakan atur di Setting.');
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      setState(() {
+        _latCtrl.text = position.latitude.toString();
+        _lngCtrl.text = position.longitude.toString();
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Lokasi kantor berhasil diambil.'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     
+    // Validations
+    if (_latCtrl.text.isEmpty || _lngCtrl.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Silakan ambil titik lokasi kantor otomatis atau isi secara manual.'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    if (_radiusCtrl.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Radius absensi wajib diisi.'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    int? radius = int.tryParse(_radiusCtrl.text);
+    if (radius == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Radius harus berupa angka bulat.'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    if (radius < 20) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Radius absensi minimal 20 meter.'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    if (radius > 1000) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Radius absensi maksimal 1.000 meter.'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
       final data = {
         'nama_cabang': _namaCtrl.text,
         'alamat': _alamatCtrl.text,
         'status': _status,
+        'latitude': _latCtrl.text,
+        'longitude': _lngCtrl.text,
+        'radius_absensi_meter': _radiusCtrl.text,
       };
 
       if (widget.cabang == null) {
@@ -108,7 +203,52 @@ class _CabangFormScreenState extends State<CabangFormScreen> {
                       hint: 'Masukkan alamat cabang',
                       maxLines: 3,
                     ),
+                    const SizedBox(height: 24),
+                    Text('Lokasi Absensi Cleaner', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _isLoading ? null : _getLocation,
+                        icon: const Icon(Icons.location_on, color: AppColors.primary),
+                        label: Text('Ambil Lokasi Kantor Saat Ini', style: GoogleFonts.inter(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.primary),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildField(
+                            label: 'Latitude',
+                            controller: _latCtrl,
+                            hint: 'Mis. -7.98',
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildField(
+                            label: 'Longitude',
+                            controller: _lngCtrl,
+                            hint: 'Mis. 112.63',
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildField(
+                      label: 'Radius Absensi (meter)',
+                      controller: _radiusCtrl,
+                      hint: 'Mis. 100',
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 24),
                     Text('Status', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
@@ -157,6 +297,8 @@ class _CabangFormScreenState extends State<CabangFormScreen> {
     String? hint,
     int maxLines = 1,
     String? Function(String?)? validator,
+    TextInputType? keyboardType,
+    bool readOnly = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -167,7 +309,9 @@ class _CabangFormScreenState extends State<CabangFormScreen> {
           controller: controller,
           maxLines: maxLines,
           validator: validator,
-          style: GoogleFonts.inter(fontSize: 14, color: AppColors.textDark),
+          keyboardType: keyboardType,
+          readOnly: readOnly,
+          style: GoogleFonts.inter(fontSize: 14, color: readOnly ? AppColors.textMuted : AppColors.textDark),
           decoration: InputDecoration(
             hintText: hint,
             filled: true,

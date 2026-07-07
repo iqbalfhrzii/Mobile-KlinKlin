@@ -2,11 +2,11 @@ class AppConstants {
   AppConstants._();
 
   // Base URL – ganti dengan URL API atau IP kamu saat tes device / production
-  static const String baseUrl = 'http://10.0.2.2:8000/api';
+  static const String baseUrl = 'http://159.223.59.109/api';
 
   // Timeout dalam milidetik
-  static const int connectTimeout = 10000;
-  static const int receiveTimeout = 10000;
+  static const int connectTimeout = 30000;
+  static const int receiveTimeout = 30000;
 
   // Shared Preferences keys
   static const String tokenKey = 'auth_token';

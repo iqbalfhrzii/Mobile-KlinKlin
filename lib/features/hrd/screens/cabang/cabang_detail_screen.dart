@@ -131,6 +131,8 @@ class _CabangDetailScreenState extends State<CabangDetailScreen> {
                     : ListView(
                         padding: const EdgeInsets.all(16),
                         children: [
+                          _buildLocationSection(),
+                          const SizedBox(height: 24),
                           Text('Pengaturan Tarif Bonus Karyawan', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
                           const SizedBox(height: 4),
                           Text('Atur nominal bonus per jenis kategori khusus cabang ini.', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
@@ -145,6 +147,38 @@ class _CabangDetailScreenState extends State<CabangDetailScreen> {
                         ],
                       ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.location_on_outlined, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text('Lokasi Absensi', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (widget.cabang.latitude != null && widget.cabang.longitude != null) ...[
+            Text('Latitude: ${widget.cabang.latitude}', style: GoogleFonts.inter(fontSize: 14)),
+            const SizedBox(height: 4),
+            Text('Longitude: ${widget.cabang.longitude}', style: GoogleFonts.inter(fontSize: 14)),
+            const SizedBox(height: 4),
+            Text('Radius: ${widget.cabang.radiusAbsensiMeter ?? 100} meter', style: GoogleFonts.inter(fontSize: 14)),
+          ] else
+            Text('Lokasi absensi belum dikonfigurasi.', style: GoogleFonts.inter(fontSize: 14, color: AppColors.textMuted, fontStyle: FontStyle.italic)),
         ],
       ),
     );

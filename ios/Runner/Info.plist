@@ -58,9 +58,11 @@
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>Aplikasi ini membutuhkan akses ke galeri untuk memilih foto profil atau bukti pembayaran.</string>
 		<key>NSCameraUsageDescription</key>
-		<string>Aplikasi ini membutuhkan akses ke kamera untuk mengambil foto bukti pembayaran atau laporan pekerjaan.</string>
+		<string>Aplikasi ini membutuhkan akses ke kamera untuk absen selfie dan foto bukti pekerjaan.</string>
 		<key>NSMicrophoneUsageDescription</key>
 		<string>Aplikasi ini membutuhkan akses mikrofon untuk merekam video (jika diperlukan oleh kamera).</string>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>Aplikasi ini membutuhkan akses lokasi untuk verifikasi kehadiran (absensi) di area cabang/kantor.</string>
 		<!-- Firebase Cloud Messaging -->
 		<key>UIBackgroundModes</key>
 		<array>
@@ -69,5 +71,10 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSAppTransportSecurity</key>
+		<dict>
+			<key>NSAllowsArbitraryLoads</key>
+			<true/>
+		</dict>
 	</dict>
 </plist>

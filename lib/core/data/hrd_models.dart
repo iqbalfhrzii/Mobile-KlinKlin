@@ -3,12 +3,18 @@ class CabangModel {
   final String namaCabang;
   final String? alamat;
   final String status;
+  final double? latitude;
+  final double? longitude;
+  final int? radiusAbsensiMeter;
 
   CabangModel({
     required this.id,
     required this.namaCabang,
     this.alamat,
     required this.status,
+    this.latitude,
+    this.longitude,
+    this.radiusAbsensiMeter,
   });
 
   factory CabangModel.fromJson(Map<String, dynamic> json) {
@@ -17,6 +23,9 @@ class CabangModel {
       namaCabang: json['nama_cabang'] ?? '',
       alamat: json['alamat'],
       status: json['status'] ?? 'aktif',
+      latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
+      longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
+      radiusAbsensiMeter: json['radius_absensi_meter'] != null ? int.tryParse(json['radius_absensi_meter'].toString()) : null,
     );
   }
 }

@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../auth/screens/change_pin_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../screens/hrd_data_master_screen.dart';
+import '../../attendance/screens/admin_attendance_list_screen.dart';
 
 import '../screens/hrd_dashboard_screen.dart';
 
@@ -37,12 +38,14 @@ class _HrdMainShellState extends State<HrdMainShell> {
   final _screens = const [
     HrdDashboardScreen(),
     HrdDataMasterScreen(),
+    AdminAttendanceListScreen(),
     ProfileScreen(),
   ];
 
   static const _navItems = [
     _NavItem(Icons.grid_view_rounded, Icons.grid_view_rounded, 'Dashboard'),
     _NavItem(Icons.storage_rounded, Icons.storage_rounded, 'Data Master'),
+    _NavItem(Icons.fingerprint_rounded, Icons.fingerprint_rounded, 'Absensi'),
     _NavItem(Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
   ];
 

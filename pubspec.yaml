@@ -71,6 +71,13 @@ dependencies:
   # UI
   shimmer: ^3.0.0
 
+  # Attendance
+  camera: ^0.11.0
+  geolocator: ^13.0.0
+  permission_handler: ^11.3.0
+  flutter_image_compress: ^2.4.0
+  device_info_plus: ^11.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
