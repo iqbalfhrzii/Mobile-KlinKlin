@@ -63,6 +63,10 @@
 		<string>Aplikasi ini membutuhkan akses mikrofon untuk merekam video (jika diperlukan oleh kamera).</string>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>Aplikasi ini membutuhkan akses lokasi untuk verifikasi kehadiran (absensi) di area cabang/kantor.</string>
+		<key>NSLocationAlwaysUsageDescription</key>
+		<string>Aplikasi ini membutuhkan akses lokasi untuk verifikasi kehadiran (absensi) di area cabang/kantor.</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>Aplikasi ini membutuhkan akses lokasi untuk verifikasi kehadiran (absensi) di area cabang/kantor.</string>
 		<!-- Firebase Cloud Messaging -->
 		<key>UIBackgroundModes</key>
 		<array>
