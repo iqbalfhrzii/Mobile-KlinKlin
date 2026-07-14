@@ -95,6 +95,7 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
       };
 
       if (widget.karyawan == null) {
+        data['pin'] = '123456'; // Default PIN required by API
         await _hrdService.createKaryawan(data);
       } else {
         await _hrdService.updateKaryawan(widget.karyawan!.id, data);

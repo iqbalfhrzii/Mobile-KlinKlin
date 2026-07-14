@@ -8,8 +8,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class AdminAttendanceDetailScreen extends StatefulWidget {
   final GroupedAttendanceItem item;
+  final bool showPhoto;
 
-  const AdminAttendanceDetailScreen({super.key, required this.item});
+  const AdminAttendanceDetailScreen({super.key, required this.item, this.showPhoto = true});
 
   @override
   State<AdminAttendanceDetailScreen> createState() => _AdminAttendanceDetailScreenState();
@@ -128,7 +129,7 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
         const SizedBox(height: 8),
         _buildInfoRow(Icons.location_on_outlined, 'Jarak dari Kantor', '${data.distanceMeter.toStringAsFixed(1)} meter'),
         const SizedBox(height: 16),
-        if (data.selfieViewUrl != null && data.selfieViewUrl!.isNotEmpty)
+        if (widget.showPhoto && data.selfieViewUrl != null && data.selfieViewUrl!.isNotEmpty)
           _isTokenLoaded
               ? GestureDetector(
                   onTap: () {

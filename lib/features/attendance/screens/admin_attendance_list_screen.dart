@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/gradient_header.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/weekly_date_picker.dart';
 import '../data/attendance_model.dart';
 import '../services/attendance_service.dart';
 import 'admin_attendance_detail_screen.dart';
+import '../../../../core/data/hrd_models.dart';
+import '../../hrd/services/hrd_service.dart';
 
 class AdminAttendanceListScreen extends StatefulWidget {
   const AdminAttendanceListScreen({super.key});
@@ -16,57 +20,69 @@ class AdminAttendanceListScreen extends StatefulWidget {
 
 class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
   final AttendanceService _service = AttendanceService();
+  final HrdService _hrdService = HrdService();
   bool _isLoading = true;
   List<GroupedAttendanceItem> _groupedItems = [];
+  List<AttendanceHistoryItem> _allRawItems = [];
+  DateTime? _filterStart;
+  DateTime? _filterEnd;
+  String _searchQuery = '';
+  
+  List<CabangModel> _cabangs = [];
+  CabangModel? _selectedCabang;
+  
+  bool _isFinance = false;
+  int? _userCabangId;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _initPrefs();
+  }
+
+  Future<void> _initPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final role = prefs.getString('user_role') ?? '';
+    if (mounted) {
+      setState(() {
+        _isFinance = role.toLowerCase().contains('finance');
+        _userCabangId = prefs.getInt('user_cabang_id');
+      });
+      if (!_isFinance) {
+        _fetchCabangs();
+      }
+      _loadData();
+    }
+  }
+
+  Future<void> _fetchCabangs() async {
+    try {
+      final cabangs = await _hrdService.fetchCabang();
+      if (mounted) {
+        setState(() {
+          _cabangs = cabangs.where((c) => !c.namaCabang.toLowerCase().contains('kantor pusat')).toList();
+        });
+      }
+    } catch (e) {
+      // ignore
+    }
   }
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final items = await _service.getAllAbsensi();
-      final grouped = <String, GroupedAttendanceItem>{};
-      
-      for (var item in items) {
-        if (item.karyawanId == null || item.tanggal == null) continue;
-        
-        final key = '${item.karyawanId}_${item.tanggal}';
-        
-        if (!grouped.containsKey(key)) {
-          grouped[key] = GroupedAttendanceItem(
-            tanggal: item.tanggal!,
-            karyawanId: item.karyawanId!,
-            namaCleaner: item.namaCleaner ?? 'Cleaner Tanpa Nama',
-          );
-        }
-        
-        if (item.type == 'check_in' || item.type == 'masuk') {
-          grouped[key] = GroupedAttendanceItem(
-            tanggal: grouped[key]!.tanggal,
-            karyawanId: grouped[key]!.karyawanId,
-            namaCleaner: grouped[key]!.namaCleaner,
-            checkIn: item,
-            checkOut: grouped[key]!.checkOut,
-          );
-        } else if (item.type == 'check_out' || item.type == 'pulang') {
-          grouped[key] = GroupedAttendanceItem(
-            tanggal: grouped[key]!.tanggal,
-            karyawanId: grouped[key]!.karyawanId,
-            namaCleaner: grouped[key]!.namaCleaner,
-            checkIn: grouped[key]!.checkIn,
-            checkOut: item,
-          );
-        }
+      String? branchParam;
+      if (_isFinance && _userCabangId != null) {
+        branchParam = _userCabangId.toString();
+      } else {
+        branchParam = _selectedCabang?.id.toString();
       }
       
-      final groupedList = grouped.values.toList();
-      groupedList.sort((a, b) => b.tanggal.compareTo(a.tanggal));
-      
-      setState(() => _groupedItems = groupedList);
+      final items = await _service.getAllAbsensi(
+        branch: branchParam,
+      );
+      _allRawItems = items;
+      _applyFilter();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -76,6 +92,65 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _applyFilter() {
+    final items = _allRawItems.where((item) {
+      if (item.tanggal == null) return false;
+      final itemDate = DateTime.tryParse(item.tanggal!);
+      if (itemDate == null) return false;
+      if (_filterStart != null && _filterEnd != null) {
+        final d = DateTime(itemDate.year, itemDate.month, itemDate.day);
+        final s = DateTime(_filterStart!.year, _filterStart!.month, _filterStart!.day);
+        final e = DateTime(_filterEnd!.year, _filterEnd!.month, _filterEnd!.day);
+        if (d.isBefore(s) || d.isAfter(e)) return false;
+      }
+      if (_searchQuery.isNotEmpty) {
+        final q = _searchQuery.toLowerCase();
+        final name = item.namaCleaner?.toLowerCase() ?? '';
+        if (!name.contains(q)) return false;
+      }
+      return true;
+    }).toList();
+
+    final grouped = <String, GroupedAttendanceItem>{};
+    
+    for (var item in items) {
+      if (item.karyawanId == null || item.tanggal == null) continue;
+      
+      final key = '${item.karyawanId}_${item.tanggal}';
+      
+      if (!grouped.containsKey(key)) {
+        grouped[key] = GroupedAttendanceItem(
+          tanggal: item.tanggal!,
+          karyawanId: item.karyawanId!,
+          namaCleaner: item.namaCleaner ?? 'Cleaner Tanpa Nama',
+        );
+      }
+      
+      if (item.type == 'check_in' || item.type == 'masuk') {
+        grouped[key] = GroupedAttendanceItem(
+          tanggal: grouped[key]!.tanggal,
+          karyawanId: grouped[key]!.karyawanId,
+          namaCleaner: grouped[key]!.namaCleaner,
+          checkIn: item,
+          checkOut: grouped[key]!.checkOut,
+        );
+      } else if (item.type == 'check_out' || item.type == 'pulang') {
+        grouped[key] = GroupedAttendanceItem(
+          tanggal: grouped[key]!.tanggal,
+          karyawanId: grouped[key]!.karyawanId,
+          namaCleaner: grouped[key]!.namaCleaner,
+          checkIn: grouped[key]!.checkIn,
+          checkOut: item,
+        );
+      }
+    }
+    
+    final groupedList = grouped.values.toList();
+    groupedList.sort((a, b) => b.tanggal.compareTo(a.tanggal));
+    
+    setState(() => _groupedItems = groupedList);
   }
 
   @override
@@ -102,17 +177,27 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.history_rounded, color: Colors.white, size: 24),
-                ),
               ],
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: WeeklyDatePicker(
+              searchQuery: _searchQuery,
+              onSearchChanged: (val) {
+                setState(() => _searchQuery = val);
+                _applyFilter();
+              },
+              onFilterChanged: (start, end) {
+                setState(() {
+                  _filterStart = start;
+                  _filterEnd = end;
+                });
+                _applyFilter();
+              },
+            ),
+          ),
+          if (!_isFinance) _buildBranchFilter(),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -215,6 +300,45 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
             style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: hasData ? color : Colors.grey),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBranchFilter() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<CabangModel?>(
+            isExpanded: true,
+            value: _selectedCabang,
+            icon: const Icon(Icons.arrow_drop_down, color: AppColors.textMuted),
+            hint: Text(
+              'Semua Cabang',
+              style: GoogleFonts.inter(fontSize: 14, color: AppColors.textDark),
+            ),
+            items: [
+              DropdownMenuItem<CabangModel?>(
+                value: null,
+                child: Text('Semua Cabang', style: GoogleFonts.inter(fontSize: 14)),
+              ),
+              ..._cabangs.map((c) => DropdownMenuItem<CabangModel?>(
+                    value: c,
+                    child: Text(c.namaCabang, style: GoogleFonts.inter(fontSize: 14)),
+                  )),
+            ],
+            onChanged: (CabangModel? newValue) {
+              setState(() => _selectedCabang = newValue);
+              _loadData();
+            },
+          ),
+        ),
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/network/dio_client.dart';
 import '../data/attendance_model.dart';
 
@@ -34,6 +35,21 @@ class AttendanceService {
               hasCheckedOut = true;
               checkOutTime = item['waktu_server'];
             }
+            
+            // Try to extract branch info from the absensi record itself if possible
+            final c = item['karyawan']?['cabang'] ?? item['cabang'];
+            if (c != null) {
+              if (branchName == null && c['nama_cabang'] != null) {
+                branchName = c['nama_cabang'];
+              }
+              final lat = c['latitude'] ?? c['lat'];
+              final lng = c['longitude'] ?? c['lng'];
+              final radius = c['radius_absensi_meter'] ?? c['radius'];
+              
+              if (lat != null && branchLat == null) branchLat = double.tryParse(lat.toString());
+              if (lng != null && branchLng == null) branchLng = double.tryParse(lng.toString());
+              if (radius != null && maxRadiusMeter == null) maxRadiusMeter = double.tryParse(radius.toString());
+            }
           }
         }
 
@@ -42,11 +58,60 @@ class AttendanceService {
           final meResponse = await _dio.get('/me');
           if (meResponse.statusCode == 200) {
             final meData = meResponse.data['data'] ?? {};
-            if (meData['cabang'] != null) {
-              branchName = meData['cabang']['nama_cabang'];
-              branchLat = meData['cabang']['latitude'] != null ? double.tryParse(meData['cabang']['latitude'].toString()) : null;
-              branchLng = meData['cabang']['longitude'] != null ? double.tryParse(meData['cabang']['longitude'].toString()) : null;
-              maxRadiusMeter = meData['cabang']['radius_absensi_meter'] != null ? double.tryParse(meData['cabang']['radius_absensi_meter'].toString()) : 50.0;
+            
+            // 1. Get branch info directly from /me first
+            final cabang1 = meData['cabang'];
+            final cabang2 = meData['karyawan']?['cabang'];
+            final cabang3 = meData['user']?['cabang'];
+            
+            final List<dynamic> possibleCabangs = [cabang1, cabang2, cabang3];
+            for (var c in possibleCabangs) {
+              if (c != null) {
+                if (branchName == null && c['nama_cabang'] != null) {
+                  branchName = c['nama_cabang'];
+                }
+                
+                final lat = c['latitude'] ?? c['lat'];
+                final lng = c['longitude'] ?? c['lng'];
+                final radius = c['radius_absensi_meter'] ?? c['radius'];
+                
+                if (lat != null && branchLat == null) branchLat = double.tryParse(lat.toString());
+                if (lng != null && branchLng == null) branchLng = double.tryParse(lng.toString());
+                if (radius != null && maxRadiusMeter == null) maxRadiusMeter = double.tryParse(radius.toString());
+              }
+            }
+
+            // 2. Fallback: If coordinates are STILL null, try fetching /cabangs
+            if (branchLat == null || branchLng == null) {
+              var cabangId = meData['cabang_id'] ?? meData['karyawan']?['cabang_id'] ?? meData['user']?['cabang_id'];
+              
+              if (cabangId == null) {
+                final prefs = await SharedPreferences.getInstance();
+                cabangId = prefs.getInt('user_cabang_id') ?? prefs.getString('user_cabang_id');
+              }
+              
+              if (cabangId != null) {
+                try {
+                  // Fetch from /cabangs to guarantee getting the coordinates
+                  final cabangsResponse = await _dio.get('/cabangs');
+                  if (cabangsResponse.statusCode == 200) {
+                    final cabangsList = cabangsResponse.data['data'] as List;
+                    final myCabang = cabangsList.firstWhere((c) => c['id'].toString() == cabangId.toString(), orElse: () => null);
+                    
+                    if (myCabang != null) {
+                      branchName = myCabang['nama_cabang'] ?? branchName;
+                      
+                      final lat = myCabang['latitude'] ?? myCabang['lat'];
+                      final lng = myCabang['longitude'] ?? myCabang['lng'];
+                      final radius = myCabang['radius_absensi_meter'] ?? myCabang['radius'];
+                      
+                      if (lat != null && branchLat == null) branchLat = double.tryParse(lat.toString());
+                      if (lng != null && branchLng == null) branchLng = double.tryParse(lng.toString());
+                      if (radius != null && maxRadiusMeter == null) maxRadiusMeter = double.tryParse(radius.toString());
+                    }
+                  }
+                } catch (_) {}
+              }
             }
           }
         } catch (_) {}
@@ -71,13 +136,22 @@ class AttendanceService {
   Future<List<AttendanceHistoryItem>> getHistory({String? date, String? month}) async {
     try {
       final Map<String, dynamic> query = {};
-      if (date != null) query['date'] = date;
-      if (month != null) query['month'] = month;
+      if (date != null) query['tanggal'] = date;
+      if (month != null) query['bulan'] = month;
 
-      final response = await _dio.get('/absensi/history', queryParameters: query);
+      // Some backend APIs might not support filtering by month on the /saya endpoint
+      // We'll fetch all and filter locally if needed, or just rely on what the API returns.
+      final response = await _dio.get('/absensi/saya');
       if (response.statusCode == 200) {
         final List data = response.data['data'] ?? [];
-        return data.map((item) => AttendanceHistoryItem.fromJson(item)).toList();
+        var history = data.map((item) => AttendanceHistoryItem.fromJson(item)).toList();
+        
+        // Filter locally by month if provided since we removed it from query params
+        if (month != null) {
+          history = history.where((item) => item.tanggal != null && item.tanggal!.startsWith(month)).toList();
+        }
+        
+        return history;
       }
       throw Exception('Gagal mendapatkan riwayat absensi');
     } catch (e) {
@@ -134,9 +208,9 @@ class AttendanceService {
   Future<List<AttendanceHistoryItem>> getAllAbsensi({String? date, String? month, String? branch}) async {
     try {
       final Map<String, dynamic> query = {};
-      if (date != null) query['date'] = date;
-      if (month != null) query['month'] = month;
-      if (branch != null) query['branch'] = branch;
+      if (date != null) query['tanggal'] = date;
+      if (month != null) query['bulan'] = month;
+      if (branch != null) query['cabang_id'] = branch;
 
       final response = await _dio.get('/absensi/riwayat', queryParameters: query);
       if (response.statusCode == 200) {
