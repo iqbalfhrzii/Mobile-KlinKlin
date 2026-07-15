@@ -275,33 +275,84 @@ class _CleanerAttendanceScreenState extends State<CleanerAttendanceScreen> {
   }
 
   Future<void> _selectMonth() async {
-    final DateTime? picked = await showDialog<DateTime>(
+    int tempMonth = _selectedMonth.month;
+    int tempYear = _selectedMonth.year;
+    
+    final List<String> monthNames = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+
+    await showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Pilih Bulan'),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 300,
-            child: ListView.builder(
-              itemCount: 12,
-              itemBuilder: (context, index) {
-                final date = DateTime(DateTime.now().year, index + 1, 1);
-                return ListTile(
-                  title: Text('${_monthName(date.month)} ${date.year}'),
-                  onTap: () => Navigator.pop(context, date),
-                );
-              },
-            ),
-          ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text('Pilih Periode', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.textDark)),
+              content: Row(
+                children: [
+                  Expanded(
+                    child: DropdownButton<int>(
+                      value: tempMonth,
+                      isExpanded: true,
+                      items: List.generate(12, (index) {
+                        return DropdownMenuItem(
+                          value: index + 1,
+                          child: Text(monthNames[index], style: GoogleFonts.inter(fontSize: 14)),
+                        );
+                      }),
+                      onChanged: (val) {
+                        if (val != null) setStateDialog(() => tempMonth = val);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: DropdownButton<int>(
+                      value: tempYear,
+                      isExpanded: true,
+                      items: List.generate(5, (index) {
+                        int year = DateTime.now().year - 2 + index;
+                        return DropdownMenuItem(
+                          value: year,
+                          child: Text(year.toString(), style: GoogleFonts.inter(fontSize: 14)),
+                        );
+                      }),
+                      onChanged: (val) {
+                        if (val != null) setStateDialog(() => tempYear = val);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Batal', style: GoogleFonts.inter(color: Colors.grey.shade600)),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    if (tempMonth != _selectedMonth.month || tempYear != _selectedMonth.year) {
+                      setState(() => _selectedMonth = DateTime(tempYear, tempMonth, 1));
+                      _fetchHistory();
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: Text('Terapkan', style: GoogleFonts.inter(color: Colors.white)),
+                ),
+              ],
+            );
+          },
         );
       },
     );
-
-    if (picked != null && picked.month != _selectedMonth.month) {
-      setState(() => _selectedMonth = picked);
-      _fetchHistory();
-    }
   }
 
   @override
@@ -407,29 +458,72 @@ class _CleanerAttendanceScreenState extends State<CleanerAttendanceScreen> {
                child: Text('Koordinat lokasi cabang belum diatur oleh Admin.', style: GoogleFonts.inter(color: AppColors.textMuted)),
              )
           else if (_currentPosition != null)
-             Row(
-               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+             Column(
                children: [
-                 Column(
-                   crossAxisAlignment: CrossAxisAlignment.start,
+                 Row(
+                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                    children: [
-                     Text('Jarak ke Kantor', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12)),
-                     const SizedBox(height: 4),
-                     Text('${distance?.toStringAsFixed(1) ?? '-'} meter', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
+                     Column(
+                       crossAxisAlignment: CrossAxisAlignment.start,
+                       children: [
+                         Text('Jarak ke Kantor', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12)),
+                         const SizedBox(height: 4),
+                         Text('${distance?.toStringAsFixed(1) ?? '-'} meter', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
+                       ]
+                     ),
+                     Container(
+                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                       decoration: BoxDecoration(
+                         color: isInside ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1), 
+                         borderRadius: BorderRadius.circular(20)
+                       ),
+                       child: Text(
+                         isInside ? 'Di Dalam Radius' : 'Di Luar Radius', 
+                         style: GoogleFonts.inter(color: isInside ? Colors.green : Colors.red, fontWeight: FontWeight.bold, fontSize: 12)
+                       ),
+                     ),
                    ]
                  ),
-                 Container(
-                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                   decoration: BoxDecoration(
-                     color: isInside ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1), 
-                     borderRadius: BorderRadius.circular(20)
-                   ),
-                   child: Text(
-                     isInside ? 'Di Dalam Radius' : 'Di Luar Radius', 
-                     style: GoogleFonts.inter(color: isInside ? Colors.green : Colors.red, fontWeight: FontWeight.bold, fontSize: 12)
-                   ),
+                 const SizedBox(height: 12),
+                 const Divider(height: 1, thickness: 1, color: Colors.black12),
+                 const SizedBox(height: 12),
+                 Row(
+                   children: [
+                     Expanded(
+                       child: Column(
+                         crossAxisAlignment: CrossAxisAlignment.start,
+                         children: [
+                           Text('Koordinat (Lat, Lng)', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 10)),
+                           const SizedBox(height: 2),
+                           Text(
+                             '${_currentPosition!.latitude.toStringAsFixed(6)}, ${_currentPosition!.longitude.toStringAsFixed(6)}',
+                             style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                           ),
+                         ],
+                       ),
+                     ),
+                     Container(width: 1, height: 24, color: Colors.grey.shade300),
+                     const SizedBox(width: 12),
+                     Expanded(
+                       child: Column(
+                         crossAxisAlignment: CrossAxisAlignment.start,
+                         children: [
+                           Text('Akurasi GPS', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 10)),
+                           const SizedBox(height: 2),
+                           Text(
+                             '± ${_currentPosition!.accuracy.toStringAsFixed(1)} meter',
+                             style: GoogleFonts.inter(
+                               fontSize: 12, 
+                               fontWeight: FontWeight.w600, 
+                               color: _currentPosition!.accuracy > 30 ? Colors.red : AppColors.textDark
+                             ),
+                           ),
+                         ],
+                       ),
+                     ),
+                   ],
                  ),
-               ]
+               ],
              )
         ]
       )
