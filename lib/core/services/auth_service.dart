@@ -105,52 +105,16 @@ class AuthService {
 
   static Future<void> updateProfile(String name, String? photoPath) async {
     final prefs = await SharedPreferences.getInstance();
-    String? id = prefs.getString('karyawan_id');
-    if (id == null) {
-      // Fallback: extract from user_id which is stored as KLK-CS-0{id}
-      final userIdStr = prefs.getString('user_id');
-      if (userIdStr != null && userIdStr.startsWith('KLK-CS-0')) {
-        id = userIdStr.replaceFirst('KLK-CS-0', '');
-      }
-    }
-
-    if (id == null || id.isEmpty) {
-      throw Exception('ID Karyawan tidak ditemukan, silakan login ulang.');
-    }
-
-    Response res;
-    try {
-      res = await _dio.get('/karyawans/$id');
-    } catch (e) {
-      throw Exception('Gagal mengambil data profil terbaru.');
-    }
-    final meData = res.data['data'] ?? res.data;
-
-    final mapData = <String, dynamic>{
-      'cabang_id':
-          meData['cabang_id'] ??
-          (meData['cabang'] is Map ? meData['cabang']['id'] : null),
-      'jabatan_id':
-          meData['jabatan_id'] ??
-          (meData['jabatan'] is Map ? meData['jabatan']['id'] : null),
-      'nama': name,
-      'email': meData['email'],
-      'no_wa': meData['no_wa'] ?? '',
-      'status': meData['status'] ?? 'aktif',
-    };
 
     try {
       if (photoPath != null && photoPath.isNotEmpty) {
-        mapData['_method'] = 'PUT';
-        mapData['foto_profil_file'] = await MultipartFile.fromFile(
-          photoPath,
-          filename: photoPath.split('/').last,
-        );
-        final formData = FormData.fromMap(mapData);
-        await _dio.post('/karyawans/$id', data: formData);
-      } else {
-        mapData['foto_profil'] = meData['foto_profil'];
-        await _dio.put('/karyawans/$id', data: mapData);
+        final formData = FormData.fromMap({
+          'foto_profil': await MultipartFile.fromFile(
+            photoPath,
+            filename: photoPath.split('/').last,
+          )
+        });
+        await _dio.post('/me/foto-profil', data: formData);
       }
       
       // Update local storage
