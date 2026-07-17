@@ -54,10 +54,13 @@ class PdfInvoiceService {
     final diskonPersen = order.pembayaran?.diskonPersen ?? 0.0;
     final diskonLayanan = (order.total * (diskonPersen / 100)).round();
     final totalSetelahDiskon = order.total - diskonLayanan;
-    
-    final ppnPersen = order.pembayaran?.ppn ?? order.ppn ?? 11;
+
+    final ppnPersen = order.pembayaran?.ppn ?? order.ppn ?? 0;
     final ppnValue = (totalSetelahDiskon * (ppnPersen / 100)).round();
     final totalTagihan = totalSetelahDiskon + ppnValue;
+
+    final terbilangText = _terbilang(totalTagihan);
+    final formattedTerbilang = terbilangText.toUpperCase();
 
     String cleanerNames = order.cleaners.map((c) => c.name).join(', ');
     if (cleanerNames.isEmpty) cleanerNames = '-';
@@ -348,8 +351,14 @@ class PdfInvoiceService {
                         formatRupiah(order.total),
                       ),
                       if (diskonLayanan > 0)
-                        _buildSummaryRow('Diskon ${diskonPersen == diskonPersen.toInt() ? diskonPersen.toInt() : diskonPersen}% (Rp)', '-${formatRupiah(diskonLayanan)}'),
-                      _buildSummaryRow('PPN ($ppnPersen%)', formatRupiah(ppnValue)),
+                        _buildSummaryRow(
+                          'Diskon ${diskonPersen == diskonPersen.toInt() ? diskonPersen.toInt() : diskonPersen}% (Rp)',
+                          '-${formatRupiah(diskonLayanan)}',
+                        ),
+                      _buildSummaryRow(
+                        'PPN ($ppnPersen%)',
+                        formatRupiah(ppnValue),
+                      ),
                       pw.SizedBox(height: 8),
                       pw.Container(height: 1.5, color: PdfColors.black),
                       pw.SizedBox(height: 8),
@@ -378,7 +387,20 @@ class PdfInvoiceService {
               ],
             ),
 
-            pw.SizedBox(height: 40),
+            pw.SizedBox(height: 24),
+            pw.Center(
+              child: pw.Text(
+                '$formattedTerbilang',
+                style: pw.TextStyle(
+                  fontStyle: pw.FontStyle.italic,
+                  fontSize: 10,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.black,
+                ),
+              ),
+            ),
+
+            pw.SizedBox(height: 30),
 
             // FOOTER (Signatures)
             pw.Row(
@@ -471,5 +493,44 @@ class PdfInvoiceService {
         ],
       ),
     );
+  }
+
+  static String _terbilang(int angka) {
+    if (angka == 0) return 'nol';
+
+    String konversi(int n) {
+      final units = [
+        '',
+        'satu',
+        'dua',
+        'tiga',
+        'empat',
+        'lima',
+        'enam',
+        'tujuh',
+        'delapan',
+        'sembilan',
+        'sepuluh',
+        'sebelas',
+      ];
+      if (n == 0) return '';
+      if (n < 12) return units[n];
+      if (n < 20) return '${units[n - 10]} belas';
+      if (n < 100) return '${units[n ~/ 10]} puluh ${konversi(n % 10)}';
+      if (n < 200) return 'seratus ${konversi(n - 100)}';
+      if (n < 1000) return '${units[n ~/ 100]} ratus ${konversi(n % 100)}';
+      if (n < 2000) return 'seribu ${konversi(n - 1000)}';
+      if (n < 1000000)
+        return '${konversi(n ~/ 1000)} ribu ${konversi(n % 1000)}';
+      if (n < 1000000000)
+        return '${konversi(n ~/ 1000000)} juta ${konversi(n % 1000000)}';
+      if (n < 1000000000000)
+        return '${konversi(n ~/ 1000000000)} milyar ${konversi(n % 1000000000)}';
+      return '${konversi(n ~/ 1000000000000)} triliun ${konversi(n % 1000000000000)}';
+    }
+
+    final raw = konversi(angka).trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (raw.isEmpty) return 'nol';
+    return '$raw rupiah';
   }
 }

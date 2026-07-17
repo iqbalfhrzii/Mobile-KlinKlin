@@ -9,6 +9,7 @@ import '../../../core/widgets/weekly_date_picker.dart';
 import 'order_detail_screen.dart';
 import 'create_order_screen.dart';
 import '../services/order_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class OrderListScreen extends StatefulWidget {
   final String? initialStatusFilter;
@@ -187,6 +188,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                             );
                             _fetchData();
                           },
+                          onRefresh: _fetchData,
                         ),
                       ),
                   ],
@@ -307,127 +309,366 @@ class _OrderListScreenState extends State<OrderListScreen> {
 }
 
 class _OrderCard extends StatelessWidget {
-  const _OrderCard({required this.order, required this.onTap});
+  const _OrderCard({
+    required this.order,
+    required this.onTap,
+    required this.onRefresh,
+  });
   final OrderModel order;
   final VoidCallback onTap;
+  final VoidCallback onRefresh;
 
   String _fmt(int n) =>
       'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
+
+  String _formatDisplayDate(String schedule) {
+    if (schedule.isEmpty || schedule == '-') return '-';
+    final parts = schedule.split('·');
+    final datePart = parts[0].trim();
+    String timePart = parts.length > 1 ? parts[1].trim() : '';
+
+    if (timePart.endsWith(':00')) {
+      final tParts = timePart.split(':');
+      if (tParts.length >= 2) {
+        timePart = '${tParts[0]}:${tParts[1]}';
+      }
+    }
+
+    try {
+      final dt = DateTime.parse(datePart);
+      final days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      final months = [
+        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      ];
+      final dayNameReal = days[dt.weekday == 7 ? 0 : dt.weekday];
+      final monthName = months[dt.month - 1];
+
+      final formattedDate = '$dayNameReal, ${dt.day} $monthName ${dt.year}';
+      return timePart.isNotEmpty ? '$formattedDate - $timePart' : formattedDate;
+    } catch (e) {
+      return schedule;
+    }
+  }
+
+  Future<void> _launchWA(
+    BuildContext context,
+    String noWa, {
+    String? template,
+  }) async {
+    String phone = noWa.replaceAll(RegExp(r'\D'), '');
+    if (phone.startsWith('0')) {
+      phone = '62${phone.substring(1)}';
+    }
+    final url = Uri.parse(
+      'https://wa.me/$phone${template != null ? '?text=${Uri.encodeComponent(template)}' : ''}',
+    );
+    try {
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tidak dapat membuka WhatsApp')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tidak dapat membuka WhatsApp')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final o = order;
     final isCancelled = o.status == OrderStatus.cancelled;
+
+    // Calculate total price accurately
+    final double diskonPersen = o.pembayaran?.diskonPersen ?? 0.0;
+    final int diskonValue = (o.total * (diskonPersen / 100)).round();
+    final int totalSetelahDiskon = o.total - diskonValue;
+    final int ppnPersen = o.ppn ?? o.pembayaran?.ppn ?? 0;
+    final int ppnValue = (o.pembayaran != null || o.ppn != null)
+        ? (totalSetelahDiskon * (ppnPersen / 100)).round()
+        : 0;
+    final int totalAkhir = totalSetelahDiskon + ppnValue;
+
+    String dateStr = _formatDisplayDate(o.schedule);
+    final bool isDone = o.status == OrderStatus.completed;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isCancelled
-                ? AppColors.error.withOpacity(0.2)
-                : AppColors.border,
-          ),
+          border: Border.all(color: AppColors.border),
           boxShadow: [AppColors.cardShadow],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  o.id,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textMuted,
-                    fontFamily: 'monospace',
-                  ),
+                Container(
+                  width: 5,
+                  color: isCancelled
+                      ? AppColors.error
+                      : (isDone ? AppColors.statusDone : AppColors.primary),
                 ),
-                const Spacer(),
-                StatusBadge(status: o.status),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                InitialsAvatar(name: o.customer.name, size: 36),
-                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        o.customer.name,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textDark,
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                o.customer.name,
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textDark,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            StatusBadge(status: o.status),
+                          ],
                         ),
                       ),
-                      Text(
-                        o.services.map((s) => '${s.qty}x ${s.name}').join(', '),
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: AppColors.textMuted,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 2,
                         ),
-                        overflow: TextOverflow.ellipsis,
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.description_outlined,
+                              size: 14,
+                              color: AppColors.textMuted,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                dateStr,
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: AppColors.textMuted,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.border.withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                o.paymentMethod.toUpperCase(),
+                                style: GoogleFonts.inter(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textDark.withOpacity(0.8),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              _fmt(totalAkhir),
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            Text(
+                              ' · ',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                o.cleaners.isNotEmpty
+                                    ? o.cleaners.map((c) => c.name).join(', ')
+                                    : 'Belum ada cleaner',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textDark,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 2,
+                        ),
+                        child: Text(
+                          o.services.map((s) => s.name).join(', '),
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFFAD6800),
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const Divider(color: AppColors.border, height: 1),
+                      Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Row(
+                          children: [
+
+                            InkWell(
+                              onTap: () => _launchWA(context, o.customer.phone),
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF25D366),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.chat_bubble_outline_rounded,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Cust',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            if (o.cleaners.isNotEmpty) ...[
+                              InkWell(
+                                onTap: () {
+                                  final withPhone = o.cleaners.firstWhere(
+                                    (c) => c.phone.isNotEmpty,
+                                    orElse: () => o.cleaners.first,
+                                  );
+                                  _launchWA(
+                                    context,
+                                    withPhone.phone.isNotEmpty
+                                        ? withPhone.phone
+                                        : '',
+                                  );
+                                },
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF25D366),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.chat_bubble_outline_rounded,
+                                        size: 14,
+                                        color: Colors.white,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Cleaner',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                            ],
+                            const Spacer(),
+
+                            InkWell(
+                              onTap: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        CreateOrderScreen(existingOrder: o),
+                                  ),
+                                );
+                                onRefresh();
+                              },
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  border: Border.all(color: AppColors.border),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.edit_outlined,
+                                  size: 16,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-                Builder(
-                  builder: (context) {
-                    final double diskonPersen = o.pembayaran?.diskonPersen ?? 0.0;
-                    final int diskonValue = (o.total * (diskonPersen / 100)).round();
-                    final int totalSetelahDiskon = o.total - diskonValue;
-                    final int ppnPersen = o.ppn ?? o.pembayaran?.ppn ?? 11;
-                    final int ppnValue = (totalSetelahDiskon * (ppnPersen / 100)).round();
-                    final int totalAkhir = totalSetelahDiskon + ppnValue;
-
-                    return Text(
-                      _fmt(totalAkhir),
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                    );
-                  }
-                ),
               ],
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(
-                  Icons.schedule_rounded,
-                  size: 12,
-                  color: AppColors.textMuted,
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    o.schedule,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                ),
-                if (o.cleaners.isNotEmpty)
-                  Text(
-                    o.cleaners.map((c) => c.name).join(', '),
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );

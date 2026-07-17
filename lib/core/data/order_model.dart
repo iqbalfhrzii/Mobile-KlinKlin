@@ -214,6 +214,7 @@ class OrderCustomer {
     required this.phone,
     required this.address,
     required this.area,
+    this.notes = '',
   });
 
   String id;
@@ -221,6 +222,7 @@ class OrderCustomer {
   String phone;
   String address;
   String area;
+  String notes;
 
   factory OrderCustomer.fromJson(Map<String, dynamic> json, [Map<String, dynamic>? rootJson]) {
     final cabang = (rootJson ?? json)['cabang'] ?? {};
@@ -230,6 +232,7 @@ class OrderCustomer {
       phone: json['no_wa'] ?? '-',
       address: json['alamat'] ?? '-',
       area: cabang['nama_cabang'] ?? 'Cabang',
+      notes: json['catatan'] ?? '',
     );
   }
 }
@@ -245,6 +248,7 @@ class OrderCleaner {
     this.totalBonus = 0,
     this.fotoProfil,
     this.showWa = false,
+    this.phone = '',
   });
 
   String id;
@@ -256,6 +260,7 @@ class OrderCleaner {
   int totalBonus;
   String? fotoProfil;
   bool showWa;
+  String phone;
 
   factory OrderCleaner.fromJson(Map<String, dynamic> json) {
     final cleaner = json['cleaner'] ?? {};
@@ -273,6 +278,7 @@ class OrderCleaner {
       totalBonus: totalB,
       fotoProfil: cleaner['foto_profil'] ?? cleaner['foto'] ?? (cleaner['user'] != null && cleaner['user'] is Map ? cleaner['user']['foto_profil'] : null),
       showWa: json['show_wa'] == true || json['show_wa'] == 1 || json['show_wa'] == '1',
+      phone: cleaner['no_wa']?.toString() ?? cleaner['no_hp']?.toString() ?? cleaner['phone']?.toString() ?? '',
     );
   }
 }
@@ -429,7 +435,7 @@ class OrderDraft {
     List<ServiceItem>? services,
     List<OrderCleaner>? cleaners,
     this.notes = '',
-    this.applyPpn = true,
+    this.applyPpn = false,
     this.tanggalPengerjaan = '',
     this.waktuPengerjaan = '',
   }) : services = services ?? [],

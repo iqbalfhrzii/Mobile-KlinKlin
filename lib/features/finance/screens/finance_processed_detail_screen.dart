@@ -86,7 +86,7 @@ class FinanceProcessedDetailScreen extends StatelessWidget {
     final int diskonValue = (subtotal * (diskonPersen / 100)).round();
     final int totalSetelahDiskon = subtotal - diskonValue;
     
-    final int ppnPercentage = order.ppn ?? payment?.ppn ?? 11;
+    final int ppnPercentage = order.ppn ?? payment?.ppn ?? 0;
     final int ppn = (totalSetelahDiskon * (ppnPercentage / 100)).round();
     final int total = totalSetelahDiskon + ppn;
     

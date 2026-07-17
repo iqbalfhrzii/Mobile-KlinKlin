@@ -5,7 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../home/screens/home_screen.dart';
 import '../orders/screens/order_list_screen.dart';
 import '../customers/screens/customer_list_screen.dart';
-import '../payment/screens/cash_flow_menu_screen.dart';
+import '../payment/screens/payment_screen.dart';
 import '../profile/screens/profile_screen.dart';
 import '../auth/screens/change_pin_screen.dart';
 
@@ -35,11 +35,11 @@ class _MainShellState extends State<MainShell> {
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
   }
 
-  final _screens = const [
+  final List<Widget> _screens = const [
     HomeScreen(),
     OrderListScreen(),
     CustomerListScreen(),
-    CashFlowMenuScreen(),
+    PaymentScreen(),
     ProfileScreen(),
   ];
 

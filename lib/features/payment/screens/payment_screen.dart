@@ -54,7 +54,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
-  List<OrderModel> get _filtered {
+  List<OrderModel> get _allFilteredWithoutStatus {
     return _allOrders.where((o) {
       final q = _query.toLowerCase();
       final matchQ = o.id.toLowerCase().contains(q) ||
@@ -64,23 +64,33 @@ class _PaymentScreenState extends State<PaymentScreen> {
         !o.scheduleDateTime.isBefore(_filterStart!) &&
         !o.scheduleDateTime.isAfter(_filterEnd!)
       );
+      return matchQ && matchDate;
+    }).toList();
+  }
+
+  List<OrderModel> get _filtered {
+    return _allFilteredWithoutStatus.where((o) {
+      final isOrderCancelled = o.status == OrderStatus.cancelled || 
+                              o.status == OrderStatus.waitingCancelApproval || 
+                              o.paymentStatus == 'cancelled' || 
+                              o.paymentStatus == 'rejected';
       
-      // Filter by cancel mode
-      bool matchStatus = true;
-      if (widget.isCancelMode) {
-        matchStatus = o.status == OrderStatus.cancelled || o.status == OrderStatus.waitingCancelApproval;
-      } else {
-        matchStatus = o.status != OrderStatus.cancelled && o.status != OrderStatus.waitingCancelApproval;
-        if (_statusFilter == 'Belum') {
-          matchStatus = matchStatus && (o.paymentStatus == 'unpaid' || o.paymentStatus == 'pending') && o.status != OrderStatus.waitingPaymentApproval;
-        } else if (_statusFilter == 'Menunggu Approve') {
-          matchStatus = matchStatus && (o.status == OrderStatus.waitingPaymentApproval);
-        } else if (_statusFilter == 'Lunas') {
-          matchStatus = matchStatus && (o.paymentStatus == 'paid' || o.paymentStatus == 'approved');
-        }
+      if (_statusFilter == 'Dibatalkan') {
+        return isOrderCancelled;
       }
       
-      return matchQ && matchDate && matchStatus;
+      if (_statusFilter != 'Semua' && isOrderCancelled) return false;
+      
+      if (_statusFilter == 'Belum Lunas') {
+        return (o.paymentStatus == 'unpaid' || o.paymentStatus == 'pending') && 
+               o.status != OrderStatus.waitingPaymentApproval;
+      } else if (_statusFilter == 'Menunggu Approve') {
+        return o.status == OrderStatus.waitingPaymentApproval;
+      } else if (_statusFilter == 'Sudah Lunas') {
+        return o.paymentStatus == 'paid' || o.paymentStatus == 'approved';
+      }
+      
+      return true; // For 'Semua'
     }).toList();
   }
 
@@ -92,6 +102,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
       _filtered.where((o) => o.paymentStatus == 'paid' || o.paymentStatus == 'approved').toList();
   List<OrderModel> get _cancelled =>
       _filtered.where((o) => o.status == OrderStatus.cancelled || o.status == OrderStatus.waitingCancelApproval || o.paymentStatus == 'cancelled' || o.paymentStatus == 'rejected').toList();
+
+  int _calculateOrderTotal(OrderModel o) {
+    final double diskonPersen = o.pembayaran?.diskonPersen ?? 0.0;
+    final int diskonValue = (o.total * (diskonPersen / 100)).round();
+    final int totalSetelahDiskon = o.total - diskonValue;
+    final int ppnPersen = o.ppn ?? o.pembayaran?.ppn ?? 0;
+    final int ppnValue = (o.pembayaran != null || o.ppn != null)
+        ? (totalSetelahDiskon * (ppnPersen / 100)).round()
+        : 0;
+    return totalSetelahDiskon + ppnValue;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -113,145 +134,166 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                  WeeklyDatePicker(
-                    searchQuery: _query,
-                    onSearchChanged: (val) => setState(() => _query = val),
-                    onFilterChanged: (start, end) {
-                      setState(() {
-                        _filterStart = start;
-                        _filterEnd = end;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  if (!widget.isCancelMode) ...[
-                    _buildFilterRow(context),
-                    const SizedBox(height: 14),
-                    _buildSummaryCards(),
-                  ],
-                  const SizedBox(height: 16),
-                  if (!widget.isCancelMode && _unpaid.isNotEmpty && (_statusFilter == 'Semua' || _statusFilter == 'Belum')) ...[
-                    _sectionLabel('BELUM LUNAS', AppColors.statusPending),
-                    const SizedBox(height: 8),
-                    ..._unpaid.map((o) => _PaymentCard(
-                        order: o, onTap: () => _openDetail(context, o))),
-                    const SizedBox(height: 16),
-                  ],
-                  if (!widget.isCancelMode && _waitingApprove.isNotEmpty && (_statusFilter == 'Semua' || _statusFilter == 'Menunggu Approve')) ...[
-                    _sectionLabel('MENUNGGU APPROVE', AppColors.primary),
-                    const SizedBox(height: 8),
-                    ..._waitingApprove.map((o) => _PaymentCard(
-                        order: o, onTap: () => _openDetail(context, o))),
-                    const SizedBox(height: 16),
-                  ],
-                  if (!widget.isCancelMode && _paid.isNotEmpty && (_statusFilter == 'Semua' || _statusFilter == 'Lunas')) ...[
-                    _sectionLabel('SUDAH LUNAS', AppColors.statusDone),
-                    const SizedBox(height: 8),
-                    ..._paid.map((o) => _PaymentCard(
-                        order: o, onTap: () => _openDetail(context, o))),
-                    const SizedBox(height: 16),
-                  ],
-                  if (widget.isCancelMode && _cancelled.isNotEmpty) ...[
-                    _sectionLabel('DIBATALKAN', AppColors.error),
-                    const SizedBox(height: 8),
-                    ..._cancelled.map((o) => _PaymentCard(
-                        order: o, onTap: () => _openDetail(context, o))),
-                  ],
-                  if (_filtered.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 40),
-                      child: Center(child: Text('Tidak ada data',
-                          style: GoogleFonts.inter(color: AppColors.textMuted))),
+                          WeeklyDatePicker(
+                            searchQuery: _query,
+                            onSearchChanged: (val) => setState(() => _query = val),
+                            onFilterChanged: (start, end) {
+                              setState(() {
+                                _filterStart = start;
+                                _filterEnd = end;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          _buildFilterRow(context),
+                          const SizedBox(height: 14),
+                          _buildSummaryCards(),
+                          const SizedBox(height: 16),
+                          if (_unpaid.isNotEmpty && (_statusFilter == 'Semua' || _statusFilter == 'Belum Lunas')) ...[
+                            _sectionLabel('BELUM LUNAS', AppColors.statusPending),
+                            const SizedBox(height: 8),
+                            ..._unpaid.map((o) => _PaymentCard(
+                                order: o, onTap: () => _openDetail(context, o))),
+                            const SizedBox(height: 16),
+                          ],
+                          if (_waitingApprove.isNotEmpty && (_statusFilter == 'Semua' || _statusFilter == 'Menunggu Approve')) ...[
+                            _sectionLabel('MENUNGGU APPROVE', AppColors.primary),
+                            const SizedBox(height: 8),
+                            ..._waitingApprove.map((o) => _PaymentCard(
+                                order: o, onTap: () => _openDetail(context, o))),
+                            const SizedBox(height: 16),
+                          ],
+                          if (_paid.isNotEmpty && (_statusFilter == 'Semua' || _statusFilter == 'Sudah Lunas')) ...[
+                            _sectionLabel('SUDAH LUNAS', AppColors.statusDone),
+                            const SizedBox(height: 8),
+                            ..._paid.map((o) => _PaymentCard(
+                                order: o, onTap: () => _openDetail(context, o))),
+                            const SizedBox(height: 16),
+                          ],
+                          if (_cancelled.isNotEmpty && (_statusFilter == 'Semua' || _statusFilter == 'Dibatalkan')) ...[
+                            _sectionLabel('DIBATALKAN', AppColors.error),
+                            const SizedBox(height: 8),
+                            ..._cancelled.map((o) => _PaymentCard(
+                                order: o, onTap: () => _openDetail(context, o))),
+                          ],
+                          if (_filtered.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 40),
+                              child: Center(child: Text('Tidak ada data',
+                                  style: GoogleFonts.inter(color: AppColors.textMuted))),
+                            ),
+                        ],
+                      ),
                     ),
-                ],
-              ),
-            ),
+                  ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
   Widget _buildHeader() {
+    final unresolvedCount = _allOrders.where((o) => 
+      o.status != OrderStatus.cancelled && 
+      o.status != OrderStatus.waitingCancelApproval && 
+      (o.paymentStatus == 'unpaid' || o.paymentStatus == 'pending' || o.status == OrderStatus.waitingPaymentApproval)
+    ).length;
+
     return GradientHeader(
       padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
       child: Row(
         children: [
-          HeaderBackButton(onTap: () => Navigator.pop(context)),
-          const SizedBox(width: 12),
+          if (Navigator.canPop(context)) ...[
+            HeaderBackButton(onTap: () => Navigator.pop(context)),
+            const SizedBox(width: 12),
+          ],
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(widget.isCancelMode ? 'Manajemen' : 'Manajemen', style: GoogleFonts.inter(
+            Text('Manajemen', style: GoogleFonts.inter(
                 fontSize: 11, color: Colors.white.withOpacity(0.7))),
-            Text(widget.isCancelMode ? 'Cancel Pembayaran' : 'Pembayaran', style: GoogleFonts.inter(
+            Text(_statusFilter == 'Dibatalkan' ? 'Cancel Pembayaran' : 'Pembayaran', style: GoogleFonts.inter(
                 fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
           ]),
           const Spacer(),
-          if (!widget.isCancelMode)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20)),
-              child: Text('${_unpaid.length + _waitingApprove.length} Belum Lunas', style: GoogleFonts.inter(
-                  fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600)),
-            ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(20)),
+            child: Text('$unresolvedCount Belum Lunas', style: GoogleFonts.inter(
+                fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600)),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildFilterRow(BuildContext context) {
-    const statuses = ['Semua', 'Belum', 'Menunggu Approve', 'Lunas'];
+    const statuses = ['Semua', 'Belum Lunas', 'Menunggu Approve', 'Sudah Lunas', 'Dibatalkan'];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: [
-          if (!widget.isCancelMode) ...statuses.map((m) {
-            final active = _statusFilter == m;
-            return GestureDetector(
-              onTap: () => setState(() => _statusFilter = m),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                decoration: BoxDecoration(
-                  color: active ? AppColors.primary : AppColors.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: active ? AppColors.primary : AppColors.border),
-                ),
-                child: Text(m, style: GoogleFonts.inter(
-                  fontSize: 12, fontWeight: FontWeight.w600,
-                  color: active ? Colors.white : AppColors.textMuted,
-                )),
+        children: statuses.map((m) {
+          final active = _statusFilter == m;
+          return GestureDetector(
+            onTap: () => setState(() => _statusFilter = m),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: active ? AppColors.primary : AppColors.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: active ? AppColors.primary : AppColors.border),
               ),
-            );
-          }),
-        ],
+              child: Text(m, style: GoogleFonts.inter(
+                fontSize: 12, fontWeight: FontWeight.w600,
+                color: active ? Colors.white : AppColors.textMuted,
+              )),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
 
   Widget _buildSummaryCards() {
-    final totalPending = _unpaid.fold<int>(0, (s, o) => s + (o.pembayaran?.total ?? (o.total + (o.total * 0.11).round()))) + _waitingApprove.fold<int>(0, (s, o) => s + (o.pembayaran?.total ?? (o.total + (o.total * 0.11).round())));
-    final totalPaid = _paid.fold<int>(0, (s, o) => s + (o.pembayaran?.total ?? (o.total + (o.total * 0.11).round())));
+    final activeOrders = _allFilteredWithoutStatus;
+    final unpaidOrders = activeOrders.where((o) => o.status != OrderStatus.cancelled && o.status != OrderStatus.waitingCancelApproval && (o.paymentStatus == 'unpaid' || o.paymentStatus == 'pending') && o.status != OrderStatus.waitingPaymentApproval).toList();
+    final waitingOrders = activeOrders.where((o) => o.status == OrderStatus.waitingPaymentApproval).toList();
+    final paidOrders = activeOrders.where((o) => o.paymentStatus == 'paid' || o.paymentStatus == 'approved').toList();
+    final cancelledOrders = activeOrders.where((o) => o.status == OrderStatus.cancelled || o.status == OrderStatus.waitingCancelApproval || o.paymentStatus == 'cancelled' || o.paymentStatus == 'rejected').toList();
+
+    final totalPending = unpaidOrders.fold<int>(0, (s, o) => s + _calculateOrderTotal(o)) + 
+                         waitingOrders.fold<int>(0, (s, o) => s + _calculateOrderTotal(o));
+    final totalPaid = paidOrders.fold<int>(0, (s, o) => s + _calculateOrderTotal(o));
+    final totalCancelled = cancelledOrders.fold<int>(0, (s, o) => s + _calculateOrderTotal(o));
+
     return Row(children: [
       Expanded(child: _SmallCard(
         label: 'Belum Lunas', value: _fmt(totalPending),
         icon: Icons.pending_actions_rounded,
         color: AppColors.statusPending, bg: AppColors.statusPendingBg,
-        count: _unpaid.length + _waitingApprove.length,
-        isActive: _statusFilter == 'Semua' || _statusFilter == 'Belum' || _statusFilter == 'Menunggu Approve',
-        onTap: () => setState(() => _statusFilter = (_statusFilter == 'Belum' || _statusFilter == 'Menunggu Approve') ? 'Semua' : 'Belum'),
+        count: unpaidOrders.length + waitingOrders.length,
+        isActive: _statusFilter == 'Semua' || _statusFilter == 'Belum Lunas' || _statusFilter == 'Menunggu Approve',
+        onTap: () => setState(() => _statusFilter = (_statusFilter == 'Belum Lunas' || _statusFilter == 'Menunggu Approve') ? 'Semua' : 'Belum Lunas'),
       )),
-      const SizedBox(width: 10),
+      const SizedBox(width: 8),
       Expanded(child: _SmallCard(
         label: 'Sudah Lunas', value: _fmt(totalPaid),
         icon: Icons.check_circle_rounded,
         color: AppColors.statusDone, bg: AppColors.statusDoneBg,
-        count: _paid.length,
-        isActive: _statusFilter == 'Semua' || _statusFilter == 'Lunas',
-        onTap: () => setState(() => _statusFilter = _statusFilter == 'Lunas' ? 'Semua' : 'Lunas'),
+        count: paidOrders.length,
+        isActive: _statusFilter == 'Semua' || _statusFilter == 'Sudah Lunas',
+        onTap: () => setState(() => _statusFilter = _statusFilter == 'Sudah Lunas' ? 'Semua' : 'Sudah Lunas'),
+      )),
+      const SizedBox(width: 8),
+      Expanded(child: _SmallCard(
+        label: 'Dibatalkan', value: _fmt(totalCancelled),
+        icon: Icons.cancel_presentation_rounded,
+        color: AppColors.error, bg: const Color(0xFFFEF2F2),
+        count: cancelledOrders.length,
+        isActive: _statusFilter == 'Semua' || _statusFilter == 'Dibatalkan',
+        onTap: () => setState(() => _statusFilter = _statusFilter == 'Dibatalkan' ? 'Semua' : 'Dibatalkan'),
       )),
     ]);
   }
@@ -280,9 +322,18 @@ class _PaymentCard extends StatelessWidget {
   final OrderModel order;
   final VoidCallback onTap;
 
+  int _calculateCardTotal(OrderModel o) {
+    final double diskonPersen = o.pembayaran?.diskonPersen ?? 0.0;
+    final int diskonValue = (o.total * (diskonPersen / 100)).round();
+    final int totalSetelahDiskon = o.total - diskonValue;
+    final int ppnPersen = o.ppn ?? o.pembayaran?.ppn ?? 0;
+    final int ppnValue = (o.pembayaran != null || o.ppn != null)
+        ? (totalSetelahDiskon * (ppnPersen / 100)).round()
+        : 0;
+    return totalSetelahDiskon + ppnValue;
+  }
   String _fmt(int n) => 'Rp ${n.toString().replaceAllMapped(
       RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
-
   @override
   Widget build(BuildContext context) {
     final isCancelled = order.status == OrderStatus.cancelled || order.paymentStatus == 'cancelled' || order.paymentStatus == 'rejected';
@@ -342,7 +393,7 @@ class _PaymentCard extends StatelessWidget {
           ])),
           const SizedBox(width: 10),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(_fmt(order.pembayaran?.total ?? (order.total + (order.total * 0.11).round())),
+            Text(_fmt(order.pembayaran?.total ?? _calculateCardTotal(order)),
                 style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -401,7 +452,7 @@ class _SmallCard extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         opacity: isActive ? 1.0 : 0.4,
         child: Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(16),
@@ -411,18 +462,22 @@ class _SmallCard extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               Container(
-                  padding: const EdgeInsets.all(7),
+                  padding: const EdgeInsets.all(5),
                   decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
-                  child: Icon(icon, color: color, size: 14)),
+                  child: Icon(icon, color: color, size: 12)),
               const Spacer(),
-              Text('$count transaksi',
-                  style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
+              Text('$count tx',
+                  style: GoogleFonts.inter(fontSize: 9, color: AppColors.textMuted)),
             ]),
             const SizedBox(height: 8),
-            Text(value, style: GoogleFonts.inter(
-                fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(value, style: GoogleFonts.inter(
+                  fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+            ),
+            const SizedBox(height: 2),
             Text(label,
-                style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
           ]),
         ),
       ),

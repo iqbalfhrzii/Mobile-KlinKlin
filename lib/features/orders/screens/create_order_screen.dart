@@ -13,6 +13,7 @@ import '../../../core/api/api_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/utils/currency_formatter.dart';
 import 'order_detail_screen.dart';
+import '../../customers/screens/add_customer_screen.dart';
 
 class CreateOrderScreen extends StatefulWidget {
   const CreateOrderScreen({super.key, this.existingOrder});
@@ -46,7 +47,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       _draft.notes = o.notes;
       _draft.services = List.from(o.services);
       _draft.cleaners = List.from(o.cleaners);
-      _draft.applyPpn = (o.ppn ?? o.pembayaran?.ppn ?? 11) > 0;
+      _draft.applyPpn = (o.ppn ?? o.pembayaran?.ppn ?? 0) > 0;
       
       if (o.services.isNotEmpty) {
         _draft.tanggalPengerjaan = o.services.first.tanggalPengerjaan;
@@ -445,6 +446,7 @@ class _Step1InfoState extends State<_Step1Info> {
             phone: c.phone,
             address: c.address,
             area: '-',
+            notes: c.notes,
           );
           widget.onChanged();
           Navigator.pop(ctx);
@@ -994,6 +996,36 @@ class _CustomerSearchSheetState extends State<_CustomerSearchSheet> {
             ),
           ),
           const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final newCust = await Navigator.push<CustomerModel>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AddCustomerScreen(),
+                    ),
+                  );
+                  if (newCust != null && mounted) {
+                    widget.onSelect(newCust);
+                  }
+                },
+                icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
+                label: const Text('Tambah Pelanggan Baru'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           const Divider(height: 1, color: AppColors.border),
           Expanded(
             child: _filtered.isEmpty
@@ -1202,24 +1234,48 @@ class _Step2Services extends StatelessWidget {
                                   s.name,
                                   style: GoogleFonts.inter(
                                     fontSize: 15,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.bold,
                                     color: AppColors.textDark,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 6),
                                 Row(
                                   children: [
-                                    const Icon(
-                                      Icons.tag,
-                                      size: 12,
-                                      color: AppColors.textMuted,
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.background,
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(color: AppColors.border),
+                                      ),
+                                      child: Text(
+                                        'Qty: ${s.qty}',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.textMuted,
+                                        ),
+                                      ),
                                     ),
-                                    const SizedBox(width: 4),
+                                    const SizedBox(width: 6),
                                     Text(
-                                      'Qty: ${s.qty}',
+                                      '·',
                                       style: GoogleFonts.inter(
-                                        fontSize: 12,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
                                         color: AppColors.textMuted,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        'Rp ${CurrencyInputFormatter.format(s.price.toInt())}',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.primary,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ],
@@ -1227,8 +1283,9 @@ class _Step2Services extends StatelessWidget {
                               ],
                             ),
                           ),
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          const SizedBox(width: 12),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               GestureDetector(
                                 onTap: () => _showAddServiceSheet(
@@ -1237,19 +1294,19 @@ class _Step2Services extends StatelessWidget {
                                   index: i,
                                 ),
                                 child: Container(
-                                  padding: const EdgeInsets.all(6),
+                                  padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primary.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(6),
+                                    color: AppColors.primary.withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: const Icon(
-                                    Icons.edit_outlined,
+                                    Icons.edit_rounded,
                                     size: 18,
                                     color: AppColors.primary,
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(width: 8),
                               GestureDetector(
                                 onTap: () {
                                   showDialog(
@@ -1299,13 +1356,13 @@ class _Step2Services extends StatelessWidget {
                                   );
                                 },
                                 child: Container(
-                                  padding: const EdgeInsets.all(6),
+                                  padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: AppColors.error.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(6),
+                                    color: AppColors.error.withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: const Icon(
-                                    Icons.delete_outline,
+                                    Icons.delete_rounded,
                                     size: 18,
                                     color: AppColors.error,
                                   ),
@@ -1401,6 +1458,160 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
     Navigator.pop(context);
   }
 
+  void _showSearchServiceDialog() {
+    String searchQ = '';
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (context, setStateModal) {
+            final filtered = _availableServices.where((e) {
+              final name = e['nama_layanan']?.toString().toLowerCase() ?? '';
+              return name.contains(searchQ.toLowerCase());
+            }).toList();
+
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.7,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.border,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Pilih Layanan',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      onChanged: (val) {
+                        setStateModal(() {
+                          searchQ = val;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Cari layanan...',
+                        hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 14),
+                        prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textMuted, size: 20),
+                        filled: true,
+                        fillColor: AppColors.background,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.cleaning_services_rounded, color: AppColors.textMuted.withOpacity(0.3), size: 48),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Layanan tidak ditemukan',
+                                    style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.separated(
+                              itemCount: filtered.length,
+                              separatorBuilder: (_, __) => const Divider(color: AppColors.border, height: 1),
+                              itemBuilder: (context, index) {
+                                final e = filtered[index];
+                                final price = e['harga'] ?? e['harga_default'];
+                                final num priceVal = price is num ? price : (num.tryParse(price?.toString() ?? '0') ?? 0);
+                                final isSelected = _selectedLayanan?['id'] == e['id'];
+
+                                return ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                  leading: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: isSelected 
+                                          ? AppColors.primary.withOpacity(0.1) 
+                                          : AppColors.primary.withOpacity(0.05),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.cleaning_services_rounded, 
+                                      size: 18, 
+                                      color: isSelected ? AppColors.primary : AppColors.textMuted
+                                    ),
+                                  ),
+                                  title: Text(
+                                    e['nama_layanan'],
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                      color: isSelected ? AppColors.primary : AppColors.textDark,
+                                    ),
+                                  ),
+                                  subtitle: priceVal > 0
+                                      ? Padding(
+                                          padding: const EdgeInsets.only(top: 2),
+                                          child: Text(
+                                            'Harga default: Rp ${CurrencyInputFormatter.format(priceVal.toInt())}',
+                                            style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                                          ),
+                                        )
+                                      : null,
+                                  trailing: isSelected 
+                                      ? const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20)
+                                      : const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted, size: 20),
+                                  onTap: () {
+                                    Navigator.pop(dialogCtx, e);
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ).then((selected) {
+      if (selected != null) {
+        setState(() {
+          _selectedLayanan = selected as Map<String, dynamic>;
+          final price = _selectedLayanan!['harga'] ?? _selectedLayanan!['harga_default'];
+          final num priceVal = price is num ? price : (num.tryParse(price?.toString() ?? '0') ?? 0);
+          _hargaCtrl.text = priceVal > 0 ? CurrencyInputFormatter.format(priceVal.toInt()) : '';
+        });
+      }
+    });
+  }
+
   Widget build(BuildContext context) {
     return AnimatedPadding(
       padding: EdgeInsets.only(
@@ -1440,57 +1651,42 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
               else if (_availableServices.isEmpty)
                 const Text('Tidak ada layanan di cabang ini.')
               else
-                DropdownButtonFormField<Map<String, dynamic>>(
-                  value: _selectedLayanan,
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: AppColors.surface,
-                    contentPadding: const EdgeInsets.symmetric(
+                InkWell(
+                  onTap: _showSearchServiceDialog,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
                       horizontal: 14,
                       vertical: 14,
                     ),
-                    border: OutlineInputBorder(
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppColors.border),
+                      border: Border.all(color: AppColors.border),
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppColors.border),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: AppColors.primary,
-                        width: 1.5,
-                      ),
-                    ),
-                  ),
-                  icon: const Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    color: AppColors.textMuted,
-                  ),
-                  items: _availableServices
-                      .map(
-                        (e) => DropdownMenuItem(
-                          value: e,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
                           child: Text(
-                            e['nama_layanan'],
+                            _selectedLayanan != null 
+                                ? _selectedLayanan!['nama_layanan'] 
+                                : 'Pilih layanan...',
                             style: GoogleFonts.inter(
                               fontSize: 14,
-                              color: AppColors.textDark,
+                              fontWeight: _selectedLayanan != null ? FontWeight.w600 : FontWeight.normal,
+                              color: _selectedLayanan != null ? AppColors.textDark : AppColors.textMuted,
                             ),
                           ),
                         ),
-                      )
-                      .toList(),
-                  onChanged: (v) {
-                    if (v != null) {
-                      setState(() {
-                        _selectedLayanan = v;
-                      });
-                    }
-                  },
+                        const Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: AppColors.primary,
+                          size: 22,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               const SizedBox(height: 12),
               const SizedBox(height: 12),
@@ -1690,6 +1886,7 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
   List<Map<String, dynamic>> _availableCleaners = [];
   bool _isLoading = true;
   String? _error;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -1699,14 +1896,14 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
 
   Future<void> _fetchCleaners() async {
     try {
-      // Typically fetch from HrdService, we can import it or use OrderService if we add it
-      // Let's assume we can use a basic Dio call here or add fetchCleaners to OrderService
-      // Wait, we can't easily fetch without HrdService. We'll use HrdService.
-      final hrdService = _HrdServiceStub();
+      final svc = OrderService();
       final prefs = await SharedPreferences.getInstance();
       final cabangId = prefs.getInt('user_cabang_id') ?? 1;
 
-      final data = await hrdService.fetchCleaners(cabangId);
+      final data = await svc.fetchAvailableCleaners(
+        tanggal: widget.draft.tanggalPengerjaan.isNotEmpty ? widget.draft.tanggalPengerjaan : null,
+        waktu: widget.draft.waktuPengerjaan.isNotEmpty ? widget.draft.waktuPengerjaan : null,
+      );
       if (mounted) {
         setState(() {
           _availableCleaners = data;
@@ -1726,65 +1923,203 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
-    if (_error != null)
+    if (_error != null) {
       return Center(
         child: Text(_error!, style: const TextStyle(color: AppColors.error)),
       );
-    if (_availableCleaners.isEmpty)
+    }
+    if (_availableCleaners.isEmpty) {
       return const Center(child: Text('Tidak ada cleaner tersedia.'));
+    }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _availableCleaners.length,
-      itemBuilder: (context, index) {
-        final c = _availableCleaners[index];
-        final idStr = c['id'].toString();
-        // Since draft.cleaners is a List<OrderCleaner>, we'll just check if it's there
-        final isSelected = widget.draft.cleaners.any((x) => x.id == idStr);
+    final filtered = _availableCleaners.where((c) {
+      final name = (c['name'] ?? c['nama'] ?? '').toString().toLowerCase();
+      return name.contains(_searchQuery.toLowerCase());
+    }).toList();
 
-        return ListTile(
-          onTap: () {
-            setState(() {
-              if (isSelected) {
-                widget.draft.cleaners.removeWhere((x) => x.id == idStr);
-              } else {
-                widget.draft.cleaners.add(
-                  OrderCleaner(
-                    id: idStr,
-                    pesananCleanerId: '',
-                    name: c['name'] ?? c['nama'] ?? 'Unknown',
-                    rating: c['rating'] != null
-                        ? double.tryParse(c['rating'].toString()) ?? 0.0
-                        : 0.0,
-                    statusPengerjaan: CleanerWorkStatus.assigned,
-                    totalBonus: 0,
-                    bonuses: [],
-                  ),
-                );
-              }
-              widget.onChanged();
-            });
-          },
-          tileColor: isSelected ? AppColors.surfaceBlue : AppColors.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(
-              color: isSelected ? AppColors.primary : AppColors.border,
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: TextField(
+            onChanged: (val) {
+              setState(() {
+                _searchQuery = val;
+              });
+            },
+            decoration: InputDecoration(
+              hintText: 'Cari nama cleaner...',
+              hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 14),
+              prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textMuted, size: 20),
+              filled: true,
+              fillColor: AppColors.surface,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+              ),
             ),
           ),
-          leading: Icon(
-            Icons.person,
-            color: isSelected ? AppColors.primary : AppColors.textMuted,
-          ),
-          title: Text(
-            c['name'] ?? c['nama'] ?? '-',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-          ),
-          trailing: isSelected
-              ? const Icon(Icons.check_circle, color: AppColors.primary)
-              : null,
-        );
-      },
+        ),
+        Expanded(
+          child: filtered.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.people_outline_rounded, color: AppColors.textMuted.withOpacity(0.3), size: 48),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Cleaner tidak ditemukan',
+                        style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final c = filtered[index];
+                    final idStr = c['id'].toString();
+                    final isSelected = widget.draft.cleaners.any((x) => x.id == idStr);
+
+                    final statusStr = c['status_pengerjaan']?.toString().toLowerCase() ?? 'free';
+                    final bool isFree = statusStr == 'free';
+
+                    final String? foto = c['foto_profil']?.toString().replaceAll('\\', '/').trim();
+                    final bool hasFoto = foto != null && foto.isNotEmpty && foto != 'null';
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.primary.withOpacity(0.04) : AppColors.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isSelected ? AppColors.primary : AppColors.border,
+                          width: isSelected ? 1.5 : 1.0,
+                        ),
+                        boxShadow: [AppColors.cardShadow],
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        onTap: () {
+                          setState(() {
+                            if (isSelected) {
+                              widget.draft.cleaners.removeWhere((x) => x.id == idStr);
+                            } else {
+                              widget.draft.cleaners.add(
+                                OrderCleaner(
+                                  id: idStr,
+                                  pesananCleanerId: '',
+                                  name: c['name'] ?? c['nama'] ?? 'Unknown',
+                                  rating: c['rating'] != null
+                                      ? double.tryParse(c['rating'].toString()) ?? 0.0
+                                      : 0.0,
+                                  statusPengerjaan: CleanerWorkStatus.assigned,
+                                  totalBonus: 0,
+                                  bonuses: [],
+                                ),
+                              );
+                            }
+                            widget.onChanged();
+                          });
+                        },
+                        leading: Builder(
+                          builder: (context) {
+                            if (hasFoto) {
+                              final String fullUrl = foto.startsWith('http')
+                                  ? foto
+                                  : '${ApiClient.baseUrl.replaceAll('/api', '')}/storage/${foto.replaceFirst(RegExp(r'^/?storage/'), '')}';
+                              return Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: isSelected ? AppColors.primary : Colors.transparent, width: 1.5),
+                                ),
+                                child: ClipOval(
+                                  child: Image.network(
+                                    Uri.encodeFull(fullUrl),
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => CircleAvatar(
+                                      backgroundColor: isSelected ? AppColors.primary.withOpacity(0.1) : AppColors.surfaceBlue,
+                                      child: Icon(Icons.person, color: isSelected ? AppColors.primary : AppColors.textMuted),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+                            return CircleAvatar(
+                              radius: 22,
+                              backgroundColor: isSelected ? AppColors.primary.withOpacity(0.1) : AppColors.surfaceBlue,
+                              child: Icon(Icons.person, color: isSelected ? AppColors.primary : AppColors.textMuted),
+                            );
+                          },
+                        ),
+                        title: Text(
+                          c['name'] ?? c['nama'] ?? '-',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                            color: isSelected ? AppColors.primary : AppColors.textDark,
+                          ),
+                        ),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: isFree ? const Color(0xFFE6FFEC) : const Color(0xFFFFF7E6),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  isFree ? 'Tersedia' : 'Ada Jadwal',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: isFree ? const Color(0xFF28A745) : const Color(0xFFD48806),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        trailing: Container(
+                          width: 22,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected ? AppColors.primary : AppColors.border,
+                              width: 2,
+                            ),
+                            color: isSelected ? AppColors.primary : Colors.transparent,
+                          ),
+                          child: isSelected
+                              ? const Icon(
+                                  Icons.check,
+                                  size: 14,
+                                  color: Colors.white,
+                                )
+                              : null,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 }

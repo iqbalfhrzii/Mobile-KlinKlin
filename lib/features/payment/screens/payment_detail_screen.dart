@@ -187,7 +187,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                   final double diskonPersen = _o.pembayaran?.diskonPersen ?? 0.0;
                   final int diskonValue = (_o.total * (diskonPersen / 100)).round();
                   final int totalSetelahDiskon = _o.total - diskonValue;
-                  final int ppnPersen = _o.ppn ?? _o.pembayaran?.ppn ?? 11;
+                  final int ppnPersen = _o.ppn ?? _o.pembayaran?.ppn ?? 0;
                   final int ppnValue = (totalSetelahDiskon * (ppnPersen / 100)).round();
                   final int totalAkhir = totalSetelahDiskon + ppnValue;
                   return Text(_fmt(totalAkhir), style: GoogleFonts.inter(
@@ -327,7 +327,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
           final double diskonPersen = _o.pembayaran?.diskonPersen ?? 0.0;
           final int diskonValue = (_o.total * (diskonPersen / 100)).round();
           final int totalSetelahDiskon = _o.total - diskonValue;
-          final int ppnPersen = _o.ppn ?? _o.pembayaran?.ppn ?? 11;
+          final int ppnPersen = _o.ppn ?? _o.pembayaran?.ppn ?? 0;
           final int ppnValue = (totalSetelahDiskon * (ppnPersen / 100)).round();
           final int totalAkhir = totalSetelahDiskon + ppnValue;
           
@@ -645,7 +645,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   void _showPaymentSheet(BuildContext context) {
     final noteCtrl = TextEditingController();
     final diskonCtrl = TextEditingController();
-    bool applyPpn = (_o.ppn ?? _o.pembayaran?.ppn ?? 11) > 0;
+    bool applyPpn = (_o.ppn ?? _o.pembayaran?.ppn ?? 0) > 0;
     File? selectedProof;
     bool isSubmitting = false;
     String? errorMsg;

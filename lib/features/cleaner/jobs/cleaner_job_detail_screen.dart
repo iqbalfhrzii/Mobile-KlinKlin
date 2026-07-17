@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
@@ -20,11 +22,21 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
   bool _hasChanged = false;
   String _error = '';
 
+  Timer? _durationTimer;
+  String _durationDisplay = '00:00:00';
+  DateTime? _workStartTime;
+
   @override
   void initState() {
     super.initState();
     _job = widget.job;
     _refreshDetail();
+  }
+
+  @override
+  void dispose() {
+    _durationTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _refreshDetail() async {
@@ -35,12 +47,87 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
         _job = detail;
         _isLoading = false;
       });
+      if (_job['status_pengerjaan'] == 'in_progress') {
+        _startDurationTimer();
+      } else {
+        _durationTimer?.cancel();
+      }
     } catch (e) {
       // If fetching detail fails, just use the partial job data passed from list
       setState(() {
         _isLoading = false;
       });
+      if (_job['status_pengerjaan'] == 'in_progress') {
+        _startDurationTimer();
+      }
     }
+  }
+
+  void _startDurationTimer() {
+    _durationTimer?.cancel();
+    
+    DateTime? startTime;
+    if (_job['started_at'] != null) {
+      startTime = DateTime.tryParse(_job['started_at'].toString())?.toLocal();
+    }
+    if (startTime == null && _job['waktu_mulai'] != null) {
+      startTime = DateTime.tryParse(_job['waktu_mulai'].toString())?.toLocal();
+    }
+    if (startTime == null && _job['updated_at'] != null) {
+      startTime = DateTime.tryParse(_job['updated_at'].toString())?.toLocal();
+    }
+    _workStartTime = startTime;
+    
+    if (_workStartTime == null) {
+      _loadLocalStartTime();
+      return;
+    }
+    
+    _durationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      final now = DateTime.now();
+      final diff = now.difference(_workStartTime!);
+      if (diff.isNegative) {
+        setState(() {
+          _durationDisplay = '00:00:00';
+        });
+        return;
+      }
+      final hours = diff.inHours.toString().padLeft(2, '0');
+      final minutes = (diff.inMinutes % 60).toString().padLeft(2, '0');
+      final seconds = (diff.inSeconds % 60).toString().padLeft(2, '0');
+      setState(() {
+        _durationDisplay = '$hours:$minutes:$seconds';
+      });
+    });
+  }
+
+  Future<void> _loadLocalStartTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    final localTimeStr = prefs.getString('job_start_time_${_job['id']}');
+    if (localTimeStr != null) {
+      _workStartTime = DateTime.tryParse(localTimeStr);
+    }
+    if (_workStartTime == null) {
+      _workStartTime = DateTime.now();
+      prefs.setString('job_start_time_${_job['id']}', _workStartTime!.toIso8601String());
+    }
+    _startDurationTimer();
+  }
+
+  Future<void> _saveLocalStartTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    _workStartTime = now;
+    await prefs.setString('job_start_time_${_job['id']}', now.toIso8601String());
+  }
+
+  Future<void> _clearLocalStartTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('job_start_time_${_job['id']}');
   }
 
   Future<void> _updateStatus(String action) async {
@@ -51,9 +138,12 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
     try {
       if (action == 'start') {
         await _service.startJob(_job['id']);
+        await _saveLocalStartTime();
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pekerjaan dimulai!'), backgroundColor: AppColors.statusProgress));
       } else if (action == 'finish') {
         await _service.finishJob(_job['id']);
+        await _clearLocalStartTime();
+        _durationTimer?.cancel();
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pekerjaan selesai!'), backgroundColor: AppColors.statusDone));
       }
       _hasChanged = true;
@@ -83,6 +173,364 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
     }
   }
 
+  String _formatDateWithDay(String? dateStr) {
+    if (dateStr == null || dateStr == '-') return '-';
+    try {
+      final dt = DateTime.parse(dateStr);
+      final weekdayNames = {
+        1: 'Senin',
+        2: 'Selasa',
+        3: 'Rabu',
+        4: 'Kamis',
+        5: 'Jumat',
+        6: 'Sabtu',
+        7: 'Minggu',
+      };
+      final months = {
+        1: 'Januari',
+        2: 'Februari',
+        3: 'Maret',
+        4: 'April',
+        5: 'Mei',
+        6: 'Juni',
+        7: 'Juli',
+        8: 'Agustus',
+        9: 'September',
+        10: 'Oktober',
+        11: 'November',
+        12: 'Desember',
+      };
+      final dayName = weekdayNames[dt.weekday] ?? '';
+      final monthName = months[dt.month] ?? '';
+      return '$dayName, ${dt.day} $monthName ${dt.year}';
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  String _getFinishedDurationString() {
+    DateTime? start;
+    if (_job['started_at'] != null) {
+      start = DateTime.tryParse(_job['started_at'].toString())?.toLocal();
+    }
+    if (start == null && _job['waktu_mulai'] != null) {
+      start = DateTime.tryParse(_job['waktu_mulai'].toString())?.toLocal();
+    }
+    
+    DateTime? end;
+    if (_job['finished_at'] != null) {
+      end = DateTime.tryParse(_job['finished_at'].toString())?.toLocal();
+    }
+    if (end == null && _job['waktu_selesai'] != null) {
+      end = DateTime.tryParse(_job['waktu_selesai'].toString())?.toLocal();
+    }
+    if (end == null && _job['updated_at'] != null) {
+      end = DateTime.tryParse(_job['updated_at'].toString())?.toLocal();
+    }
+    
+    if (start == null || end == null) return 'Selesai';
+    final diff = end.difference(start);
+    if (diff.isNegative) return 'Selesai';
+    
+    final hours = diff.inHours;
+    final minutes = diff.inMinutes % 60;
+    final seconds = diff.inSeconds % 60;
+    
+    List<String> parts = [];
+    if (hours > 0) parts.add('$hours jam');
+    if (minutes > 0) parts.add('$minutes menit');
+    if (hours == 0 && minutes == 0) parts.add('$seconds detik');
+    
+    return parts.join(' ');
+  }
+
+  Widget _buildFuturisticScheduleOrTimerCard(String? status, String globalTgl, String globalWaktu) {
+    if (status == 'in_progress') {
+      return _buildFuturisticTimerCard(globalTgl, globalWaktu);
+    } else if (status == 'finished') {
+      return _buildFuturisticFinishedCard(globalTgl, globalWaktu);
+    } else {
+      return _buildFuturisticScheduledCard(globalTgl, globalWaktu);
+    }
+  }
+
+  Widget _buildFuturisticTimerCard(String globalTgl, String globalWaktu) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white, 
+        borderRadius: BorderRadius.circular(16), 
+        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Waktu Pengerjaan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.statusProgress.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: AppColors.statusProgress,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Aktif',
+                      style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.statusProgress),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.statusProgress.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.timer_outlined, color: AppColors.statusProgress, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _durationDisplay,
+                      style: GoogleFonts.inter(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.statusProgress,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Durasi pengerjaan berjalan',
+                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Divider(color: AppColors.border, height: 1),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.calendar_month, color: AppColors.textMuted, size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    globalTgl,
+                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  const Icon(Icons.access_time_outlined, color: AppColors.textMuted, size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Mulai: $globalWaktu',
+                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFuturisticFinishedCard(String globalTgl, String globalWaktu) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white, 
+        borderRadius: BorderRadius.circular(16), 
+        border: Border.all(color: AppColors.statusDone.withOpacity(0.3)),
+        boxShadow: [AppColors.cardShadow],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Durasi Pengerjaan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.statusDone.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Selesai',
+                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.statusDone),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.statusDone.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check_circle_outline_rounded, color: AppColors.statusDone, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _getFinishedDurationString(),
+                      style: GoogleFonts.inter(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Pekerjaan diselesaikan',
+                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Divider(color: AppColors.border, height: 1),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.calendar_month, color: AppColors.textMuted, size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    globalTgl,
+                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  const Icon(Icons.access_time_outlined, color: AppColors.textMuted, size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    globalWaktu,
+                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFuturisticScheduledCard(String globalTgl, String globalWaktu) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white, 
+        borderRadius: BorderRadius.circular(16), 
+        border: Border.all(color: AppColors.border),
+        boxShadow: [AppColors.cardShadow],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Jadwal Pengerjaan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.statusPending.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Mendatang',
+                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.statusPending),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
+                child: const Icon(Icons.calendar_month, color: AppColors.primary, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(globalTgl, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.access_time_outlined, size: 14, color: AppColors.textMuted),
+                        const SizedBox(width: 4),
+                        Text(globalWaktu, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = _job['status_pengerjaan'];
@@ -93,7 +541,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
     String globalTgl = '-';
     String globalWaktu = '-';
     if (details.isNotEmpty) {
-      globalTgl = details.first['tanggal_pengerjaan'] ?? '-';
+      globalTgl = _formatDateWithDay(details.first['tanggal_pengerjaan']);
       globalWaktu = details.first['waktu_pengerjaan'] ?? '-';
     }
     
@@ -177,6 +625,8 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        _buildFuturisticScheduleOrTimerCard(status, globalTgl, globalWaktu),
+                        const SizedBox(height: 20),
                         _buildStatusHeader(status),
                         const SizedBox(height: 24),
                         
@@ -196,161 +646,197 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary.withOpacity(0.1),
-                                      shape: BoxShape.circle,
+                                  CircleAvatar(
+                                    radius: 22,
+                                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                                    child: Text(
+                                      (pelanggan['nama_pelanggan'] ?? 'P').toString().substring(0, 1).toUpperCase(),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primary,
+                                      ),
                                     ),
-                                    child: const Icon(Icons.person, color: AppColors.primary, size: 24),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
-                                    child: Text(pelanggan['nama_pelanggan'] ?? '-', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          pelanggan['nama_pelanggan'] ?? '-',
+                                          style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                        ),
+                                        if (pelanggan['no_wa'] != null) ...[
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            pelanggan['no_wa'],
+                                            style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
                                   ),
+                                  if (pelanggan['no_wa'] != null && (_job['show_wa'] == true || _job['show_wa'] == 1 || _job['show_wa'] == '1'))
+                                    InkWell(
+                                      onTap: () => _launchWA(pelanggan['no_wa']),
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF25D366),
+                                          borderRadius: BorderRadius.circular(20),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(0xFF25D366).withOpacity(0.15),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.message_rounded, color: Colors.white, size: 14),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              'Chat WA',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
                                 ],
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 14),
+                              const Divider(color: AppColors.border, height: 1),
+                              const SizedBox(height: 14),
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
-                                    margin: const EdgeInsets.only(top: 2),
-                                    child: const Icon(Icons.location_on, color: AppColors.error, size: 20),
-                                  ),
+                                  const Icon(Icons.location_on_rounded, color: AppColors.error, size: 18),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(pelanggan['alamat_pelanggan'] ?? pelanggan['alamat'] ?? 'Alamat tidak tersedia', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, height: 1.4)),
+                                        Text(
+                                          'Alamat Pengerjaan',
+                                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMuted),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          pelanggan['alamat_pelanggan'] ?? pelanggan['alamat'] ?? 'Alamat tidak tersedia',
+                                          style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, height: 1.4),
+                                        ),
                                         if (pelanggan['patokan_alamat'] != null && pelanggan['patokan_alamat'].toString().trim().isNotEmpty) ...[
                                           const SizedBox(height: 8),
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                            decoration: BoxDecoration(color: AppColors.surfaceBlue, borderRadius: BorderRadius.circular(6)),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.surfaceBlue,
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+                                            ),
                                             child: Row(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                const Icon(Icons.flag_outlined, size: 14, color: AppColors.primary),
+                                                const Icon(Icons.flag_rounded, size: 14, color: AppColors.primary),
                                                 const SizedBox(width: 6),
-                                                Expanded(child: Text('${pelanggan['patokan_alamat']}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600))),
+                                                Expanded(
+                                                  child: Text(
+                                                    'Patokan: ${pelanggan['patokan_alamat']}',
+                                                    style: GoogleFonts.inter(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w500),
+                                                  ),
+                                                ),
                                               ],
                                             ),
                                           ),
-                                        ]
+                                        ],
                                       ],
                                     ),
                                   ),
                                 ],
                               ),
-                              if (pelanggan['no_wa'] != null && (_job['show_wa'] == true || _job['show_wa'] == 1 || _job['show_wa'] == '1')) ...[
-                                const SizedBox(height: 16),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.phone, color: AppColors.statusDone, size: 20),
-                                    const SizedBox(width: 8),
-                                    Expanded(child: Text(pelanggan['no_wa'], style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark))),
-                                    InkWell(
-                                      onTap: () => _launchWA(pelanggan['no_wa']),
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF25D366).withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: const Color(0xFF25D366).withOpacity(0.3)),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
+                              if (pelanggan['catatan'] != null && pelanggan['catatan'].toString().trim().isNotEmpty && pelanggan['catatan'].toString().trim() != 'null') ...[
+                                const SizedBox(height: 14),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF9F9F9),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: AppColors.border),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(Icons.note_alt_rounded, color: AppColors.primary, size: 16),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Image.network(
-                                              'https://www.edigitalagency.com.au/wp-content/uploads/WhatsApp-logo-webp-green-small-size.webp',
-                                              height: 16,
-                                              errorBuilder: (_, __, ___) => const Icon(Icons.message, size: 16, color: Color(0xFF1DA851)),
+                                            Text(
+                                              'Catatan Pelanggan',
+                                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
                                             ),
-                                            const SizedBox(width: 6),
-                                            Text('Chat Pelanggan', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF1DA851))),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              pelanggan['catatan'].toString(),
+                                              style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark),
+                                            ),
                                           ],
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ],
-
                               if (pesanan['keterangan_order'] != null && pesanan['keterangan_order'].toString().trim().isNotEmpty) ...[
-                                const SizedBox(height: 16),
-                                const Divider(color: AppColors.border),
-                                const SizedBox(height: 12),
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Icon(Icons.sticky_note_2_rounded, color: AppColors.primary, size: 20),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text('Catatan Pesanan', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            pesanan['keterangan_order'].toString(),
-                                            style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, fontStyle: FontStyle.italic),
-                                          ),
-                                        ],
+                                const SizedBox(height: 14),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.grey.shade200),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Icon(Icons.notes_rounded, color: Colors.grey.shade600, size: 16),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Catatan Pesanan',
+                                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textMuted),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              pesanan['keterangan_order'].toString(),
+                                              style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark, fontStyle: FontStyle.italic),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ],
                             ],
                           ),
-                        ),
-                  const SizedBox(height: 24),
-                  
-                  // Jadwal Pengerjaan
-                  Text('Jadwal Pengerjaan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                  const SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.white, 
-                      borderRadius: BorderRadius.circular(16), 
-                      border: Border.all(color: AppColors.border),
-                      boxShadow: [AppColors.cardShadow],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
-                          child: const Icon(Icons.calendar_month, color: AppColors.primary, size: 22),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(globalTgl, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  const Icon(Icons.access_time_outlined, size: 14, color: AppColors.textMuted),
-                                  const SizedBox(width: 4),
-                                  Text(globalWaktu, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
+                        ),const SizedBox(height: 8),
 
                   // Detail Layanan
                   Text('Layanan Dipesan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),

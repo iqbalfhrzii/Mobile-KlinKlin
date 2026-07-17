@@ -35,7 +35,7 @@ class _FinanceMainShellState extends State<FinanceMainShell> {
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
   }
 
-  final _screens = const [
+  final List<Widget> _screens = const [
     FinanceDashboardScreen(),
     FinanceCashFlowMenuScreen(),
     AdminAttendanceListScreen(),

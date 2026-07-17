@@ -154,6 +154,69 @@ class _CleanerJobListScreenState extends State<CleanerJobListScreen> {
     }
   }
 
+  String _formatDateWithDay(String? dateStr) {
+    if (dateStr == null || dateStr == '-') return '-';
+    try {
+      final dt = DateTime.parse(dateStr);
+      final weekdayNames = {
+        1: 'Senin',
+        2: 'Selasa',
+        3: 'Rabu',
+        4: 'Kamis',
+        5: 'Jumat',
+        6: 'Sabtu',
+        7: 'Minggu',
+      };
+      final months = {
+        1: 'Januari',
+        2: 'Februari',
+        3: 'Maret',
+        4: 'April',
+        5: 'Mei',
+        6: 'Juni',
+        7: 'Juli',
+        8: 'Agustus',
+        9: 'September',
+        10: 'Oktober',
+        11: 'November',
+        12: 'Desember',
+      };
+      final dayName = weekdayNames[dt.weekday] ?? '';
+      final monthName = months[dt.month] ?? '';
+      return '$dayName, ${dt.day} $monthName ${dt.year}';
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  String? _getRelativeDay(String? dateStr) {
+    if (dateStr == null || dateStr == '-') return null;
+    try {
+      final parsedDate = DateTime.parse(dateStr);
+      final today = DateTime.now();
+      
+      final dateOnly = DateTime(parsedDate.year, parsedDate.month, parsedDate.day);
+      final todayOnly = DateTime(today.year, today.month, today.day);
+      
+      final difference = dateOnly.difference(todayOnly).inDays;
+      
+      if (difference == 0) {
+        return 'Hari Ini';
+      } else if (difference == 1) {
+        return 'Besok';
+      } else if (difference == -1) {
+        return 'Kemarin';
+      } else if (difference > 1 && difference <= 7) {
+        return '$difference hari lagi';
+      } else if (difference < -1 && difference >= -7) {
+        return '${difference.abs()} hari lalu';
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -211,6 +274,7 @@ class _CleanerJobListScreenState extends State<CleanerJobListScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: ListView.separated(
+                          padding: EdgeInsets.zero,
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: _filteredJobs.length,
@@ -345,10 +409,22 @@ class _CleanerJobListScreenState extends State<CleanerJobListScreen> {
     
     String jam = '-';
     String tanggal = '-';
+    String? rawTanggal;
     if (details.isNotEmpty) {
       jam = details[0]['waktu_pengerjaan'] ?? '-';
-      tanggal = details[0]['tanggal_pengerjaan'] ?? '-';
+      rawTanggal = details[0]['tanggal_pengerjaan'];
+      tanggal = _formatDateWithDay(rawTanggal);
     }
+
+    // Format jam pengerjaan (remove seconds if present)
+    if (jam.length > 5 && jam.contains(':')) {
+      final parts = jam.split(':');
+      if (parts.length >= 2) {
+        jam = '${parts[0]}:${parts[1]}';
+      }
+    }
+
+    final relativeDay = _getRelativeDay(rawTanggal);
 
     return GestureDetector(
       onTap: () async {
@@ -371,6 +447,7 @@ class _CleanerJobListScreenState extends State<CleanerJobListScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header Row (ID and Status)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -379,35 +456,131 @@ class _CleanerJobListScreenState extends State<CleanerJobListScreen> {
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.border),
                   ),
                   child: Text('#${pesanan['id'] ?? '-'}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
                 ),
-                _buildStatusBadge(status),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (relativeDay != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        margin: const EdgeInsets.only(right: 6),
+                        decoration: BoxDecoration(
+                          color: (relativeDay == 'Hari Ini' || relativeDay == 'Besok') 
+                              ? AppColors.primary.withOpacity(0.08) 
+                              : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: (relativeDay == 'Hari Ini' || relativeDay == 'Besok') 
+                                ? AppColors.primary.withOpacity(0.15) 
+                                : Colors.grey.shade200
+                          ),
+                        ),
+                        child: Text(
+                          relativeDay,
+                          style: GoogleFonts.inter(
+                            fontSize: 10, 
+                            fontWeight: FontWeight.bold, 
+                            color: (relativeDay == 'Hari Ini' || relativeDay == 'Besok') 
+                                ? AppColors.primary 
+                                : AppColors.textMuted
+                          ),
+                        ),
+                      ),
+                    ],
+                    _buildStatusBadge(status),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 12),
+            
+            // Customer Row (Top and Prominent)
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                  child: const Icon(Icons.person_rounded, size: 18, color: AppColors.primary),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    customerName,
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            
+            // Highlighted Schedule (Waktu & Tanggal)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceBlue, // A soft blue background for schedule
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.calendar_month_rounded, color: AppColors.primary, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Jadwal Pengerjaan',
+                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primary.withOpacity(0.8), letterSpacing: 0.5),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$tanggal · $jam WIB',
+                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            
+            // Address Section
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.05), borderRadius: BorderRadius.circular(12)),
-                  child: const Icon(Icons.person_outline, color: AppColors.primary, size: 20),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withOpacity(0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.location_on_rounded, color: AppColors.error, size: 18),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(customerName, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                      Text(
+                        'Alamat Pengerjaan',
+                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMuted),
+                      ),
                       const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.access_time_rounded, size: 12, color: AppColors.textMuted),
-                          const SizedBox(width: 4),
-                          Text('$tanggal · $jam', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
-                        ],
-                      )
+                      Text(
+                        customerAddress,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark, height: 1.4),
+                      ),
                     ],
                   ),
                 ),
@@ -416,16 +589,20 @@ class _CleanerJobListScreenState extends State<CleanerJobListScreen> {
             const SizedBox(height: 12),
             const Divider(color: AppColors.border, height: 1),
             const SizedBox(height: 12),
+            
+            // Card Footer
             Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                const Icon(Icons.location_on_outlined, size: 16, color: AppColors.textMuted),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(customerAddress, maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textDark)),
+                Row(
+                  children: [
+                    Text('Lihat Detail', style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 2),
+                    const Icon(Icons.chevron_right_rounded, color: AppColors.primary, size: 16),
+                  ],
                 ),
-                const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted, size: 20),
               ],
-            )
+            ),
           ],
         ),
       ),
