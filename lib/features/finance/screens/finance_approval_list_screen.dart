@@ -43,9 +43,19 @@ class _FinanceApprovalListScreenState extends State<FinanceApprovalListScreen> {
       });
     }
     try {
-      final orders = await _orderService.fetchOrders(
-        statusPesanan: 'waiting_payment_approval',
-      );
+      final allOrders = await _orderService.fetchOrders();
+      final orders = allOrders.where((o) {
+        final pStatus = o.paymentStatus.toLowerCase();
+        final pPembayaranStatus = o.pembayaran?.statusPembayaran.toLowerCase() ?? '';
+        if (pStatus == 'paid' || pStatus == 'approved' || pStatus == 'lunas' || pStatus == 'settlement') return false;
+        if (o.status == OrderStatus.cancelled || pStatus == 'cancelled' || pStatus == 'rejected') return false;
+        return o.status == OrderStatus.waitingPaymentApproval ||
+            pStatus == 'pending' ||
+            pStatus == 'waiting_approval' ||
+            pPembayaranStatus == 'pending' ||
+            pPembayaranStatus == 'waiting_approval' ||
+            (o.paymentProof != null && o.paymentProof!.isNotEmpty);
+      }).toList();
       if (mounted) {
         setState(() {
           _orders = orders;

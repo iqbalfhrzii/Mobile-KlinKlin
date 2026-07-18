@@ -22,10 +22,12 @@ class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScree
   Future<void> _handleApprove() async {
     setState(() => _isProcessing = true);
     try {
-      if (widget.order.pembayaran == null) {
+      final int pId = widget.order.pembayaran?.id ??
+          int.tryParse(widget.order.id.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      if (pId == 0) {
         throw Exception('Data pembayaran tidak ditemukan');
       }
-      await _financeService.approvePembayaran(widget.order.pembayaran!.id, 'approved');
+      await _financeService.approvePembayaran(pId, 'approved');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Pembayaran berhasil disetujui'),

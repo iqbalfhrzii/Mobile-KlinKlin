@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/whatsapp_icon.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../services/cleaner_job_service.dart';
 
@@ -698,7 +699,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            const Icon(Icons.message_rounded, color: Colors.white, size: 14),
+                                            const WhatsAppIcon(size: 18, color: Colors.white),
                                             const SizedBox(width: 6),
                                             Text(
                                               'Chat WA',

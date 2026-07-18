@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
+import '../../../core/widgets/whatsapp_icon.dart';
 import '../../../core/data/mock_data.dart';
 import '../../../core/data/order_model.dart';
 import '../../../core/widgets/weekly_date_picker.dart';
@@ -440,7 +441,7 @@ class _OrderCard extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            StatusBadge(status: o.status),
+                            StatusBadge(status: o.status, order: o),
                           ],
                         ),
                       ),
@@ -566,11 +567,10 @@ class _OrderCard extends StatelessWidget {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(
-                                      Icons.chat_bubble_outline_rounded,
-                                      size: 14,
-                                      color: Colors.white,
-                                    ),
+                                     const WhatsAppIcon(
+                                       size: 18,
+                                       color: Colors.white,
+                                     ),
                                     const SizedBox(width: 6),
                                     Text(
                                       'Cust',
@@ -612,11 +612,10 @@ class _OrderCard extends StatelessWidget {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(
-                                        Icons.chat_bubble_outline_rounded,
-                                        size: 14,
-                                        color: Colors.white,
-                                      ),
+                                       const WhatsAppIcon(
+                                         size: 18,
+                                         color: Colors.white,
+                                       ),
                                       const SizedBox(width: 6),
                                       Text(
                                         'Cleaner',

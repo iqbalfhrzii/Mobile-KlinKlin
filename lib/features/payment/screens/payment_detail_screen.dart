@@ -118,7 +118,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
           Text(_o.id, style: GoogleFonts.inter(
               fontSize: 11, color: Colors.white.withOpacity(0.65))),
         ])),
-        StatusBadge(status: _o.status),
+        StatusBadge(status: _o.status, order: _o),
       ]),
     );
   }

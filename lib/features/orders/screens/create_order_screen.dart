@@ -102,7 +102,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 ),
               ),
               Text(
-                'Langkah ${_step + 1} dari 3 · ${_steps[_step]}',
+                'Langkah ${_step + 1} dari 4 · ${_steps[_step]}',
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   color: Colors.white.withOpacity(0.7),
@@ -1251,9 +1251,9 @@ class _Step2Services extends StatelessWidget {
                                       child: Text(
                                         'Qty: ${s.qty}',
                                         style: GoogleFonts.inter(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.textMuted,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.primary,
                                         ),
                                       ),
                                     ),
@@ -2223,7 +2223,7 @@ class _Step4SummaryState extends State<_Step4Summary> {
                                     ),
                                   ),
                                   Text(
-                                    'Rp ${s.price}',
+                                    'Rp ${CurrencyInputFormatter.format(s.price)}',
                                     style: GoogleFonts.inter(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
@@ -2298,7 +2298,7 @@ class _Step4SummaryState extends State<_Step4Summary> {
                       ),
                     ),
                     Text(
-                      'Rp $subtotal',
+                      'Rp ${CurrencyInputFormatter.format(subtotal)}',
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         color: AppColors.textDark,
@@ -2342,7 +2342,7 @@ class _Step4SummaryState extends State<_Step4Summary> {
                       ],
                     ),
                     Text(
-                      'Rp $ppn',
+                      'Rp ${CurrencyInputFormatter.format(ppn)}',
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         color: AppColors.textDark,
@@ -2367,7 +2367,7 @@ class _Step4SummaryState extends State<_Step4Summary> {
                       ),
                     ),
                     Text(
-                      'Rp $totalAkhir',
+                      'Rp ${CurrencyInputFormatter.format(totalAkhir)}',
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,

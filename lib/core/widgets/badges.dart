@@ -4,46 +4,153 @@ import '../theme/app_colors.dart';
 import '../data/order_model.dart';
 
 class StatusBadge extends StatelessWidget {
-  const StatusBadge({super.key, required this.status});
+  const StatusBadge({super.key, required this.status, this.order});
   final OrderStatus status;
-
-  static const _config = {
-    OrderStatus.draft: _BadgeConfig('Draf', AppColors.statusPending, AppColors.statusPendingBg),
-    OrderStatus.assigned: _BadgeConfig('Menunggu Pengerjaan', AppColors.statusAssigned, AppColors.statusAssignedBg),
-    OrderStatus.inProgress: _BadgeConfig('Sedang Dikerjakan', AppColors.statusProgress, AppColors.statusProgressBg),
-    OrderStatus.finishedByCleaner: _BadgeConfig('Selesai Dikerjakan', AppColors.statusDone, AppColors.statusDoneBg),
-    OrderStatus.waitingPaymentApproval: _BadgeConfig('Menunggu Approve', AppColors.statusPending, AppColors.statusPendingBg),
-    OrderStatus.waitingCancelApproval: _BadgeConfig('Menunggu Batal', Colors.orange, Color(0xFFFFF3E0)),
-    OrderStatus.completed: _BadgeConfig('Selesai / Lunas', AppColors.statusDone, AppColors.statusDoneBg),
-    OrderStatus.cancelled: _BadgeConfig('Dibatalkan', Colors.red, Color(0xFFFFEBEE)),
-  };
+  final OrderModel? order;
 
   @override
   Widget build(BuildContext context) {
-    final cfg = _config[status] ?? _BadgeConfig(status.name, AppColors.statusPending, AppColors.statusPendingBg);
+    if (order != null) {
+      return Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          WorkStatusBadge(status: status),
+          PaymentStatusBadge(order: order),
+        ],
+      );
+    }
+    return WorkStatusBadge(status: status);
+  }
+}
+
+class WorkStatusBadge extends StatelessWidget {
+  const WorkStatusBadge({super.key, required this.status});
+  final OrderStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    String label;
+    Color color;
+    Color bg;
+
+    switch (status) {
+      case OrderStatus.draft:
+        label = 'Draf';
+        color = AppColors.textMuted;
+        bg = const Color(0xFFF3F4F6);
+        break;
+      case OrderStatus.assigned:
+        label = 'Ditugaskan';
+        color = AppColors.primary;
+        bg = AppColors.surfaceBlue;
+        break;
+      case OrderStatus.inProgress:
+        label = 'Dikerjakan';
+        color = const Color(0xFF0284C7);
+        bg = const Color(0xFFE0F2FE);
+        break;
+      case OrderStatus.finishedByCleaner:
+        label = 'Selesai Cleaner';
+        color = const Color(0xFFD97706);
+        bg = const Color(0xFFFEF3C7);
+        break;
+      case OrderStatus.completed:
+        label = 'Selesai';
+        color = AppColors.statusDone;
+        bg = AppColors.statusDoneBg;
+        break;
+      case OrderStatus.waitingPaymentApproval:
+        label = 'Dikerjakan';
+        color = const Color(0xFF0284C7);
+        bg = const Color(0xFFE0F2FE);
+        break;
+      case OrderStatus.waitingCancelApproval:
+        label = 'Menunggu Batal';
+        color = Colors.orange;
+        bg = const Color(0xFFFFF3E0);
+        break;
+      case OrderStatus.cancelled:
+        label = 'Dibatalkan';
+        color = AppColors.error;
+        bg = const Color(0xFFFEF2F2);
+        break;
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: cfg.bg,
+        color: bg,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        cfg.label,
+        label,
         style: GoogleFonts.inter(
           fontSize: 10,
           fontWeight: FontWeight.w700,
-          color: cfg.color,
+          color: color,
         ),
       ),
     );
   }
 }
 
-class _BadgeConfig {
-  const _BadgeConfig(this.label, this.color, this.bg);
-  final String label;
-  final Color color;
-  final Color bg;
+class PaymentStatusBadge extends StatelessWidget {
+  const PaymentStatusBadge({
+    super.key,
+    this.paymentStatus,
+    this.orderStatus,
+    this.order,
+  });
+
+  final String? paymentStatus;
+  final OrderStatus? orderStatus;
+  final OrderModel? order;
+
+  @override
+  Widget build(BuildContext context) {
+    final String statusStr = (order?.paymentStatus ?? paymentStatus ?? 'unpaid').toLowerCase();
+    final OrderStatus oStatus = order?.status ?? orderStatus ?? OrderStatus.draft;
+
+    String label;
+    Color color;
+    Color bg;
+
+    if (statusStr == 'paid' || statusStr == 'approved' || statusStr == 'disetujui' || statusStr == 'lunas') {
+      label = 'Disetujui';
+      color = const Color(0xFF16A34A);
+      bg = const Color(0xFFDCFCE7);
+    } else if (statusStr == 'pending' || statusStr == 'waiting_payment_approval' || oStatus == OrderStatus.waitingPaymentApproval) {
+      label = 'Pending';
+      color = const Color(0xFFD97706);
+      bg = const Color(0xFFFEF3C7);
+    } else if (statusStr == 'rejected' || statusStr == 'ditolak') {
+      label = 'Ditolak';
+      color = AppColors.error;
+      bg = const Color(0xFFFEF2F2);
+    } else {
+      label = 'Belum Dibayar';
+      color = const Color(0xFFDC2626);
+      bg = const Color(0xFFFEE2E2);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.inter(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
+  }
 }
 
 /// Avatar inisial (tanpa foto)
@@ -95,35 +202,3 @@ class InitialsAvatar extends StatelessWidget {
   }
 }
 
-/// Category chip (VIP / Premium / Reguler)
-class CategoryBadge extends StatelessWidget {
-  const CategoryBadge({super.key, required this.category});
-  final String category;
-
-  static const _colors = {
-    'VIP':     _BadgeConfig('VIP',     AppColors.vip,     AppColors.vipBg),
-    'Premium': _BadgeConfig('Premium', AppColors.premium, AppColors.premiumBg),
-    'Reguler': _BadgeConfig('Reguler', AppColors.reguler, AppColors.regulerBg),
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    final cfg = _colors[category] ?? _colors['Reguler']!;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: cfg.bg,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: cfg.color.withOpacity(0.3)),
-      ),
-      child: Text(
-        cfg.label,
-        style: GoogleFonts.inter(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          color: cfg.color,
-        ),
-      ),
-    );
-  }
-}
