@@ -1038,8 +1038,10 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                           final svc = PaymentService();
                           
                           String apiMethod;
-                          if (selectedMethod == 'Transfer BCA' || selectedMethod == 'Transfer Mandiri') {
-                            apiMethod = 'transfer';
+                          if (selectedMethod == 'Transfer BCA') {
+                            apiMethod = 'transfer_bca';
+                          } else if (selectedMethod == 'Transfer Mandiri') {
+                            apiMethod = 'transfer_mandiri';
                           } else if (selectedMethod == 'QRIS') {
                             apiMethod = 'qris';
                           } else {

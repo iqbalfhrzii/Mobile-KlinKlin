@@ -28,7 +28,10 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
   final OrderService _orderService = OrderService();
   final FinanceService _financeService = FinanceService();
 
-  List<OrderModel> _allOrders = [];
+  List<OrderModel> _approveOrders = [];
+  List<OrderModel> _batalOrders = [];
+  List<OrderModel> _riwayatOrders = [];
+
   bool _isLoading = true;
   String _error = '';
   Timer? _refreshTimer;
@@ -55,30 +58,31 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
     }
 
     try {
-      List<OrderModel> fetched = [];
-      if (_statusFilter == 'Approve') {
-        final allOrders = await _orderService.fetchOrders();
-        fetched = allOrders.where((o) {
-          final pStatus = o.paymentStatus.toLowerCase();
-          final pPembayaranStatus = o.pembayaran?.statusPembayaran.toLowerCase() ?? '';
-          if (pStatus == 'paid' || pStatus == 'approved' || pStatus == 'lunas' || pStatus == 'settlement') return false;
-          if (o.status == OrderStatus.cancelled || pStatus == 'cancelled' || pStatus == 'rejected') return false;
-          return o.status == OrderStatus.waitingPaymentApproval ||
-              pStatus == 'pending' ||
-              pStatus == 'waiting_approval' ||
-              pPembayaranStatus == 'pending' ||
-              pPembayaranStatus == 'waiting_approval' ||
-              (o.paymentProof != null && o.paymentProof!.isNotEmpty);
-        }).toList();
-      } else if (_statusFilter == 'Batal') {
-        fetched = await _financeService.fetchPembatalan(statusPesanan: 'waiting_cancel_approval');
-      } else if (_statusFilter == 'Riwayat') {
-        fetched = await _financeService.fetchProcessedOrders(statusApproval: 'approved');
-      }
+      final results = await Future.wait([
+        _orderService.fetchOrders(),
+        _financeService.fetchPembatalan(statusPesanan: 'waiting_cancel_approval'),
+        _financeService.fetchProcessedOrders(statusApproval: 'approved'),
+      ]);
+
+      final allOrders = results[0];
+      final approveList = allOrders.where((o) {
+        final pStatus = o.paymentStatus.toLowerCase();
+        final pPembayaranStatus = o.pembayaran?.statusPembayaran.toLowerCase() ?? '';
+        if (pStatus == 'paid' || pStatus == 'approved' || pStatus == 'lunas' || pStatus == 'settlement') return false;
+        if (o.status == OrderStatus.cancelled || pStatus == 'cancelled' || pStatus == 'rejected') return false;
+        return o.status == OrderStatus.waitingPaymentApproval ||
+            pStatus == 'pending' ||
+            pStatus == 'waiting_approval' ||
+            pPembayaranStatus == 'pending' ||
+            pPembayaranStatus == 'waiting_approval' ||
+            (o.paymentProof != null && o.paymentProof!.isNotEmpty);
+      }).toList();
 
       if (mounted) {
         setState(() {
-          _allOrders = fetched;
+          _approveOrders = approveList;
+          _batalOrders = results[1];
+          _riwayatOrders = results[2];
           _isLoading = false;
         });
       }
@@ -92,13 +96,13 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
     }
   }
 
-  List<OrderModel> get _filtered {
-    return _allOrders.where((o) {
+  List<OrderModel> _applyFilters(List<OrderModel> list, {bool ignoreDate = false}) {
+    return list.where((o) {
       final q = _query.toLowerCase();
       final matchQ = o.id.toLowerCase().contains(q) ||
           o.customer.name.toLowerCase().contains(q) ||
           o.services.any((s) => s.name.toLowerCase().contains(q));
-      final matchDate = _filterStart == null || (
+      final matchDate = ignoreDate || _filterStart == null || (
         !o.scheduleDateTime.isBefore(_filterStart!) &&
         !o.scheduleDateTime.isAfter(_filterEnd!)
       );
@@ -106,14 +110,42 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
     }).toList();
   }
 
+  List<OrderModel> get _currentList {
+    if (_statusFilter == 'Approve') return _approveOrders;
+    if (_statusFilter == 'Batal') return _batalOrders;
+    return _riwayatOrders;
+  }
+
+  List<OrderModel> get _filteredApprove => _applyFilters(_approveOrders, ignoreDate: true);
+  List<OrderModel> get _filteredBatal => _applyFilters(_batalOrders, ignoreDate: true);
+  List<OrderModel> get _filteredRiwayat => _applyFilters(_riwayatOrders, ignoreDate: false);
+
+  List<OrderModel> get _filtered {
+    if (_statusFilter == 'Approve') return _filteredApprove;
+    if (_statusFilter == 'Batal') return _filteredBatal;
+    return _filteredRiwayat;
+  }
+
   void _changeTab(String tab) {
     if (_statusFilter == tab) return;
     setState(() {
       _statusFilter = tab;
-      _allOrders = [];
     });
-    _loadData();
   }
+
+  int _calculateOrderTotal(OrderModel o) {
+    final double diskonPersen = o.pembayaran?.diskonPersen ?? 0.0;
+    final int diskonValue = (o.total * (diskonPersen / 100)).round();
+    final int totalSetelahDiskon = o.total - diskonValue;
+    final int ppnPersen = o.ppn ?? o.pembayaran?.ppn ?? 0;
+    final int ppnValue = (o.pembayaran != null || o.ppn != null)
+        ? (totalSetelahDiskon * (ppnPersen / 100)).round()
+        : 0;
+    return totalSetelahDiskon + ppnValue;
+  }
+
+  String _fmt(int n) => 'Rp ${n.toString().replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +155,7 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
         children: [
           _buildHeader(),
           Expanded(
-            child: _isLoading && _allOrders.isEmpty
+            child: _isLoading && _currentList.isEmpty
                 ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
                 : RefreshIndicator(
                     onRefresh: () => _loadData(),
@@ -146,10 +178,10 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
                             },
                           ),
                           const SizedBox(height: 16),
-                          _buildFilterRow(),
+                          _buildSummaryCards(),
                           const SizedBox(height: 16),
                           
-                          if (_error.isNotEmpty && _allOrders.isEmpty)
+                          if (_error.isNotEmpty && _currentList.isEmpty)
                             Center(child: Padding(
                               padding: const EdgeInsets.only(top: 20),
                               child: Text(_error, style: const TextStyle(color: AppColors.error)),
@@ -196,51 +228,39 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
     );
   }
 
-  Widget _buildFilterRow() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _filterChip('Approve'),
-          const SizedBox(width: 8),
-          _filterChip('Batal'),
-          const SizedBox(width: 8),
-          _filterChip('Riwayat'),
-        ],
-      ),
-    );
-  }
+  Widget _buildSummaryCards() {
+    final totalApprove = _filteredApprove.fold<int>(0, (s, o) => s + _calculateOrderTotal(o));
+    final totalBatal = _filteredBatal.fold<int>(0, (s, o) => s + _calculateOrderTotal(o));
+    final totalRiwayat = _filteredRiwayat.fold<int>(0, (s, o) => s + _calculateOrderTotal(o));
 
-  Widget _filterChip(String label) {
-    final isSelected = _statusFilter == label;
-    return GestureDetector(
-      onTap: () => _changeTab(label),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.border,
-          ),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: AppColors.primary.withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            )
-          ] : null,
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: isSelected ? Colors.white : AppColors.textMuted,
-          ),
-        ),
-      ),
-    );
+    return Row(children: [
+      Expanded(child: _SmallCard(
+        label: 'Approve', value: _fmt(totalApprove),
+        icon: Icons.pending_actions_rounded,
+        color: AppColors.primary, bg: AppColors.surfaceBlue,
+        count: _filteredApprove.length,
+        isActive: _statusFilter == 'Approve',
+        onTap: () => _changeTab('Approve'),
+      )),
+      const SizedBox(width: 8),
+      Expanded(child: _SmallCard(
+        label: 'Batal', value: _fmt(totalBatal),
+        icon: Icons.cancel_presentation_rounded,
+        color: const Color(0xFFF59E0B), bg: const Color(0xFFF59E0B).withOpacity(0.1),
+        count: _filteredBatal.length,
+        isActive: _statusFilter == 'Batal',
+        onTap: () => _changeTab('Batal'),
+      )),
+      const SizedBox(width: 8),
+      Expanded(child: _SmallCard(
+        label: 'Riwayat', value: _fmt(totalRiwayat),
+        icon: Icons.history_rounded,
+        color: AppColors.statusDone, bg: AppColors.statusDoneBg,
+        count: _filteredRiwayat.length,
+        isActive: _statusFilter == 'Riwayat',
+        onTap: () => _changeTab('Riwayat'),
+      )),
+    ]);
   }
 
   Widget _buildOrderItem(OrderModel order) {
@@ -255,7 +275,7 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
 
   Widget _buildApproveCard(OrderModel order) {
     final formatCurrency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
-    final totalAkhir = order.pembayaran?.total ?? (order.total + (order.total * 0.11).round());
+    final totalAkhir = _calculateOrderTotal(order);
 
     return GestureDetector(
       onTap: () async {
@@ -326,7 +346,7 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
 
   Widget _buildCancelCard(OrderModel order) {
     final formatCurrency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
-    final totalAkhir = order.pembayaran?.total ?? (order.total + (order.total * 0.11).round());
+    final totalAkhir = _calculateOrderTotal(order);
     
     return GestureDetector(
       onTap: () async {
@@ -411,7 +431,7 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
 
   Widget _buildRiwayatCard(OrderModel order) {
     final formatCurrency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
-    final totalAkhir = order.pembayaran?.total ?? (order.total + (order.total * 0.11).round());
+    final totalAkhir = _calculateOrderTotal(order);
     
     Color statusColor;
     String statusText;
@@ -498,6 +518,65 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SmallCard extends StatelessWidget {
+  const _SmallCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+    required this.bg,
+    required this.count,
+    this.isActive = true,
+    this.onTap,
+  });
+  final String label, value;
+  final IconData icon;
+  final Color color, bg;
+  final int count;
+  final bool isActive;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 200),
+        opacity: isActive ? 1.0 : 0.4,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: isActive ? color : AppColors.border),
+            boxShadow: [if (isActive) AppColors.cardShadow],
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
+                  child: Icon(icon, color: color, size: 12)),
+              const Spacer(),
+              Text('$count tx',
+                  style: GoogleFonts.inter(fontSize: 9, color: AppColors.textMuted)),
+            ]),
+            const SizedBox(height: 8),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(value, style: GoogleFonts.inter(
+                  fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+            ),
+            const SizedBox(height: 2),
+            Text(label,
+                style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
+          ]),
         ),
       ),
     );

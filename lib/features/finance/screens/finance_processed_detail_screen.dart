@@ -98,8 +98,10 @@ class FinanceProcessedDetailScreen extends StatelessWidget {
     }
 
     String paymentMethod = order.paymentMethod;
-    if (paymentMethod.toLowerCase() == 'midtrans' || paymentMethod.toLowerCase() == 'manual_transfer') {
-      paymentMethod = 'Transfer';
+    if (paymentMethod == '-') {
+      paymentMethod = 'Belum dipilih';
+    } else {
+      paymentMethod = paymentMethod.replaceAll('_', ' ').split(' ').map((s) => s.isNotEmpty ? '${s[0].toUpperCase()}${s.substring(1)}' : '').join(' ');
     }
 
     return Scaffold(
