@@ -245,28 +245,29 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             children: [
               HeaderBackButton(onTap: () => Navigator.pop(context)),
               const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Detail Pesanan',
-                    style: GoogleFonts.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Detail Pesanan',
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  Text(
-                    o.id,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: Colors.white.withOpacity(0.6),
+                    Text(
+                      o.id,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: Colors.white.withOpacity(0.6),
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              const Spacer(),
-              StatusBadge(status: o.status, order: o),
               if (canEdit) ...[
                 const SizedBox(width: 8),
                 InkWell(
@@ -284,7 +285,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   borderRadius: BorderRadius.circular(20),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
+                      horizontal: 12,
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
@@ -302,9 +303,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           color: Colors.white,
                           size: 14,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 6),
                         Text(
-                          'Edit',
+                          'Edit Pesanan',
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -334,6 +335,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   Widget _buildCustomerCard(OrderModel o) {
     return _card(
       title: 'Info Pesanan',
+      trailingAction: StatusBadge(status: o.status, order: o),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
