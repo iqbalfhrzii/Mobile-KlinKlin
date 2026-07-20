@@ -390,6 +390,7 @@ class _Step1InfoState extends State<_Step1Info> {
   List<CustomerModel> _customers = [];
   bool _isLoading = true;
   String? _error;
+  String _userBranch = 'Memuat...';
 
   late final TextEditingController _tglCtrl;
   late final TextEditingController _waktuCtrl;
@@ -399,7 +400,17 @@ class _Step1InfoState extends State<_Step1Info> {
     super.initState();
     _tglCtrl = TextEditingController(text: widget.draft.tanggalPengerjaan);
     _waktuCtrl = TextEditingController(text: widget.draft.waktuPengerjaan);
+    _loadUserBranch();
     _loadCustomers();
+  }
+
+  Future<void> _loadUserBranch() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _userBranch = prefs.getString('user_branch') ?? '-';
+      });
+    }
   }
 
   @override
@@ -595,10 +606,10 @@ class _Step1InfoState extends State<_Step1Info> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Surabaya',
+                  _userBranch,
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                     color: AppColors.textDark,
                   ),
                 ),

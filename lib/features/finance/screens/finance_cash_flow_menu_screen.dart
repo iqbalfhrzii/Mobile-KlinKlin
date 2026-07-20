@@ -113,7 +113,8 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
   List<OrderModel> get _currentList {
     if (_statusFilter == 'Approve') return _approveOrders;
     if (_statusFilter == 'Batal') return _batalOrders;
-    return _riwayatOrders;
+    if (_statusFilter == 'Riwayat') return _riwayatOrders;
+    return [..._approveOrders, ..._batalOrders, ..._riwayatOrders];
   }
 
   List<OrderModel> get _filteredApprove => _applyFilters(_approveOrders, ignoreDate: true);
@@ -123,14 +124,16 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
   List<OrderModel> get _filtered {
     if (_statusFilter == 'Approve') return _filteredApprove;
     if (_statusFilter == 'Batal') return _filteredBatal;
-    return _filteredRiwayat;
+    if (_statusFilter == 'Riwayat') return _filteredRiwayat;
+    return [..._filteredApprove, ..._filteredBatal, ..._filteredRiwayat];
   }
 
   void _changeTab(String tab) {
-    if (_statusFilter == tab) return;
-    setState(() {
-      _statusFilter = tab;
-    });
+    if (_statusFilter == tab) {
+      setState(() => _statusFilter = 'Semua');
+    } else {
+      setState(() => _statusFilter = tab);
+    }
   }
 
   int _calculateOrderTotal(OrderModel o) {
@@ -192,7 +195,8 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
                               child: Center(child: Text(
                                 _statusFilter == 'Approve' ? 'Tidak ada pembayaran yang menunggu approval.' :
                                 _statusFilter == 'Batal' ? 'Tidak ada pengajuan pembatalan.' :
-                                'Belum ada riwayat pesanan yang diproses.',
+                                _statusFilter == 'Riwayat' ? 'Belum ada riwayat pesanan yang diproses.' :
+                                'Tidak ada transaksi.',
                                 style: GoogleFonts.inter(color: AppColors.textMuted),
                                 textAlign: TextAlign.center,
                               )),
@@ -239,7 +243,7 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
         icon: Icons.pending_actions_rounded,
         color: AppColors.primary, bg: AppColors.surfaceBlue,
         count: _filteredApprove.length,
-        isActive: _statusFilter == 'Approve',
+        isActive: _statusFilter == 'Semua' || _statusFilter == 'Approve',
         onTap: () => _changeTab('Approve'),
       )),
       const SizedBox(width: 8),
@@ -248,7 +252,7 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
         icon: Icons.cancel_presentation_rounded,
         color: const Color(0xFFF59E0B), bg: const Color(0xFFF59E0B).withOpacity(0.1),
         count: _filteredBatal.length,
-        isActive: _statusFilter == 'Batal',
+        isActive: _statusFilter == 'Semua' || _statusFilter == 'Batal',
         onTap: () => _changeTab('Batal'),
       )),
       const SizedBox(width: 8),
@@ -257,16 +261,16 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
         icon: Icons.history_rounded,
         color: AppColors.statusDone, bg: AppColors.statusDoneBg,
         count: _filteredRiwayat.length,
-        isActive: _statusFilter == 'Riwayat',
+        isActive: _statusFilter == 'Semua' || _statusFilter == 'Riwayat',
         onTap: () => _changeTab('Riwayat'),
       )),
     ]);
   }
 
   Widget _buildOrderItem(OrderModel order) {
-    if (_statusFilter == 'Approve') {
+    if (_approveOrders.any((o) => o.id == order.id)) {
       return _buildApproveCard(order);
-    } else if (_statusFilter == 'Batal') {
+    } else if (_batalOrders.any((o) => o.id == order.id)) {
       return _buildCancelCard(order);
     } else {
       return _buildRiwayatCard(order);

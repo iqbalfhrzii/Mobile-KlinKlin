@@ -15,6 +15,13 @@ class OrderService {
     String? tipeCustomer,
   }) async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final role = prefs.getString('user_role')?.toLowerCase() ?? '';
+      
+      if (cabangId == null && (role.contains('cs') || role.contains('customer service'))) {
+        cabangId = prefs.getInt('user_cabang_id');
+      }
+
       final Map<String, dynamic> queryParams = {};
       if (statusPesanan != null && statusPesanan != 'Semua') {
         // Map back to API expected string if needed, but the UI might pass raw names
@@ -273,7 +280,11 @@ class OrderService {
   /// Fetch cleaners
   Future<List<Map<String, dynamic>>> fetchAvailableCleaners({String? tanggal, String? waktu}) async {
     try {
-      final response = await _dio.get('/karyawans'); 
+      final prefs = await SharedPreferences.getInstance();
+      final cabangId = prefs.getInt('user_cabang_id');
+      final response = await _dio.get('/karyawans', queryParameters: {
+        if (cabangId != null) 'cabang_id': cabangId,
+      }); 
       var responseData = response.data['data'] ?? response.data;
       if (responseData is Map && responseData.containsKey('data')) {
         responseData = responseData['data'];
