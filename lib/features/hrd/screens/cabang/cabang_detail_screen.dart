@@ -57,7 +57,7 @@ class _CabangDetailScreenState extends State<CabangDetailScreen> {
     }
   }
 
-  Future<void> _updateTarif(JenisBonusModel jenisBonus, int existingId, int existingNominal) async {
+  Future<bool> _updateTarif(JenisBonusModel jenisBonus, int existingId, int existingNominal) async {
     final ctrl = TextEditingController(text: existingNominal > 0 ? existingNominal.toString() : '');
     
     final confirm = await showDialog<bool>(
@@ -89,13 +89,15 @@ class _CabangDetailScreenState extends State<CabangDetailScreen> {
       final nominal = int.tryParse(ctrl.text) ?? 0;
       try {
         await _hrdService.setTarifBonus(existingId, widget.cabang.id, jenisBonus.id, nominal);
-        _fetchData();
+        await _fetchData();
+        return true;
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
         }
       }
     }
+    return false;
   }
 
   @override
@@ -131,19 +133,28 @@ class _CabangDetailScreenState extends State<CabangDetailScreen> {
                     : ListView(
                         padding: const EdgeInsets.all(16),
                         children: [
+                          _buildBranchInfo(),
+                          const SizedBox(height: 16),
                           _buildLocationSection(),
                           const SizedBox(height: 24),
-                          Text('Pengaturan Tarif Bonus Karyawan', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                          const SizedBox(height: 4),
-                          Text('Atur nominal bonus per jenis kategori khusus cabang ini.', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
-                          const SizedBox(height: 16),
-                          ..._jenisBonusList.map((jb) {
-                            final tarif = _tarifBonusList.firstWhere(
-                              (t) => t.jenisBonusId == jb.id,
-                              orElse: () => TarifBonusCabangModel(id: 0, cabangId: widget.cabang.id, jenisBonusId: jb.id, nominal: 0),
-                            );
-                            return _buildBonusItem(jb, tarif.id, tarif.nominal);
-                          }),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _showBonusBottomSheet,
+                              icon: const Icon(Icons.card_giftcard_rounded),
+                              label: Text('Kelola Bonus Karyawan', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.purple.shade50,
+                                foregroundColor: Colors.purple.shade700,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  side: BorderSide(color: Colors.purple.shade200),
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
           ),
@@ -184,7 +195,126 @@ class _CabangDetailScreenState extends State<CabangDetailScreen> {
     );
   }
 
-  Widget _buildBonusItem(JenisBonusModel jenisBonus, int id, int nominal) {
+  Widget _buildBranchInfo() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.info_outline_rounded, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text('Informasi Cabang', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: widget.cabang.status == 'aktif' ? Colors.green.withOpacity(0.15) : Colors.red.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  widget.cabang.status.toUpperCase(),
+                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: widget.cabang.status == 'aktif' ? Colors.green.shade700 : Colors.red.shade700),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildInfoRow(Icons.map_outlined, 'Alamat Lengkap', widget.cabang.alamat ?? '-'),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _buildInfoRow(Icons.login_rounded, 'Jam Masuk', widget.cabang.jamMasuk ?? '-')),
+              Expanded(child: _buildInfoRow(Icons.logout_rounded, 'Jam Pulang', widget.cabang.jamPulang ?? '-')),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildInfoRow(Icons.timer_outlined, 'Toleransi Telat', '${widget.cabang.toleransiTelatMenit ?? 0} menit'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: AppColors.textMuted),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+              Text(value, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showBonusBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.7,
+            decoration: const BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.card_giftcard_rounded, color: Colors.purple),
+                      const SizedBox(width: 8),
+                      Text('Kelola Tarif Bonus', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Text('Atur nominal bonus per jenis kategori khusus cabang ini.', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    children: _jenisBonusList.map((jb) {
+                      final tarif = _tarifBonusList.firstWhere(
+                        (t) => t.jenisBonusId == jb.id,
+                        orElse: () => TarifBonusCabangModel(id: 0, cabangId: widget.cabang.id, jenisBonusId: jb.id, nominal: 0),
+                      );
+                      return _buildModalBonusItem(jb, tarif.id, tarif.nominal, setModalState);
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+      ),
+    );
+  }
+
+  Widget _buildModalBonusItem(JenisBonusModel jenisBonus, int id, int nominal, StateSetter setModalState) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -196,7 +326,10 @@ class _CabangDetailScreenState extends State<CabangDetailScreen> {
         title: Text(jenisBonus.namaBonus, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         subtitle: Text('Rp $nominal', style: GoogleFonts.inter(color: AppColors.primary, fontWeight: FontWeight.bold)),
         trailing: ElevatedButton(
-          onPressed: () => _updateTarif(jenisBonus, id, nominal),
+          onPressed: () async {
+            final changed = await _updateTarif(jenisBonus, id, nominal);
+            if (changed) setModalState(() {});
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary.withOpacity(0.1),
             foregroundColor: AppColors.primary,

@@ -132,4 +132,79 @@ class HrdService {
       return TarifBonusCabangModel.fromJson(response.data['data']);
     }
   }
+
+  // --- Pelanggan ---
+  Future<List<PelangganHrdModel>> fetchPelanggan({int? cabangId, String? search}) async {
+    final Map<String, dynamic> params = {};
+    if (cabangId != null) params['cabang_id'] = cabangId;
+    if (search != null && search.isNotEmpty) params['search'] = search;
+    
+    final response = await _dio.get('/pelanggans', queryParameters: params);
+    final data = response.data['data'] as List;
+    return data.map((e) => PelangganHrdModel.fromJson(e)).toList();
+  }
+
+  Future<PelangganHrdModel> createPelanggan(Map<String, dynamic> data) async {
+    final response = await _dio.post('/pelanggans', data: data);
+    return PelangganHrdModel.fromJson(response.data['data']);
+  }
+
+  Future<PelangganHrdModel> updatePelanggan(int id, Map<String, dynamic> data) async {
+    final response = await _dio.put('/pelanggans/$id', data: data);
+    return PelangganHrdModel.fromJson(response.data['data']);
+  }
+
+  Future<void> deletePelanggan(int id) async {
+    await _dio.delete('/pelanggans/$id');
+  }
+
+  // --- Gaji Pokok ---
+  Future<List<GajiPokokModel>> fetchGajiPokok() async {
+    final response = await _dio.get('/gaji-pokoks');
+    final data = response.data['data'] as List;
+    return data.map((e) => GajiPokokModel.fromJson(e)).toList();
+  }
+
+  Future<GajiPokokModel> createGajiPokok(Map<String, dynamic> data) async {
+    final response = await _dio.post('/gaji-pokoks', data: data);
+    return GajiPokokModel.fromJson(response.data['data']);
+  }
+
+  Future<GajiPokokModel> updateGajiPokok(int id, Map<String, dynamic> data) async {
+    final response = await _dio.put('/gaji-pokoks/$id', data: data);
+    return GajiPokokModel.fromJson(response.data['data']);
+  }
+
+  Future<void> deleteGajiPokok(int id) async {
+    await _dio.delete('/gaji-pokoks/$id');
+  }
+
+  // --- Gaji Karyawan ---
+  Future<List<GajiKaryawanModel>> fetchGajiKaryawan({String? filterCabang, String? filterBulan, String? search}) async {
+    final response = await _dio.get('/gaji-karyawans', queryParameters: {
+      if (filterCabang != null && filterCabang.isNotEmpty) 'filter_cabang': filterCabang,
+      if (filterBulan != null && filterBulan.isNotEmpty) 'filter_bulan': filterBulan,
+      if (search != null && search.isNotEmpty) 'search': search,
+    });
+    final List data = response.data['data'] ?? [];
+    return data.map((json) => GajiKaryawanModel.fromJson(json)).toList();
+  }
+
+  Future<GajiKaryawanModel> generateDraftGajiKaryawan(Map<String, dynamic> params) async {
+    final response = await _dio.get('/gaji-karyawans/draft', queryParameters: params);
+    return GajiKaryawanModel.fromJson(response.data['data']);
+  }
+
+  Future<GajiKaryawanModel> createGajiKaryawan(Map<String, dynamic> data) async {
+    final response = await _dio.post('/gaji-karyawans', data: data);
+    return GajiKaryawanModel.fromJson(response.data['data']);
+  }
+
+  Future<void> deleteGajiKaryawan(int id) async {
+    await _dio.delete('/gaji-karyawans/$id');
+  }
+
+  String getPrintSlipGajiUrl(int id) {
+    return '${_dio.options.baseUrl}/gaji-karyawans/$id/print';
+  }
 }

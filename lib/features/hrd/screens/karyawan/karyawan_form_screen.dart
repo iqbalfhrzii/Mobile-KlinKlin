@@ -21,10 +21,13 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
   late TextEditingController _namaCtrl;
   late TextEditingController _emailCtrl;
   late TextEditingController _noWaCtrl;
+  late TextEditingController _namaBankCtrl;
+  late TextEditingController _noRekeningCtrl;
   
   int? _selectedCabang;
   int? _selectedJabatan;
   String _status = 'aktif';
+  String _statusKaryawan = 'tetap';
   
   List<CabangModel> _cabangs = [];
   List<JabatanModel> _jabatans = [];
@@ -38,11 +41,19 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
     _namaCtrl = TextEditingController(text: widget.karyawan?.nama);
     _emailCtrl = TextEditingController(text: widget.karyawan?.email);
     _noWaCtrl = TextEditingController(text: widget.karyawan?.noWa);
+    _namaBankCtrl = TextEditingController(text: widget.karyawan?.namaBank);
+    _noRekeningCtrl = TextEditingController(text: widget.karyawan?.noRekening);
     
     _selectedCabang = widget.karyawan?.cabangId;
     _selectedJabatan = widget.karyawan?.jabatanId;
     if (widget.karyawan != null) {
-      _status = widget.karyawan!.status;
+      String statusVal = widget.karyawan!.status.toLowerCase();
+      _status = ['aktif', 'nonaktif'].contains(statusVal) ? statusVal : 'aktif';
+      
+      if (widget.karyawan!.statusKaryawan != null && widget.karyawan!.statusKaryawan!.isNotEmpty) {
+        String statusKar = widget.karyawan!.statusKaryawan!.toLowerCase();
+        _statusKaryawan = ['tetap', 'freelance', 'kontrak'].contains(statusKar) ? statusKar : 'tetap';
+      }
     }
     _fetchRefs();
   }
@@ -73,6 +84,8 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
     _namaCtrl.dispose();
     _emailCtrl.dispose();
     _noWaCtrl.dispose();
+    _namaBankCtrl.dispose();
+    _noRekeningCtrl.dispose();
     super.dispose();
   }
 
@@ -92,6 +105,9 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
         'cabang_id': _selectedCabang,
         'jabatan_id': _selectedJabatan,
         'status': _status,
+        'status_karyawan': _statusKaryawan,
+        'nama_bank': _namaBankCtrl.text.isEmpty ? null : _namaBankCtrl.text,
+        'no_rekening': _noRekeningCtrl.text.isEmpty ? null : _noRekeningCtrl.text,
       };
 
       if (widget.karyawan == null) {
@@ -234,6 +250,38 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
                             onChanged: (val) {
                               if (val != null) setState(() => _status = val);
                             },
+                          ),
+                          const SizedBox(height: 16),
+                          Text('Status Pegawai', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
+                          const SizedBox(height: 8),
+                          DropdownButtonFormField<String>(
+                            value: _statusKaryawan,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: AppColors.surface,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: 'tetap', child: Text('Tetap')),
+                              DropdownMenuItem(value: 'freelance', child: Text('Freelance')),
+                              DropdownMenuItem(value: 'kontrak', child: Text('Kontrak')),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) setState(() => _statusKaryawan = val);
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          _buildField(
+                            label: 'Nama Bank (Opsional)',
+                            controller: _namaBankCtrl,
+                            hint: 'BCA / BNI / Mandiri / dll',
+                          ),
+                          const SizedBox(height: 16),
+                          _buildField(
+                            label: 'No. Rekening (Opsional)',
+                            controller: _noRekeningCtrl,
+                            hint: 'Masukkan nomor rekening',
+                            keyboardType: TextInputType.number,
                           ),
                           const SizedBox(height: 40),
                           SizedBox(

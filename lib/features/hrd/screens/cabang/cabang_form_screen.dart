@@ -23,6 +23,10 @@ class _CabangFormScreenState extends State<CabangFormScreen> {
   late TextEditingController _latCtrl;
   late TextEditingController _lngCtrl;
   late TextEditingController _radiusCtrl;
+  late TextEditingController _jamMasukCtrl;
+  late TextEditingController _toleransiCtrl;
+  late TextEditingController _jamPulangCtrl;
+  late TextEditingController _targetOmzetCtrl;
   String _status = 'aktif';
   bool _isLoading = false;
 
@@ -34,6 +38,11 @@ class _CabangFormScreenState extends State<CabangFormScreen> {
     _latCtrl = TextEditingController(text: widget.cabang?.latitude?.toString() ?? '');
     _lngCtrl = TextEditingController(text: widget.cabang?.longitude?.toString() ?? '');
     _radiusCtrl = TextEditingController(text: widget.cabang?.radiusAbsensiMeter?.toString() ?? (widget.cabang == null ? '100' : ''));
+    _jamMasukCtrl = TextEditingController(text: widget.cabang?.jamMasuk ?? '08:00');
+    _toleransiCtrl = TextEditingController(text: widget.cabang?.toleransiTelatMenit?.toString() ?? '15');
+    _jamPulangCtrl = TextEditingController(text: widget.cabang?.jamPulang ?? '17:00');
+    _targetOmzetCtrl = TextEditingController(text: widget.cabang?.targetOmzet?.toString() ?? '');
+    
     if (widget.cabang != null) {
       _status = widget.cabang!.status;
     }
@@ -46,6 +55,10 @@ class _CabangFormScreenState extends State<CabangFormScreen> {
     _latCtrl.dispose();
     _lngCtrl.dispose();
     _radiusCtrl.dispose();
+    _jamMasukCtrl.dispose();
+    _toleransiCtrl.dispose();
+    _jamPulangCtrl.dispose();
+    _targetOmzetCtrl.dispose();
     super.dispose();
   }
 
@@ -91,6 +104,31 @@ class _CabangFormScreenState extends State<CabangFormScreen> {
       }
     } finally {
       setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _selectTime(BuildContext context, TextEditingController controller) async {
+    TimeOfDay initialTime = const TimeOfDay(hour: 8, minute: 0);
+    if (controller.text.isNotEmpty && controller.text.contains(':')) {
+      final parts = controller.text.split(':');
+      if (parts.length >= 2) {
+        initialTime = TimeOfDay(
+          hour: int.tryParse(parts[0]) ?? 8,
+          minute: int.tryParse(parts[1]) ?? 0,
+        );
+      }
+    }
+
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+    );
+
+    if (picked != null) {
+      final String formattedTime = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      setState(() {
+        controller.text = formattedTime;
+      });
     }
   }
 
@@ -143,6 +181,10 @@ class _CabangFormScreenState extends State<CabangFormScreen> {
         'latitude': _latCtrl.text,
         'longitude': _lngCtrl.text,
         'radius_absensi_meter': _radiusCtrl.text,
+        'jam_masuk': _jamMasukCtrl.text,
+        'toleransi_telat_menit': _toleransiCtrl.text,
+        'jam_pulang': _jamPulangCtrl.text,
+        'target_omzet': _targetOmzetCtrl.text.isEmpty ? null : _targetOmzetCtrl.text,
       };
 
       if (widget.cabang == null) {
@@ -203,6 +245,13 @@ class _CabangFormScreenState extends State<CabangFormScreen> {
                       hint: 'Masukkan alamat cabang',
                       maxLines: 3,
                     ),
+                    const SizedBox(height: 16),
+                    _buildField(
+                      label: 'Target Omzet (Opsional)',
+                      controller: _targetOmzetCtrl,
+                      hint: 'Masukkan target pendapatan',
+                      keyboardType: TextInputType.number,
+                    ),
                     const SizedBox(height: 24),
                     Text('Lokasi Absensi Cleaner', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
                     const SizedBox(height: 8),
@@ -247,6 +296,48 @@ class _CabangFormScreenState extends State<CabangFormScreen> {
                       controller: _radiusCtrl,
                       hint: 'Mis. 100',
                       keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 24),
+                    Text('Pengaturan Absensi', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    const SizedBox(height: 16),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => _selectTime(context, _jamMasukCtrl),
+                            child: AbsorbPointer(
+                              child: _buildField(
+                                label: 'Jam Masuk',
+                                controller: _jamMasukCtrl,
+                                hint: '08:00',
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildField(
+                            label: 'Toleransi (Menit)',
+                            controller: _toleransiCtrl,
+                            hint: '15',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => _selectTime(context, _jamPulangCtrl),
+                            child: AbsorbPointer(
+                              child: _buildField(
+                                label: 'Jam Pulang',
+                                controller: _jamPulangCtrl,
+                                hint: '17:00',
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 24),
                     Text('Status', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMuted)),

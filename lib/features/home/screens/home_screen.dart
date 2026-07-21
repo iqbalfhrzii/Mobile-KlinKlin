@@ -39,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _grafikHarian = [];
   List<dynamic> _grafikBulanan = [];
   List<OrderModel> _recentOrders = [];
-  
+
   String _userName = 'Memuat...';
   String _userRole = 'Customer Service';
   String _userBranch = '-';
@@ -57,8 +57,9 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadProfile();
     try {
       final dbData = await DashboardService().fetchCsDashboard();
-      final orders = await OrderService().fetchOrders(); // Only fetch for recent orders or we can leave it
-      
+      final orders = await OrderService()
+          .fetchOrders(); // Only fetch for recent orders or we can leave it
+
       if (mounted) {
         setState(() {
           if (dbData.isNotEmpty) {
@@ -83,9 +84,14 @@ class _HomeScreenState extends State<HomeScreen> {
             final now = DateTime.now();
 
             for (var o in orders) {
-              bool isToday = o.scheduleDateTime.year == now.year && o.scheduleDateTime.month == now.month && o.scheduleDateTime.day == now.day;
-              bool isThisMonth = o.scheduleDateTime.year == now.year && o.scheduleDateTime.month == now.month;
-              
+              bool isToday =
+                  o.scheduleDateTime.year == now.year &&
+                  o.scheduleDateTime.month == now.month &&
+                  o.scheduleDateTime.day == now.day;
+              bool isThisMonth =
+                  o.scheduleDateTime.year == now.year &&
+                  o.scheduleDateTime.month == now.month;
+
               if (isThisMonth) omzetBulan += o.total;
               if (isToday) {
                 omzetHari += o.total;
@@ -93,12 +99,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (o.status == OrderStatus.completed) done++;
               }
               if (o.status == OrderStatus.waitingPaymentApproval) waiting++;
-              if (o.status == OrderStatus.assigned || o.status == OrderStatus.inProgress || o.status == OrderStatus.draft) active++;
+              if (o.status == OrderStatus.assigned ||
+                  o.status == OrderStatus.inProgress ||
+                  o.status == OrderStatus.draft)
+                active++;
             }
 
             _omzetThisMonth = omzetBulan;
             _omzetToday = omzetHari;
-            _rataRataOrder = orders.isNotEmpty ? (omzetBulan / orders.length).toDouble() : 0;
+            _rataRataOrder = orders.isNotEmpty
+                ? (omzetBulan / orders.length).toDouble()
+                : 0;
             _targetOmzet = 15000000;
             _ordersToday = countToday;
             _waiting = waiting;
@@ -107,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _grafikHarian = [];
             _grafikBulanan = [];
           }
-          
+
           _recentOrders = orders.take(3).toList();
           _isLoadingStats = false;
         });
@@ -139,8 +150,12 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _userName = me['nama'] ?? _userName;
           _userPhoto = me['foto_profil'];
-          _userRole = me['jabatan'] is Map ? me['jabatan']['nama_jabatan'] ?? _userRole : _userRole;
-          _userBranch = me['cabang'] is Map ? me['cabang']['nama_cabang'] ?? _userBranch : _userBranch;
+          _userRole = me['jabatan'] is Map
+              ? me['jabatan']['nama_jabatan'] ?? _userRole
+              : _userRole;
+          _userBranch = me['cabang'] is Map
+              ? me['cabang']['nama_cabang'] ?? _userBranch
+              : _userBranch;
         });
       }
     } catch (_) {}
@@ -157,33 +172,33 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _buildHeader(),
           Expanded(
-            child: _isLoadingStats 
-              ? const Center(child: CircularProgressIndicator())
-              : RefreshIndicator(
-                  onRefresh: _loadStats,
-                  color: AppColors.primary,
-                  backgroundColor: AppColors.surface,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildStatCards(),
-                        const SizedBox(height: 16),
-                        _buildOmzetCard(),
-                        const SizedBox(height: 16),
-                        _buildGrafikHarian(),
-                        const SizedBox(height: 16),
-                        _buildGrafikBulanan(),
-                        const SizedBox(height: 16),
-                        _buildQuickActions(),
-                        const SizedBox(height: 16),
-                        _buildRecentOrders(),
-                      ],
+            child: _isLoadingStats
+                ? const Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
+                    onRefresh: _loadStats,
+                    color: AppColors.primary,
+                    backgroundColor: AppColors.surface,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildStatCards(),
+                          const SizedBox(height: 16),
+                          _buildOmzetCard(),
+                          const SizedBox(height: 16),
+                          _buildGrafikHarian(),
+                          const SizedBox(height: 16),
+                          _buildGrafikBulanan(),
+                          const SizedBox(height: 16),
+                          _buildQuickActions(),
+                          const SizedBox(height: 16),
+                          _buildRecentOrders(),
+                        ],
+                      ),
                     ),
                   ),
-                ),
           ),
         ],
       ),
@@ -193,7 +208,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHeader() {
     final now = DateTime.now();
     final hour = now.hour;
-    final greeting = hour < 12 ? 'Selamat Pagi' : hour < 15 ? 'Selamat Siang' : hour < 18 ? 'Selamat Sore' : 'Selamat Malam';
+    final greeting = hour < 12
+        ? 'Selamat Pagi'
+        : hour < 15
+        ? 'Selamat Siang'
+        : hour < 18
+        ? 'Selamat Sore'
+        : 'Selamat Malam';
 
     return GradientHeader(
       padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
@@ -205,22 +226,32 @@ class _HomeScreenState extends State<HomeScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Image.asset(
-                    'assets/images/logo.png',
-                    height: 24,
-                  ),
+                  Image.asset('assets/images/logo.png', height: 24),
                   const SizedBox(height: 4),
-                  Text(greeting + ',', style: GoogleFonts.inter(
-                    fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white,
-                  )),
-                  Text('$_userName ✨', style: GoogleFonts.inter(
-                    fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white,
-                  )),
+                  Text(
+                    greeting + ',',
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    '$_userName ✨',
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
@@ -237,7 +268,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       if (_userBranch != '-') ...[
                         const SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(12),
@@ -274,24 +308,40 @@ class _HomeScreenState extends State<HomeScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Omzet Hari Ini', style: GoogleFonts.inter(
-                      fontSize: 11, color: Colors.white.withOpacity(0.7),
-                    )),
-                    Text(_formatRupiah(_omzetToday), style: GoogleFonts.inter(
-                      fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white,
-                    )),
+                    Text(
+                      'Omzet Hari Ini',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: Colors.white.withOpacity(0.7),
+                      ),
+                    ),
+                    Text(
+                      _formatRupiah(_omzetToday),
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
                   ],
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     'Aktif',
-                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ],
@@ -304,43 +354,152 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildAvatar() {
     if (_userPhoto == null || _userPhoto!.isEmpty) {
-      return InitialsAvatar(name: _userName, size: 48, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35));
+      return InitialsAvatar(
+        name: _userName,
+        size: 48,
+        backgroundColor: Colors.white.withOpacity(0.2),
+        textColor: Colors.white,
+        borderColor: Colors.white.withOpacity(0.35),
+      );
     }
-    
+
     if (_userPhoto!.startsWith('data:image')) {
       try {
         final base64Str = _userPhoto!.split(',').last;
-        return ClipOval(child: Image.memory(base64Decode(base64Str), width: 48, height: 48, fit: BoxFit.cover));
+        return ClipOval(
+          child: Image.memory(
+            base64Decode(base64Str),
+            width: 48,
+            height: 48,
+            fit: BoxFit.cover,
+          ),
+        );
       } catch (_) {
-        return InitialsAvatar(name: _userName, size: 48, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35));
+        return InitialsAvatar(
+          name: _userName,
+          size: 48,
+          backgroundColor: Colors.white.withOpacity(0.2),
+          textColor: Colors.white,
+          borderColor: Colors.white.withOpacity(0.35),
+        );
       }
     }
-    
+
     if (_userPhoto!.startsWith('http')) {
-      return ClipOval(child: Image.network(_userPhoto!, width: 48, height: 48, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 48, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35))));
+      return ClipOval(
+        child: Image.network(
+          _userPhoto!,
+          width: 48,
+          height: 48,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => InitialsAvatar(
+            name: _userName,
+            size: 48,
+            backgroundColor: Colors.white.withOpacity(0.2),
+            textColor: Colors.white,
+            borderColor: Colors.white.withOpacity(0.35),
+          ),
+        ),
+      );
     }
-    
+
     if (_userPhoto!.startsWith('/')) {
-      return ClipOval(child: Image.file(File(_userPhoto!), width: 48, height: 48, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 48, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35))));
+      return ClipOval(
+        child: Image.file(
+          File(_userPhoto!),
+          width: 48,
+          height: 48,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => InitialsAvatar(
+            name: _userName,
+            size: 48,
+            backgroundColor: Colors.white.withOpacity(0.2),
+            textColor: Colors.white,
+            borderColor: Colors.white.withOpacity(0.35),
+          ),
+        ),
+      );
     }
-    
-    return ClipOval(child: Image.network('http://192.168.1.242:8000/storage/$_userPhoto', width: 48, height: 48, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 48, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35))));
+
+    return ClipOval(
+      child: Image.network(
+        'http://192.168.1.242:8000/storage/$_userPhoto',
+        width: 48,
+        height: 48,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => InitialsAvatar(
+          name: _userName,
+          size: 48,
+          backgroundColor: Colors.white.withOpacity(0.2),
+          textColor: Colors.white,
+          borderColor: Colors.white.withOpacity(0.35),
+        ),
+      ),
+    );
   }
 
   Widget _buildStatCards() {
     final items = [
-      _Stat('Pesanan Hari Ini', '$_ordersToday', Icons.receipt_long_rounded, AppColors.primaryMid, onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const OrderListScreen(isTodayOnly: true)));
-      }),
-      _Stat('Menunggu Approve', '$_waiting', Icons.hourglass_empty_rounded, AppColors.statusPending, onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const OrderListScreen(initialStatusFilter: 'waitingPaymentApproval')));
-      }),
-      _Stat('Dikerjakan', '$_active', Icons.cleaning_services_rounded, AppColors.statusProgress, onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const OrderListScreen(initialStatusFilter: 'inProgress')));
-      }),
-      _Stat('Selesai', '$_doneToday', Icons.check_circle_rounded, AppColors.statusDone, onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const OrderListScreen(initialStatusFilter: 'completed')));
-      }),
+      _Stat(
+        'Pesanan Hari Ini',
+        '$_ordersToday',
+        Icons.receipt_long_rounded,
+        AppColors.primaryMid,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const OrderListScreen(isTodayOnly: true),
+            ),
+          );
+        },
+      ),
+      _Stat(
+        'Menunggu Approve',
+        '$_waiting',
+        Icons.hourglass_empty_rounded,
+        AppColors.statusPending,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const OrderListScreen(
+                initialStatusFilter: 'waitingPaymentApproval',
+              ),
+            ),
+          );
+        },
+      ),
+      _Stat(
+        'Dikerjakan',
+        '$_active',
+        Icons.cleaning_services_rounded,
+        AppColors.statusProgress,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  const OrderListScreen(initialStatusFilter: 'inProgress'),
+            ),
+          );
+        },
+      ),
+      _Stat(
+        'Selesai',
+        '$_doneToday',
+        Icons.check_circle_rounded,
+        AppColors.statusDone,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  const OrderListScreen(initialStatusFilter: 'completed'),
+            ),
+          );
+        },
+      ),
     ];
 
     return GridView.count(
@@ -381,18 +540,31 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: const Color(0xFFE8F5E9),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.trending_up_rounded, color: Color(0xFF2E7D32), size: 18),
+                      child: const Icon(
+                        Icons.trending_up_rounded,
+                        color: Color(0xFF2E7D32),
+                        size: 18,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Omzet Bulan Ini', style: GoogleFonts.inter(
-                          fontSize: 12, color: AppColors.textMuted,
-                        )),
-                        Text(_formatRupiah(omzet), style: GoogleFonts.inter(
-                          fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark,
-                        )),
+                        Text(
+                          'Omzet Bulan Ini',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                        Text(
+                          _formatRupiah(omzet),
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -401,12 +573,21 @@ class _HomeScreenState extends State<HomeScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('Rata-rata Order', style: GoogleFonts.inter(
-                    fontSize: 11, color: AppColors.textMuted,
-                  )),
-                  Text(_formatRupiah(_rataRataOrder.toInt()), style: GoogleFonts.inter(
-                    fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark,
-                  )),
+                  Text(
+                    'Rata-rata Order',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  Text(
+                    _formatRupiah(_rataRataOrder.toInt()),
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textDark,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -415,12 +596,21 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Progress target bulanan', style: GoogleFonts.inter(
-                fontSize: 11, color: AppColors.textMuted,
-              )),
-              Text('${(pct * 100).round()}%', style: GoogleFonts.inter(
-                fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textDark,
-              )),
+              Text(
+                'Progress target bulanan',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              Text(
+                '${(pct * 100).round()}%',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textDark,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 6),
@@ -429,14 +619,17 @@ class _HomeScreenState extends State<HomeScreen> {
             child: LinearProgressIndicator(
               value: pct,
               backgroundColor: AppColors.surfaceBlue,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.statusDone),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppColors.statusDone,
+              ),
               minHeight: 6,
             ),
           ),
           const SizedBox(height: 6),
-          Text('Target: ${_formatRupiah(target)}', style: GoogleFonts.inter(
-            fontSize: 11, color: AppColors.textMuted,
-          )),
+          Text(
+            'Target: ${_formatRupiah(target)}',
+            style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+          ),
         ],
       ),
     );
@@ -453,7 +646,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     double maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
     if (maxY == 0) maxY = 1000000;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -465,9 +658,14 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Omzet 7 Hari Terakhir', style: GoogleFonts.inter(
-            fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark,
-          )),
+          Text(
+            'Omzet 7 Hari Terakhir',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+            ),
+          ),
           const SizedBox(height: 24),
           SizedBox(
             height: 200,
@@ -477,15 +675,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   show: true,
                   drawVerticalLine: false,
                   horizontalInterval: maxY / 4,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: AppColors.border,
-                    strokeWidth: 1,
-                  ),
+                  getDrawingHorizontalLine: (value) =>
+                      FlLine(color: AppColors.border, strokeWidth: 1),
                 ),
                 titlesData: FlTitlesData(
                   show: true,
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
@@ -500,7 +700,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           padding: const EdgeInsets.only(top: 8.0),
                           child: Text(
                             _grafikHarian[index]['hari'] ?? '',
-                            style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted),
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: AppColors.textMuted,
+                            ),
                           ),
                         );
                       },
@@ -515,7 +718,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (value == 0) return const SizedBox();
                         return Text(
                           '${(value / 1000).toStringAsFixed(0)}K',
-                          style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted),
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            color: AppColors.textMuted,
+                          ),
                         );
                       },
                     ),
@@ -553,11 +759,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
     List<BarChartGroupData> barGroups = [];
     double maxY = 0;
-    
+
     for (int i = 0; i < _grafikBulanan.length; i++) {
       double val = double.tryParse(_grafikBulanan[i]['omzet'].toString()) ?? 0;
       if (val > maxY) maxY = val;
-      
+
       barGroups.add(
         BarChartGroupData(
           x: i,
@@ -572,7 +778,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     }
-    
+
     if (maxY == 0) maxY = 1000000;
 
     return Container(
@@ -586,9 +792,14 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Grafik Omzet Bulanan', style: GoogleFonts.inter(
-            fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark,
-          )),
+          Text(
+            'Grafik Omzet Bulanan',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+            ),
+          ),
           const SizedBox(height: 24),
           SizedBox(
             height: 200,
@@ -605,12 +816,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       reservedSize: 30,
                       getTitlesWidget: (double value, TitleMeta meta) {
                         int index = value.toInt();
-                        if (index < 0 || index >= _grafikBulanan.length) return const SizedBox();
+                        if (index < 0 || index >= _grafikBulanan.length)
+                          return const SizedBox();
                         return Padding(
                           padding: const EdgeInsets.only(top: 8.0),
                           child: Text(
                             _grafikBulanan[index]['nama_bulan'] ?? '',
-                            style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted),
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: AppColors.textMuted,
+                            ),
                           ),
                         );
                       },
@@ -625,22 +840,27 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (value == 0) return const SizedBox();
                         return Text(
                           '${(value / 1000000).toStringAsFixed(1)}M',
-                          style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted),
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            color: AppColors.textMuted,
+                          ),
                         );
                       },
                     ),
                   ),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                 ),
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
                   horizontalInterval: maxY / 4,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: AppColors.border,
-                    strokeWidth: 1,
-                  ),
+                  getDrawingHorizontalLine: (value) =>
+                      FlLine(color: AppColors.border, strokeWidth: 1),
                 ),
                 borderData: FlBorderData(show: false),
                 barGroups: barGroups,
@@ -654,54 +874,95 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildQuickActions() {
     final actions = [
-      _QuickAction('Buat Pesanan', Icons.add_circle_outline_rounded, AppColors.primary, AppColors.surfaceBlue),
-      _QuickAction('Kelola Pelanggan', Icons.people_outline_rounded, const Color(0xFF7C3AED), const Color(0xFFEDE9FE)),
-      _QuickAction('KPI Karyawan', Icons.analytics_rounded, const Color(0xFFE65100), const Color(0xFFFFF3E0)),
+      _QuickAction(
+        'Buat Pesanan',
+        Icons.add_circle_outline_rounded,
+        AppColors.primary,
+        AppColors.surfaceBlue,
+      ),
+      _QuickAction(
+        'Kelola Pelanggan',
+        Icons.people_outline_rounded,
+        const Color(0xFF7C3AED),
+        const Color(0xFFEDE9FE),
+      ),
+      _QuickAction(
+        'KPI Karyawan',
+        Icons.analytics_rounded,
+        const Color(0xFFE65100),
+        const Color(0xFFFFF3E0),
+      ),
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Aksi Cepat', style: GoogleFonts.inter(
-          fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textMuted,
-          letterSpacing: 0.5,
-        )),
+        Text(
+          'Aksi Cepat',
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textMuted,
+            letterSpacing: 0.5,
+          ),
+        ),
         const SizedBox(height: 10),
         Row(
-          children: actions.map((a) => Expanded(
-            child: GestureDetector(
-              onTap: () {
-                if (a.label == 'Buat Pesanan') {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateOrderScreen()));
-                } else if (a.label == 'KPI Karyawan') {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const KpiScreen()));
-                }
-              },
-              child: Container(
-                margin: EdgeInsets.only(right: a == actions.last ? 0 : 8),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.border),
-                  boxShadow: [AppColors.cardShadow],
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: a.bg, shape: BoxShape.circle),
-                      child: Icon(a.icon, color: a.color, size: 20),
+          children: actions
+              .map(
+                (a) => Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      if (a.label == 'Buat Pesanan') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const CreateOrderScreen(),
+                          ),
+                        );
+                      } else if (a.label == 'KPI Karyawan') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const KpiScreen()),
+                        );
+                      }
+                    },
+                    child: Container(
+                      margin: EdgeInsets.only(right: a == actions.last ? 0 : 8),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
+                        boxShadow: [AppColors.cardShadow],
+                      ),
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: a.bg,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(a.icon, color: a.color, size: 20),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            a.label,
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textDark,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(a.label, style: GoogleFonts.inter(
-                      fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textDark,
-                    ), textAlign: TextAlign.center),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          )).toList(),
+              )
+              .toList(),
         ),
       ],
     );
@@ -716,50 +977,77 @@ class _HomeScreenState extends State<HomeScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Pesanan Terbaru', style: GoogleFonts.inter(
-              fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textMuted, letterSpacing: 0.5,
-            )),
-            Text('Lihat Semua', style: GoogleFonts.inter(
-              fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary,
-            )),
+            Text(
+              'Pesanan Terbaru',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textMuted,
+                letterSpacing: 0.5,
+              ),
+            ),
+            Text(
+              'Lihat Semua',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 10),
-        ..._recentOrders.map((o) => GestureDetector(
-          onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => OrderDetailScreen(order: o)));
-          },
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.border),
-              boxShadow: [AppColors.cardShadow],
-            ),
-            child: Row(
-              children: [
-                InitialsAvatar(name: o.customer.name, size: 38),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(o.customer.name, style: GoogleFonts.inter(
-                        fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark,
-                      )),
-                      Text(o.services.isNotEmpty ? o.services.first.name : 'Pesanan', style: GoogleFonts.inter(
-                        fontSize: 11, color: AppColors.textMuted,
-                      )),
-                    ],
+        ..._recentOrders.map(
+          (o) => GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => OrderDetailScreen(order: o)),
+              );
+            },
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.border),
+                boxShadow: [AppColors.cardShadow],
+              ),
+              child: Row(
+                children: [
+                  InitialsAvatar(name: o.customer.name, size: 38),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          o.customer.name,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                        Text(
+                          o.services.isNotEmpty
+                              ? o.services.first.name
+                              : 'Pesanan',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                StatusBadge(status: o.status),
-              ],
+                  StatusBadge(status: o.status),
+                ],
+              ),
             ),
           ),
-        )),
+        ),
       ],
     );
   }
@@ -790,31 +1078,40 @@ class _StatCard extends StatelessWidget {
           border: Border.all(color: AppColors.border),
           boxShadow: [AppColors.cardShadow],
         ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: stat.color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(10),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: stat.color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(stat.icon, color: stat.color, size: 18),
             ),
-            child: Icon(stat.icon, color: stat.color, size: 18),
-          ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(stat.value, style: GoogleFonts.inter(
-                fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textDark,
-              )),
-              Text(stat.label, style: GoogleFonts.inter(
-                fontSize: 11, color: AppColors.textMuted,
-              )),
-            ],
-          ),
-        ],
-      ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  stat.value,
+                  style: GoogleFonts.inter(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                Text(
+                  stat.label,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

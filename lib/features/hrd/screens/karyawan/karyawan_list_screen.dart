@@ -5,6 +5,7 @@ import '../../../../../core/widgets/gradient_header.dart';
 import '../../../../../core/data/hrd_models.dart';
 import '../../services/hrd_service.dart';
 import 'karyawan_form_screen.dart';
+import 'karyawan_detail_screen.dart';
 
 class KaryawanListScreen extends StatefulWidget {
   const KaryawanListScreen({super.key});
@@ -220,103 +221,164 @@ class _KaryawanListScreenState extends State<KaryawanListScreen> {
 
   Widget _buildItem(KaryawanModel karyawan) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade100),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.grey.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade200.withOpacity(0.5),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 16,
+            spreadRadius: 2,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+        child: InkWell(
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => KaryawanDetailScreen(karyawan: karyawan)));
+          },
+          borderRadius: BorderRadius.circular(24),
+          child: Column(
             children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: AppColors.primary.withOpacity(0.1),
-                backgroundImage: karyawan.fotoProfil != null ? NetworkImage(karyawan.fotoProfil!) : null,
-                child: karyawan.fotoProfil == null ? Text(karyawan.nama.substring(0, 1).toUpperCase(), style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)) : null,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      karyawan.nama, 
-                      style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: AppColors.primary.withOpacity(0.1),
+                      backgroundImage: karyawan.fotoProfil != null ? NetworkImage(karyawan.fotoProfil!) : null,
+                      child: karyawan.fotoProfil == null ? Text(karyawan.nama.substring(0, 1).toUpperCase(), style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 18)) : null,
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.work_outline_rounded, size: 14, color: AppColors.textMuted),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            '${karyawan.jabatan?.namaJabatan ?? '-'} • ${karyawan.cabang?.namaCabang ?? '-'}',
-                            style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  karyawan.nama,
+                                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: karyawan.status == 'aktif' ? Colors.green.withOpacity(0.15) : Colors.red.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  karyawan.status.toUpperCase(),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: karyawan.status == 'aktif' ? Colors.green.shade700 : Colors.red.shade700,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: karyawan.status == 'aktif' ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        karyawan.status.toUpperCase(),
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: karyawan.status == 'aktif' ? Colors.green : Colors.red,
-                        ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(Icons.email_outlined, size: 14, color: AppColors.textMuted),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(karyawan.email, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(Icons.phone_outlined, size: 14, color: AppColors.textMuted),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(karyawan.noWa ?? '-', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.work_outline_rounded, size: 12, color: Colors.blue),
+                                    const SizedBox(width: 4),
+                                    Text(karyawan.jabatan?.namaJabatan ?? '-', style: GoogleFonts.inter(fontSize: 11, color: Colors.blue, fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.storefront_rounded, size: 12, color: Colors.orange),
+                                    const SizedBox(width: 4),
+                                    Text(karyawan.cabang?.namaCabang ?? '-', style: GoogleFonts.inter(fontSize: 11, color: Colors.orange, fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                      child: const Icon(Icons.edit_rounded, color: Colors.blue, size: 18),
+              Container(
+                decoration: BoxDecoration(
+                  border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextButton.icon(
+                        onPressed: () async {
+                          final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => KaryawanFormScreen(karyawan: karyawan)));
+                          if (res == true) _fetchData();
+                        },
+                        icon: const Icon(Icons.edit_rounded, color: Colors.blue, size: 18),
+                        label: Text('Edit', style: GoogleFonts.inter(color: Colors.blue, fontWeight: FontWeight.w600)),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.only(bottomLeft: Radius.circular(24))),
+                        ),
+                      ),
                     ),
-                    onPressed: () async {
-                      final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => KaryawanFormScreen(karyawan: karyawan)));
-                      if (res == true) _fetchData();
-                    },
-                    constraints: const BoxConstraints(),
-                    padding: EdgeInsets.zero,
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                      child: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 18),
+                    Container(width: 1, height: 30, color: Colors.grey.shade200),
+                    Expanded(
+                      child: TextButton.icon(
+                        onPressed: () => _delete(karyawan),
+                        icon: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 18),
+                        label: Text('Hapus', style: GoogleFonts.inter(color: Colors.red, fontWeight: FontWeight.w600)),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.only(bottomRight: Radius.circular(24))),
+                        ),
+                      ),
                     ),
-                    onPressed: () => _delete(karyawan),
-                    constraints: const BoxConstraints(),
-                    padding: EdgeInsets.zero,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),

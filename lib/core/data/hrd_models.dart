@@ -6,6 +6,10 @@ class CabangModel {
   final double? latitude;
   final double? longitude;
   final int? radiusAbsensiMeter;
+  final String? jamMasuk;
+  final int? toleransiTelatMenit;
+  final String? jamPulang;
+  final double? targetOmzet;
 
   CabangModel({
     required this.id,
@@ -15,6 +19,10 @@ class CabangModel {
     this.latitude,
     this.longitude,
     this.radiusAbsensiMeter,
+    this.jamMasuk,
+    this.toleransiTelatMenit,
+    this.jamPulang,
+    this.targetOmzet,
   });
 
   factory CabangModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +34,10 @@ class CabangModel {
       latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
       longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
       radiusAbsensiMeter: json['radius_absensi_meter'] != null ? int.tryParse(json['radius_absensi_meter'].toString()) : null,
+      jamMasuk: json['jam_masuk'] != null ? json['jam_masuk'].toString().substring(0, 5) : null,
+      toleransiTelatMenit: json['toleransi_telat_menit'] != null ? int.tryParse(json['toleransi_telat_menit'].toString()) : null,
+      jamPulang: json['jam_pulang'] != null ? json['jam_pulang'].toString().substring(0, 5) : null,
+      targetOmzet: json['target_omzet'] != null ? double.tryParse(json['target_omzet'].toString()) : null,
     );
   }
 }
@@ -62,6 +74,9 @@ class KaryawanModel {
   final String? noWa;
   final String? fotoProfil;
   final String status;
+  final String? statusKaryawan;
+  final String? namaBank;
+  final String? noRekening;
   final CabangModel? cabang;
   final JabatanModel? jabatan;
 
@@ -74,6 +89,9 @@ class KaryawanModel {
     this.noWa,
     this.fotoProfil,
     required this.status,
+    this.statusKaryawan,
+    this.namaBank,
+    this.noRekening,
     this.cabang,
     this.jabatan,
   });
@@ -88,6 +106,9 @@ class KaryawanModel {
       noWa: json['no_wa'],
       fotoProfil: json['foto_profil_url'] ?? json['foto_profil'],
       status: json['status'] ?? 'aktif',
+      statusKaryawan: json['status_karyawan'],
+      namaBank: json['nama_bank'],
+      noRekening: json['no_rekening'],
       cabang: json['cabang'] != null ? CabangModel.fromJson(json['cabang']) : null,
       jabatan: json['jabatan'] != null ? JabatanModel.fromJson(json['jabatan']) : null,
     );
@@ -160,5 +181,225 @@ class TarifBonusCabangModel {
       cabang: json['cabang'] != null ? CabangModel.fromJson(json['cabang']) : null,
       jenisBonus: json['jenis_bonus'] != null ? JenisBonusModel.fromJson(json['jenis_bonus']) : null,
     );
+  }
+}
+
+class PelangganHrdModel {
+  final int id;
+  final int cabangId;
+  final String namaPelanggan;
+  final String? noWa;
+  final String? alamat;
+  final String? catatan;
+  final String status;
+  final CabangModel? cabang;
+
+  PelangganHrdModel({
+    required this.id,
+    required this.cabangId,
+    required this.namaPelanggan,
+    this.noWa,
+    this.alamat,
+    this.catatan,
+    required this.status,
+    this.cabang,
+  });
+
+  factory PelangganHrdModel.fromJson(Map<String, dynamic> json) {
+    return PelangganHrdModel(
+      id: json['id'],
+      cabangId: json['cabang_id'],
+      namaPelanggan: json['nama_pelanggan'] ?? '',
+      noWa: json['no_wa'],
+      alamat: json['alamat'],
+      catatan: json['catatan'],
+      status: json['status'] ?? 'aktif',
+      cabang: json['cabang'] != null ? CabangModel.fromJson(json['cabang']) : null,
+    );
+  }
+}
+
+class GajiPokokModel {
+  final int id;
+  final int cabangId;
+  final int jabatanId;
+  final String statusKaryawan;
+  final int gajiPokok;
+  final int bonusBulanan;
+  final int tunjanganKos;
+  final int tunjanganKerja;
+  final int gajiPokokHarian;
+  final int premiBpjs;
+  final CabangModel? cabang;
+  final JabatanModel? jabatan;
+
+  GajiPokokModel({
+    required this.id,
+    required this.cabangId,
+    required this.jabatanId,
+    required this.statusKaryawan,
+    required this.gajiPokok,
+    required this.bonusBulanan,
+    required this.tunjanganKos,
+    required this.tunjanganKerja,
+    required this.gajiPokokHarian,
+    required this.premiBpjs,
+    this.cabang,
+    this.jabatan,
+  });
+
+  factory GajiPokokModel.fromJson(Map<String, dynamic> json) {
+    return GajiPokokModel(
+      id: json['id'],
+      cabangId: json['cabang_id'],
+      jabatanId: json['jabatan_id'],
+      statusKaryawan: json['status_karyawan'] ?? '',
+      gajiPokok: json['gaji_pokok'] != null ? (double.tryParse(json['gaji_pokok'].toString())?.toInt() ?? 0) : 0,
+      bonusBulanan: json['bonus_bulanan'] != null ? (double.tryParse(json['bonus_bulanan'].toString())?.toInt() ?? 0) : 0,
+      tunjanganKos: json['tunjangan_kos'] != null ? (double.tryParse(json['tunjangan_kos'].toString())?.toInt() ?? 0) : 0,
+      tunjanganKerja: json['tunjangan_kerja'] != null ? (double.tryParse(json['tunjangan_kerja'].toString())?.toInt() ?? 0) : 0,
+      gajiPokokHarian: json['gaji_pokok_harian'] != null ? (double.tryParse(json['gaji_pokok_harian'].toString())?.toInt() ?? 0) : 0,
+      premiBpjs: json['premi_bpjs'] != null ? (double.tryParse(json['premi_bpjs'].toString())?.toInt() ?? 0) : 0,
+      cabang: json['cabang'] != null ? CabangModel.fromJson(json['cabang']) : null,
+      jabatan: json['jabatan'] != null ? JabatanModel.fromJson(json['jabatan']) : null,
+    );
+  }
+}
+
+class GajiKaryawanModel {
+  final int id;
+  final int karyawanId;
+  final String jenisGaji;
+  final String? snapshotCabang;
+  final String? snapshotJabatan;
+  final String? snapshotStatus;
+  final String? awalPeriode;
+  final String? akhirPeriode;
+  final int? periodeBulan;
+  final int? periodeTahun;
+  final int? jumlahHariKerja;
+  
+  final int gajiPokok;
+  final int gajiPokokHarian;
+  final int bonusBulanan;
+  final int tunjanganKos;
+  final int tunjanganKerja;
+  final int premiBpjs;
+  
+  final int kasbon;
+  final int potonganTidakAbsen;
+  final int potonganKeterlambatan;
+  final int potonganAbsen;
+  final int bpjsKetenagakerjaan;
+  final int potonganLainnya;
+  final String? keteranganPotonganLainnya;
+  
+  final int bonusReview;
+  final int bonusTanggalMerah;
+  final int totalKilometer;
+  final int totalDeepclean;
+  final int totalSalon;
+  final int totalTips;
+  final int totalParkir;
+  final int totalLembur;
+  final int totalUangMakan;
+  final int totalBonusLainnya;
+  
+  final int totalBonus;
+  final int totalPotongan;
+  final int takeHomePay;
+  final int totalGajiDiterima;
+
+  final KaryawanModel? karyawan;
+
+  GajiKaryawanModel({
+    required this.id,
+    required this.karyawanId,
+    required this.jenisGaji,
+    this.snapshotCabang,
+    this.snapshotJabatan,
+    this.snapshotStatus,
+    this.awalPeriode,
+    this.akhirPeriode,
+    this.periodeBulan,
+    this.periodeTahun,
+    this.jumlahHariKerja,
+    required this.gajiPokok,
+    required this.gajiPokokHarian,
+    required this.bonusBulanan,
+    required this.tunjanganKos,
+    required this.tunjanganKerja,
+    required this.premiBpjs,
+    required this.kasbon,
+    required this.potonganTidakAbsen,
+    required this.potonganKeterlambatan,
+    required this.potonganAbsen,
+    required this.bpjsKetenagakerjaan,
+    required this.potonganLainnya,
+    this.keteranganPotonganLainnya,
+    required this.bonusReview,
+    required this.bonusTanggalMerah,
+    required this.totalKilometer,
+    required this.totalDeepclean,
+    required this.totalSalon,
+    required this.totalTips,
+    required this.totalParkir,
+    required this.totalLembur,
+    required this.totalUangMakan,
+    required this.totalBonusLainnya,
+    required this.totalBonus,
+    required this.totalPotongan,
+    required this.takeHomePay,
+    required this.totalGajiDiterima,
+    this.karyawan,
+  });
+
+  factory GajiKaryawanModel.fromJson(Map<String, dynamic> json) {
+    return GajiKaryawanModel(
+      id: json['id'] ?? 0,
+      karyawanId: json['karyawan_id'] ?? 0,
+      jenisGaji: json['jenis_gaji'] ?? 'bulanan',
+      snapshotCabang: json['snapshot_cabang'],
+      snapshotJabatan: json['snapshot_jabatan'],
+      snapshotStatus: json['snapshot_status'],
+      awalPeriode: json['awal_periode'],
+      akhirPeriode: json['akhir_periode'],
+      periodeBulan: json['periode_bulan'],
+      periodeTahun: json['periode_tahun'],
+      jumlahHariKerja: json['jumlah_hari_kerja'],
+      gajiPokok: _parseInt(json['gaji_pokok']),
+      gajiPokokHarian: _parseInt(json['gaji_pokok_harian']),
+      bonusBulanan: _parseInt(json['bonus_bulanan']),
+      tunjanganKos: _parseInt(json['tunjangan_kos']),
+      tunjanganKerja: _parseInt(json['tunjangan_kerja']),
+      premiBpjs: _parseInt(json['premi_bpjs']),
+      kasbon: _parseInt(json['kasbon']),
+      potonganTidakAbsen: _parseInt(json['potongan_tidak_absen']),
+      potonganKeterlambatan: _parseInt(json['potongan_keterlambatan']),
+      potonganAbsen: _parseInt(json['potongan_absen']),
+      bpjsKetenagakerjaan: _parseInt(json['bpjs_ketenagakerjaan']),
+      potonganLainnya: _parseInt(json['potongan_lainnya']),
+      keteranganPotonganLainnya: json['keterangan_potongan_lainnya'],
+      bonusReview: _parseInt(json['bonus_review']),
+      bonusTanggalMerah: _parseInt(json['bonus_tanggal_merah']),
+      totalKilometer: _parseInt(json['total_kilometer']),
+      totalDeepclean: _parseInt(json['total_deepclean']),
+      totalSalon: _parseInt(json['total_salon']),
+      totalTips: _parseInt(json['total_tips']),
+      totalParkir: _parseInt(json['total_parkir']),
+      totalLembur: _parseInt(json['total_lembur']),
+      totalUangMakan: _parseInt(json['total_uang_makan']),
+      totalBonusLainnya: _parseInt(json['total_bonus_lainnya']),
+      totalBonus: _parseInt(json['total_bonus']),
+      totalPotongan: _parseInt(json['total_potongan']),
+      takeHomePay: _parseInt(json['take_home_pay']),
+      totalGajiDiterima: _parseInt(json['total_gaji_diterima']),
+      karyawan: json['karyawan'] != null ? KaryawanModel.fromJson(json['karyawan']) : null,
+    );
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    return double.tryParse(value.toString())?.toInt() ?? 0;
   }
 }
