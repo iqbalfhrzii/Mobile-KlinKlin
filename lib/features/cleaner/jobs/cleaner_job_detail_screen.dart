@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
@@ -131,18 +133,18 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
     await prefs.remove('job_start_time_${_job['id']}');
   }
 
-  Future<void> _updateStatus(String action) async {
+  Future<void> _updateStatus(String action, List<File> photos) async {
     setState(() {
       _isLoading = true;
       _error = '';
     });
     try {
       if (action == 'start') {
-        await _service.startJob(_job['id']);
+        await _service.startJob(_job['id'], photos);
         await _saveLocalStartTime();
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pekerjaan dimulai!'), backgroundColor: AppColors.statusProgress));
       } else if (action == 'finish') {
-        await _service.finishJob(_job['id']);
+        await _service.finishJob(_job['id'], photos);
         await _clearLocalStartTime();
         _durationTimer?.cancel();
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pekerjaan selesai!'), backgroundColor: AppColors.statusDone));
@@ -156,6 +158,189 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_error), backgroundColor: AppColors.error));
     }
+  }
+
+  void _showPhotoPickerSheet(String action) {
+    final ImagePicker picker = ImagePicker();
+    List<File> selectedPhotos = [];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            Future<void> pickPhoto(ImageSource source) async {
+              if (selectedPhotos.length >= 3) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Maksimal 3 foto')),
+                );
+                return;
+              }
+              final XFile? file = await picker.pickImage(
+                source: source,
+                imageQuality: 60,
+                maxWidth: 1024,
+                maxHeight: 1024,
+              );
+              if (file != null) {
+                setModalState(() {
+                  selectedPhotos.add(File(file.path));
+                });
+              }
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                top: 20,
+                left: 20,
+                right: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        action == 'start' ? 'Foto Start Pekerjaan' : 'Foto Finish Pekerjaan',
+                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    'Wajib pilih/ambil 2-3 foto pekerjaan.',
+                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+                  ),
+                  const SizedBox(height: 16),
+
+                  Row(
+                    children: [
+                      ...selectedPhotos.asMap().entries.map((entry) {
+                        final idx = entry.key;
+                        final f = entry.value;
+                        return Stack(
+                          children: [
+                            Container(
+                              margin: const EdgeInsets.only(right: 12),
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                image: DecorationImage(
+                                  image: FileImage(f),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 2,
+                              right: 14,
+                              child: GestureDetector(
+                                onTap: () {
+                                  setModalState(() {
+                                    selectedPhotos.removeAt(idx);
+                                  });
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close, size: 14, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }),
+                      if (selectedPhotos.length < 3)
+                        GestureDetector(
+                          onTap: () {
+                            showModalBottomSheet(
+                              context: context,
+                              builder: (_) => SafeArea(
+                                child: Wrap(
+                                  children: [
+                                    ListTile(
+                                      leading: const Icon(Icons.camera_alt),
+                                      title: const Text('Kamera'),
+                                      onTap: () {
+                                        Navigator.pop(context);
+                                        pickPhoto(ImageSource.camera);
+                                      },
+                                    ),
+                                    ListTile(
+                                      leading: const Icon(Icons.photo_library),
+                                      title: const Text('Galeri'),
+                                      onTap: () {
+                                        Navigator.pop(context);
+                                        pickPhoto(ImageSource.gallery);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_a_photo, color: AppColors.primary),
+                                SizedBox(height: 4),
+                                Text('Tambah', style: TextStyle(fontSize: 10, color: AppColors.primary)),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _updateStatus(action, selectedPhotos);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: action == 'start' ? AppColors.primary : AppColors.statusDone,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(
+                        action == 'start' ? 'Kirim & Start Pekerjaan' : 'Kirim & Selesaikan Pekerjaan',
+                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   String _formatRupiah(int n) =>
@@ -925,7 +1110,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : () => _updateStatus(isStartable ? 'start' : 'finish'),
+                    onPressed: _isLoading ? null : () => _showPhotoPickerSheet(isStartable ? 'start' : 'finish'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isStartable ? AppColors.primary : AppColors.statusDone,
                       padding: const EdgeInsets.symmetric(vertical: 16),

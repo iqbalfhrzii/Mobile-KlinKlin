@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/api/api_client.dart';
@@ -20,17 +21,13 @@ class CleanerJobService {
         'cleaner_id': cleanerId,
       });
 
-      final responseData = response.data['data'];
-      if (responseData is List) {
-        return responseData
-            .where((e) => e['status_pengerjaan'] != 'assigned')
-            .map((e) => Map<String, dynamic>.from(e))
-            .toList();
+      if (response.data['status'] == true) {
+        return response.data['data'] as List<dynamic>;
       }
-      throw Exception(response.data['message'] ?? 'Gagal mengambil data jobs');
+      throw Exception(response.data['message'] ?? 'Gagal mengambil data job');
     } on DioException catch (e) {
       if (e.response != null && e.response?.data != null) {
-        throw Exception(e.response?.data['message'] ?? 'Gagal mengambil data jobs');
+        throw Exception(e.response?.data['message'] ?? 'Gagal mengambil data job');
       }
       throw Exception('Tidak dapat terhubung ke server');
     }
@@ -46,7 +43,7 @@ class CleanerJobService {
       });
 
       if (response.data['status'] == true) {
-        return response.data['data'];
+        return response.data['data'] as Map<String, dynamic>;
       }
       throw Exception(response.data['message'] ?? 'Gagal mengambil detail job');
     } on DioException catch (e) {
@@ -57,41 +54,111 @@ class CleanerJobService {
     }
   }
 
-  Future<void> startJob(int pesananCleanerId) async {
+  Future<void> startJob(int pesananCleanerId, List<File> photos) async {
     final cleanerId = await _getCleanerId();
     if (cleanerId == null) throw Exception('Cleaner ID tidak ditemukan');
 
     try {
-      final response = await _dio.post('/cleaner/jobs/$pesananCleanerId/start', queryParameters: {
-        'cleaner_id': cleanerId,
+      final List<MultipartFile> files = [];
+      for (var f in photos) {
+        files.add(await MultipartFile.fromFile(
+          f.path,
+          filename: f.path.split('/').last,
+        ));
+      }
+
+      final formData = FormData.fromMap({
+        'foto[]': files,
       });
+
+      final response = await _dio.post(
+        '/cleaner/jobs/$pesananCleanerId/start',
+        queryParameters: {'cleaner_id': cleanerId},
+        data: formData,
+      );
 
       if (response.data['status'] != true) {
         throw Exception(response.data['message'] ?? 'Gagal memulai job');
       }
     } on DioException catch (e) {
       if (e.response != null && e.response?.data != null) {
-        throw Exception(e.response?.data['message'] ?? 'Gagal memulai job');
+        final data = e.response?.data;
+        if (data is Map) {
+          if (data['errors'] != null) {
+            final errs = data['errors'];
+            if (errs is Map && errs['foto'] != null) {
+              final fotoErrs = errs['foto'];
+              if (fotoErrs is List) {
+                throw Exception(fotoErrs.join(', '));
+              }
+              throw Exception(fotoErrs.toString());
+            } else if (errs is List) {
+              throw Exception(errs.join(', '));
+            } else if (errs is Map) {
+              final messages = errs.values.expand((v) => v is List ? v : [v.toString()]).join(', ');
+              throw Exception(messages);
+            }
+          }
+          if (data['message'] != null) {
+            throw Exception(data['message'].toString());
+          }
+        }
+        throw Exception(e.response?.data?.toString() ?? 'Gagal memulai job');
       }
       throw Exception('Tidak dapat terhubung ke server');
     }
   }
 
-  Future<void> finishJob(int pesananCleanerId) async {
+  Future<void> finishJob(int pesananCleanerId, List<File> photos) async {
     final cleanerId = await _getCleanerId();
     if (cleanerId == null) throw Exception('Cleaner ID tidak ditemukan');
 
     try {
-      final response = await _dio.post('/cleaner/jobs/$pesananCleanerId/finish', queryParameters: {
-        'cleaner_id': cleanerId,
+      final List<MultipartFile> files = [];
+      for (var f in photos) {
+        files.add(await MultipartFile.fromFile(
+          f.path,
+          filename: f.path.split('/').last,
+        ));
+      }
+
+      final formData = FormData.fromMap({
+        'foto[]': files,
       });
+
+      final response = await _dio.post(
+        '/cleaner/jobs/$pesananCleanerId/finish',
+        queryParameters: {'cleaner_id': cleanerId},
+        data: formData,
+      );
 
       if (response.data['status'] != true) {
         throw Exception(response.data['message'] ?? 'Gagal menyelesaikan job');
       }
     } on DioException catch (e) {
       if (e.response != null && e.response?.data != null) {
-        throw Exception(e.response?.data['message'] ?? 'Gagal menyelesaikan job');
+        final data = e.response?.data;
+        if (data is Map) {
+          if (data['errors'] != null) {
+            final errs = data['errors'];
+            if (errs is Map && errs['foto'] != null) {
+              final fotoErrs = errs['foto'];
+              if (fotoErrs is List) {
+                throw Exception(fotoErrs.join(', '));
+              }
+              throw Exception(fotoErrs.toString());
+            } else if (errs is List) {
+              throw Exception(errs.join(', '));
+            } else if (errs is Map) {
+              final messages = errs.values.expand((v) => v is List ? v : [v.toString()]).join(', ');
+              throw Exception(messages);
+            }
+          }
+          if (data['message'] != null) {
+            throw Exception(data['message'].toString());
+          }
+        }
+        throw Exception(e.response?.data?.toString() ?? 'Gagal menyelesaikan job');
       }
       throw Exception('Tidak dapat terhubung ke server');
     }

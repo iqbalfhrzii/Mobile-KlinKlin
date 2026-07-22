@@ -8,6 +8,7 @@ import '../screens/hrd_data_master_screen.dart';
 import '../../attendance/screens/admin_attendance_list_screen.dart';
 
 import '../screens/hrd_dashboard_screen.dart';
+import '../screens/gaji_karyawan/gaji_karyawan_list_screen.dart';
 
 class HrdMainShell extends StatefulWidget {
   const HrdMainShell({
@@ -35,12 +36,12 @@ class _HrdMainShellState extends State<HrdMainShell> {
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
   }
 
-  final _screens = const [
-    HrdDashboardScreen(),
-    AdminAttendanceListScreen(),
-    Scaffold(body: Center(child: Text('Penggajian - Coming Soon'))),
-    HrdDataMasterScreen(),
-    ProfileScreen(),
+  List<Widget> get _screens => [
+    const HrdDashboardScreen(),
+    const AdminAttendanceListScreen(),
+    const GajiKaryawanListScreen(),
+    const HrdDataMasterScreen(),
+    const ProfileScreen(),
   ];
 
   static const _navItems = [

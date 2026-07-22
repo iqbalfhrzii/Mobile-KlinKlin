@@ -208,16 +208,56 @@ class AttendanceService {
   Future<List<AttendanceHistoryItem>> getAllAbsensi({String? date, String? month, String? branch}) async {
     try {
       final Map<String, dynamic> query = {};
-      if (date != null) query['tanggal'] = date;
-      if (month != null) query['bulan'] = month;
-      if (branch != null) query['cabang_id'] = branch;
-
-      final response = await _dio.get('/absensi/riwayat', queryParameters: query);
-      if (response.statusCode == 200) {
-        final List data = response.data['data'] ?? [];
-        return data.map((item) => AttendanceHistoryItem.fromJson(item)).toList();
+      if (date != null && date.isNotEmpty) {
+        query['tanggal'] = date;
       }
-      throw Exception('Gagal mendapatkan daftar absensi');
+      if (month != null && month.isNotEmpty) {
+        if (month.contains('-')) {
+          final parts = month.split('-');
+          if (parts.length >= 2) {
+            final y = int.tryParse(parts[0]);
+            final m = int.tryParse(parts[1]);
+            if (y != null) query['tahun'] = y;
+            if (m != null) query['bulan'] = m;
+          }
+        } else {
+          final m = int.tryParse(month);
+          if (m != null) query['bulan'] = m;
+        }
+      }
+      if (branch != null && branch.isNotEmpty) {
+        final bId = int.tryParse(branch);
+        if (bId != null) query['cabang_id'] = bId;
+      }
+
+      final allItems = <AttendanceHistoryItem>[];
+      int currentPage = 1;
+      int lastPage = 1;
+
+      do {
+        final currentQuery = Map<String, dynamic>.from(query);
+        currentQuery['page'] = currentPage;
+
+        final response = await _dio.get('/absensi/riwayat', queryParameters: currentQuery);
+        if (response.statusCode == 200) {
+          final resData = response.data['data'];
+          if (resData is Map) {
+            final itemsList = resData['data'] as List? ?? [];
+            allItems.addAll(itemsList.map((item) => AttendanceHistoryItem.fromJson(item)));
+            lastPage = resData['last_page'] ?? 1;
+          } else if (resData is List) {
+            allItems.addAll(resData.map((item) => AttendanceHistoryItem.fromJson(item)));
+            break;
+          } else {
+            break;
+          }
+        } else {
+          break;
+        }
+        currentPage++;
+      } while (currentPage <= lastPage);
+
+      return allItems;
     } catch (e) {
       throw Exception('Terjadi kesalahan saat memuat absensi: $e');
     }

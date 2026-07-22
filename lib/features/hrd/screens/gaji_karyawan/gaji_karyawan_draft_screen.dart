@@ -101,7 +101,7 @@ class _GajiKaryawanDraftScreenState extends State<GajiKaryawanDraftScreen> {
         final res = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => GajiKaryawanFormScreen(draft: draft),
+            builder: (_) => GajiKaryawanFormScreen(gajiToEdit: draft),
           ),
         );
         if (res == true) {

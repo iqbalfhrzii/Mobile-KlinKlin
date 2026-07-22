@@ -2653,6 +2653,7 @@ klinklin.co.id/aduanpayment''';
     List<Map<String, dynamic>> availableCleaners = [];
     bool isLoading = true;
     String? error;
+    String searchQuery = '';
     List<String> selectedIds = o.cleaners.map((c) => c.id).toList();
 
     showModalBottomSheet(
@@ -2688,8 +2689,13 @@ klinklin.co.id/aduanpayment''';
                   });
             }
 
+            final filteredCleaners = availableCleaners.where((c) {
+              final name = (c['nama'] ?? c['name'] ?? '').toString().toLowerCase();
+              return name.contains(searchQuery.toLowerCase());
+            }).toList();
+
             return Container(
-              height: MediaQuery.of(innerContext).size.height * 0.75,
+              height: MediaQuery.of(innerContext).size.height * 0.8,
               decoration: const BoxDecoration(
                 color: AppColors.background,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -2706,7 +2712,7 @@ klinklin.co.id/aduanpayment''';
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -2728,6 +2734,29 @@ klinklin.co.id/aduanpayment''';
                       ],
                     ),
                   ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                    child: TextField(
+                      onChanged: (val) {
+                        setStateModal(() {
+                          searchQuery = val;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Cari nama cleaner...',
+                        hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 14),
+                        prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textMuted, size: 20),
+                        filled: true,
+                        fillColor: AppColors.surface,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   const Divider(height: 1, color: AppColors.border),
                   Expanded(
                     child: isLoading
@@ -2740,10 +2769,12 @@ klinklin.co.id/aduanpayment''';
                               textAlign: TextAlign.center,
                             ),
                           )
-                        : availableCleaners.isEmpty
+                        : filteredCleaners.isEmpty
                         ? Center(
                             child: Text(
-                              'Tidak ada cleaner tersedia.',
+                              searchQuery.isNotEmpty
+                                  ? 'Cleaner dengan nama "$searchQuery" tidak ditemukan.'
+                                  : 'Tidak ada cleaner tersedia.',
                               style: GoogleFonts.inter(
                                 color: AppColors.textMuted,
                               ),
@@ -2751,9 +2782,9 @@ klinklin.co.id/aduanpayment''';
                           )
                         : ListView.builder(
                             padding: const EdgeInsets.all(16),
-                            itemCount: availableCleaners.length,
+                            itemCount: filteredCleaners.length,
                             itemBuilder: (listContext, index) {
-                              final c = availableCleaners[index];
+                              final c = filteredCleaners[index];
                               final isSelected = selectedIds.contains(c['id']);
                               final statusPengerjaan =
                                   c['status_pengerjaan']?.toString() ?? 'free';

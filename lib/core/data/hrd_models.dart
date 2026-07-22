@@ -403,3 +403,97 @@ class GajiKaryawanModel {
     return double.tryParse(value.toString())?.toInt() ?? 0;
   }
 }
+
+class InsentifCleanerModel {
+  final int karyawanId;
+  final String namaCleaner;
+  final String cabang;
+  final int totalInsentif;
+  final int jumlahBonus;
+  final List<InsentifDetailModel> riwayat;
+
+  InsentifCleanerModel({
+    required this.karyawanId,
+    required this.namaCleaner,
+    required this.cabang,
+    required this.totalInsentif,
+    required this.jumlahBonus,
+    this.riwayat = const [],
+  });
+
+  factory InsentifCleanerModel.fromJson(Map<String, dynamic> json) {
+    return InsentifCleanerModel(
+      karyawanId: json['karyawan_id'] ?? json['id'] ?? 0,
+      namaCleaner: json['nama_cleaner'] ?? json['nama'] ?? '-',
+      cabang: json['cabang'] ?? (json['cabang'] is Map ? json['cabang']['nama_cabang'] : null) ?? '-',
+      totalInsentif: _parseInt(json['total_insentif']),
+      jumlahBonus: _parseInt(json['jumlah_bonus']),
+      riwayat: json['riwayat'] != null
+          ? (json['riwayat'] as List).map((e) => InsentifDetailModel.fromJson(e)).toList()
+          : [],
+    );
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    return double.tryParse(value.toString())?.toInt() ?? 0;
+  }
+}
+
+class InsentifDetailModel {
+  final String tanggal;
+  final String pelanggan;
+  final String pesananIdVisual;
+  final int totalNominal;
+  final List<InsentifItemModel> items;
+
+  InsentifDetailModel({
+    required this.tanggal,
+    required this.pelanggan,
+    required this.pesananIdVisual,
+    required this.totalNominal,
+    this.items = const [],
+  });
+
+  factory InsentifDetailModel.fromJson(Map<String, dynamic> json) {
+    return InsentifDetailModel(
+      tanggal: json['tanggal'] ?? '',
+      pelanggan: json['pelanggan'] ?? '',
+      pesananIdVisual: json['pesanan_id_visual'] ?? '',
+      totalNominal: _parseInt(json['total_nominal']),
+      items: json['items'] != null
+          ? (json['items'] as List).map((e) => InsentifItemModel.fromJson(e)).toList()
+          : [],
+    );
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    return double.tryParse(value.toString())?.toInt() ?? 0;
+  }
+}
+
+class InsentifItemModel {
+  final String jenisBonus;
+  final int nominal;
+  final String? keterangan;
+
+  InsentifItemModel({
+    required this.jenisBonus,
+    required this.nominal,
+    this.keterangan,
+  });
+
+  factory InsentifItemModel.fromJson(Map<String, dynamic> json) {
+    return InsentifItemModel(
+      jenisBonus: json['jenis_bonus'] ?? '',
+      nominal: _parseInt(json['nominal']),
+      keterangan: json['keterangan'],
+    );
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    return double.tryParse(value.toString())?.toInt() ?? 0;
+  }
+}

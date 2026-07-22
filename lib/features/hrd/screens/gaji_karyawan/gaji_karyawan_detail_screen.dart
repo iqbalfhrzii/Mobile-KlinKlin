@@ -1,10 +1,13 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:printing/printing.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/gradient_header.dart';
 import '../../../../../core/data/hrd_models.dart';
+import '../../../../../core/services/pdf_slip_gaji_service.dart';
 import '../../services/hrd_service.dart';
 
 class GajiKaryawanDetailScreen extends StatelessWidget {
@@ -15,12 +18,22 @@ class GajiKaryawanDetailScreen extends StatelessWidget {
   GajiKaryawanDetailScreen({super.key, required this.gaji});
 
   void _printSlip(BuildContext context) async {
-    final url = Uri.parse(_hrdService.getPrintSlipGajiUrl(gaji.id));
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal membuka tautan PDF.')));
+    Uint8List pdfBytes;
+    try {
+      final bytes = await _hrdService.fetchPrintSlipPdfBytes(gaji.id);
+      if (bytes.length > 4 && bytes[0] == 0x25 && bytes[1] == 0x50 && bytes[2] == 0x44 && bytes[3] == 0x46) {
+        pdfBytes = bytes;
+      } else {
+        pdfBytes = await PdfSlipGajiService.generateSlip(gaji);
       }
+    } catch (_) {
+      pdfBytes = await PdfSlipGajiService.generateSlip(gaji);
     }
+
+    await Printing.layoutPdf(
+      name: 'Slip_Gaji_${gaji.karyawan?.nama ?? gaji.id}',
+      onLayout: (format) => pdfBytes,
+    );
   }
 
   Widget _buildSummaryRow(String label, int amount, {bool isMinus = false, bool isBold = false}) {

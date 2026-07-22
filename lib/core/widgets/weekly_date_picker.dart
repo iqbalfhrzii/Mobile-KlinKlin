@@ -10,6 +10,7 @@ class WeeklyDatePicker extends StatefulWidget {
     this.onSearchSubmit,
     this.searchQuery,
     this.initialDate,
+    this.showAllMonthButton = true,
   });
 
   /// Called when the filter changes.
@@ -21,6 +22,7 @@ class WeeklyDatePicker extends StatefulWidget {
   final VoidCallback? onSearchSubmit;
   final String? searchQuery;
   final DateTime? initialDate;
+  final bool showAllMonthButton;
 
   @override
   State<WeeklyDatePicker> createState() => _WeeklyDatePickerState();
@@ -285,67 +287,68 @@ class _WeeklyDatePickerState extends State<WeeklyDatePicker> {
               const SizedBox(width: 8),
             ],
             // Tombol Semua Tanggal
-            if (!_isAllTime)
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _isAllTime = true;
-                    _selectedDate = null;
-                  });
-                  _notifyParent();
-                },
-                child: Container(
-                  height: 38,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceBlue,
-                    borderRadius: BorderRadius.circular(12),
+            if (widget.showAllMonthButton)
+              if (!_isAllTime)
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _isAllTime = true;
+                      _selectedDate = null;
+                    });
+                    _notifyParent();
+                  },
+                  child: Container(
+                    height: 38,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceBlue,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Lihat per bulan',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
                   ),
-                  child: Text(
-                    'Lihat per bulan',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
+                )
+              else
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _isAllTime = false;
+                      _selectedDate = null;
+                    });
+                    _notifyParent();
+                  },
+                  child: Container(
+                    height: 38,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.close, size: 14, color: AppColors.primary),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Filter Bulan Ini',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              )
-            else
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _isAllTime = false;
-                    _selectedDate = null;
-                  });
-                  _notifyParent();
-                },
-                child: Container(
-                  height: 38,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.history_rounded, size: 14, color: AppColors.textMuted),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Lihat per bulan (Batal)',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
           ],
         ),
       ],

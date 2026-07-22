@@ -38,6 +38,7 @@ class AttendanceStatus {
 class AttendanceHistoryItem {
   final int id;
   final String? namaCleaner;
+  final String? cabangName;
   final String type; // 'check_in' or 'check_out'
   final String time;
   final String status;
@@ -49,6 +50,7 @@ class AttendanceHistoryItem {
   AttendanceHistoryItem({
     required this.id,
     this.namaCleaner,
+    this.cabangName,
     required this.type,
     required this.time,
     required this.status,
@@ -59,9 +61,19 @@ class AttendanceHistoryItem {
   });
 
   factory AttendanceHistoryItem.fromJson(Map<String, dynamic> json) {
+    String? cName;
+    if (json['cabang_name'] != null) {
+      cName = json['cabang_name'].toString();
+    } else if (json['cabang'] is Map && json['cabang']['nama_cabang'] != null) {
+      cName = json['cabang']['nama_cabang'].toString();
+    } else if (json['karyawan'] is Map && json['karyawan']['cabang'] is Map) {
+      cName = json['karyawan']['cabang']['nama_cabang']?.toString();
+    }
+
     return AttendanceHistoryItem(
       id: json['id'] ?? 0,
       namaCleaner: json['nama_cleaner'] ?? (json['karyawan'] != null ? json['karyawan']['nama'] : null),
+      cabangName: cName,
       type: json['tipe'] ?? json['type'] ?? 'unknown',
       time: _formatTime(json['waktu_server'] ?? json['created_at'] ?? ''),
       status: json['status'] ?? 'unknown',
@@ -89,6 +101,7 @@ class GroupedAttendanceItem {
   final String tanggal;
   final int karyawanId;
   final String namaCleaner;
+  final String? cabangName;
   final AttendanceHistoryItem? checkIn;
   final AttendanceHistoryItem? checkOut;
 
@@ -96,6 +109,7 @@ class GroupedAttendanceItem {
     required this.tanggal,
     required this.karyawanId,
     required this.namaCleaner,
+    this.cabangName,
     this.checkIn,
     this.checkOut,
   });

@@ -1215,171 +1215,192 @@ class _Step2Services extends StatelessWidget {
                     final s = draft.services[i];
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: AppColors.border),
                         boxShadow: [AppColors.cardShadow],
                       ),
-                      child: Row(
+                      child: Column(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceBlue.withOpacity(0.5),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.cleaning_services_rounded,
-                              color: AppColors.primary,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Row(
                               children: [
-                                Text(
-                                  s.name,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.textDark,
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceBlue.withOpacity(0.5),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.cleaning_services_rounded,
+                                    color: AppColors.primary,
+                                    size: 24,
                                   ),
                                 ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.background,
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(color: AppColors.border),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              s.name,
+                                              style: GoogleFonts.inter(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.textDark,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Rp ${CurrencyInputFormatter.format(s.price.toInt())}',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.primary,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      child: Text(
-                                        'Qty: ${s.qty}',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.primary,
+                                      const SizedBox(height: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.background,
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(color: AppColors.border),
+                                        ),
+                                        child: Text(
+                                          'Qty: ${s.qty}',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: AppColors.primary,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '·',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.textMuted,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(
-                                        'Rp ${CurrencyInputFormatter.format(s.price.toInt())}',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.primary,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              GestureDetector(
-                                onTap: () => _showAddServiceSheet(
-                                  context,
-                                  existing: s,
-                                  index: i,
-                                ),
-                                child: Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary.withOpacity(0.08),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(
-                                    Icons.edit_rounded,
-                                    size: 18,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              GestureDetector(
-                                onTap: () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (ctx) => AlertDialog(
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      title: Text(
-                                        'Hapus Layanan?',
-                                        style: GoogleFonts.inter(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                      content: Text(
-                                        'Apakah Anda yakin ingin menghapus layanan ini dari pesanan?',
-                                        style: GoogleFonts.inter(fontSize: 14),
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(ctx),
-                                          child: Text(
-                                            'Batal',
+                          Container(
+                            decoration: const BoxDecoration(
+                              border: Border(top: BorderSide(color: AppColors.border)),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: () => _showAddServiceSheet(
+                                      context,
+                                      existing: s,
+                                      index: i,
+                                    ),
+                                    borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(16)),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.edit_rounded, size: 16, color: AppColors.primary),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            'Edit',
                                             style: GoogleFonts.inter(
-                                              color: AppColors.textMuted,
+                                              fontSize: 13,
                                               fontWeight: FontWeight.w600,
+                                              color: AppColors.primary,
                                             ),
                                           ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Container(width: 1, height: 24, color: AppColors.border),
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          title: Text(
+                                            'Hapus Layanan?',
+                                            style: GoogleFonts.inter(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                          content: Text(
+                                            'Apakah Anda yakin ingin menghapus layanan ini dari pesanan?',
+                                            style: GoogleFonts.inter(fontSize: 14),
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(ctx),
+                                              child: Text(
+                                                'Batal',
+                                                style: GoogleFonts.inter(
+                                                  color: AppColors.textMuted,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                            TextButton(
+                                              onPressed: () {
+                                                Navigator.pop(ctx);
+                                                draft.services.removeAt(i);
+                                                onChanged();
+                                              },
+                                              child: Text(
+                                                'Hapus',
+                                                style: GoogleFonts.inter(
+                                                  color: AppColors.error,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.pop(ctx);
-                                            draft.services.removeAt(i);
-                                            onChanged();
-                                          },
-                                          child: Text(
+                                      );
+                                    },
+                                    borderRadius: const BorderRadius.only(bottomRight: Radius.circular(16)),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.error),
+                                          const SizedBox(width: 6),
+                                          Text(
                                             'Hapus',
                                             style: GoogleFonts.inter(
-                                              color: AppColors.error,
+                                              fontSize: 13,
                                               fontWeight: FontWeight.w600,
+                                              color: AppColors.error,
                                             ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
-                                  );
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.error.withOpacity(0.08),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(
-                                    Icons.delete_rounded,
-                                    size: 18,
-                                    color: AppColors.error,
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -1623,118 +1644,137 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
     });
   }
 
+  @override
   Widget build(BuildContext context) {
-    return AnimatedPadding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeOut,
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final maxHeight = MediaQuery.of(context).size.height * 0.85;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
       child: Container(
+        constraints: BoxConstraints(maxHeight: maxHeight),
         decoration: const BoxDecoration(
           color: AppColors.background,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.all(20),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                widget.existing == null ? 'Tambah Layanan' : 'Edit Layanan',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const SizedBox(height: 16),
-              _label('Layanan'),
-              if (_isLoading)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(12),
-                    child: CircularProgressIndicator(),
-                  ),
-                )
-              else if (_error != null)
-                Text(_error!, style: const TextStyle(color: AppColors.error))
-              else if (_availableServices.isEmpty)
-                const Text('Tidak ada layanan di cabang ini.')
-              else
-                InkWell(
-                  onTap: _showSearchServiceDialog,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 14,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _selectedLayanan != null 
-                                ? _selectedLayanan!['nama_layanan'] 
-                                : 'Pilih layanan...',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: _selectedLayanan != null ? FontWeight.w600 : FontWeight.normal,
-                              color: _selectedLayanan != null ? AppColors.textDark : AppColors.textMuted,
-                            ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              widget.existing == null ? 'Tambah Layanan' : 'Edit Layanan',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _label('Layanan'),
+                    if (_isLoading)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(12),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    else if (_error != null)
+                      Text(_error!, style: const TextStyle(color: AppColors.error))
+                    else if (_availableServices.isEmpty)
+                      const Text('Tidak ada layanan di cabang ini.')
+                    else
+                      InkWell(
+                        onTap: _showSearchServiceDialog,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _selectedLayanan != null 
+                                      ? _selectedLayanan!['nama_layanan'] 
+                                      : 'Pilih layanan...',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: _selectedLayanan != null ? FontWeight.w600 : FontWeight.normal,
+                                    color: _selectedLayanan != null ? AppColors.textDark : AppColors.textMuted,
+                                  ),
+                                ),
+                              ),
+                              const Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                color: AppColors.primary,
+                                size: 22,
+                              ),
+                            ],
                           ),
                         ),
-                        const Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          color: AppColors.primary,
-                          size: 22,
-                        ),
-                      ],
+                      ),
+                    const SizedBox(height: 12),
+                    _label('Harga Layanan (Rp)'),
+                    _textField(
+                      _hargaCtrl,
+                      type: TextInputType.number,
+                      hint: 'Contoh: 150000',
+                      inputFormatters: [CurrencyInputFormatter()],
                     ),
-                  ),
-                ),
-              const SizedBox(height: 12),
-              const SizedBox(height: 12),
-              _label('Harga Layanan (Rp)'),
-              _textField(
-                _hargaCtrl,
-                type: TextInputType.number,
-                hint: 'Contoh: 150000',
-                inputFormatters: [CurrencyInputFormatter()],
-              ),
-              const SizedBox(height: 12),
-              _label('Qty (Contoh: 3 jam 2 cleaner)'),
-              _textField(_qtyCtrl, hint: 'Teks bebas...'),
-              const SizedBox(height: 12),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _submit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 52),
-                  elevation: 4,
-                  shadowColor: AppColors.primary.withOpacity(0.4),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  'Simpan',
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
+                    const SizedBox(height: 12),
+                    _label('Qty (Contoh: 3 jam 2 cleaner)'),
+                    _textField(_qtyCtrl, hint: 'Teks bebas...'),
+                    const SizedBox(height: 16),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: _submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 52),
+                elevation: 4,
+                shadowColor: AppColors.primary.withOpacity(0.4),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                'Simpan',
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

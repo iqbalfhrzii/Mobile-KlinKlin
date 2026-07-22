@@ -111,16 +111,23 @@ class _SelfieViewerScreenState extends State<SelfieViewerScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.broken_image_rounded, color: Colors.white54, size: 64),
+                        const Icon(Icons.no_photography_rounded, color: Colors.white54, size: 64),
                         const SizedBox(height: 16),
-                        Text('Foto selfie tidak dapat dimuat.\nSilakan coba lagi.', 
-                            textAlign: TextAlign.center, 
-                            style: GoogleFonts.inter(color: Colors.white)),
-                        const SizedBox(height: 16),
+                        Text(
+                          'Foto selfie tidak tersedia di server\natau belum diunggah oleh cleaner.', 
+                          textAlign: TextAlign.center, 
+                          style: GoogleFonts.inter(color: Colors.white70, fontSize: 14, height: 1.4),
+                        ),
+                        const SizedBox(height: 20),
                         ElevatedButton.icon(
                           onPressed: _refreshUrl,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Muat Ulang'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          icon: const Icon(Icons.refresh, color: Colors.white),
+                          label: Text('Coba Lagi', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white)),
                         ),
                       ],
                     ),

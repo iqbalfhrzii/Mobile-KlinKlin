@@ -10,6 +10,7 @@ import 'pelanggan/pelanggan_list_screen.dart';
 import 'jenis_bonus/jenis_bonus_list_screen.dart';
 import 'gaji_pokok/gaji_pokok_list_screen.dart';
 import 'gaji_karyawan/gaji_karyawan_list_screen.dart';
+import 'insentif/insentif_cleaner_list_screen.dart';
 
 class HrdDataMasterScreen extends StatelessWidget {
   const HrdDataMasterScreen({super.key});
@@ -52,6 +53,20 @@ class HrdDataMasterScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               children: [
+                _buildMenuCard(
+                  context,
+                  title: 'Insentif Cleaner',
+                  description: 'Pantau & kelola insentif cleaner',
+                  icon: Icons.payments_rounded,
+                  color: Colors.teal,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const InsentifCleanerListScreen(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 _buildMenuCard(
                   context,
                   title: 'Karyawan',
