@@ -33,7 +33,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   bool _isLoading = false;
 
   bool get _canEdit {
-    return _o.status != OrderStatus.completed &&
+    return _o.statusUtamaLabel != 'Done' &&
+        _o.status != OrderStatus.completed &&
         _o.status != OrderStatus.cancelled;
   }
 
@@ -138,6 +139,83 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
       );
     }
+  }
+
+  void _showRequestEditDialog() {
+    if (_o.hasPendingEditRequest) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pengajuan edit layanan sudah dikirim dan sedang menunggu persetujuan Finance.'),
+          backgroundColor: Color(0xFFD97706),
+        ),
+      );
+      return;
+    }
+
+    final reasonCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Ajukan Edit Layanan',
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppColors.primary),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Status pesanan sudah selesai/diproses. Silakan masukkan alasan pengajuan edit untuk disetujui Finance:',
+              style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonCtrl,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'Contoh: Maaf mbak ada salah input pembayaran / layanan...',
+                hintStyle: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final reason = reasonCtrl.text.trim();
+              if (reason.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Alasan pengajuan edit harus diisi.')),
+                );
+                return;
+              }
+              setState(() {
+                _o.hasPendingEditRequest = true;
+                _o.alasanPengajuanEdit = reason;
+              });
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Pengajuan edit layanan berhasil dikirim ke Finance!'),
+                  backgroundColor: Color(0xFF059669),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Kirim Pengajuan'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _toggleWa(OrderCleaner cleaner) async {
@@ -310,6 +388,35 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ] else ...[
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: _showRequestEditDialog,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFFDE68A)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.edit_note_rounded, color: Color(0xFFD97706), size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          o.hasPendingEditRequest ? 'Edit Pending' : 'Ajukan Edit',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFFD97706),
                           ),
                         ),
                       ],

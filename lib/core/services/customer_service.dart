@@ -6,10 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 class CustomerService {
   static final Dio _dio = ApiClient.instance;
 
-  static Future<List<CustomerModel>> getCustomers({String? status}) async {
+  static Future<List<CustomerModel>> getCustomers({String? status, bool ignoreCabang = false}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cabangId = prefs.getInt('user_cabang_id');
+      final cabangId = ignoreCabang ? null : prefs.getInt('user_cabang_id');
 
       final params = <String, dynamic>{};
       if (cabangId != null) params['cabang_id'] = cabangId;

@@ -12,11 +12,13 @@ class CustomerModel {
     required this.lastOrderDate,
     required this.notes,
     required this.orders,
+    this.cabangId,
   });
 
   factory CustomerModel.fromJson(Map<String, dynamic> json) {
     return CustomerModel(
       id: 'PLG-${json['id']}',
+      cabangId: json['cabang_id'] != null ? int.tryParse(json['cabang_id'].toString()) : null,
       name: json['nama_pelanggan'] ?? '-',
       phone: json['no_wa'] ?? '-',
       address: json['alamat'] ?? '-',
@@ -36,6 +38,7 @@ class CustomerModel {
   }
 
   final String id;
+  final int? cabangId;
   final String name;
   final String phone;
   final String address;

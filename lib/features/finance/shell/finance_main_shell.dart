@@ -6,8 +6,9 @@ import '../../auth/screens/change_pin_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 
 import '../screens/finance_dashboard_screen.dart';
-import '../screens/finance_cash_flow_menu_screen.dart';
-import '../../attendance/screens/admin_attendance_list_screen.dart';
+import '../screens/finance_audit_screen.dart';
+import '../screens/finance_gaji_screen.dart';
+import '../screens/finance_download_screen.dart';
 
 class FinanceMainShell extends StatefulWidget {
   const FinanceMainShell({
@@ -35,28 +36,30 @@ class _FinanceMainShellState extends State<FinanceMainShell> {
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
   }
 
-  final List<Widget> _screens = const [
-    FinanceDashboardScreen(),
-    FinanceCashFlowMenuScreen(),
-    AdminAttendanceListScreen(),
-    ProfileScreen(),
-  ];
-
   static const _navItems = [
     _NavItem(Icons.grid_view_rounded, Icons.grid_view_rounded, 'Dashboard'),
-    _NavItem(Icons.account_balance_wallet_outlined, Icons.account_balance_wallet_rounded, 'Cash Flow'),
-    _NavItem(Icons.fingerprint_rounded, Icons.fingerprint_rounded, 'Absensi'),
+    _NavItem(Icons.fact_check_outlined, Icons.fact_check_rounded, 'Audit'),
+    _NavItem(Icons.credit_card_outlined, Icons.credit_card_rounded, 'Gaji'),
+    _NavItem(Icons.download_outlined, Icons.download_rounded, 'Download'),
     _NavItem(Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final screens = const [
+      FinanceDashboardScreen(),
+      FinanceAuditScreen(),
+      FinanceGajiScreen(),
+      FinanceDownloadScreen(),
+      ProfileScreen(),
+    ];
+
     return Stack(
       children: [
         Scaffold(
           body: IndexedStack(
             index: _currentIndex,
-            children: _screens,
+            children: screens,
           ),
           bottomNavigationBar: _buildNavBar(),
         ),

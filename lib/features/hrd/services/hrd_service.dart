@@ -49,8 +49,8 @@ class HrdService {
   }
 
   // --- Karyawan ---
-  Future<List<KaryawanModel>> fetchKaryawan() async {
-    final response = await _dio.get('/karyawans');
+  Future<List<KaryawanModel>> fetchKaryawan({bool all = true}) async {
+    final response = await _dio.get('/karyawans', queryParameters: all ? {'all': 1} : null);
     final data = response.data['data'] as List;
     return data.map((e) => KaryawanModel.fromJson(e)).toList();
   }

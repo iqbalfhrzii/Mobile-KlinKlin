@@ -237,6 +237,32 @@ class OrderCustomer {
   }
 }
 
+class CleanerFoto {
+  String id;
+  String url;
+  String path;
+  String tipe;
+  DateTime? createdAt;
+
+  CleanerFoto({
+    required this.id,
+    required this.url,
+    required this.path,
+    required this.tipe,
+    this.createdAt,
+  });
+
+  factory CleanerFoto.fromJson(Map<String, dynamic> json) {
+    return CleanerFoto(
+      id: json['id']?.toString() ?? '',
+      url: json['foto_url'] ?? json['foto_path'] ?? '',
+      path: json['foto_path'] ?? '',
+      tipe: json['tipe'] ?? 'start',
+      createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) : null,
+    );
+  }
+}
+
 class OrderCleaner {
   OrderCleaner({
     required this.id,
@@ -249,6 +275,8 @@ class OrderCleaner {
     this.fotoProfil,
     this.showWa = false,
     this.phone = '',
+    this.fotosStart = const [],
+    this.fotosFinish = const [],
   });
 
   String id;
@@ -261,12 +289,17 @@ class OrderCleaner {
   String? fotoProfil;
   bool showWa;
   String phone;
+  List<CleanerFoto> fotosStart;
+  List<CleanerFoto> fotosFinish;
 
   factory OrderCleaner.fromJson(Map<String, dynamic> json) {
     final cleaner = json['cleaner'] ?? {};
     final bonusesData = json['bonuses'] as List? ?? [];
     final List<CleanerBonus> parsedBonuses = (bonusesData as List).map<CleanerBonus>((e) => CleanerBonus.fromJson(e)).toList();
     final int totalB = parsedBonuses.fold(0, (sum, b) => sum + b.nominal);
+
+    final fotosStartData = json['fotos_start'] as List? ?? [];
+    final fotosFinishData = json['fotos_finish'] as List? ?? [];
 
     return OrderCleaner(
       id: cleaner['id']?.toString() ?? json['id']?.toString() ?? '',
@@ -279,6 +312,8 @@ class OrderCleaner {
       fotoProfil: cleaner['foto_profil'] ?? cleaner['foto'] ?? (cleaner['user'] != null && cleaner['user'] is Map ? cleaner['user']['foto_profil'] : null),
       showWa: json['show_wa'] == true || json['show_wa'] == 1 || json['show_wa'] == '1',
       phone: cleaner['no_wa']?.toString() ?? cleaner['no_hp']?.toString() ?? cleaner['phone']?.toString() ?? '',
+      fotosStart: (fotosStartData).map((e) => CleanerFoto.fromJson(e)).toList(),
+      fotosFinish: (fotosFinishData).map((e) => CleanerFoto.fromJson(e)).toList(),
     );
   }
 }
@@ -332,6 +367,7 @@ class OrderModel {
     required this.cleaners,
     required this.status,
     required this.total,
+    required this.subtotal,
     required this.paymentMethod,
     required this.paymentStatus,
     required this.notes,
@@ -341,7 +377,16 @@ class OrderModel {
     this.paymentProof,
     this.pembayaran,
     this.pembatalanId,
+    this.waktuBatal,
     this.ppn,
+    this.pph,
+    this.discount = 0,
+    this.hasPendingEditRequest = false,
+    this.alasanPengajuanEdit = '',
+    this.createdByName = '',
+    this.statusPengerjaan = 'Ditugaskan',
+    this.statusBonus = 'Pending',
+    this.statusUtamaRaw,
   });
 
   String id;
@@ -353,6 +398,7 @@ class OrderModel {
   List<OrderCleaner> cleaners;
   OrderStatus status;
   int total;
+  int subtotal;
   String paymentMethod;
   String paymentStatus; // unpaid | paid | cancelled
   String notes;
@@ -362,7 +408,64 @@ class OrderModel {
   String? paymentProof;
   OrderPayment? pembayaran;
   int? pembatalanId;
+  DateTime? waktuBatal;
   int? ppn;
+  int? pph;
+  int? discount;
+  bool hasPendingEditRequest;
+  String alasanPengajuanEdit;
+  String createdByName;
+  String statusPengerjaan;
+  String statusBonus;
+  String? statusUtamaRaw;
+
+  String get statusPengerjaanLabel {
+    if (status == OrderStatus.cancelled) return 'Dibatalkan';
+    if (status == OrderStatus.draft) return 'Draft';
+    if (status == OrderStatus.completed) return 'Selesai';
+    if (status == OrderStatus.finishedByCleaner) return 'Selesai Cleaner';
+    return statusPengerjaan.isNotEmpty ? statusPengerjaan : 'Ditugaskan';
+  }
+
+  String get statusPembayaranLabel {
+    final p = paymentStatus.toLowerCase();
+    final pSub = pembayaran?.statusPembayaran.toLowerCase() ?? '';
+    if (p == 'approved' || p == 'paid' || p == 'lunas' || pSub == 'approved') return 'Disetujui';
+    if (p == 'pending' || pSub == 'pending' || status == OrderStatus.waitingPaymentApproval) return 'Menunggu Approval';
+    if (p == 'rejected' || pSub == 'rejected') return 'Ditolak';
+    if (p == 'cancelled' || status == OrderStatus.cancelled) return 'Dibatalkan';
+    return 'Belum Dibayar';
+  }
+
+  String get statusBonusLabel {
+    if (statusBonus.toLowerCase() == 'selesai') return 'Selesai';
+    if (statusBonus.toLowerCase() == 'approved' || statusBonus.toLowerCase() == 'disetujui') return 'Disetujui';
+    return 'Pending';
+  }
+
+  String get statusUtamaLabel {
+    if (statusUtamaRaw != null && statusUtamaRaw!.isNotEmpty) {
+      final s = statusUtamaRaw!.toLowerCase();
+      if (s == 'done') return 'Done';
+      if (s == 'process') return 'Process';
+      if (s == 'pending') return 'Pending';
+      if (s == 'cancelled') return 'Dibatalkan';
+      if (s == 'draft') return 'Draft';
+    }
+
+    if (status == OrderStatus.cancelled || paymentStatus.toLowerCase() == 'cancelled') return 'Dibatalkan';
+    if (status == OrderStatus.draft) return 'Draft';
+    if (status == OrderStatus.completed && statusBonus.toLowerCase() == 'selesai') return 'Done';
+    if (status == OrderStatus.finishedByCleaner || 
+        status == OrderStatus.waitingPaymentApproval || 
+        status == OrderStatus.waitingCancelApproval || 
+        (status == OrderStatus.completed && statusBonus.toLowerCase() != 'selesai')) {
+      return 'Pending';
+    }
+    return 'Process';
+  }
+
+  String get rawStatus => _orderStatusToString(status);
 
   String get schedule {
     if (services.isEmpty) return "-";
@@ -380,6 +483,16 @@ class OrderModel {
     }
   }
 
+  int get netTotal {
+    if (pembayaran?.total != null && pembayaran!.total! > 0) {
+      return pembayaran!.total!;
+    }
+    if (pembayaran?.totalSetelahDiskon != null && pembayaran!.totalSetelahDiskon! > 0) {
+      return pembayaran!.totalSetelahDiskon!;
+    }
+    return total;
+  }
+
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     final customerData = json['pelanggan'] ?? {};
     final detailsData = json['details'] as List? ?? [];
@@ -390,8 +503,53 @@ class OrderModel {
     
     final int computedTotal = parsedServices.fold(0, (sum, s) => sum + s.subtotal);
 
+    final pendingEdits = json['pending_edit_layanans'] as List? ?? [];
+    bool hasPendingEdit = pendingEdits.isNotEmpty;
+    String alasanEdit = '';
+    String createdByName = '';
+    
+    if (hasPendingEdit) {
+      alasanEdit = pendingEdits.first['keterangan']?.toString() ?? '';
+      createdByName = pendingEdits.first['cs']?['nama']?.toString() ?? pendingEdits.first['cs']?['nama_karyawan']?.toString() ?? 'CS';
+    }
+
+    int parseTotal() {
+      if (json['pembayaran'] != null && json['pembayaran'] is Map) {
+        final p = json['pembayaran'];
+        if (p['total_akhir'] != null) {
+          final v = double.tryParse(p['total_akhir'].toString())?.toInt();
+          if (v != null && v > 0) return v;
+        }
+        if (p['total_setelah_diskon'] != null) {
+          final v = double.tryParse(p['total_setelah_diskon'].toString())?.toInt();
+          if (v != null && v > 0) return v;
+        }
+        if (p['total'] != null) {
+          final v = double.tryParse(p['total'].toString())?.toInt();
+          if (v != null && v > 0) return v;
+        }
+      }
+      if (json['total_akhir'] != null) {
+        final v = double.tryParse(json['total_akhir'].toString())?.toInt();
+        if (v != null && v > 0) return v;
+      }
+      if (json['total_setelah_diskon'] != null) {
+        final v = double.tryParse(json['total_setelah_diskon'].toString())?.toInt();
+        if (v != null && v > 0) return v;
+      }
+      if (json['total'] != null) {
+        final v = double.tryParse(json['total'].toString())?.toInt();
+        if (v != null && v > 0) return v;
+      }
+      if (json['subtotal'] != null) {
+        final v = double.tryParse(json['subtotal'].toString())?.toInt();
+        if (v != null && v > 0) return v;
+      }
+      return computedTotal;
+    }
+
     return OrderModel(
-      id: json['id']?.toString() ?? '',
+      id: json['nomor_pesanan']?.toString() ?? json['id']?.toString() ?? '',
       cabangId: json['cabang_id']?.toString() ?? '',
       customer: OrderCustomer.fromJson(customerData, json),
       chatDari: _parseChatSource(json['chat_dari']),
@@ -399,7 +557,8 @@ class OrderModel {
       services: parsedServices,
       cleaners: parsedCleaners,
       status: _parseOrderStatus(json['status_pesanan']),
-      total: json['subtotal'] != null ? (double.tryParse(json['subtotal'].toString())?.toInt() ?? computedTotal) : computedTotal,
+      total: parseTotal(),
+      subtotal: computedTotal,
       paymentMethod: json['pembayaran']?['metode_pembayaran'] ?? json['metode_pembayaran'] ?? '-',
       paymentStatus: json['pembayaran']?['status_pembayaran'] ?? json['status_pembayaran'] ?? 'unpaid',
       notes: json['keterangan_order'] ?? '',
@@ -409,7 +568,17 @@ class OrderModel {
       paymentProof: json['pembayaran']?['bukti_transfer'] ?? json['pembayaran']?['bukti_pembayaran'] ?? json['file_invoice'],
       pembayaran: json['pembayaran'] != null ? OrderPayment.fromJson(json['pembayaran']) : null,
       pembatalanId: json['pembatalan']?['id'],
-      ppn: json['ppn'] != null ? (double.tryParse(json['ppn'].toString())?.toInt()) : null,
+      waktuBatal: json['waktu_batal'] != null 
+          ? DateTime.tryParse(json['waktu_batal']) 
+          : (json['pembatalan']?['created_at'] != null ? DateTime.tryParse(json['pembatalan']['created_at']) : null),
+      ppn: json['ppn'] != null ? (double.tryParse(json['ppn'].toString())?.toInt()) : (json['pembayaran']?['ppn'] != null ? double.tryParse(json['pembayaran']['ppn'].toString())?.toInt() : null),
+      pph: json['pph'] != null ? (double.tryParse(json['pph'].toString())?.toInt()) : (json['pembayaran']?['pph'] != null ? double.tryParse(json['pembayaran']['pph'].toString())?.toInt() : null),
+      discount: json['diskon_persen'] != null ? (double.tryParse(json['diskon_persen'].toString())?.toInt()) : (json['pembayaran']?['diskon_persen'] != null ? double.tryParse(json['pembayaran']['diskon_persen'].toString())?.toInt() : 0),
+      hasPendingEditRequest: hasPendingEdit,
+      alasanPengajuanEdit: alasanEdit,
+      createdByName: createdByName,
+      statusBonus: json['status_bonus']?.toString() ?? 'Pending',
+      statusUtamaRaw: json['status_order_utama']?.toString(),
     );
   }
 

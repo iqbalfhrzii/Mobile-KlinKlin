@@ -13,6 +13,7 @@ class OrderService {
     int? cabangId,
     String? chatDari,
     String? tipeCustomer,
+    bool fetchAllPages = true,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -24,23 +25,40 @@ class OrderService {
 
       final Map<String, dynamic> queryParams = {};
       if (statusPesanan != null && statusPesanan != 'Semua') {
-        // Map back to API expected string if needed, but the UI might pass raw names
         queryParams['status_pesanan'] = statusPesanan;
       }
       if (cabangId != null) queryParams['cabang_id'] = cabangId;
       if (chatDari != null) queryParams['chat_dari'] = chatDari;
       if (tipeCustomer != null) queryParams['tipe_customer'] = tipeCustomer;
 
-      final response = await _dio.get('/pesanan', queryParameters: queryParams);
-      var responseData = response.data['data'] ?? response.data;
-      
-      // Jika responseData berupa Map (biasanya karena Pagination Laravel), ambil field 'data' di dalamnya
-      if (responseData is Map && responseData.containsKey('data') && responseData['data'] is List) {
-        responseData = responseData['data'];
-      }
-      
-      final List data = responseData as List;
-      return data.map((json) => OrderModel.fromJson(json)).toList();
+      final List<dynamic> allRawOrders = [];
+      int currentPage = 1;
+      int lastPage = 1;
+
+      do {
+        final params = Map<String, dynamic>.from(queryParams);
+        if (fetchAllPages) {
+          params['page'] = currentPage;
+        }
+
+        final response = await _dio.get('/pesanan', queryParameters: params);
+        final rawBody = response.data;
+        var responseData = rawBody['data'] ?? rawBody;
+
+        if (responseData is Map && responseData.containsKey('data') && responseData['data'] is List) {
+          final List pageItems = responseData['data'] as List;
+          allRawOrders.addAll(pageItems);
+          lastPage = responseData['last_page'] is int ? responseData['last_page'] : 1;
+          currentPage++;
+        } else if (responseData is List) {
+          allRawOrders.addAll(responseData);
+          break;
+        } else {
+          break;
+        }
+      } while (fetchAllPages && currentPage <= lastPage);
+
+      return allRawOrders.map((json) => OrderModel.fromJson(json)).toList();
     } catch (e) {
       throw Exception('Gagal mengambil data pesanan: $e');
     }

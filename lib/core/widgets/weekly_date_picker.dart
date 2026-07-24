@@ -11,6 +11,7 @@ class WeeklyDatePicker extends StatefulWidget {
     this.searchQuery,
     this.initialDate,
     this.showAllMonthButton = true,
+    this.trailingWidget,
   });
 
   /// Called when the filter changes.
@@ -23,6 +24,7 @@ class WeeklyDatePicker extends StatefulWidget {
   final String? searchQuery;
   final DateTime? initialDate;
   final bool showAllMonthButton;
+  final Widget? trailingWidget;
 
   @override
   State<WeeklyDatePicker> createState() => _WeeklyDatePickerState();
@@ -286,72 +288,123 @@ class _WeeklyDatePickerState extends State<WeeklyDatePicker> {
               ),
               const SizedBox(width: 8),
             ],
-            // Tombol Semua Tanggal
-            if (widget.showAllMonthButton)
-              if (!_isAllTime)
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _isAllTime = true;
-                      _selectedDate = null;
-                    });
-                    _notifyParent();
-                  },
-                  child: Container(
-                    height: 38,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceBlue,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'Lihat per bulan',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                )
-              else
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _isAllTime = false;
-                      _selectedDate = null;
-                    });
-                    _notifyParent();
-                  },
-                  child: Container(
-                    height: 38,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.close, size: 14, color: AppColors.primary),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Filter Bulan Ini',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
+            // Tombol Semua Tanggal / Custom Trailing Widget
+            if (widget.trailingWidget != null)
+              widget.trailingWidget!
+            else if (widget.showAllMonthButton)
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      // Bulan ini
+                      _isAllTime
+                          ? _buildActiveChip('Bulan ini', () {
+                              setState(() {
+                                _isAllTime = false;
+                                _selectedDate = null;
+                              });
+                              _notifyParent();
+                            })
+                          : _buildInactiveChip('Bulan ini', () {
+                              setState(() {
+                                _isAllTime = true;
+                                _selectedDate = null;
+                                _currentWeekStart = _getStartOfWeek(DateTime.now());
+                              });
+                              _notifyParent();
+                            }),
+                      const SizedBox(width: 8),
+                      // Kemarin
+                      _buildShortcutChip('Kemarin', DateTime.now().subtract(const Duration(days: 1))),
+                      const SizedBox(width: 8),
+                      // Hari ini
+                      _buildShortcutChip('Hari ini', DateTime.now()),
+                      const SizedBox(width: 8),
+                      // Besok
+                      _buildShortcutChip('Besok', DateTime.now().add(const Duration(days: 1))),
+                    ],
                   ),
                 ),
+              ),
           ],
         ),
       ],
+    );
+  }
+
+  bool _isSameDay(DateTime? a, DateTime b) {
+    if (a == null) return false;
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Widget _buildShortcutChip(String label, DateTime targetDate) {
+    final isActive = !_isAllTime && _isSameDay(_selectedDate, targetDate);
+    return isActive
+        ? _buildActiveChip(label, () {
+            setState(() { _selectedDate = null; });
+            _notifyParent();
+          })
+        : _buildInactiveChip(label, () {
+            setState(() {
+              _isAllTime = false;
+              _currentWeekStart = _getStartOfWeek(targetDate);
+              _selectedDate = DateTime(targetDate.year, targetDate.month, targetDate.day);
+            });
+            _notifyParent();
+          });
+  }
+
+  Widget _buildActiveChip(String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.close, size: 14, color: AppColors.primary),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInactiveChip(String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceBlue,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.primary,
+          ),
+        ),
+      ),
     );
   }
 }
