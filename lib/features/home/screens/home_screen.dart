@@ -64,62 +64,56 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (mounted) {
         setState(() {
-          if (dbData.isNotEmpty) {
-            _omzetThisMonth = dbData['omzet_bulan_ini'] ?? 0;
-            _omzetToday = dbData['omzet_hari_ini'] ?? 0;
-            _rataRataOrder = (dbData['rata_rata_order'] ?? 0).toDouble();
-            _targetOmzet = dbData['target_omzet'] ?? 15000000;
-            _ordersToday = dbData['pesanan_hari_ini'] ?? 0;
-            _waiting = dbData['menunggu_approve'] ?? 0;
-            _active = dbData['dikerjakan'] ?? 0;
-            _doneToday = dbData['selesai_hari_ini'] ?? 0;
-            _grafikHarian = dbData['grafik_harian'] ?? [];
-            _grafikBulanan = dbData['grafik_bulanan'] ?? [];
-          } else {
-            // Fallback for when VPS API is not yet updated
-            int omzetBulan = 0;
-            int omzetHari = 0;
-            int countToday = 0;
-            int waiting = 0;
-            int active = 0;
-            int done = 0;
-            final now = DateTime.now();
+          int omzetBulan = 0;
+          int omzetHari = 0;
+          int countThisMonth = 0;
+          int countToday = 0;
+          int waiting = 0;
+          int active = 0;
+          int done = 0;
+          final now = DateTime.now();
 
-            for (var o in orders) {
-              bool isToday =
-                  o.scheduleDateTime.year == now.year &&
-                  o.scheduleDateTime.month == now.month &&
-                  o.scheduleDateTime.day == now.day;
-              bool isThisMonth =
-                  o.scheduleDateTime.year == now.year &&
-                  o.scheduleDateTime.month == now.month;
-
-              if (isThisMonth) omzetBulan += o.total;
-              if (isToday) {
-                omzetHari += o.total;
-                countToday++;
-                if (o.status == OrderStatus.completed) done++;
-              }
-              if (o.status == OrderStatus.waitingPaymentApproval) waiting++;
-              if (o.status == OrderStatus.assigned ||
-                  o.status == OrderStatus.inProgress ||
-                  o.status == OrderStatus.draft)
-                active++;
+          for (var o in orders) {
+            if (o.status == OrderStatus.cancelled || o.status == OrderStatus.draft) {
+              continue;
             }
+            bool isToday =
+                o.scheduleDateTime.year == now.year &&
+                o.scheduleDateTime.month == now.month &&
+                o.scheduleDateTime.day == now.day;
+            bool isThisMonth =
+                o.scheduleDateTime.year == now.year &&
+                o.scheduleDateTime.month == now.month;
 
-            _omzetThisMonth = omzetBulan;
-            _omzetToday = omzetHari;
-            _rataRataOrder = orders.isNotEmpty
-                ? (omzetBulan / orders.length).toDouble()
-                : 0;
-            _targetOmzet = 15000000;
-            _ordersToday = countToday;
-            _waiting = waiting;
-            _active = active;
-            _doneToday = done;
-            _grafikHarian = [];
-            _grafikBulanan = [];
+            final int val = o.subtotal > 0 ? o.subtotal : o.total;
+            if (isThisMonth) {
+              omzetBulan += val;
+              countThisMonth++;
+            }
+            if (isToday) {
+              omzetHari += val;
+              countToday++;
+              if (o.status == OrderStatus.completed) done++;
+            }
+            if (o.status == OrderStatus.waitingPaymentApproval) waiting++;
+            if (o.status == OrderStatus.assigned ||
+                o.status == OrderStatus.inProgress) {
+              active++;
+            }
           }
+
+          _omzetThisMonth = omzetBulan > 0 ? omzetBulan : (dbData['omzet_bulan_ini'] ?? 0);
+          _omzetToday = omzetHari > 0 || orders.isNotEmpty ? omzetHari : (dbData['omzet_hari_ini'] ?? 0);
+          _rataRataOrder = countThisMonth > 0
+              ? (omzetBulan / countThisMonth).toDouble()
+              : (dbData['rata_rata_order'] ?? 0).toDouble();
+          _ordersToday = countToday > 0 || orders.isNotEmpty ? countToday : (dbData['pesanan_hari_ini'] ?? 0);
+          _waiting = waiting > 0 || orders.isNotEmpty ? waiting : (dbData['menunggu_approve'] ?? 0);
+          _active = active > 0 || orders.isNotEmpty ? active : (dbData['dikerjakan'] ?? 0);
+          _doneToday = done > 0 || orders.isNotEmpty ? done : (dbData['selesai_hari_ini'] ?? 0);
+          _targetOmzet = dbData['target_omzet'] ?? 15000000;
+          _grafikHarian = dbData['grafik_harian'] ?? [];
+          _grafikBulanan = dbData['grafik_bulanan'] ?? [];
 
           _recentOrders = orders.take(3).toList();
           _isLoadingStats = false;

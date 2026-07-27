@@ -8,11 +8,11 @@ class DashboardService {
   Future<Map<String, dynamic>> fetchCsDashboard() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cabangId = prefs.getString('user_cabang_id');
+      final cabangId = prefs.getInt('user_cabang_id') ?? prefs.getString('user_cabang_id');
       
       final queryParams = <String, dynamic>{};
-      if (cabangId != null && cabangId.isNotEmpty && cabangId != '-') {
-        queryParams['cabang_id'] = cabangId;
+      if (cabangId != null && cabangId.toString().isNotEmpty && cabangId.toString() != '-') {
+        queryParams['cabang_id'] = cabangId.toString();
       }
       
       final response = await _dio.get('/dashboard/cs', queryParameters: queryParams);
