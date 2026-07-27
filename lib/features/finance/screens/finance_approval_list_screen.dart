@@ -6,7 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/data/order_model.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/weekly_date_picker.dart';
-import '../../orders/services/order_service.dart';
+import '../services/finance_service.dart';
 import 'finance_approval_detail_screen.dart';
 
 class FinanceApprovalListScreen extends StatefulWidget {
@@ -17,7 +17,7 @@ class FinanceApprovalListScreen extends StatefulWidget {
 }
 
 class _FinanceApprovalListScreenState extends State<FinanceApprovalListScreen> {
-  final OrderService _orderService = OrderService();
+  final FinanceService _financeService = FinanceService();
   bool _isLoading = true;
   String _error = '';
   List<OrderModel> _orders = [];
@@ -45,19 +45,7 @@ class _FinanceApprovalListScreenState extends State<FinanceApprovalListScreen> {
       });
     }
     try {
-      final allOrders = await _orderService.fetchOrders();
-      final orders = allOrders.where((o) {
-        final pStatus = o.paymentStatus.toLowerCase();
-        final pPembayaranStatus = o.pembayaran?.statusPembayaran.toLowerCase() ?? '';
-        if (pStatus == 'paid' || pStatus == 'approved' || pStatus == 'lunas' || pStatus == 'settlement') return false;
-        if (o.status == OrderStatus.cancelled || pStatus == 'cancelled' || pStatus == 'rejected') return false;
-        return o.status == OrderStatus.waitingPaymentApproval ||
-            pStatus == 'pending' ||
-            pStatus == 'waiting_approval' ||
-            pPembayaranStatus == 'pending' ||
-            pPembayaranStatus == 'waiting_approval' ||
-            (o.paymentProof != null && o.paymentProof!.isNotEmpty);
-      }).toList();
+      final orders = await _financeService.fetchPendingPembayaran();
       if (mounted) {
         setState(() {
           _orders = orders;

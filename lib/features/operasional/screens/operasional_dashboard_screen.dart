@@ -1,30 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
-import '../services/finance_service.dart';
+import '../services/operasional_service.dart';
 import '../../../core/widgets/gradient_header.dart';
-import '../../operasional/screens/operasional_report_kpi_screen.dart';
-import '../../operasional/screens/operasional_data_chat_screen.dart';
 
-class FinanceDashboardScreen extends StatefulWidget {
-  const FinanceDashboardScreen({super.key});
+class OperasionalDashboardScreen extends StatefulWidget {
+  const OperasionalDashboardScreen({super.key});
 
   @override
-  State<FinanceDashboardScreen> createState() => _FinanceDashboardScreenState();
+  State<OperasionalDashboardScreen> createState() =>
+      _OperasionalDashboardScreenState();
 }
 
-class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
+class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
     with SingleTickerProviderStateMixin {
-  final _service = FinanceService();
+  final _service = OperasionalService();
   late TabController _tabController;
 
   bool _isLoading = true;
   String _error = '';
-
-  String _userName = 'Finance';
-  String _mainTab = 'omzet'; // 'omzet', 'kpi', 'marketing'
 
   // API Data
   Map<String, dynamic>? _data;
@@ -44,21 +39,11 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
   @override
   void initState() {
     super.initState();
-    _loadProfile();
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
     _fetchData();
-  }
-
-  Future<void> _loadProfile() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) {
-      setState(() {
-        _userName = prefs.getString('user_name') ?? 'Finance';
-      });
-    }
   }
 
   Future<void> _fetchData() async {
@@ -92,6 +77,7 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
           start = DateFormat('yyyy-MM-dd').format(_customStartDate!);
           end = DateFormat('yyyy-MM-dd').format(_customEndDate!);
         } else {
+          // fallback to this month
           start = DateFormat(
             'yyyy-MM-dd',
           ).format(DateTime(now.year, now.month, 1));
@@ -154,235 +140,95 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
       backgroundColor: Colors.grey.shade50,
       body: Column(
         children: [
-          _buildHeader(),
-          _buildMainTabBar(),
-
-          if (_mainTab == 'kpi')
-            const Expanded(child: OperasionalReportKpiScreen(hideHeader: true))
-          else if (_mainTab == 'marketing')
-            const Expanded(child: OperasionalDataChatScreen(hideHeader: true))
-          else ...[
-            // Filters
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: _filters.map((f) {
-                  final isSelected = _selectedFilter == f;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: InkWell(
-                      onTap: () => _onFilterChanged(f),
-                      borderRadius: BorderRadius.circular(20),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected ? AppColors.primary : Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: isSelected
-                                ? AppColors.primary
-                                : Colors.grey.shade300,
-                          ),
-                        ),
-                        child: Text(
-                          f == 'Kustom Tanggal' &&
-                                  _customStartDate != null &&
-                                  isSelected
-                              ? '${DateFormat('dd MMM').format(_customStartDate!)} - ${DateFormat('dd MMM').format(_customEndDate!)}'
-                              : f,
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.w500,
-                            color: isSelected
-                                ? Colors.white
-                                : AppColors.textMuted,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-
-            if (_isLoading)
-              const Expanded(child: Center(child: CircularProgressIndicator()))
-            else if (_error.isNotEmpty)
-              Expanded(
-                child: Center(
+          GradientHeader(
+            child: Row(
+              children: [
+                Expanded(
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: AppColors.error,
-                        size: 40,
-                      ),
-                      const SizedBox(height: 10),
                       Text(
-                        _error,
-                        style: GoogleFonts.inter(color: AppColors.error),
+                        'Laporan Omzet',
+                        style: GoogleFonts.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed: _fetchData,
-                        icon: const Icon(Icons.refresh_rounded),
-                        label: const Text('Coba Lagi'),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Kinerja pendapatan & penjualan',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.white.withOpacity(0.8),
+                        ),
                       ),
                     ],
                   ),
                 ),
-              )
-            else if (_data != null)
-              Expanded(child: _buildContent()),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMainTabBar() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+              ],
+            ),
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          _buildMainTabBtn('Omzet', 'omzet', Icons.grid_view_rounded),
-          _buildMainTabBtn('KPI', 'kpi', Icons.analytics_rounded),
-          _buildMainTabBtn('Marketing', 'marketing', Icons.campaign_rounded),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildMainTabBtn(String label, String key, IconData icon) {
-    final isSelected = _mainTab == key;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _mainTab = key;
-          });
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.3),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 16,
-                color: isSelected ? Colors.white : AppColors.textMuted,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                  color: isSelected ? Colors.white : AppColors.textDark,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Selamat Datang,',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: Colors.white.withOpacity(0.85),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _userName,
-                    style: GoogleFonts.inter(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withOpacity(0.3)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.shield_rounded,
-                      color: Colors.white,
-                      size: 14,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Finance',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+          // Filters
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: _filters.map((f) {
+                final isSelected = _selectedFilter == f;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: InkWell(
+                    onTap: () => _onFilterChanged(f),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.primary : Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.primary
+                              : Colors.grey.shade300,
+                        ),
+                      ),
+                      child: Text(
+                        f == 'Kustom Tanggal' &&
+                                _customStartDate != null &&
+                                isSelected
+                            ? '${DateFormat('dd MMM').format(_customStartDate!)} - ${DateFormat('dd MMM').format(_customEndDate!)}'
+                            : f,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.w500,
+                          color: isSelected
+                              ? Colors.white
+                              : AppColors.textMuted,
+                        ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ],
+                  ),
+                );
+              }).toList(),
+            ),
           ),
+
+          if (_isLoading)
+            const Expanded(child: Center(child: CircularProgressIndicator()))
+          else if (_error.isNotEmpty)
+            Expanded(
+              child: Center(
+                child: Text(_error, style: const TextStyle(color: Colors.red)),
+              ),
+            )
+          else if (_data != null)
+            Expanded(child: _buildContent()),
         ],
       ),
     );
@@ -1569,20 +1415,6 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
     );
   }
 
-  double _getLayananOmzet(dynamic val) {
-    if (val == null) return 0.0;
-    if (val is num) return val.toDouble();
-    if (val is Map) return (val['omzet'] as num? ?? 0).toDouble();
-    return 0.0;
-  }
-
-  int _getLayananTrx(dynamic val) {
-    if (val == null) return 0;
-    if (val is num) return val > 0 ? 1 : 0;
-    if (val is Map) return (val['trx'] as num? ?? 0).toInt();
-    return 0;
-  }
-
   Widget _buildTabRankingVisualisasi() {
     final listCabang = List<Map<String, dynamic>>.from(
       _data!['omzet_per_cabang'] as List,
@@ -1768,5 +1600,19 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
         ],
       ),
     );
+  }
+
+  double _getLayananOmzet(dynamic val) {
+    if (val == null) return 0.0;
+    if (val is num) return val.toDouble();
+    if (val is Map) return (val['omzet'] as num? ?? 0).toDouble();
+    return 0.0;
+  }
+
+  int _getLayananTrx(dynamic val) {
+    if (val == null) return 0;
+    if (val is num) return val > 0 ? 1 : 0;
+    if (val is Map) return (val['trx'] as num? ?? 0).toInt();
+    return 0;
   }
 }

@@ -27,10 +27,10 @@ class CabangModel {
 
   factory CabangModel.fromJson(Map<String, dynamic> json) {
     return CabangModel(
-      id: json['id'],
-      namaCabang: json['nama_cabang'] ?? '',
-      alamat: json['alamat'],
-      status: json['status'] ?? 'aktif',
+      id: json['id'] != null ? (int.tryParse(json['id'].toString()) ?? 0) : 0,
+      namaCabang: json['nama_cabang']?.toString() ?? '',
+      alamat: json['alamat']?.toString(),
+      status: json['status']?.toString() ?? 'aktif',
       latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
       longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
       radiusAbsensiMeter: json['radius_absensi_meter'] != null ? int.tryParse(json['radius_absensi_meter'].toString()) : null,
@@ -57,10 +57,10 @@ class JabatanModel {
 
   factory JabatanModel.fromJson(Map<String, dynamic> json) {
     return JabatanModel(
-      id: json['id'],
-      cabangId: json['cabang_id'],
-      namaJabatan: json['nama_jabatan'] ?? '',
-      cabang: json['cabang'] != null ? CabangModel.fromJson(json['cabang']) : null,
+      id: json['id'] != null ? (int.tryParse(json['id'].toString()) ?? 0) : 0,
+      cabangId: json['cabang_id'] != null ? (int.tryParse(json['cabang_id'].toString()) ?? 0) : 0,
+      namaJabatan: json['nama_jabatan']?.toString() ?? '',
+      cabang: json['cabang'] != null && json['cabang'] is Map<String, dynamic> ? CabangModel.fromJson(json['cabang']) : null,
     );
   }
 }
@@ -98,19 +98,19 @@ class KaryawanModel {
 
   factory KaryawanModel.fromJson(Map<String, dynamic> json) {
     return KaryawanModel(
-      id: json['id'],
-      cabangId: json['cabang_id'],
-      jabatanId: json['jabatan_id'],
-      nama: json['nama'] ?? '',
-      email: json['email'] ?? '',
-      noWa: json['no_wa'],
-      fotoProfil: json['foto_profil_url'] ?? json['foto_profil'],
-      status: json['status'] ?? 'aktif',
-      statusKaryawan: json['status_karyawan'],
-      namaBank: json['nama_bank'],
-      noRekening: json['no_rekening'],
-      cabang: json['cabang'] != null ? CabangModel.fromJson(json['cabang']) : null,
-      jabatan: json['jabatan'] != null ? JabatanModel.fromJson(json['jabatan']) : null,
+      id: json['id'] != null ? (int.tryParse(json['id'].toString()) ?? 0) : 0,
+      cabangId: json['cabang_id'] != null ? (int.tryParse(json['cabang_id'].toString()) ?? 0) : 0,
+      jabatanId: json['jabatan_id'] != null ? (int.tryParse(json['jabatan_id'].toString()) ?? 0) : 0,
+      nama: json['nama']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      noWa: json['no_wa']?.toString(),
+      fotoProfil: (json['foto_profil_url'] ?? json['foto_profil'])?.toString(),
+      status: json['status']?.toString() ?? 'aktif',
+      statusKaryawan: json['status_karyawan']?.toString(),
+      namaBank: json['nama_bank']?.toString(),
+      noRekening: json['no_rekening']?.toString(),
+      cabang: json['cabang'] != null && json['cabang'] is Map<String, dynamic> ? CabangModel.fromJson(json['cabang']) : null,
+      jabatan: json['jabatan'] != null && json['jabatan'] is Map<String, dynamic> ? JabatanModel.fromJson(json['jabatan']) : null,
     );
   }
 }
@@ -130,10 +130,10 @@ class LayananModel {
 
   factory LayananModel.fromJson(Map<String, dynamic> json) {
     return LayananModel(
-      id: json['id'],
-      cabangId: json['cabang_id'] ?? 0,
-      namaLayanan: json['nama_layanan'] ?? '',
-      status: json['status'] ?? 'aktif',
+      id: json['id'] != null ? (int.tryParse(json['id'].toString()) ?? 0) : 0,
+      cabangId: json['cabang_id'] != null ? (int.tryParse(json['cabang_id'].toString()) ?? 0) : 0,
+      namaLayanan: json['nama_layanan']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'aktif',
     );
   }
 }

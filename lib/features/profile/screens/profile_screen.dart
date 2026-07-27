@@ -10,6 +10,8 @@ import 'dart:convert';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/change_pin_screen.dart';
 import 'edit_profile_screen.dart';
+import 'leave_request_screen.dart';
+import 'kpi_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -78,6 +80,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   children: [
                     _buildInfoCard(),
+                    const SizedBox(height: 12),
+                    _buildMenuSection('Karyawan', [
+                      _MenuItem(Icons.event_available_rounded, 'Pengajuan Cuti & Izin', onTap: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaveRequestScreen()));
+                      }),
+                      _MenuItem(Icons.analytics_rounded, 'KPI & Evaluasi Kinerja', onTap: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const KpiScreen()));
+                      }),
+                    ]),
                     const SizedBox(height: 12),
                     _buildMenuSection('Akun', [
                       _MenuItem(Icons.lock_outline_rounded, 'Ganti PIN', onTap: () => _changePIN(context)),

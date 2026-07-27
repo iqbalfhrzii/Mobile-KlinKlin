@@ -38,6 +38,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
 
   // Filter
   String _searchQuery = '';
+  final TextEditingController _searchCtrl = TextEditingController();
   String? _selectedCabangName;
   String? _selectedStatusUtama;
   String _periodFilter = 'semua'; // 'semua', 'hari_ini', 'kemarin', 'besok', 'bulan_ini', 'custom'
@@ -578,12 +579,23 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       !o.tanggalInput.isBefore(todayStart) && !o.tanggalInput.isAfter(todayEnd)
     ).toList();
 
+    // Omzet = sum of pembayaran.total_akhir for approved payments today
+    // (matches web: Pemasukan::whereDate('tanggal_pemasukan', now())->sum('nominal'))
+    // pembayaran.total in mobile == total_akhir from API == Pemasukan.nominal on web
     final omzetToday = ordersToday
-        .where((o) => o.status == OrderStatus.completed || o.statusUtamaLabel == 'Done')
-        .fold<int>(0, (sum, o) => sum + o.netTotal);
+        .where((o) =>
+          o.pembayaran?.statusPembayaran == 'approved' ||
+          o.paymentStatus == 'approved')
+        .fold<int>(0, (sum, o) {
+          // Use pembayaran.total (= total_akhir) if available, else fallback to order.total
+          final nominal = o.pembayaran?.total ?? o.total;
+          return sum + nominal;
+        });
 
+    // Done count = pesanan berstatus utama Done hari ini
+    // (matches web: Pesanan::where('status_order_utama', 'done')->whereDate('tanggal_input', now())->count())
     final doneCountToday = ordersToday
-        .where((o) => o.status == OrderStatus.completed)
+        .where((o) => o.statusUtamaRaw?.toLowerCase() == 'done')
         .length;
 
     final pendingAuditList = _orders.where((o) =>
@@ -601,95 +613,16 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Title Banner
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.withOpacity(0.18)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.02),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Audit Order',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Kelola dan audit persetujuan pembayaran pesanan serta pantau pesanan yang telah disetujui (Done).',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: AppColors.textMuted,
-                  height: 1.3,
-                ),
-              ),
-            ],
-          ),
-        ),
+        // Unified 1-Row Summary Bar (Omzet Hari Ini | Disetujui | Menunggu)
+        _buildUnifiedAuditSummaryBar(omzetToday, doneCountToday, pendingAuditList.length),
         const SizedBox(height: 14),
-
-        // 3 Summary Cards (Omzet Masuk Hari Ini, Order Done Hari Ini, Menunggu Audit)
-        Row(
-          children: [
-            Expanded(
-              child: _buildSummaryCard(
-                title: 'TOTAL OMZET MASUK HARI INI',
-                value: _currencyFormat.format(omzetToday),
-                subtitle: 'Omzet dari pembayaran disetujui hari ini',
-                color: const Color(0xFF059669),
-                bgColor: const Color(0xFFECFDF5),
-                icon: Icons.monetization_on_rounded,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _buildSummaryCard(
-                title: 'ORDER DISETUJUI HARI INI',
-                value: '$doneCountToday Order',
-                subtitle: 'Pesanan berstatus Done hari ini',
-                color: const Color(0xFF0284C7),
-                bgColor: const Color(0xFFF0F9FF),
-                icon: Icons.check_circle_rounded,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildSummaryCard(
-                title: 'MENUNGGU AUDIT',
-                value: '${pendingAuditList.length} Order',
-                subtitle: 'Belum di-approve',
-                color: const Color(0xFFD97706),
-                bgColor: const Color(0xFFFFFBEB),
-                icon: Icons.pending_actions_rounded,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
 
         // Mode Switcher for Tables (Pending vs Done/Approved)
         Container(
-          padding: const EdgeInsets.all(4),
+          padding: const EdgeInsets.all(5),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.grey.withOpacity(0.2)),
           ),
           child: Row(
@@ -699,24 +632,24 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                   onTap: () => setState(() => _approvalTableMode = 'pending'),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
                     decoration: BoxDecoration(
                       color: _approvalTableMode == 'pending' ? const Color(0xFFD97706) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
                           Icons.access_time_rounded,
-                          size: 14,
+                          size: 16,
                           color: _approvalTableMode == 'pending' ? Colors.white : AppColors.textMuted,
                         ),
                         const SizedBox(width: 6),
                         Text(
                           'Menunggu Approval (${pendingAuditList.length})',
                           style: GoogleFonts.inter(
-                            fontSize: 11,
+                            fontSize: 12.5,
                             fontWeight: _approvalTableMode == 'pending' ? FontWeight.bold : FontWeight.w600,
                             color: _approvalTableMode == 'pending' ? Colors.white : AppColors.textDark,
                           ),
@@ -731,24 +664,24 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                   onTap: () => setState(() => _approvalTableMode = 'done'),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
                     decoration: BoxDecoration(
                       color: _approvalTableMode == 'done' ? const Color(0xFF059669) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
                           Icons.task_alt_rounded,
-                          size: 14,
+                          size: 16,
                           color: _approvalTableMode == 'done' ? Colors.white : AppColors.textMuted,
                         ),
                         const SizedBox(width: 6),
                         Text(
                           'Disetujui / Selesai (${approvedDoneList.length})',
                           style: GoogleFonts.inter(
-                            fontSize: 11,
+                            fontSize: 12.5,
                             fontWeight: _approvalTableMode == 'done' ? FontWeight.bold : FontWeight.w600,
                             color: _approvalTableMode == 'done' ? Colors.white : AppColors.textDark,
                           ),
@@ -763,118 +696,8 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
         ),
         const SizedBox(height: 14),
 
-        // WeeklyDatePicker (Papan Tanggal Mingguan)
-        WeeklyDatePicker(
-          showAllMonthButton: false,
-          searchQuery: _searchQuery,
-          onSearchChanged: (val) => setState(() => _searchQuery = val),
-          onFilterChanged: (start, end) {
-            setState(() {
-              _filterStart = start;
-              _filterEnd = end;
-            });
-          },
-        ),
-        const SizedBox(height: 10),
-
-        // Row: Dropdown Filter Cabang & Dropdown Filter Waktu (Side-by-Side Bersebelahan)
-        Row(
-          children: [
-            // 1. Dropdown Filter Cabang
-            Expanded(
-              child: Builder(
-                builder: (context) {
-                  List<String> sortedCabangNames = [];
-                  if (_cabangs.isNotEmpty) {
-                    sortedCabangNames = _cabangs
-                        .where((c) => !c.namaCabang.toLowerCase().contains('kantor pusat'))
-                        .map((c) => c.namaCabang.toUpperCase())
-                        .toList()..sort();
-                  }
-                  if (sortedCabangNames.isEmpty) {
-                    sortedCabangNames = ['BALIKPAPAN', 'DENPASAR', 'MAKASSAR', 'MALANG', 'SURABAYA'];
-                  }
-
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String?>(
-                        value: _selectedCabangName,
-                        hint: Text(
-                          'Semua Cabang',
-                          style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark, fontWeight: FontWeight.w600),
-                        ),
-                        icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textMuted),
-                        isExpanded: true,
-                        style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark, fontWeight: FontWeight.w600),
-                        items: [
-                          DropdownMenuItem<String?>(
-                            value: null,
-                            child: Text('Semua Cabang', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
-                          ),
-                          ...sortedCabangNames.map((name) => DropdownMenuItem<String?>(
-                            value: name,
-                            child: Text(name, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
-                          )),
-                        ],
-                        onChanged: (val) {
-                          setState(() {
-                            _selectedCabangName = val;
-                          });
-                        },
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 8),
-
-            // 2. Dropdown Filter Waktu (Dipindahkan Bersebelahan dengan Filter Cabang!)
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _periodFilter,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textMuted),
-                    isExpanded: true,
-                    style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark, fontWeight: FontWeight.w600),
-                    items: [
-                      DropdownMenuItem(value: 'semua', child: Text('Semua Waktu', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600))),
-                      DropdownMenuItem(value: 'hari_ini', child: Text('Hari Ini', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600))),
-                      DropdownMenuItem(value: 'kemarin', child: Text('Kemarin', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600))),
-                      DropdownMenuItem(value: 'besok', child: Text('Besok', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600))),
-                      DropdownMenuItem(value: 'bulan_ini', child: Text('Bulan Ini', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600))),
-                    ],
-                    onChanged: (val) {
-                      if (val != null) {
-                        setState(() {
-                          _periodFilter = val;
-                          if (val == 'semua') {
-                            _filterStart = null;
-                            _filterEnd = null;
-                          }
-                        });
-                      }
-                    },
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
+        // Search & Filter Bar (Row 1: Search + Pilih Tanggal, Row 2: Semua Cabang + Semua Waktu)
+        _buildProMaxSearchAndFilterBar(),
         const SizedBox(height: 14),
 
         if (_approvalTableMode == 'pending')
@@ -953,6 +776,617 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
 
     return true;
   }
+
+  Widget _buildUnifiedAuditSummaryBar(num omzetToday, int doneCountToday, int pendingCount) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withOpacity(0.18)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            // 1. Omzet Hari Ini
+            Expanded(
+              flex: 4,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Icon(Icons.monetization_on_rounded, size: 12, color: Color(0xFF059669)),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          'OMZET HARI INI',
+                          style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: const Color(0xFF059669)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      _currencyFormat.format(omzetToday),
+                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF065F46)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            VerticalDivider(width: 14, thickness: 1, color: Colors.grey.withOpacity(0.15)),
+
+            // 2. Disetujui
+            Expanded(
+              flex: 3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0F9FF),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF0284C7)),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          'DISETUJUI',
+                          style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: const Color(0xFF0284C7)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '$doneCountToday Order',
+                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF0369A1)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            VerticalDivider(width: 14, thickness: 1, color: Colors.grey.withOpacity(0.15)),
+
+            // 3. Menunggu Audit
+            Expanded(
+              flex: 3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFFBEB),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Icon(Icons.pending_actions_rounded, size: 12, color: Color(0xFFD97706)),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          'MENUNGGU',
+                          style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: const Color(0xFFD97706)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '$pendingCount Order',
+                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFFB45309)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUnifiedCancelSummaryBar(num totalCancelToday, num totalCancelThisMonth) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withOpacity(0.18)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(6)),
+                        child: const Icon(Icons.cancel_outlined, size: 14, color: Color(0xFFDC2626)),
+                      ),
+                      const SizedBox(width: 6),
+                      Text('CANCEL HARI INI', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626))),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text('$totalCancelToday Order', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF991B1B))),
+                ],
+              ),
+            ),
+            VerticalDivider(width: 20, thickness: 1, color: Colors.grey.withOpacity(0.15)),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(color: const Color(0xFFFFF1F2), borderRadius: BorderRadius.circular(6)),
+                        child: const Icon(Icons.calendar_month_outlined, size: 14, color: Color(0xFFE11D48)),
+                      ),
+                      const SizedBox(width: 6),
+                      Text('CANCEL BULAN INI', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFFE11D48))),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text('$totalCancelThisMonth Order', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF9F1239))),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProMaxSearchAndFilterBar({bool showStatusFilter = false}) {
+    final int activeFilterCount = (_selectedCabangName != null ? 1 : 0) +
+        (_periodFilter != 'semua' ? 1 : 0) +
+        (showStatusFilter && _selectedStatusUtama != null ? 1 : 0);
+
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 46,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(23),
+              border: Border.all(
+                color: _searchQuery.isNotEmpty ? const Color(0xFF3B82F6) : Colors.grey.withOpacity(0.25),
+                width: _searchQuery.isNotEmpty ? 1.5 : 1.0,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: _searchQuery.isNotEmpty ? const Color(0xFF3B82F6).withOpacity(0.12) : Colors.black.withOpacity(0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.search_rounded,
+                  size: 20,
+                  color: _searchQuery.isNotEmpty ? const Color(0xFF2563EB) : AppColors.textMuted,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _searchCtrl,
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                    decoration: InputDecoration(
+                      hintText: 'Cari pelanggan, no. pesanan, atau cleaner...',
+                      hintStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.normal, color: AppColors.textMuted),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+                if (_searchQuery.isNotEmpty)
+                  GestureDetector(
+                    onTap: () {
+                      _searchCtrl.clear();
+                      setState(() => _searchQuery = '');
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(color: Color(0xFFF1F5F9), shape: BoxShape.circle),
+                      child: const Icon(Icons.close_rounded, size: 14, color: AppColors.textMuted),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        GestureDetector(
+          onTap: () => _showFilterBottomSheet(showStatusFilter: showStatusFilter),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            height: 46,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              gradient: activeFilterCount > 0
+                  ? const LinearGradient(colors: [Color(0xFF2563EB), Color(0xFF4F46E5)])
+                  : null,
+              color: activeFilterCount > 0 ? null : Colors.white,
+              borderRadius: BorderRadius.circular(23),
+              border: Border.all(
+                color: activeFilterCount > 0 ? Colors.transparent : Colors.grey.withOpacity(0.3),
+                width: 1.5,
+              ),
+              boxShadow: [
+                if (activeFilterCount > 0)
+                  BoxShadow(
+                    color: const Color(0xFF4F46E5).withOpacity(0.35),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  )
+                else
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.tune_rounded,
+                  size: 18,
+                  color: activeFilterCount > 0 ? Colors.white : AppColors.textDark,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Filter',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: activeFilterCount > 0 ? Colors.white : AppColors.textDark,
+                  ),
+                ),
+                if (activeFilterCount > 0) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '$activeFilterCount',
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showFilterBottomSheet({required bool showStatusFilter}) {
+    List<String> sortedCabangNames = [];
+    if (_cabangs.isNotEmpty) {
+      sortedCabangNames = _cabangs
+          .where((c) => !c.namaCabang.toLowerCase().contains('kantor pusat'))
+          .map((c) => c.namaCabang.toUpperCase())
+          .toList()..sort();
+    }
+    if (sortedCabangNames.isEmpty) {
+      sortedCabangNames = ['BALIKPAPAN', 'DENPASAR', 'MAKASSAR', 'MALANG', 'SURABAYA'];
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle Bar
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Title
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Filter Transaksi', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(height: 1),
+                  const SizedBox(height: 16),
+
+                  // 1. Pilih Cabang
+                  Text('Pilih Cabang', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('Semua Cabang'),
+                        selected: _selectedCabangName == null,
+                        onSelected: (val) {
+                          setModalState(() => _selectedCabangName = null);
+                          setState(() => _selectedCabangName = null);
+                        },
+                        selectedColor: const Color(0xFFEFF6FF),
+                        labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: _selectedCabangName == null ? FontWeight.bold : FontWeight.w500, color: _selectedCabangName == null ? const Color(0xFF1D4ED8) : AppColors.textDark),
+                        side: BorderSide(color: _selectedCabangName == null ? const Color(0xFF3B82F6) : Colors.grey.shade300),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        showCheckmark: false,
+                      ),
+                      ...sortedCabangNames.map((name) {
+                        final isSel = _selectedCabangName == name;
+                        return ChoiceChip(
+                          label: Text(name),
+                          selected: isSel,
+                          onSelected: (val) {
+                            setModalState(() => _selectedCabangName = val ? name : null);
+                            setState(() => _selectedCabangName = val ? name : null);
+                          },
+                          selectedColor: const Color(0xFFEFF6FF),
+                          labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.w500, color: isSel ? const Color(0xFF1D4ED8) : AppColors.textDark),
+                          side: BorderSide(color: isSel ? const Color(0xFF3B82F6) : Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          showCheckmark: false,
+                        );
+                      }),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // 2. Rentang Waktu
+                  Text('Rentang Waktu', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ...[
+                        {'key': 'semua', 'label': 'Semua Waktu'},
+                        {'key': 'hari_ini', 'label': 'Hari Ini'},
+                        {'key': 'kemarin', 'label': 'Kemarin'},
+                        {'key': 'besok', 'label': 'Besok'},
+                        {'key': 'bulan_ini', 'label': 'Bulan Ini'},
+                      ].map((item) {
+                        final isSel = _periodFilter == item['key'];
+                        return ChoiceChip(
+                          label: Text(item['label']!),
+                          selected: isSel,
+                          onSelected: (val) {
+                            if (val) {
+                              setModalState(() {
+                                _periodFilter = item['key']!;
+                                _customRange = null;
+                                if (_periodFilter == 'semua') {
+                                  _filterStart = null;
+                                  _filterEnd = null;
+                                }
+                              });
+                              setState(() {
+                                _periodFilter = item['key']!;
+                                _customRange = null;
+                                if (_periodFilter == 'semua') {
+                                  _filterStart = null;
+                                  _filterEnd = null;
+                                }
+                              });
+                            }
+                          },
+                          selectedColor: const Color(0xFFECFDF5),
+                          labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.w500, color: isSel ? const Color(0xFF047857) : AppColors.textDark),
+                          side: BorderSide(color: isSel ? const Color(0xFF10B981) : Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          showCheckmark: false,
+                        );
+                      }),
+                      ActionChip(
+                        avatar: const Icon(Icons.calendar_month_rounded, size: 14, color: Color(0xFF4F46E5)),
+                        label: Text(
+                          _periodFilter == 'custom' && _customRange != null
+                              ? '${DateFormat('dd/MM').format(_customRange!.start)} - ${DateFormat('dd/MM').format(_customRange!.end)}'
+                              : 'Pilih Tanggal',
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: _periodFilter == 'custom' ? FontWeight.bold : FontWeight.w500, color: _periodFilter == 'custom' ? const Color(0xFF4F46E5) : AppColors.textDark),
+                        ),
+                        onPressed: () async {
+                          Navigator.pop(ctx);
+                          await _pickCustomRange();
+                        },
+                        backgroundColor: _periodFilter == 'custom' ? const Color(0xFFEEF2FF) : Colors.white,
+                        side: BorderSide(color: _periodFilter == 'custom' ? const Color(0xFF6366F1) : Colors.grey.shade300),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ],
+                  ),
+
+                  // 3. Status Utama (for Tab 3)
+                  if (showStatusFilter) ...[
+                    const SizedBox(height: 20),
+                    Text('Status Order', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('Semua Status'),
+                          selected: _selectedStatusUtama == null,
+                          onSelected: (val) {
+                            setModalState(() => _selectedStatusUtama = null);
+                            setState(() => _selectedStatusUtama = null);
+                          },
+                          selectedColor: const Color(0xFFFFFBEB),
+                          labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: _selectedStatusUtama == null ? FontWeight.bold : FontWeight.w500, color: _selectedStatusUtama == null ? const Color(0xFFD97706) : AppColors.textDark),
+                          side: BorderSide(color: _selectedStatusUtama == null ? const Color(0xFFF59E0B) : Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          showCheckmark: false,
+                        ),
+                        ...['Draft', 'Process', 'Done', 'Dibatalkan'].map((st) {
+                          final isSel = _selectedStatusUtama == st;
+                          return ChoiceChip(
+                            label: Text(st),
+                            selected: isSel,
+                            onSelected: (val) {
+                              setModalState(() => _selectedStatusUtama = val ? st : null);
+                              setState(() => _selectedStatusUtama = val ? st : null);
+                            },
+                            selectedColor: const Color(0xFFFFFBEB),
+                            labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.w500, color: isSel ? const Color(0xFFD97706) : AppColors.textDark),
+                            side: BorderSide(color: isSel ? const Color(0xFFF59E0B) : Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            showCheckmark: false,
+                          );
+                        }),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+
+                  // Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setModalState(() {
+                              _selectedCabangName = null;
+                              _periodFilter = 'semua';
+                              _customRange = null;
+                              _filterStart = null;
+                              _filterEnd = null;
+                              if (showStatusFilter) _selectedStatusUtama = null;
+                            });
+                            setState(() {
+                              _selectedCabangName = null;
+                              _periodFilter = 'semua';
+                              _customRange = null;
+                              _filterStart = null;
+                              _filterEnd = null;
+                              if (showStatusFilter) _selectedStatusUtama = null;
+                            });
+                          },
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: BorderSide(color: Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: Text('Reset', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2563EB),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: Text('Terapkan Filter', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
 
   // --- Summary Card ---
   Widget _buildSummaryCard({
@@ -1109,137 +1543,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
             final orderNo = order.id.startsWith('SUR') || order.id.startsWith('BAL') || order.id.startsWith('DEN') || order.id.startsWith('MAL')
                 ? order.id
                 : 'Order #${order.id}';
-
-            return Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.withOpacity(0.18)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        orderNo,
-                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFEF3C7),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFFDE68A)),
-                        ),
-                        child: Text(
-                          'Menunggu Approval',
-                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFFD97706)),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-
-                  Row(
-                    children: [
-                      const Icon(Icons.person_outline_rounded, size: 14, color: AppColors.textMuted),
-                      const SizedBox(width: 4),
-                      Text(
-                        order.customer.name,
-                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                      ),
-                      const SizedBox(width: 12),
-                      const Icon(Icons.storefront_rounded, size: 14, color: AppColors.textMuted),
-                      const SizedBox(width: 4),
-                      Text(
-                        order.customer.area.toUpperCase(),
-                        style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          order.paymentMethod.toUpperCase(),
-                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                        ),
-                      ),
-                      Text(
-                        _currencyFormat.format(order.total),
-                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: const Color(0xFF059669)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const Divider(height: 1),
-                  const SizedBox(height: 10),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => _showDetailModal(order),
-                          icon: const Icon(Icons.visibility_rounded, size: 14),
-                          label: const Text('Detail'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            side: BorderSide(color: AppColors.primary.withOpacity(0.5)),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => _showApproveConfirm(order),
-                          icon: const Icon(Icons.check_rounded, size: 14),
-                          label: const Text('Approve'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF059669),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      InkWell(
-                        onTap: () => _showRejectModal(order),
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          padding: const EdgeInsets.all(9),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade50,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.red.shade200),
-                          ),
-                          child: const Icon(Icons.close_rounded, size: 16, color: Color(0xFFDC2626)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
+            return _buildProMaxOrderCard(order, isPending: true);
           },
         ),
         _buildLoadMoreButton(
@@ -1309,68 +1613,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                 ? order.id
                 : 'Order #${order.id}';
 
-            return Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(orderNo, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                      Text(_currencyFormat.format(order.total), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF059669))),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-
-                  Row(
-                    children: [
-                      Text(order.customer.name, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark)),
-                      const SizedBox(width: 8),
-                      Text('·', style: GoogleFonts.inter(color: AppColors.textMuted)),
-                      const SizedBox(width: 8),
-                      Text(order.customer.area.toUpperCase(), style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _buildBadge(
-                          order.statusUtamaLabel.toUpperCase(),
-                          order.statusUtamaLabel == 'Done' ? Colors.green.shade100 : (order.statusUtamaLabel == 'Pending' ? Colors.orange.shade100 : Colors.blue.shade100),
-                          order.statusUtamaLabel == 'Done' ? Colors.green.shade800 : (order.statusUtamaLabel == 'Pending' ? Colors.orange.shade800 : Colors.blue.shade800),
-                        ),
-                        const SizedBox(width: 6),
-                        _buildBadge('Pengerjaan: ${order.statusPengerjaanLabel}', Colors.blue.shade100, Colors.blue.shade800),
-                        const SizedBox(width: 6),
-                        _buildBadge('Pembayaran: ${order.statusPembayaranLabel}', const Color(0xFFD1FAE5), const Color(0xFF047857)),
-                        const SizedBox(width: 6),
-                        _buildBadge('Bonus: ${order.statusBonusLabel}', order.statusBonusLabel == 'Selesai' ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7), order.statusBonusLabel == 'Selesai' ? const Color(0xFF047857) : const Color(0xFFD97706)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: InkWell(
-                      onTap: () => _showDetailModal(order),
-                      child: Text(
-                        'Lihat Detail →',
-                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
+            return _buildProMaxOrderCard(order, isPending: false);
           },
         ),
         _buildLoadMoreButton(
@@ -1379,6 +1622,254 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
           onTap: () => setState(() => _limitAuditDone += 5),
         ),
       ],
+    );
+  }
+
+  Widget _buildProMaxOrderCard(OrderModel order, {required bool isPending}) {
+    final orderNo = order.id.startsWith('SUR') || order.id.startsWith('BAL') || order.id.startsWith('DEN') || order.id.startsWith('MAL')
+        ? order.id
+        : 'Order #${order.id}';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 2),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.025),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Compact
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: isPending ? const Color(0xFFFEF3C7).withOpacity(0.4) : const Color(0xFFF0FDF4).withOpacity(0.5),
+                border: Border(
+                  bottom: BorderSide(
+                    color: isPending ? const Color(0xFFFDE68A).withOpacity(0.5) : const Color(0xFFBBF7D0).withOpacity(0.5),
+                  ),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        isPending ? Icons.pending_actions_rounded : Icons.check_circle_rounded,
+                        size: 15,
+                        color: isPending ? const Color(0xFFD97706) : const Color(0xFF059669),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        orderNo,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: isPending ? const Color(0xFFB45309) : const Color(0xFF065F46),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: isPending ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      isPending ? 'Menunggu Approval' : 'Disetujui',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: isPending ? const Color(0xFFD97706) : const Color(0xFF16A34A),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Body Compact
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Customer Info Row
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 15,
+                        backgroundColor: AppColors.primary.withOpacity(0.1),
+                        child: Text(
+                          order.customer.name.isNotEmpty ? order.customer.name[0].toUpperCase() : 'C',
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              order.customer.name,
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                const Icon(Icons.location_on_rounded, size: 11, color: Color(0xFFDC2626)),
+                                const SizedBox(width: 2),
+                                Text(
+                                  order.customer.area.toUpperCase(),
+                                  style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.textMuted),
+                                ),
+                                const SizedBox(width: 5),
+                                Text('•', style: GoogleFonts.inter(fontSize: 10.5, color: AppColors.textMuted)),
+                                const SizedBox(width: 5),
+                                const Icon(Icons.access_time_rounded, size: 11, color: AppColors.textMuted),
+                                const SizedBox(width: 2),
+                                Expanded(
+                                  child: Text(
+                                    DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(order.tanggalInput),
+                                    style: GoogleFonts.inter(fontSize: 10.5, color: AppColors.textMuted),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Price & Payment Method Bar
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.payment_rounded, size: 14, color: AppColors.primary),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Metode: ${order.paymentMethod.toUpperCase()}',
+                              style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          _currencyFormat.format(order.total),
+                          style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.bold, color: const Color(0xFF059669)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Safe Actions Bar (Space Efficient)
+                  if (isPending) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: OutlinedButton.icon(
+                            onPressed: () => _showDetailModal(order),
+                            icon: const Icon(Icons.description_outlined, size: 14),
+                            label: const Text('Periksa'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              side: BorderSide(color: AppColors.primary.withOpacity(0.4)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          flex: 4,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _showApproveConfirm(order),
+                            icon: const Icon(Icons.check_circle_rounded, size: 14),
+                            label: const Text('Approve'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF059669),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              elevation: 0,
+                              textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          flex: 3,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _showRejectModal(order),
+                            icon: const Icon(Icons.cancel_outlined, size: 14),
+                            label: const Text('Tolak'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFEF2F2),
+                              foregroundColor: const Color(0xFFDC2626),
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side: const BorderSide(color: Color(0xFFFECACA)),
+                              ),
+                              elevation: 0,
+                              textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: () => _showDetailModal(order),
+                          icon: const Icon(Icons.description_outlined, size: 14),
+                          label: const Text('Lihat Rincian Audit'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            side: BorderSide(color: AppColors.primary.withOpacity(0.4)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1666,6 +2157,46 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                       )
                     else
                       ...order.cleaners.map((c) => _buildCleanerPhotos(c)),
+                    if (_approvalTableMode == 'pending') ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _showApproveConfirm(order);
+                              },
+                              icon: const Icon(Icons.check_circle_rounded, size: 16),
+                              label: const Text('Approve & Selesai'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF059669),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                elevation: 0,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _showRejectModal(order);
+                              },
+                              icon: const Icon(Icons.cancel_outlined, size: 16, color: Color(0xFFDC2626)),
+                              label: const Text('Tolak', style: TextStyle(color: Color(0xFFDC2626))),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                side: const BorderSide(color: Color(0xFFFECACA)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 20),
                   ],
                 ),
@@ -1788,177 +2319,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Title Banner matching Web
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.withOpacity(0.18)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.02),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Edit Order',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Pengajuan edit pesanan dari CS yang masih menunggu persetujuan Finance.',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: AppColors.textMuted,
-                  height: 1.3,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-
-        // WeeklyDatePicker (Papan Tanggal Mingguan)
-        WeeklyDatePicker(
-          showAllMonthButton: false,
-          searchQuery: _searchQuery,
-          onSearchChanged: (val) => setState(() => _searchQuery = val),
-          onFilterChanged: (start, end) {
-            setState(() {
-              _filterStart = start;
-              _filterEnd = end;
-            });
-          },
-        ),
-        const SizedBox(height: 10),
-
-        // Row: Filter Cabang & Filter Waktu Dropdowns (Side by Side)
-        Row(
-          children: [
-            Expanded(
-              child: Builder(
-                builder: (context) {
-                  List<String> sortedCabangNames = [];
-                  if (_cabangs.isNotEmpty) {
-                    sortedCabangNames = _cabangs
-                        .where((c) => !c.namaCabang.toLowerCase().contains('kantor pusat'))
-                        .map((c) => c.namaCabang.toUpperCase())
-                        .toList()..sort();
-                  }
-                  if (sortedCabangNames.isEmpty) {
-                    sortedCabangNames = ['BALIKPAPAN', 'DENPASAR', 'MAKASSAR', 'MALANG', 'SURABAYA'];
-                  }
-
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String?>(
-                        value: _selectedCabangName,
-                        hint: Text(
-                          'Semua Cabang',
-                          style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark, fontWeight: FontWeight.w600),
-                        ),
-                        icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textMuted),
-                        isExpanded: true,
-                        style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark, fontWeight: FontWeight.w600),
-                        items: [
-                          DropdownMenuItem<String?>(
-                            value: null,
-                            child: Text('Semua Cabang', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
-                          ),
-                          ...sortedCabangNames.map((name) => DropdownMenuItem<String?>(
-                            value: name,
-                            child: Text(name, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
-                          )),
-                        ],
-                        onChanged: (val) {
-                          setState(() {
-                            _selectedCabangName = val;
-                          });
-                        },
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 8),
-
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _periodFilter,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textMuted),
-                    isExpanded: true,
-                    style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark, fontWeight: FontWeight.w600),
-                    items: [
-                      DropdownMenuItem(
-                        value: 'semua',
-                        child: Text('Semua Waktu', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
-                      ),
-                      DropdownMenuItem(
-                        value: 'hari_ini',
-                        child: Text('Hari Ini', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
-                      ),
-                      DropdownMenuItem(
-                        value: 'kemarin',
-                        child: Text('Kemarin', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
-                      ),
-                      DropdownMenuItem(
-                        value: 'besok',
-                        child: Text('Besok', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
-                      ),
-                      DropdownMenuItem(
-                        value: 'bulan_ini',
-                        child: Text('Bulan Ini', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
-                      ),
-                      DropdownMenuItem(
-                        value: 'custom',
-                        child: Text(
-                          _customRange != null
-                              ? '${DateFormat('dd/MM').format(_customRange!.start)} - ${DateFormat('dd/MM').format(_customRange!.end)}'
-                              : 'Kustom Tanggal...',
-                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
-                    onChanged: (val) {
-                      if (val == 'custom') {
-                        _pickCustomRange();
-                      } else if (val != null) {
-                        setState(() {
-                          _periodFilter = val;
-                        });
-                      }
-                    },
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+        _buildProMaxSearchAndFilterBar(),
         const SizedBox(height: 14),
 
         _buildApproveEditList(editRequestsList),
@@ -2432,154 +2793,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Title Banner matching Web Screenshot 1 & 2
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.withOpacity(0.18)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.02),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Edit Order (Bebas)',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Finance memiliki wewenang penuh untuk mengubah detail pesanan, pelanggan, cleaner, status, bonus, dan pembayaran.',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: AppColors.textMuted,
-                  height: 1.3,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-
-        // WeeklyDatePicker (Papan Tanggal Mingguan)
-        WeeklyDatePicker(
-          showAllMonthButton: false,
-          searchQuery: _searchQuery,
-          onSearchChanged: (val) => setState(() => _searchQuery = val),
-          onFilterChanged: (start, end) {
-            setState(() {
-              _filterStart = start;
-              _filterEnd = end;
-            });
-          },
-        ),
-        const SizedBox(height: 10),
-
-        // Row of Dropdown Filters: Cabang & Status Utama & Waktu
-        Row(
-          children: [
-            // 1. Cabang
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String?>(
-                    value: _selectedCabangName,
-                    hint: Text('Semua Cabang', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textDark, fontWeight: FontWeight.w600)),
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.textMuted),
-                    isExpanded: true,
-                    style: GoogleFonts.inter(fontSize: 10, color: AppColors.textDark, fontWeight: FontWeight.w600),
-                    items: [
-                      DropdownMenuItem<String?>(value: null, child: Text('Semua Cabang', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600))),
-                      ...['BALIKPAPAN', 'DENPASAR', 'MAKASSAR', 'MALANG', 'SURABAYA'].map((name) => DropdownMenuItem<String?>(
-                        value: name,
-                        child: Text(name, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600)),
-                      )),
-                    ],
-                    onChanged: (val) => setState(() => _selectedCabangName = val),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-
-            // 2. Status Utama
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String?>(
-                    value: _selectedStatusUtama,
-                    hint: Text('Status Utama', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textDark, fontWeight: FontWeight.w600)),
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.textMuted),
-                    isExpanded: true,
-                    style: GoogleFonts.inter(fontSize: 10, color: AppColors.textDark, fontWeight: FontWeight.w600),
-                    items: [
-                      DropdownMenuItem<String?>(value: null, child: Text('Semua Status', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600))),
-                      DropdownMenuItem<String?>(value: 'Draft', child: Text('Draft', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600))),
-                      DropdownMenuItem<String?>(value: 'Process', child: Text('Process', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600))),
-                      DropdownMenuItem<String?>(value: 'Done', child: Text('Done', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600))),
-                      DropdownMenuItem<String?>(value: 'Dibatalkan', child: Text('Dibatalkan', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600))),
-                    ],
-                    onChanged: (val) => setState(() => _selectedStatusUtama = val),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-
-            // 3. Waktu
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _periodFilter,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.textMuted),
-                    isExpanded: true,
-                    style: GoogleFonts.inter(fontSize: 10, color: AppColors.textDark, fontWeight: FontWeight.w600),
-                    items: [
-                      DropdownMenuItem(value: 'semua', child: Text('Semua Hari', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600))),
-                      DropdownMenuItem(value: 'hari_ini', child: Text('Hari Ini', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600))),
-                      DropdownMenuItem(value: 'kemarin', child: Text('Kemarin', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600))),
-                      DropdownMenuItem(value: 'besok', child: Text('Besok', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600))),
-                      DropdownMenuItem(value: 'bulan_ini', child: Text('Bulan Ini', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600))),
-                    ],
-                    onChanged: (val) {
-                      if (val != null) setState(() => _periodFilter = val);
-                    },
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+        _buildProMaxSearchAndFilterBar(showStatusFilter: true),
         const SizedBox(height: 14),
 
         _buildEditOrderBebasList(),
@@ -2858,220 +3072,9 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Title Banner matching Web
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.withOpacity(0.18)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.02),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Hasil Audit (Pembatalan)',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Riwayat pesanan yang dibatalkan oleh CS.',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: AppColors.textMuted,
-                  height: 1.3,
-                ),
-              ),
-            ],
-          ),
-        ),
+        _buildUnifiedCancelSummaryBar(totalCancelToday, totalCancelThisMonth),
         const SizedBox(height: 14),
-
-        // 2 Red Summary Cards (ORDERAN CANCEL HARI INI & TOTAL CANCEL BULAN INI)
-        Row(
-          children: [
-            Expanded(
-              child: _buildSummaryCard(
-                title: 'ORDERAN CANCEL HARI INI',
-                value: '$totalCancelToday Order',
-                subtitle: 'Total pesanan dibatalkan pada ${DateFormat('d MMM yyyy', 'id_ID').format(now)}',
-                color: const Color(0xFFDC2626),
-                bgColor: const Color(0xFFFEF2F2),
-                icon: Icons.cancel_outlined,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildSummaryCard(
-                title: 'TOTAL CANCEL BULAN INI',
-                value: '$totalCancelThisMonth Order',
-                subtitle: 'Total pesanan dibatalkan selama bulan ${DateFormat('MMMM yyyy', 'id_ID').format(now)}',
-                color: const Color(0xFFE11D48),
-                bgColor: const Color(0xFFFFF1F2),
-                icon: Icons.calendar_month_outlined,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-
-        // Search Input (Matching Web)
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: TextField(
-            onChanged: (val) {
-              setState(() {
-                _searchQuery = val;
-              });
-            },
-            style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark),
-            decoration: InputDecoration(
-              hintText: 'Cari pelanggan, nomor pesanan, atau cleaner...',
-              hintStyle: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
-              border: InputBorder.none,
-              icon: const Icon(Icons.search, size: 18, color: AppColors.textMuted),
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-
-        // Row: Filter Cabang & Filter Waktu Dropdowns (Side by Side)
-        Row(
-          children: [
-            Expanded(
-              child: Builder(
-                builder: (context) {
-                  List<String> sortedCabangNames = [];
-                  if (_cabangs.isNotEmpty) {
-                    sortedCabangNames = _cabangs
-                        .where((c) => !c.namaCabang.toLowerCase().contains('kantor pusat'))
-                        .map((c) => c.namaCabang.toUpperCase())
-                        .toList()..sort();
-                  }
-                  if (sortedCabangNames.isEmpty) {
-                    sortedCabangNames = ['BALIKPAPAN', 'DENPASAR', 'MAKASSAR', 'MALANG', 'SURABAYA'];
-                  }
-
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String?>(
-                        value: _selectedCabangName,
-                        hint: Text(
-                          'Semua Cabang',
-                          style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark, fontWeight: FontWeight.w600),
-                        ),
-                        icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textMuted),
-                        isExpanded: true,
-                        style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark, fontWeight: FontWeight.w600),
-                        items: [
-                          DropdownMenuItem<String?>(
-                            value: null,
-                            child: Text('Semua Cabang', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
-                          ),
-                          ...sortedCabangNames.map((name) => DropdownMenuItem<String?>(
-                            value: name,
-                            child: Text(name, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
-                          )),
-                        ],
-                        onChanged: (val) {
-                          setState(() {
-                            _selectedCabangName = val;
-                          });
-                        },
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 8),
-
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _periodFilter,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textMuted),
-                    isExpanded: true,
-                    style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark, fontWeight: FontWeight.w600),
-                    items: [
-                      DropdownMenuItem(
-                        value: 'semua',
-                        child: Text('Semua Waktu', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
-                      ),
-                      DropdownMenuItem(
-                        value: 'hari_ini',
-                        child: Text('Hari Ini', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
-                      ),
-                      DropdownMenuItem(
-                        value: 'kemarin',
-                        child: Text('Kemarin', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
-                      ),
-                      DropdownMenuItem(
-                        value: 'besok',
-                        child: Text('Besok', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
-                      ),
-                      DropdownMenuItem(
-                        value: 'bulan_ini',
-                        child: Text('Bulan Ini', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
-                      ),
-                      DropdownMenuItem(
-                        value: 'custom',
-                        child: Text(
-                          _customRange != null
-                              ? '${DateFormat('dd/MM').format(_customRange!.start)} - ${DateFormat('dd/MM').format(_customRange!.end)}'
-                              : 'Kustom Tanggal...',
-                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
-                    onChanged: (val) {
-                      if (val == 'custom') {
-                        _pickCustomRange();
-                      } else if (val != null) {
-                        setState(() {
-                          _periodFilter = val;
-                          if (val == 'semua') {
-                            _filterStart = null;
-                            _filterEnd = null;
-                          }
-                        });
-                      }
-                    },
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+        _buildProMaxSearchAndFilterBar(),
         const SizedBox(height: 14),
 
         _buildHasilAuditList(cancelledOrders),

@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../cleaner/shell/cleaner_main_shell.dart';
 import '../../finance/shell/finance_main_shell.dart';
 import '../../hrd/shell/hrd_main_shell.dart';
+import '../../operasional/shell/operasional_main_shell.dart';
 
 class PinScreen extends StatefulWidget {
   const PinScreen({super.key, required this.email});
@@ -60,6 +61,7 @@ class _PinScreenState extends State<PinScreen> {
         final isCleaner = roleName.contains('cleaner');
         final isFinance = roleName.contains('finance') || roleName.contains('keuangan');
         final isHrd = roleName == 'hrd' || roleName.contains('hrd');
+        final isOperasional = roleName.contains('operasional');
 
         debugPrint('DEBUG LOGIN isFinance: $isFinance');
 
@@ -93,6 +95,14 @@ class _PinScreenState extends State<PinScreen> {
               )),
               (route) => false,
             );
+          } else if (isOperasional) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => OperasionalMainShell(
+                // requirePinChange: true, // OperasionalMainShell not currently accepting this arg in Phase 1
+                // currentPin: _pin,
+              )),
+              (route) => false,
+            );
           } else {
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => MainShell(
@@ -116,6 +126,11 @@ class _PinScreenState extends State<PinScreen> {
           } else if (isHrd) {
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => const HrdMainShell()),
+              (route) => false,
+            );
+          } else if (isOperasional) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const OperasionalMainShell()),
               (route) => false,
             );
           } else {

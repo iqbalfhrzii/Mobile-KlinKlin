@@ -494,16 +494,19 @@ class OrderModel {
   }
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
-    final customerData = json['pelanggan'] ?? {};
-    final detailsData = json['details'] as List? ?? [];
-    final cleanersData = json['cleaners'] ?? json['pesanan_cleaners'] as List? ?? [];
+    final orderJson = (json['pesanan'] != null && json['pesanan'] is Map)
+        ? json['pesanan'] as Map<String, dynamic>
+        : json;
+    final customerData = orderJson['pelanggan'] ?? {};
+    final detailsData = orderJson['details'] as List? ?? [];
+    final cleanersData = orderJson['cleaners'] ?? orderJson['pesanan_cleaners'] as List? ?? [];
     
     final List<ServiceItem> parsedServices = (detailsData as List).map<ServiceItem>((e) => ServiceItem.fromJson(e)).toList();
     final List<OrderCleaner> parsedCleaners = (cleanersData as List).map<OrderCleaner>((e) => OrderCleaner.fromJson(e)).toList();
     
     final int computedTotal = parsedServices.fold(0, (sum, s) => sum + s.subtotal);
 
-    final pendingEdits = json['pending_edit_layanans'] as List? ?? [];
+    final pendingEdits = orderJson['pending_edit_layanans'] as List? ?? [];
     bool hasPendingEdit = pendingEdits.isNotEmpty;
     String alasanEdit = '';
     String createdByName = '';
@@ -514,8 +517,8 @@ class OrderModel {
     }
 
     int parseTotal() {
-      if (json['pembayaran'] != null && json['pembayaran'] is Map) {
-        final p = json['pembayaran'];
+      final p = json['pembayaran'] != null && json['pembayaran'] is Map ? json['pembayaran'] : (json['pesanan'] != null ? json : null);
+      if (p != null) {
         if (p['total_akhir'] != null) {
           final v = double.tryParse(p['total_akhir'].toString())?.toInt();
           if (v != null && v > 0) return v;
@@ -529,56 +532,60 @@ class OrderModel {
           if (v != null && v > 0) return v;
         }
       }
-      if (json['total_akhir'] != null) {
-        final v = double.tryParse(json['total_akhir'].toString())?.toInt();
+      if (orderJson['total_akhir'] != null) {
+        final v = double.tryParse(orderJson['total_akhir'].toString())?.toInt();
         if (v != null && v > 0) return v;
       }
-      if (json['total_setelah_diskon'] != null) {
-        final v = double.tryParse(json['total_setelah_diskon'].toString())?.toInt();
+      if (orderJson['total_setelah_diskon'] != null) {
+        final v = double.tryParse(orderJson['total_setelah_diskon'].toString())?.toInt();
         if (v != null && v > 0) return v;
       }
-      if (json['total'] != null) {
-        final v = double.tryParse(json['total'].toString())?.toInt();
+      if (orderJson['total'] != null) {
+        final v = double.tryParse(orderJson['total'].toString())?.toInt();
         if (v != null && v > 0) return v;
       }
-      if (json['subtotal'] != null) {
-        final v = double.tryParse(json['subtotal'].toString())?.toInt();
+      if (orderJson['subtotal'] != null) {
+        final v = double.tryParse(orderJson['subtotal'].toString())?.toInt();
         if (v != null && v > 0) return v;
       }
       return computedTotal;
     }
 
+    final paymentObj = json['pembayaran'] != null && json['pembayaran'] is Map
+        ? OrderPayment.fromJson(json['pembayaran'])
+        : (json['pesanan'] != null && json['status_pembayaran'] != null ? OrderPayment.fromJson(json) : null);
+
     return OrderModel(
-      id: json['nomor_pesanan']?.toString() ?? json['id']?.toString() ?? '',
-      cabangId: json['cabang_id']?.toString() ?? '',
-      customer: OrderCustomer.fromJson(customerData, json),
-      chatDari: _parseChatSource(json['chat_dari']),
-      tipeCustomer: _parseCustomerType(json['tipe_customer']),
+      id: orderJson['nomor_pesanan']?.toString() ?? orderJson['id']?.toString() ?? json['pesanan_id']?.toString() ?? json['id']?.toString() ?? '',
+      cabangId: orderJson['cabang_id']?.toString() ?? json['cabang_id']?.toString() ?? '',
+      customer: OrderCustomer.fromJson(customerData, orderJson),
+      chatDari: _parseChatSource(orderJson['chat_dari'] ?? json['chat_dari']),
+      tipeCustomer: _parseCustomerType(orderJson['tipe_customer'] ?? json['tipe_customer']),
       services: parsedServices,
       cleaners: parsedCleaners,
-      status: _parseOrderStatus(json['status_pesanan']),
+      status: _parseOrderStatus(orderJson['status_pesanan'] ?? json['status_pesanan']),
       total: parseTotal(),
       subtotal: computedTotal,
-      paymentMethod: json['pembayaran']?['metode_pembayaran'] ?? json['metode_pembayaran'] ?? '-',
-      paymentStatus: json['pembayaran']?['status_pembayaran'] ?? json['status_pembayaran'] ?? 'unpaid',
-      notes: json['keterangan_order'] ?? '',
-      tanggalInput: json['tanggal_input'] != null ? DateTime.tryParse(json['tanggal_input']) ?? DateTime.now() : DateTime.now(),
-      cancelReason: json['alasan_batal'] ?? json['pembatalan']?['alasan_cancel'],
-      cancelProof: json['bukti_batal'] ?? json['pembatalan']?['bukti_cancel'],
-      paymentProof: json['pembayaran']?['bukti_transfer'] ?? json['pembayaran']?['bukti_pembayaran'] ?? json['file_invoice'],
-      pembayaran: json['pembayaran'] != null ? OrderPayment.fromJson(json['pembayaran']) : null,
-      pembatalanId: json['pembatalan']?['id'],
-      waktuBatal: json['waktu_batal'] != null 
-          ? DateTime.tryParse(json['waktu_batal']) 
-          : (json['pembatalan']?['created_at'] != null ? DateTime.tryParse(json['pembatalan']['created_at']) : null),
-      ppn: json['ppn'] != null ? (double.tryParse(json['ppn'].toString())?.toInt()) : (json['pembayaran']?['ppn'] != null ? double.tryParse(json['pembayaran']['ppn'].toString())?.toInt() : null),
-      pph: json['pph'] != null ? (double.tryParse(json['pph'].toString())?.toInt()) : (json['pembayaran']?['pph'] != null ? double.tryParse(json['pembayaran']['pph'].toString())?.toInt() : null),
-      discount: json['diskon_persen'] != null ? (double.tryParse(json['diskon_persen'].toString())?.toInt()) : (json['pembayaran']?['diskon_persen'] != null ? double.tryParse(json['pembayaran']['diskon_persen'].toString())?.toInt() : 0),
+      paymentMethod: orderJson['pembayaran']?['metode_pembayaran'] ?? orderJson['metode_pembayaran'] ?? json['metode_pembayaran'] ?? '-',
+      paymentStatus: orderJson['pembayaran']?['status_pembayaran'] ?? orderJson['status_pembayaran'] ?? json['status_pembayaran'] ?? 'unpaid',
+      notes: orderJson['keterangan_order'] ?? json['keterangan_order'] ?? '',
+      tanggalInput: orderJson['tanggal_input'] != null ? (DateTime.tryParse(orderJson['tanggal_input']) ?? DateTime.now()) : (json['created_at'] != null ? (DateTime.tryParse(json['created_at']) ?? DateTime.now()) : DateTime.now()),
+      cancelReason: orderJson['alasan_batal'] ?? orderJson['pembatalan']?['alasan_cancel'] ?? json['alasan_cancel'] ?? json['alasan_penolakan'],
+      cancelProof: orderJson['bukti_batal'] ?? orderJson['pembatalan']?['bukti_cancel'] ?? json['bukti_cancel'],
+      paymentProof: orderJson['pembayaran']?['bukti_transfer'] ?? orderJson['pembayaran']?['bukti_pembayaran'] ?? orderJson['file_invoice'] ?? json['bukti_transfer'] ?? json['bukti_pembayaran'],
+      pembayaran: paymentObj,
+      pembatalanId: orderJson['pembatalan']?['id'] ?? json['pembatalan_id'] ?? (json['alasan_cancel'] != null ? json['id'] : null),
+      waktuBatal: orderJson['waktu_batal'] != null 
+          ? DateTime.tryParse(orderJson['waktu_batal']) 
+          : (orderJson['pembatalan']?['created_at'] != null ? DateTime.tryParse(orderJson['pembatalan']['created_at']) : (json['created_at'] != null ? DateTime.tryParse(json['created_at']) : null)),
+      ppn: orderJson['pembayaran']?['ppn'] != null ? (double.tryParse(orderJson['pembayaran']['ppn'].toString())?.toInt()) : (orderJson['ppn'] != null ? (double.tryParse(orderJson['ppn'].toString())?.toInt()) : (json['pembayaran']?['ppn'] != null ? double.tryParse(json['pembayaran']['ppn'].toString())?.toInt() : (json['ppn'] != null ? double.tryParse(json['ppn'].toString())?.toInt() : null))),
+      pph: orderJson['pembayaran']?['pph'] != null ? (double.tryParse(orderJson['pembayaran']['pph'].toString())?.toInt()) : (orderJson['pph'] != null ? (double.tryParse(orderJson['pph'].toString())?.toInt()) : (json['pembayaran']?['pph'] != null ? double.tryParse(json['pembayaran']['pph'].toString())?.toInt() : (json['pph'] != null ? double.tryParse(json['pph'].toString())?.toInt() : null))),
+      discount: orderJson['pembayaran']?['diskon_persen'] != null ? (double.tryParse(orderJson['pembayaran']['diskon_persen'].toString())?.toInt()) : (orderJson['diskon_persen'] != null ? (double.tryParse(orderJson['diskon_persen'].toString())?.toInt()) : (json['pembayaran']?['diskon_persen'] != null ? double.tryParse(json['pembayaran']['diskon_persen'].toString())?.toInt() : (json['diskon_persen'] != null ? double.tryParse(json['diskon_persen'].toString())?.toInt() : 0))),
       hasPendingEditRequest: hasPendingEdit,
       alasanPengajuanEdit: alasanEdit,
       createdByName: createdByName,
-      statusBonus: json['status_bonus']?.toString() ?? 'Pending',
-      statusUtamaRaw: json['status_order_utama']?.toString(),
+      statusBonus: orderJson['status_bonus']?.toString() ?? json['status_bonus']?.toString() ?? 'Pending',
+      statusUtamaRaw: orderJson['status_order_utama']?.toString() ?? json['status_order_utama']?.toString(),
     );
   }
 

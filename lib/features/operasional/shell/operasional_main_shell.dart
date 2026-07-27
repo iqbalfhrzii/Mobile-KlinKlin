@@ -1,0 +1,156 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../profile/screens/profile_screen.dart';
+import '../screens/operasional_dashboard_screen.dart';
+import '../screens/operasional_order_list_screen.dart';
+import '../screens/operasional_report_kpi_screen.dart';
+import '../screens/operasional_kpi_cs_screen.dart';
+import '../screens/operasional_data_chat_screen.dart';
+import '../screens/operasional_pengaturan_screen.dart';
+
+// Sementara menggunakan Container kosong sampai layar aslinya dibuat di Fase selanjutnya
+class PlaceholderScreen extends StatelessWidget {
+  final String title;
+  const PlaceholderScreen({super.key, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: Center(child: Text('Layar $title sedang dalam pengembangan (Fase Berikutnya)')),
+    );
+  }
+}
+
+class OperasionalMainShell extends StatefulWidget {
+  const OperasionalMainShell({
+    super.key,
+    this.initialIndex = 0,
+  });
+
+  final int initialIndex;
+
+  @override
+  State<OperasionalMainShell> createState() => _OperasionalMainShellState();
+}
+
+class _OperasionalMainShellState extends State<OperasionalMainShell> {
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
+  }
+
+  List<Widget> get _screens => [
+    const OperasionalDashboardScreen(),
+    const OperasionalOrderListScreen(),
+    const OperasionalReportKpiScreen(),
+    const OperasionalKpiCsScreen(),
+    const OperasionalDataChatScreen(),
+    const OperasionalPengaturanScreen(),
+  ];
+
+  static const _navItems = [
+    _NavItem(Icons.grid_view_rounded, Icons.grid_view_rounded, 'Omzet'),
+    _NavItem(Icons.receipt_long_outlined, Icons.receipt_long_rounded, 'Pesanan'),
+    _NavItem(Icons.analytics_outlined, Icons.analytics_rounded, 'KPI'),
+    _NavItem(Icons.support_agent_outlined, Icons.support_agent_rounded, 'KPI CS'),
+    _NavItem(Icons.chat_outlined, Icons.chat_rounded, 'Data Chat'),
+    _NavItem(Icons.settings_outlined, Icons.settings_rounded, 'Pengaturan'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
+      bottomNavigationBar: _buildNavBar(),
+    );
+  }
+
+  Widget _buildNavBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(
+              _navItems.length,
+              (index) => _buildNavItem(index, _navItems[index]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, _NavItem item) {
+    final isSelected = _currentIndex == index;
+    final color = isSelected ? AppColors.primary : AppColors.textMuted;
+
+    return GestureDetector(
+      onTap: () => setState(() => _currentIndex = index),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary.withOpacity(0.08) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              transitionBuilder: (Widget child, Animation<double> animation) {
+                return ScaleTransition(scale: animation, child: child);
+              },
+              child: Icon(
+                isSelected ? item.activeIcon : item.icon,
+                key: ValueKey<bool>(isSelected),
+                color: color,
+                size: 24,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              item.label,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+
+  const _NavItem(this.icon, this.activeIcon, this.label);
+}

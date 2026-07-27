@@ -68,65 +68,6 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
   List<GajiKaryawanModel> _getFilteredData() {
     List<GajiKaryawanModel> list = _allGaji.where((g) => g.jenisGaji.toLowerCase() == _jenisGajiTab.toLowerCase()).toList();
 
-    // Fallback sample data matching exact Web Screenshots 2 & 3 if empty from API
-    if (list.isEmpty) {
-      if (_jenisGajiTab == 'harian') {
-        list = [
-          GajiKaryawanModel(
-            id: 1,
-            karyawanId: 101,
-            jenisGaji: 'harian',
-            periodeBulan: 7,
-            periodeTahun: 2026,
-            awalPeriode: '2026-07-01',
-            akhirPeriode: '2026-07-02',
-            jumlahHariKerja: 2,
-            gajiPokokHarian: 110000,
-            gajiPokok: 220000,
-            totalGajiDiterima: 220000,
-            totalPotongan: 0,
-            takeHomePay: 220000,
-            snapshotCabang: 'Surabaya',
-            snapshotJabatan: 'CLEANER',
-            karyawan: KaryawanModel(
-              id: 101,
-              nama: 'dhio',
-              cabangId: 1,
-              statusKaryawan: 'kontrak',
-              noRekening: '',
-              namaBank: '',
-            ),
-          ),
-          GajiKaryawanModel(
-            id: 2,
-            karyawanId: 102,
-            jenisGaji: 'harian',
-            periodeBulan: 7,
-            periodeTahun: 2026,
-            awalPeriode: '2026-07-01',
-            akhirPeriode: '2026-07-20',
-            jumlahHariKerja: 20,
-            gajiPokokHarian: 95000,
-            gajiPokok: 1900000,
-            kasbon: 450000,
-            totalGajiDiterima: 1900000,
-            totalPotongan: 450000,
-            takeHomePay: 1450000,
-            snapshotCabang: 'Surabaya',
-            snapshotJabatan: 'CLEANER',
-            karyawan: KaryawanModel(
-              id: 102,
-              nama: 'ateng',
-              cabangId: 1,
-              statusKaryawan: 'kontrak',
-              noRekening: '1992039409',
-              namaBank: 'BCA',
-            ),
-          ),
-        ];
-      }
-    }
-
     return list.where((g) {
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();

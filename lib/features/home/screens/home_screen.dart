@@ -16,6 +16,8 @@ import '../../orders/services/order_service.dart';
 import '../../../core/data/order_model.dart';
 import '../../orders/screens/order_detail_screen.dart';
 import '../../profile/screens/kpi_screen.dart';
+import '../../attendance/screens/attendance_screen.dart';
+import 'chat_harian_screen.dart';
 import '../services/dashboard_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 
@@ -887,6 +889,18 @@ class _HomeScreenState extends State<HomeScreen> {
         const Color(0xFFEDE9FE),
       ),
       _QuickAction(
+        'Absensi',
+        Icons.fingerprint_rounded,
+        const Color(0xFF0ea5e9),
+        const Color(0xFFe0f2fe),
+      ),
+      _QuickAction(
+        'Chat Harian',
+        Icons.forum_outlined,
+        const Color(0xFFEC4899),
+        const Color(0xFFFCE7F3),
+      ),
+      _QuickAction(
         'KPI Karyawan',
         Icons.analytics_rounded,
         const Color(0xFFE65100),
@@ -924,6 +938,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => const KpiScreen()),
+                        );
+                      } else if (a.label == 'Absensi') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AttendanceScreen()),
+                        );
+                      } else if (a.label == 'Chat Harian') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ChatHarianScreen()),
                         );
                       }
                     },

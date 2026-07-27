@@ -6,20 +6,22 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/gradient_header.dart';
-import '../../attendance/data/attendance_model.dart';
+import '../../../core/utils/snackbar_utils.dart';
 import '../../attendance/services/attendance_service.dart';
-import '../../attendance/services/mock_location_service.dart';
+import 'attendance_history_screen.dart';
 import '../../attendance/screens/admin_attendance_detail_screen.dart';
 import 'camera_screen.dart';
+import '../services/mock_location_service.dart';
+import '../data/attendance_model.dart';
 
-class CleanerAttendanceScreen extends StatefulWidget {
-  const CleanerAttendanceScreen({super.key});
+class AttendanceScreen extends StatefulWidget {
+  const AttendanceScreen({super.key});
 
   @override
-  State<CleanerAttendanceScreen> createState() => _CleanerAttendanceScreenState();
+  State<AttendanceScreen> createState() => _AttendanceScreenState();
 }
 
-class _CleanerAttendanceScreenState extends State<CleanerAttendanceScreen> {
+class _AttendanceScreenState extends State<AttendanceScreen> {
   final AttendanceService _service = AttendanceService();
   
   bool _isLoading = true;
@@ -646,15 +648,9 @@ class _CleanerAttendanceScreenState extends State<CleanerAttendanceScreen> {
                child: InkWell(
                  borderRadius: BorderRadius.circular(12),
                  onTap: () {
-                   Navigator.push(
-                     context,
-                     MaterialPageRoute(
-                       builder: (_) => AdminAttendanceDetailScreen(
-                         item: group,
-                         showPhoto: false,
-                       ),
-                     ),
-                   );
+                   Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => const AttendanceHistoryScreen(),
+                  ));
                  },
                  child: Padding(
                    padding: const EdgeInsets.all(16),

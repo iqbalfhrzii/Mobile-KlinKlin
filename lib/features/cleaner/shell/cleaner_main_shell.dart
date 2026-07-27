@@ -7,7 +7,7 @@ import '../../profile/screens/profile_screen.dart';
 import '../dashboard/cleaner_dashboard_screen.dart';
 import '../history/cleaner_history_screen.dart';
 import '../jobs/cleaner_job_list_screen.dart';
-import '../attendance/cleaner_attendance_screen.dart';
+import '../../attendance/screens/attendance_screen.dart';
 
 class CleanerMainShell extends StatefulWidget {
   const CleanerMainShell({
@@ -39,7 +39,7 @@ class _CleanerMainShellState extends State<CleanerMainShell> {
   List<Widget> get _screens => [
     CleanerDashboardScreen(key: ValueKey('dash_$_dashKeyVal')),
     const CleanerJobListScreen(),
-    const CleanerAttendanceScreen(),
+    const AttendanceScreen(),
     const CleanerHistoryScreen(),
     const ProfileScreen(),
   ];

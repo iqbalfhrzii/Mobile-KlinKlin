@@ -4,14 +4,14 @@ import '../../../../core/theme/app_colors.dart';
 import '../../attendance/data/attendance_model.dart';
 import '../../attendance/services/attendance_service.dart';
 
-class CleanerAttendanceHistoryScreen extends StatefulWidget {
-  const CleanerAttendanceHistoryScreen({super.key});
+class AttendanceHistoryScreen extends StatefulWidget {
+  const AttendanceHistoryScreen({super.key});
 
   @override
-  State<CleanerAttendanceHistoryScreen> createState() => _CleanerAttendanceHistoryScreenState();
+  State<AttendanceHistoryScreen> createState() => _AttendanceHistoryScreenState();
 }
 
-class _CleanerAttendanceHistoryScreenState extends State<CleanerAttendanceHistoryScreen> {
+class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   final AttendanceService _service = AttendanceService();
   bool _isLoading = true;
   List<AttendanceHistoryItem> _history = [];

@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/data/kpi_model.dart';
 import '../../../core/data/mock_kpi_data.dart';
+import '../services/kpi_service.dart';
 
 class KpiScreen extends StatefulWidget {
   const KpiScreen({super.key});
@@ -13,7 +14,83 @@ class KpiScreen extends StatefulWidget {
 }
 
 class _KpiScreenState extends State<KpiScreen> {
-  final List<TargetKpi> _kpiList = mockTargetKpi;
+  List<TargetKpi> _kpiList = [];
+  bool _isLoading = true;
+  String _namaPeriode = 'Memuat...';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadKpi();
+  }
+
+  Future<void> _loadKpi() async {
+    try {
+      final now = DateTime.now();
+      final service = KpiService();
+      final kpiData = await service.getKpiCs(bulan: now.month, tahun: now.year);
+      
+      if (mounted) {
+        setState(() {
+          _namaPeriode = '${_getMonthName(now.month)} ${now.year}';
+          
+          final p = PeriodeKpi(id: 1, bulan: now.month.toString(), tahun: now.year, namaPeriode: _namaPeriode);
+          
+          _kpiList = [
+            TargetKpi(
+              id: 1, karyawanId: 'CS', periode: p, indikator: mockIndikatorKpi[0],
+              target: (kpiData['target_omzet'] ?? 0).toDouble(),
+              bobot: (kpiData['bobot_omzet'] ?? 0).toDouble(),
+              keterangan: '',
+              capaian: CapaianKpi(id: 1, targetKpiId: 1, nilaiCapaian: (kpiData['capaian_omzet'] ?? 0).toDouble(), catatan: ''),
+            ),
+            TargetKpi(
+              id: 2, karyawanId: 'CS', periode: p, indikator: mockIndikatorKpi[1],
+              target: (kpiData['target_closing_rate'] ?? 0).toDouble(),
+              bobot: (kpiData['bobot_closing_rate'] ?? 0).toDouble(),
+              keterangan: '',
+              capaian: CapaianKpi(id: 2, targetKpiId: 2, nilaiCapaian: (kpiData['capaian_closing_rate'] ?? 0).toDouble(), catatan: ''),
+            ),
+            TargetKpi(
+              id: 3, karyawanId: 'CS', periode: p, indikator: mockIndikatorKpi[2],
+              target: (kpiData['target_closing_chat'] ?? 0).toDouble(),
+              bobot: (kpiData['bobot_closing_chat'] ?? 0).toDouble(),
+              keterangan: '',
+              capaian: CapaianKpi(id: 3, targetKpiId: 3, nilaiCapaian: (kpiData['capaian_closing_chat'] ?? 0).toDouble(), catatan: ''),
+            ),
+            TargetKpi(
+              id: 4, karyawanId: 'CS', periode: p, indikator: mockIndikatorKpi[3],
+              target: (kpiData['target_stock_opname'] ?? 0).toDouble(),
+              bobot: (kpiData['bobot_stock_opname'] ?? 0).toDouble(),
+              keterangan: '',
+              capaian: CapaianKpi(id: 4, targetKpiId: 4, nilaiCapaian: (kpiData['nilai_stock_opname'] ?? 0).toDouble(), catatan: ''),
+            ),
+            TargetKpi(
+              id: 5, karyawanId: 'CS', periode: p, indikator: mockIndikatorKpi[4],
+              target: (kpiData['target_review_maps'] ?? 0).toDouble(),
+              bobot: (kpiData['bobot_review_maps'] ?? 0).toDouble(),
+              keterangan: '',
+              capaian: CapaianKpi(id: 5, targetKpiId: 5, nilaiCapaian: (kpiData['nilai_review_maps'] ?? 0).toDouble(), catatan: ''),
+            ),
+          ];
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _kpiList = mockTargetKpi; // Fallback to mock if API fails
+          _namaPeriode = mockPeriodeKpi.namaPeriode;
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  String _getMonthName(int m) {
+    const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    return months[m - 1];
+  }
 
   String _formatRupiah(double n) =>
       'Rp ${n.toInt().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
@@ -39,13 +116,15 @@ class _KpiScreenState extends State<KpiScreen> {
         children: [
           _buildHeader(finalScorePercentage),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                ..._kpiList.map((kpi) => _buildKpiCard(kpi)),
-                _buildStrategiPencapaian(),
-              ],
-            ),
+            child: _isLoading 
+              ? const Center(child: CircularProgressIndicator())
+              : ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    ..._kpiList.map((kpi) => _buildKpiCard(kpi)),
+                    _buildStrategiPencapaian(),
+                  ],
+                ),
           ),
         ],
       ),
@@ -86,7 +165,7 @@ class _KpiScreenState extends State<KpiScreen> {
                     ),
                     child: Row(
                       children: [
-                        Text(mockPeriodeKpi.namaPeriode, style: GoogleFonts.inter(
+                        Text(_namaPeriode, style: GoogleFonts.inter(
                           fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white,
                         )),
                         const SizedBox(width: 4),

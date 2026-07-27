@@ -17,11 +17,11 @@ class CustomerModel {
 
   factory CustomerModel.fromJson(Map<String, dynamic> json) {
     return CustomerModel(
-      id: 'PLG-${json['id']}',
+      id: 'PLG-${json['id'] ?? ''}',
       cabangId: json['cabang_id'] != null ? int.tryParse(json['cabang_id'].toString()) : null,
-      name: json['nama_pelanggan'] ?? '-',
-      phone: json['no_wa'] ?? '-',
-      address: json['alamat'] ?? '-',
+      name: json['nama_pelanggan']?.toString() ?? '-',
+      phone: json['no_wa']?.toString() ?? '-',
+      address: json['alamat']?.toString() ?? '-',
       status: json['status']?.toString() ?? 'UNKNOWN',
       totalOrders: json['total_pesanan'] != null 
           ? (int.tryParse(json['total_pesanan'].toString()) ?? 0)
@@ -29,9 +29,9 @@ class CustomerModel {
               ? (int.tryParse(json['pesanans_count'].toString()) ?? 0)
               : 0),
       totalSpending: json['total_belanja'] != null ? int.tryParse(json['total_belanja'].toString()) ?? 0 : 0,
-      lastOrderDate: json['terakhir_pesan'] ?? '-',
-      notes: json['catatan'] ?? '',
-      orders: json['pesanans'] != null 
+      lastOrderDate: json['terakhir_pesan']?.toString() ?? '-',
+      notes: json['catatan']?.toString() ?? '',
+      orders: json['pesanans'] != null && json['pesanans'] is List
           ? (json['pesanans'] as List).map((e) => CustomerOrder.fromJson(e)).toList() 
           : const [],
     );
@@ -78,10 +78,10 @@ class CustomerOrder {
 
   factory CustomerOrder.fromJson(Map<String, dynamic> json) {
     String serviceName = 'Pesanan';
-    if (json['details'] != null && (json['details'] as List).isNotEmpty) {
+    if (json['details'] != null && json['details'] is List && (json['details'] as List).isNotEmpty) {
       final details = json['details'] as List;
       final names = details.map((d) {
-        if (d['layanan'] != null && d['layanan']['nama_layanan'] != null) {
+        if (d is Map && d['layanan'] != null && d['layanan']['nama_layanan'] != null) {
           return d['layanan']['nama_layanan'].toString();
         }
         return '';
@@ -97,17 +97,18 @@ class CustomerOrder {
     }
     
     List<String> cleanerNames = [];
-    if (json['cleaners'] != null) {
+    if (json['cleaners'] != null && json['cleaners'] is List) {
       for (var c in json['cleaners']) {
-        if (c['cleaner'] != null && c['cleaner']['nama'] != null) {
-          cleanerNames.add(c['cleaner']['nama']);
+        if (c is Map && c['cleaner'] != null && c['cleaner']['nama'] != null) {
+          cleanerNames.add(c['cleaner']['nama'].toString());
         }
       }
     }
     
     int amount = 0;
-    if (json['pembayaran'] != null) {
-      amount = json['pembayaran']['total_akhir'] ?? json['pembayaran']['total_tagihan'] ?? 0;
+    if (json['pembayaran'] != null && json['pembayaran'] is Map) {
+      final val = json['pembayaran']['total_akhir'] ?? json['pembayaran']['total_tagihan'];
+      amount = val != null ? int.tryParse(val.toString()) ?? 0 : 0;
     } else {
       amount = json['subtotal'] != null ? int.tryParse(json['subtotal'].toString()) ?? 0 : 0;
     }
@@ -115,10 +116,10 @@ class CustomerOrder {
     return CustomerOrder(
       id: json['id']?.toString() ?? '',
       service: serviceName,
-      date: json['tanggal_input'] ?? '',
+      date: json['tanggal_input']?.toString() ?? '',
       cleaners: cleanerNames,
       amount: amount,
-      status: _parseStatus(json['status_pesanan']),
+      status: _parseStatus(json['status_pesanan']?.toString()),
     );
   }
 

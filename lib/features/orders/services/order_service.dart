@@ -75,13 +75,17 @@ class OrderService {
     }
   }
 
-  /// Update order
-  Future<void> updateOrder(String id, OrderDraft draft) async {
+  Future<void> updateOrder(String id, OrderDraft draft, {int? originalCabangId, int? originalCsId}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cabangId = prefs.getInt('user_cabang_id') ?? 1;
-      final csIdStr = prefs.getString('user_id');
-      final csId = (csIdStr != null) ? (int.tryParse(csIdStr.replaceAll(RegExp(r'[^0-9]'), '')) ?? 1) : 1;
+      
+      int cabangId = originalCabangId ?? (prefs.getInt('user_cabang_id') ?? 1);
+      int csId = originalCsId ?? 1;
+      
+      if (originalCsId == null) {
+        final csIdStr = prefs.getString('user_id');
+        csId = (csIdStr != null) ? (int.tryParse(csIdStr.replaceAll(RegExp(r'[^0-9]'), '')) ?? 1) : 1;
+      }
 
       final data = draft.toJson();
       data['cabang_id'] = cabangId;

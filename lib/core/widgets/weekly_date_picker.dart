@@ -255,7 +255,7 @@ class _WeeklyDatePickerState extends State<WeeklyDatePicker> {
             }),
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 6),
         // Baris Pencarian dan Tombol Semua Tanggal
         Row(
           children: [
