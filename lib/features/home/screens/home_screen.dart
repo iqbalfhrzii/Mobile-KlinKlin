@@ -447,6 +447,7 @@ class _HomeScreenState extends State<HomeScreen> {
         '$_ordersToday',
         Icons.receipt_long_rounded,
         AppColors.primaryMid,
+        hint: 'Total Order Hari Ini',
         onTap: () {
           Navigator.push(
             context,
@@ -461,6 +462,7 @@ class _HomeScreenState extends State<HomeScreen> {
         '$_waiting',
         Icons.hourglass_empty_rounded,
         AppColors.statusPending,
+        hint: 'Payment Approval',
         onTap: () {
           Navigator.push(
             context,
@@ -477,6 +479,7 @@ class _HomeScreenState extends State<HomeScreen> {
         '$_active',
         Icons.cleaning_services_rounded,
         AppColors.statusProgress,
+        hint: 'Process & Pending',
         onTap: () {
           Navigator.push(
             context,
@@ -492,6 +495,7 @@ class _HomeScreenState extends State<HomeScreen> {
         '$_doneToday',
         Icons.check_circle_rounded,
         AppColors.statusDone,
+        hint: 'Status Done',
         onTap: () {
           Navigator.push(
             context,
@@ -506,9 +510,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return GridView.count(
       crossAxisCount: 2,
-      crossAxisSpacing: 10,
-      mainAxisSpacing: 10,
-      childAspectRatio: 1.8,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 1.6,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       children: items.map((s) => _StatCard(stat: s)).toList(),
@@ -518,119 +522,136 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildOmzetCard() {
     final omzet = _omzetThisMonth;
     final target = _targetOmzet;
-    final pct = (omzet / target).clamp(0.0, 1.0);
+    final pct = (omzet / (target > 0 ? target : 1)).clamp(0.0, 1.0);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [AppColors.cardShadow],
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withOpacity(0.35),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE8F5E9),
-                        borderRadius: BorderRadius.circular(10),
+                        color: const Color(0xFF10B981).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFF10B981).withOpacity(0.4)),
                       ),
-                      child: const Icon(
-                        Icons.trending_up_rounded,
-                        color: Color(0xFF2E7D32),
-                        size: 18,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.trending_up_rounded, color: Color(0xFF34D399), size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            'OMZET BULAN BERJALAN',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF34D399),
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Omzet Bulan Ini',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                        Text(
-                          _formatRupiah(omzet),
-                          style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textDark,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 10),
+                    Text(
+                      _formatRupiah(omzet),
+                      style: GoogleFonts.inter(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: -0.5,
+                      ),
                     ),
                   ],
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'Rata-rata Order',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: AppColors.textMuted,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white.withOpacity(0.15)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Rata-rata Order',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        color: Colors.white.withOpacity(0.7),
+                      ),
                     ),
-                  ),
-                  Text(
-                    _formatRupiah(_rataRataOrder.toInt()),
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textDark,
+                    const SizedBox(height: 2),
+                    Text(
+                      _formatRupiah(_rataRataOrder.toInt()),
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Progress target bulanan',
+                'Target Bulanan: ${_formatRupiah(target)}',
                 style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: AppColors.textMuted,
+                  fontSize: 12,
+                  color: Colors.white.withOpacity(0.8),
                 ),
               ),
               Text(
                 '${(pct * 100).round()}%',
                 style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textDark,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF34D399),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: pct,
-              backgroundColor: AppColors.surfaceBlue,
+              backgroundColor: Colors.white.withOpacity(0.15),
               valueColor: const AlwaysStoppedAnimation<Color>(
-                AppColors.statusDone,
+                Color(0xFF10B981),
               ),
-              minHeight: 6,
+              minHeight: 8,
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Target: ${_formatRupiah(target)}',
-            style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
           ),
         ],
       ),
@@ -949,6 +970,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           context,
                           MaterialPageRoute(builder: (_) => const ChatHarianScreen()),
                         );
+                      } else if (a.label == 'Kelola Pelanggan') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const CustomerListScreen()),
+                        );
                       }
                     },
                     child: Container(
@@ -1001,76 +1027,182 @@ class _HomeScreenState extends State<HomeScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Pesanan Terbaru',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textMuted,
-                letterSpacing: 0.5,
-              ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceBlue,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.receipt_long_rounded, size: 16, color: AppColors.primary),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Pesanan Terbaru CS',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
+                  ),
+                ),
+              ],
             ),
-            Text(
-              'Lihat Semua',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const OrderListScreen()),
+                );
+              },
+              child: Text(
+                'Lihat Semua',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         ..._recentOrders.map(
-          (o) => GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => OrderDetailScreen(order: o)),
-              );
-            },
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.border),
-                boxShadow: [AppColors.cardShadow],
-              ),
-              child: Row(
-                children: [
-                  InitialsAvatar(name: o.customer.name, size: 38),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          (o) {
+            final bool isPaid = o.paymentStatus.toLowerCase() == 'paid' || 
+                                o.paymentStatus.toLowerCase() == 'approved' ||
+                                o.pembayaran?.statusPembayaran.toLowerCase() == 'approved';
+            return GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => OrderDetailScreen(order: o)),
+                );
+              },
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppColors.border),
+                  boxShadow: [AppColors.cardShadow],
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          o.customer.name,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textDark,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.background,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '#${o.id}',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textMuted,
+                            ),
                           ),
                         ),
-                        Text(
-                          o.services.isNotEmpty
-                              ? o.services.first.name
-                              : 'Pesanan',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            color: AppColors.textMuted,
+                        StatusBadge(status: o.status),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        InitialsAvatar(name: o.customer.name, size: 42),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                o.customer.name,
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textDark,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                o.services.isNotEmpty
+                                    ? o.services.first.name
+                                    : 'Pesanan Layanan',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  StatusBadge(status: o.status),
-                ],
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Divider(height: 1, color: AppColors.border),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Total Tagihan',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                            Text(
+                              _formatRupiah(o.total),
+                              style: GoogleFonts.inter(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF059669),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isPaid ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isPaid ? Icons.check_circle_rounded : Icons.pending_rounded,
+                                size: 14,
+                                color: isPaid ? const Color(0xFF065F46) : const Color(0xFF92400E),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                isPaid ? 'Paid / Approved' : 'Unpaid / Pending',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: isPaid ? const Color(0xFF065F46) : const Color(0xFF92400E),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ],
     );
@@ -1078,8 +1210,8 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _Stat {
-  const _Stat(this.label, this.value, this.icon, this.color, {this.onTap});
-  final String label, value;
+  const _Stat(this.label, this.value, this.icon, this.color, {this.hint = '', this.onTap});
+  final String label, value, hint;
   final IconData icon;
   final Color color;
   final VoidCallback? onTap;
@@ -1093,46 +1225,68 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: stat.onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(18),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-          boxShadow: [AppColors.cardShadow],
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: stat.color.withOpacity(0.3), width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: stat.color.withOpacity(0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: stat.color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(stat.icon, color: stat.color, size: 18),
+              child: Icon(stat.icon, color: stat.color, size: 22),
             ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  stat.value,
-                  style: GoogleFonts.inter(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    stat.value,
+                    style: GoogleFonts.inter(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textDark,
+                    ),
                   ),
-                ),
-                Text(
-                  stat.label,
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: AppColors.textMuted,
+                  Text(
+                    stat.label,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textDark,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
+                  if (stat.hint.isNotEmpty)
+                    Text(
+                      stat.hint,
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontStyle: FontStyle.italic,
+                        color: AppColors.textMuted,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
             ),
           ],
         ),

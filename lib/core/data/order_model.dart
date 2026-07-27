@@ -329,6 +329,7 @@ class OrderPayment {
     this.ppn,
     this.diskonPersen,
     this.totalSetelahDiskon,
+    this.approvedAt,
   });
 
   int id;
@@ -340,6 +341,7 @@ class OrderPayment {
   int? ppn;
   double? diskonPersen;
   int? totalSetelahDiskon;
+  DateTime? approvedAt;
 
   factory OrderPayment.fromJson(Map<String, dynamic> json) {
     return OrderPayment(
@@ -352,6 +354,7 @@ class OrderPayment {
       ppn: json['ppn'] != null ? (double.tryParse(json['ppn'].toString())?.toInt()) : null,
       diskonPersen: json['diskon_persen'] != null ? double.tryParse(json['diskon_persen'].toString()) : 0.0,
       totalSetelahDiskon: json['total_setelah_diskon'] != null ? (double.tryParse(json['total_setelah_diskon'].toString())?.toInt()) : null,
+      approvedAt: json['approved_at'] != null ? DateTime.tryParse(json['approved_at'].toString()) : null,
     );
   }
 }
@@ -384,6 +387,8 @@ class OrderModel {
     this.hasPendingEditRequest = false,
     this.alasanPengajuanEdit = '',
     this.createdByName = '',
+    this.pengajuanEditId,
+    this.waktuPengajuanEdit,
     this.statusPengerjaan = 'Ditugaskan',
     this.statusBonus = 'Pending',
     this.statusUtamaRaw,
@@ -415,6 +420,8 @@ class OrderModel {
   bool hasPendingEditRequest;
   String alasanPengajuanEdit;
   String createdByName;
+  int? pengajuanEditId;
+  DateTime? waktuPengajuanEdit;
   String statusPengerjaan;
   String statusBonus;
   String? statusUtamaRaw;
@@ -510,10 +517,16 @@ class OrderModel {
     bool hasPendingEdit = pendingEdits.isNotEmpty;
     String alasanEdit = '';
     String createdByName = '';
+    int? pEditId;
+    DateTime? wEdit;
     
     if (hasPendingEdit) {
       alasanEdit = pendingEdits.first['keterangan']?.toString() ?? '';
       createdByName = pendingEdits.first['cs']?['nama']?.toString() ?? pendingEdits.first['cs']?['nama_karyawan']?.toString() ?? 'CS';
+      pEditId = int.tryParse(pendingEdits.first['id']?.toString() ?? '');
+      if (pendingEdits.first['created_at'] != null) {
+        wEdit = DateTime.tryParse(pendingEdits.first['created_at'].toString());
+      }
     }
 
     int parseTotal() {
@@ -570,20 +583,22 @@ class OrderModel {
       paymentStatus: orderJson['pembayaran']?['status_pembayaran'] ?? orderJson['status_pembayaran'] ?? json['status_pembayaran'] ?? 'unpaid',
       notes: orderJson['keterangan_order'] ?? json['keterangan_order'] ?? '',
       tanggalInput: orderJson['tanggal_input'] != null ? (DateTime.tryParse(orderJson['tanggal_input']) ?? DateTime.now()) : (json['created_at'] != null ? (DateTime.tryParse(json['created_at']) ?? DateTime.now()) : DateTime.now()),
-      cancelReason: orderJson['alasan_batal'] ?? orderJson['pembatalan']?['alasan_cancel'] ?? json['alasan_cancel'] ?? json['alasan_penolakan'],
-      cancelProof: orderJson['bukti_batal'] ?? orderJson['pembatalan']?['bukti_cancel'] ?? json['bukti_cancel'],
+      cancelReason: orderJson['alasan_batal'] ?? orderJson['pembatalan']?['alasan_batal'] ?? orderJson['pembatalan']?['alasan_cancel'] ?? json['alasan_batal'] ?? json['alasan_cancel'] ?? json['alasan_penolakan'],
+      cancelProof: orderJson['bukti_batal'] ?? orderJson['pembatalan']?['bukti_batal'] ?? orderJson['pembatalan']?['bukti_cancel'] ?? json['bukti_cancel'],
       paymentProof: orderJson['pembayaran']?['bukti_transfer'] ?? orderJson['pembayaran']?['bukti_pembayaran'] ?? orderJson['file_invoice'] ?? json['bukti_transfer'] ?? json['bukti_pembayaran'],
       pembayaran: paymentObj,
       pembatalanId: orderJson['pembatalan']?['id'] ?? json['pembatalan_id'] ?? (json['alasan_cancel'] != null ? json['id'] : null),
       waktuBatal: orderJson['waktu_batal'] != null 
           ? DateTime.tryParse(orderJson['waktu_batal']) 
-          : (orderJson['pembatalan']?['created_at'] != null ? DateTime.tryParse(orderJson['pembatalan']['created_at']) : (json['created_at'] != null ? DateTime.tryParse(json['created_at']) : null)),
+          : (orderJson['pembatalan']?['waktu_batal'] != null ? DateTime.tryParse(orderJson['pembatalan']['waktu_batal']) : (orderJson['pembatalan']?['created_at'] != null ? DateTime.tryParse(orderJson['pembatalan']['created_at']) : (json['created_at'] != null ? DateTime.tryParse(json['created_at']) : null))),
       ppn: orderJson['pembayaran']?['ppn'] != null ? (double.tryParse(orderJson['pembayaran']['ppn'].toString())?.toInt()) : (orderJson['ppn'] != null ? (double.tryParse(orderJson['ppn'].toString())?.toInt()) : (json['pembayaran']?['ppn'] != null ? double.tryParse(json['pembayaran']['ppn'].toString())?.toInt() : (json['ppn'] != null ? double.tryParse(json['ppn'].toString())?.toInt() : null))),
       pph: orderJson['pembayaran']?['pph'] != null ? (double.tryParse(orderJson['pembayaran']['pph'].toString())?.toInt()) : (orderJson['pph'] != null ? (double.tryParse(orderJson['pph'].toString())?.toInt()) : (json['pembayaran']?['pph'] != null ? double.tryParse(json['pembayaran']['pph'].toString())?.toInt() : (json['pph'] != null ? double.tryParse(json['pph'].toString())?.toInt() : null))),
       discount: orderJson['pembayaran']?['diskon_persen'] != null ? (double.tryParse(orderJson['pembayaran']['diskon_persen'].toString())?.toInt()) : (orderJson['diskon_persen'] != null ? (double.tryParse(orderJson['diskon_persen'].toString())?.toInt()) : (json['pembayaran']?['diskon_persen'] != null ? double.tryParse(json['pembayaran']['diskon_persen'].toString())?.toInt() : (json['diskon_persen'] != null ? double.tryParse(json['diskon_persen'].toString())?.toInt() : 0))),
       hasPendingEditRequest: hasPendingEdit,
       alasanPengajuanEdit: alasanEdit,
       createdByName: createdByName,
+      pengajuanEditId: pEditId,
+      waktuPengajuanEdit: wEdit,
       statusBonus: orderJson['status_bonus']?.toString() ?? json['status_bonus']?.toString() ?? 'Pending',
       statusUtamaRaw: orderJson['status_order_utama']?.toString() ?? json['status_order_utama']?.toString(),
     );

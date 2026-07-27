@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
-import 'finance_pemasukan_screen.dart';
-import 'finance_pengeluaran_screen.dart';
 import 'finance_download_screen.dart';
-import 'finance_cash_flow_menu_screen.dart';
 
 class FinanceKeuanganMenuScreen extends StatelessWidget {
   const FinanceKeuanganMenuScreen({super.key});
@@ -24,7 +21,7 @@ class FinanceKeuanganMenuScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Manajemen', style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withOpacity(0.7))),
-                      Text('Keuangan', style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                      Text('Download Data', style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
                     ],
                   ),
                 ),
@@ -33,42 +30,15 @@ class FinanceKeuanganMenuScreen extends StatelessWidget {
           ),
           
           Expanded(
-            child: GridView.count(
+            child: ListView(
               padding: const EdgeInsets.all(20),
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
               children: [
                 _buildMenuCard(
                   context, 
-                  'Pemasukan', 
-                  'Daftar uang masuk', 
-                  Icons.arrow_circle_down_rounded, 
-                  Colors.green,
-                  const FinancePemasukanScreen(),
-                ),
-                _buildMenuCard(
-                  context, 
-                  'Pengeluaran', 
-                  'Daftar uang keluar', 
-                  Icons.arrow_circle_up_rounded, 
-                  Colors.red,
-                  const FinancePengeluaranScreen(),
-                ),
-                _buildMenuCard(
-                  context, 
-                  'Approval Cash Flow', 
-                  'Persetujuan order', 
-                  Icons.fact_check_rounded, 
-                  AppColors.primary,
-                  const FinanceCashFlowMenuScreen(),
-                ),
-                _buildMenuCard(
-                  context, 
-                  'Download Laporan', 
-                  'Export data ke Excel', 
+                  'Download Laporan (.xlsx)', 
+                  'Export data pesanan dan gaji ke file Excel', 
                   Icons.download_rounded, 
-                  Colors.purple,
+                  const Color(0xFF10B981),
                   const FinanceDownloadScreen(),
                 ),
               ],

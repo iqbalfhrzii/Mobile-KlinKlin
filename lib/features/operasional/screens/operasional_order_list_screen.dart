@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
-import '../../../core/widgets/badges.dart';
 import '../../../core/data/order_model.dart';
 import '../../orders/services/order_service.dart';
 import '../../orders/screens/order_detail_screen.dart';

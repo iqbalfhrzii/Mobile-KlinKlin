@@ -11,6 +11,7 @@ import '../../hrd/services/hrd_service.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/services/customer_service.dart';
 import '../../../core/data/customer_model.dart';
+import '../services/finance_service.dart';
 class FinanceAuditScreen extends StatefulWidget {
   const FinanceAuditScreen({super.key});
 
@@ -21,6 +22,7 @@ class FinanceAuditScreen extends StatefulWidget {
 class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
   final OrderService _orderService = OrderService();
   final HrdService _hrdService = HrdService();
+  final FinanceService _financeService = FinanceService();
 
   List<OrderModel> _orders = [];
   List<CabangModel> _cabangs = [];
@@ -579,15 +581,17 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       !o.tanggalInput.isBefore(todayStart) && !o.tanggalInput.isAfter(todayEnd)
     ).toList();
 
-    // Omzet = sum of pembayaran.total_akhir for approved payments today
+    // Omzet = sum pembayaran.total_akhir where approved_at is today
     // (matches web: Pemasukan::whereDate('tanggal_pemasukan', now())->sum('nominal'))
-    // pembayaran.total in mobile == total_akhir from API == Pemasukan.nominal on web
-    final omzetToday = ordersToday
-        .where((o) =>
-          o.pembayaran?.statusPembayaran == 'approved' ||
-          o.paymentStatus == 'approved')
+    // Pemasukan is created with tanggal_pemasukan = now() at the moment finance clicks Approve
+    final omzetToday = _orders
+        .where((o) {
+          final approvedAt = o.pembayaran?.approvedAt;
+          if (approvedAt == null) return false;
+          if (o.pembayaran?.statusPembayaran != 'approved' && o.paymentStatus != 'approved') return false;
+          return !approvedAt.isBefore(todayStart) && !approvedAt.isAfter(todayEnd);
+        })
         .fold<int>(0, (sum, o) {
-          // Use pembayaran.total (= total_akhir) if available, else fallback to order.total
           final nominal = o.pembayaran?.total ?? o.total;
           return sum + nominal;
         });
@@ -615,7 +619,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       children: [
         // Unified 1-Row Summary Bar (Omzet Hari Ini | Disetujui | Menunggu)
         _buildUnifiedAuditSummaryBar(omzetToday, doneCountToday, pendingAuditList.length),
-        const SizedBox(height: 14),
+        const SizedBox(height: 8),
 
         // Mode Switcher for Tables (Pending vs Done/Approved)
         Container(
@@ -694,11 +698,11 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 8),
 
-        // Search & Filter Bar (Row 1: Search + Pilih Tanggal, Row 2: Semua Cabang + Semua Waktu)
+        // Search & Filter Bar
         _buildProMaxSearchAndFilterBar(),
-        const SizedBox(height: 14),
+        const SizedBox(height: 2),
 
         if (_approvalTableMode == 'pending')
           _buildPendingOrdersList(pendingAuditList)
@@ -1882,10 +1886,28 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
   }
 
   // --- Modal Detail Bottom Sheet Matching Web ERP ---
+  // --- Modal Detail Bottom Sheet UI UX Pro Max ---
   void _showDetailModal(OrderModel order) {
-    final csName = order.createdByName.isNotEmpty ? order.createdByName : 'Joko';
+    final csName = order.createdByName.isNotEmpty ? order.createdByName : 'CS';
     final int totalBonus = order.cleaners.fold(0, (sum, c) => sum + c.totalBonus);
     final hasProof = order.paymentProof != null && order.paymentProof!.isNotEmpty;
+
+    Color badgeBg = const Color(0xFFFEF3C7);
+    Color badgeBorder = const Color(0xFFFDE68A);
+    Color badgeText = const Color(0xFFD97706);
+    String badgeLabel = 'Menunggu Approval';
+
+    if (order.paymentStatus.toLowerCase() == 'approved' || order.paymentStatus.toLowerCase() == 'disetujui' || order.paymentStatus.toLowerCase() == 'paid') {
+      badgeBg = const Color(0xFFDCFCE7);
+      badgeBorder = const Color(0xFF86EFAC);
+      badgeText = const Color(0xFF15803D);
+      badgeLabel = 'Pembayaran Disetujui';
+    } else if (order.paymentStatus.toLowerCase() == 'rejected' || order.paymentStatus.toLowerCase() == 'ditolak') {
+      badgeBg = const Color(0xFFFEE2E2);
+      badgeBorder = const Color(0xFFFCA5A5);
+      badgeText = const Color(0xFFB91C1C);
+      badgeLabel = 'Pembayaran Ditolak';
+    }
 
     showModalBottomSheet(
       context: context,
@@ -1894,335 +1916,542 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.88,
         decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          color: Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          boxShadow: [
+            BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, -4)),
+          ],
         ),
-        padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top Handle Bar
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            const SizedBox(height: 14),
+            // Header Content
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top Handle Bar
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(3)),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
 
-            // Title & Tutup Button (Persis Web Screenshot)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  // Title Row with ID, Badge, and Close Button (Persis Image 1)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text(
-                        'Detail Pembayaran ${order.id}',
-                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                      Expanded(
+                        child: Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 10,
+                          runSpacing: 6,
+                          children: [
+                            Text(
+                              order.id.isNotEmpty ? order.id : 'Order #${order.id}',
+                              style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: badgeBg,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: badgeBorder),
+                              ),
+                              child: Text(
+                                badgeLabel,
+                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: badgeText),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        order.customer.name.toLowerCase(),
-                        style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded, size: 22, color: AppColors.textMuted),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                       ),
                     ],
                   ),
-                ),
-                OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    side: BorderSide(color: Colors.grey.shade300),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  const SizedBox(height: 4),
+                  Text(
+                    order.customer.name.toLowerCase(),
+                    style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted),
                   ),
-                  child: Text('Tutup', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Divider(height: 1),
-            const SizedBox(height: 14),
+                  const SizedBox(height: 16),
 
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 1. Informasi Pelanggan
-                    _buildSectionHeader('Informasi Pelanggan'),
-                    _buildDetailRow('Nama:', order.customer.name),
-                    _buildDetailRow('No. WA:', order.customer.phone),
-                    _buildDetailRow('Alamat:', order.customer.address),
-                    const SizedBox(height: 16),
-
-                    // 2. Informasi Pesanan
-                    _buildSectionHeader('Informasi Pesanan'),
-                    _buildDetailRow('Cabang:', order.customer.area),
-                    _buildDetailRow('CS:', csName),
-                    _buildDetailRow('Tanggal:', _formatTanggal(order.schedule)),
-                    _buildDetailRow('Metode:', order.paymentMethod.toUpperCase()),
-                    const SizedBox(height: 16),
-
-                    // 3. Rincian Pembayaran Card (Persis Web Screenshot)
-                    _buildSectionHeader('Rincian Pembayaran'),
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                  // Blue Gradient Hero Card (TOTAL AKHIR PEMBAYARAN - Persis Image 1)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF0D52BA), Color(0xFF053E94)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      child: Column(
-                        children: [
-                          if (order.services.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('Layanan Utama', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark)),
-                                  Text(_currencyFormat.format(order.total), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
-                                ],
-                              ),
-                            )
-                          else
-                            ...order.services.map((s) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      '${s.name} (x${s.qty})',
-                                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark),
-                                    ),
-                                  ),
-                                  Text(
-                                    _currencyFormat.format(s.price * (int.tryParse(s.qty) ?? 1)),
-                                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
-                                  ),
-                                ],
-                              ),
-                            )),
-                          const Divider(height: 16, color: Color(0xFFCBD5E1)),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('Subtotal Pesanan', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
-                              Text(_currencyFormat.format(order.subtotal), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                            ],
-                          ),
-                          if (order.ppn != null && order.ppn! > 0)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8.0),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('PPN (${order.ppn}%)', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
-                                  Text('+${_currencyFormat.format(order.subtotal * (order.ppn! / 100))}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                                ],
-                              ),
-                            ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('Total Akhir', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF0284C7))),
-                              Text(_currencyFormat.format(order.total), style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF0284C7))),
-                            ],
-                          ),
-                        ],
-                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(color: const Color(0xFF0D52BA).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-
-                    // 4. Cleaner & Bonus Card (Persis Web Screenshot)
-                    _buildSectionHeader('Cleaner & Bonus'),
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: Column(
-                        children: [
-                          if (order.cleaners.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('Belum ada cleaner ditugaskan', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
-                                  Text('Rp 0', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
-                                ],
-                              ),
-                            )
-                          else
-                            ...order.cleaners.map((c) => Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(c.name, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark)),
-                                  Text(_currencyFormat.format(c.totalBonus), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
-                                ],
-                              ),
-                            )),
-                          const Divider(height: 16, color: Color(0xFFCBD5E1)),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('Total Keseluruhan Bonus', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                              Text(_currencyFormat.format(totalBonus), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 5. Bukti Transfer Section (Persis Web Screenshot)
-                    _buildSectionHeader('Bukti transfer'),
-                    hasProof
-                        ? OutlinedButton.icon(
-                            onPressed: () {
-                              // Show proof image dialog
-                              showDialog(
-                                context: context,
-                                builder: (ctx) => Dialog(
-                                  child: _buildSafeImage(order.paymentProof!),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.receipt_long_rounded, size: 16, color: Color(0xFF0284C7)),
-                            label: Text('Buka bukti', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF0284C7))),
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Color(0xFF0284C7)),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                          )
-                        : Text('Tidak ada bukti transfer.', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
-                    const SizedBox(height: 16),
-
-                    // 6. Foto Pengerjaan Cleaner Section (Persis Web Screenshot)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildSectionHeader('Foto Pengerjaan Cleaner'),
+                        Text(
+                          'TOTAL AKHIR PEMBAYARAN',
+                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white.withOpacity(0.85), letterSpacing: 0.8),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _currencyFormat.format(order.total),
+                          style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w800, color: Colors.white),
+                        ),
+                        const SizedBox(height: 14),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF86EFAC)),
+                            color: Colors.white.withOpacity(0.18),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white.withOpacity(0.25)),
                           ),
-                          child: Text(
-                            'Total ${order.cleaners.fold(0, (sum, c) => sum + c.fotosStart.length + c.fotosFinish.length)} Foto',
-                            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF15803D)),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.account_balance_wallet_outlined, size: 14, color: Colors.white),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Metode: ${order.paymentMethod.toUpperCase()}',
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+                              ),
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 8),
+                                child: Text('•', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                              ),
+                              const Icon(Icons.storefront_outlined, size: 14, color: Colors.white),
+                              const SizedBox(width: 6),
+                              Text(
+                                order.customer.area.toUpperCase(),
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    if (order.cleaners.isEmpty || order.cleaners.every((c) => c.fotosStart.isEmpty && c.fotosFinish.isEmpty))
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(Icons.image_outlined, size: 42, color: Colors.grey.shade300),
-                            const SizedBox(height: 10),
-                            Text(
-                              'Belum ada foto pengerjaan',
-                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Cleaner wajib mengunggah foto minimal 2 saat mulai dan 2 saat selesai pengerjaan melalui aplikasi mobile.',
-                              style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      ...order.cleaners.map((c) => _buildCleanerPhotos(c)),
-                    if (_approvalTableMode == 'pending') ...[
-                      const SizedBox(height: 10),
-                      Row(
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+
+            // Scrollable Section Cards
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 1. Informasi Pelanggan Card (Persis Image 1)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                _showApproveConfirm(order);
-                              },
-                              icon: const Icon(Icons.check_circle_rounded, size: 16),
-                              label: const Text('Approve & Selesai'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF059669),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                elevation: 0,
+                          _buildSectionHeader('Informasi Pelanggan', icon: Icons.person_rounded, accentColor: const Color(0xFF0D52BA)),
+                          const SizedBox(height: 6),
+                          _buildDetailRow('Nama', order.customer.name),
+                          _buildDetailRow('No. WhatsApp', order.customer.phone),
+                          _buildDetailRow('Alamat', order.customer.address),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 2. Informasi Pesanan Card (Persis Image 1)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionHeader('Informasi Pesanan', icon: Icons.assignment_rounded, accentColor: const Color(0xFF0D52BA)),
+                          const SizedBox(height: 6),
+                          _buildDetailRow('Cabang / Area', order.customer.area),
+                          _buildDetailRow('CS Pembuat', csName),
+                          _buildDetailRow('Tanggal Jadwal', _formatTanggal(order.schedule)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 3. Rincian Layanan Card (Persis Image 1)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionHeader('Rincian Layanan', icon: Icons.build_rounded, accentColor: const Color(0xFF0D52BA)),
+                          const SizedBox(height: 8),
+                          if (order.services.isEmpty)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Layanan Utama', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark)),
+                                Text(_currencyFormat.format(order.total), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                              ],
+                            )
+                          else
+                            ...order.services.map((s) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(6)),
+                                        child: Text('x${s.qty}', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF475569))),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(s.name, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                                    ],
+                                  ),
+                                  Text(_currencyFormat.format(s.price * (int.tryParse(s.qty) ?? 1)), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                                ],
                               ),
-                            ),
+                            )),
+                          const Divider(height: 20, color: Color(0xFFE2E8F0), thickness: 1.5),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Subtotal Pesanan', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
+                              Text(_currencyFormat.format(order.subtotal), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                            ],
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                _showRejectModal(order);
-                              },
-                              icon: const Icon(Icons.cancel_outlined, size: 16, color: Color(0xFFDC2626)),
-                              label: const Text('Tolak', style: TextStyle(color: Color(0xFFDC2626))),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                side: const BorderSide(color: Color(0xFFFECACA)),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          const SizedBox(height: 8),
+                          if (order.ppn != null && order.ppn! > 0)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('PPN (${order.ppn}%)', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
+                                  Text('+${_currencyFormat.format(order.subtotal * (order.ppn! / 100))}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                                ],
                               ),
                             ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Total Akhir', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF059669))),
+                              Text(_currencyFormat.format(order.total), style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: const Color(0xFF059669))),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                    const SizedBox(height: 20),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 4. Cleaner & Bonus Card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionHeader('Cleaner & Bonus', icon: Icons.cleaning_services_rounded, accentColor: const Color(0xFF0D52BA)),
+                          const SizedBox(height: 8),
+                          if (order.cleaners.isEmpty)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Belum ada cleaner ditugaskan', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
+                                Text('Rp 0', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                              ],
+                            )
+                          else
+                            ...order.cleaners.map((c) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(c.name, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                                  Text(_currencyFormat.format(c.totalBonus), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                                ],
+                              ),
+                            )),
+                          const Divider(height: 18, color: Color(0xFFE2E8F0), thickness: 1.5),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Total Keseluruhan Bonus', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                              Text(_currencyFormat.format(totalBonus), style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textDark)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 5. Bukti Transfer Section
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionHeader('Bukti transfer', icon: Icons.receipt_long_rounded, accentColor: const Color(0xFF0D52BA)),
+                          const SizedBox(height: 6),
+                          hasProof
+                              ? OutlinedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (ctx) => Dialog(
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(16),
+                                          child: _buildSafeImage(order.paymentProof!),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.receipt_long_rounded, size: 16, color: Color(0xFF0D52BA)),
+                                  label: Text('Buka bukti foto', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF0D52BA))),
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(color: Color(0xFF0D52BA)),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                )
+                              : Text('Tidak ada bukti transfer.', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 6. Foto Pengerjaan Cleaner Section
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _buildSectionHeader('Foto Pengerjaan Cleaner', icon: Icons.photo_camera_rounded, accentColor: const Color(0xFF0D52BA)),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDCFCE7),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFF86EFAC)),
+                                ),
+                                child: Text(
+                                  'Total ${order.cleaners.fold(0, (sum, c) => sum + c.fotosStart.length + c.fotosFinish.length)} Foto',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF15803D)),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          if (order.cleaners.isEmpty || order.cleaners.every((c) => c.fotosStart.isEmpty && c.fotosFinish.isEmpty))
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(Icons.photo_library_outlined, size: 36, color: Colors.grey.shade300),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Belum ada foto pengerjaan',
+                                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Cleaner wajib mengunggah foto saat mulai dan selesai pengerjaan melalui aplikasi mobile.',
+                                    style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            ...order.cleaners.map((c) => _buildCleanerPhotos(c)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
             ),
+
+            // Sticky Bottom Action Bar (Persis Image 1)
+            if (_approvalTableMode == 'pending')
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, -4)),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _showRejectModal(order);
+                        },
+                        icon: const Icon(Icons.close_rounded, size: 18, color: Color(0xFFDC2626)),
+                        label: Text('Tolak', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626))),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: const BorderSide(color: Color(0xFFDC2626), width: 1.5),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          backgroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 3,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _showApproveConfirm(order);
+                        },
+                        icon: const Icon(Icons.check_circle_rounded, size: 18, color: Colors.white),
+                        label: Text('Approve Pembayaran', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF059669),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 2,
+                          shadowColor: const Color(0xFF059669).withOpacity(0.4),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, {IconData? icon, Color? accentColor}) {
+    final color = accentColor ?? const Color(0xFF0D52BA);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary)),
+      padding: const EdgeInsets.only(bottom: 10, top: 4),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 18,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (icon != null) ...[
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 8),
+          ],
+          Text(
+            title,
+            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildDetailRow(String label, String val) {
+  Widget _buildDetailRow(String label, String val, {IconData? icon}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 90, child: Text(label, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted))),
-          Expanded(child: Text(val, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textDark))),
+          SizedBox(
+            width: 115,
+            child: Text(label, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
+          ),
+          Expanded(
+            child: Text(
+              val,
+              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
+            ),
+          ),
         ],
       ),
     );
@@ -2242,15 +2471,33 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
             child: const Text('Batal'),
           ),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                order.paymentStatus = 'approved';
-                order.status = OrderStatus.completed;
-              });
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Pembayaran berhasil disetujui!'), backgroundColor: Color(0xFF059669)),
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
               );
+              try {
+                final int pId = order.pembayaran?.id ??
+                    int.tryParse(order.id.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+                if (pId == 0) throw Exception('Data pembayaran tidak ditemukan');
+                await _financeService.approvePembayaran(pId, 'approved');
+                if (mounted) Navigator.pop(context);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Pembayaran berhasil disetujui!'), backgroundColor: Color(0xFF059669)),
+                  );
+                  _fetchData();
+                }
+              } catch (e) {
+                if (mounted) Navigator.pop(context);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), foregroundColor: Colors.white),
             child: const Text('Ya, Approve'),
@@ -2290,15 +2537,40 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
             child: const Text('Batal'),
           ),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                order.paymentStatus = 'rejected';
-                order.status = OrderStatus.cancelled;
-              });
+            onPressed: () async {
+              final reason = reasonCtrl.text.trim();
+              if (reason.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Alasan penolakan wajib diisi!'), backgroundColor: Colors.red),
+                );
+                return;
+              }
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Pembayaran berhasil ditolak.'), backgroundColor: Color(0xFFDC2626)),
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
               );
+              try {
+                final int pId = order.pembayaran?.id ??
+                    int.tryParse(order.id.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+                if (pId == 0) throw Exception('Data pembayaran tidak ditemukan');
+                await _financeService.approvePembayaran(pId, 'rejected', alasan: reason);
+                if (mounted) Navigator.pop(context);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Pembayaran berhasil ditolak.'), backgroundColor: Color(0xFFDC2626)),
+                  );
+                  _fetchData();
+                }
+              } catch (e) {
+                if (mounted) Navigator.pop(context);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
             child: const Text('Tolak'),
@@ -2329,7 +2601,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
 
   Widget _buildApproveEditList(List<OrderModel> editList) {
     final filtered = editList.where((o) {
-      if (!_matchesDateFilter(o.tanggalInput)) return false;
+      if (!_matchesDateFilter(o.waktuPengajuanEdit ?? o.tanggalInput)) return false;
       if (_selectedCabangName != null) {
         final matchCabang = o.customer.area.toUpperCase().contains(_selectedCabangName!) ||
             (_cabangs.any((c) => c.namaCabang.toUpperCase() == _selectedCabangName && o.cabangId == c.id.toString()));
@@ -2430,27 +2702,43 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  Row(
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      const Icon(Icons.person_outline_rounded, size: 14, color: AppColors.textMuted),
-                      const SizedBox(width: 4),
-                      Text(
-                        order.customer.name,
-                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.person_outline_rounded, size: 14, color: AppColors.textMuted),
+                          const SizedBox(width: 4),
+                          Text(
+                            order.customer.name,
+                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 10),
-                      const Icon(Icons.support_agent_rounded, size: 14, color: AppColors.textMuted),
-                      const SizedBox(width: 4),
-                      Text(
-                        'CS: $csName',
-                        style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.support_agent_rounded, size: 14, color: AppColors.textMuted),
+                          const SizedBox(width: 4),
+                          Text(
+                            'CS: $csName',
+                            style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 10),
-                      const Icon(Icons.storefront_rounded, size: 14, color: AppColors.textMuted),
-                      const SizedBox(width: 4),
-                      Text(
-                        order.customer.area.toUpperCase(),
-                        style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.storefront_rounded, size: 14, color: AppColors.textMuted),
+                          const SizedBox(width: 4),
+                          Text(
+                            order.customer.area.toUpperCase(),
+                            style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -2505,9 +2793,10 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         child: OutlinedButton.icon(
                           onPressed: () => _showEditDetailModal(order, csName, alasanStr),
                           icon: const Icon(Icons.visibility_rounded, size: 14),
-                          label: const Text('Detail'),
+                          label: const Text('Detail', style: TextStyle(fontWeight: FontWeight.w600)),
                           style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            foregroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 9),
                             side: BorderSide(color: AppColors.primary.withOpacity(0.5)),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -2518,11 +2807,11 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         child: ElevatedButton.icon(
                           onPressed: () => _showApproveEditConfirm(order),
                           icon: const Icon(Icons.check_rounded, size: 14),
-                          label: const Text('Setujui'),
+                          label: const Text('Setujui', style: TextStyle(fontWeight: FontWeight.w600)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF059669),
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            padding: const EdgeInsets.symmetric(vertical: 9),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                         ),
@@ -2558,149 +2847,367 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
   }
 
   // --- Modal Detail Pengajuan Edit Bottom Sheet (Matching Screenshot 2) ---
+  // --- Modal Detail Pengajuan Edit Bottom Sheet UI UX Pro Max ---
   void _showEditDetailModal(OrderModel order, String csName, String alasanStr) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.82,
+        height: MediaQuery.of(context).size.height * 0.88,
         decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          color: Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          boxShadow: [
+            BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, -4)),
+          ],
         ),
-        padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+            // Header Content
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top Handle Bar
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(3)),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Title Row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 10,
+                          runSpacing: 6,
+                          children: [
+                            Text(
+                              order.id.isNotEmpty ? order.id : 'Order #${order.id}',
+                              style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF3C7),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFFDE68A)),
+                              ),
+                              child: Text(
+                                'Pengajuan Edit',
+                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFD97706)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded, size: 22, color: AppColors.textMuted),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Diajukan oleh CS: $csName',
+                    style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Amber Gradient Hero Card (ALASAN PENGAJUAN EDIT)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFD97706), Color(0xFFB45309)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(color: const Color(0xFFD97706).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, size: 16, color: Colors.white),
+                            const SizedBox(width: 6),
+                            Text(
+                              'ALASAN PENGAJUAN EDIT',
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white.withOpacity(0.9), letterSpacing: 0.8),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          alasanStr.isNotEmpty ? alasanStr : 'Tidak ada keterangan alasan.',
+                          style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white, height: 1.3),
+                        ),
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.18),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white.withOpacity(0.25)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.person_outline_rounded, size: 14, color: Colors.white),
+                              const SizedBox(width: 6),
+                              Text(
+                                'CS: $csName',
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+                              ),
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 8),
+                                child: Text('•', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                              ),
+                              const Icon(Icons.storefront_outlined, size: 14, color: Colors.white),
+                              const SizedBox(width: 6),
+                              Text(
+                                order.customer.area.toUpperCase(),
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
               ),
             ),
-            const SizedBox(height: 14),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    'Detail Pengajuan Edit ${order.id}',
-                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                  ),
-                ),
-                IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded)),
-              ],
-            ),
-            const Divider(),
+
+            // Scrollable Section Cards
             Expanded(
               child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Amber Banner for Alasan (Persis Screenshot 2)
+                    // 1. Informasi Pelanggan Card
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFFBEB),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFFDE68A)),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Alasan Pengajuan Edit (Oleh CS: $csName)',
-                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFB45309)),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            alasanStr,
-                            style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark),
-                          ),
+                          _buildSectionHeader('Informasi Pelanggan', icon: Icons.person_rounded, accentColor: const Color(0xFFD97706)),
+                          const SizedBox(height: 6),
+                          _buildDetailRow('Nama', order.customer.name),
+                          _buildDetailRow('No. WhatsApp', order.customer.phone),
+                          _buildDetailRow('Alamat', order.customer.address),
+                          _buildDetailRow('Jadwal', _formatTanggal(order.schedule)),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    _buildDetailRow('Pelanggan', order.customer.name),
-                    _buildDetailRow('No. WA', order.customer.phone),
-                    _buildDetailRow('Alamat', order.customer.address),
-                    _buildDetailRow('Tanggal (Jadwal)', _formatTanggal(order.schedule)),
-                    const SizedBox(height: 14),
-
-                    _buildSectionHeader('Rincian Layanan'),
-                    ...order.services.map((s) => Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('${s.name} (x${s.qty})', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark)),
-                          Text(_currencyFormat.format(s.price * (int.tryParse(s.qty) ?? 1)), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    )),
-                    const Divider(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Subtotal Pesanan', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                        Text(_currencyFormat.format(order.subtotal), style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: const Color(0xFF059669))),
-                      ],
                     ),
                     const SizedBox(height: 16),
 
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildSectionHeader('Foto Pengerjaan Cleaner'),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF86EFAC)),
+                    // 2. Rincian Layanan Card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionHeader('Rincian Layanan & Tagihan', icon: Icons.build_rounded, accentColor: const Color(0xFFD97706)),
+                          const SizedBox(height: 8),
+                          ...order.services.map((s) => Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(6)),
+                                      child: Text('x${s.qty}', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF475569))),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Text(s.name, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                                  ],
+                                ),
+                                Text(_currencyFormat.format(s.price * (int.tryParse(s.qty) ?? 1)), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                              ],
+                            ),
+                          )),
+                          const Divider(height: 20, color: Color(0xFFE2E8F0), thickness: 1.5),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Subtotal Pesanan', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
+                              Text(_currencyFormat.format(order.subtotal), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                            ],
                           ),
-                          child: Text(
-                            'Total ${order.cleaners.fold(0, (sum, c) => sum + c.fotosStart.length + c.fotosFinish.length)} Foto',
-                            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF15803D)),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Total Akhir', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF059669))),
+                              Text(_currencyFormat.format(order.total), style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: const Color(0xFF059669))),
+                            ],
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    if (order.cleaners.isEmpty || order.cleaners.every((c) => c.fotosStart.isEmpty && c.fotosFinish.isEmpty))
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(Icons.image_outlined, size: 42, color: Colors.grey.shade300),
-                            const SizedBox(height: 10),
-                            Text(
-                              'Belum ada foto pengerjaan',
-                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Cleaner wajib mengunggah foto minimal 2 saat mulai dan 2 saat selesai pengerjaan melalui aplikasi mobile.',
-                              style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      ...order.cleaners.map((c) => _buildCleanerPhotos(c)),
+                    const SizedBox(height: 16),
+
+                    // 3. Foto Pengerjaan Cleaner Section
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _buildSectionHeader('Foto Pengerjaan Cleaner', icon: Icons.photo_camera_rounded, accentColor: const Color(0xFFD97706)),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDCFCE7),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFF86EFAC)),
+                                ),
+                                child: Text(
+                                  'Total ${order.cleaners.fold(0, (sum, c) => sum + c.fotosStart.length + c.fotosFinish.length)} Foto',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF15803D)),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          if (order.cleaners.isEmpty || order.cleaners.every((c) => c.fotosStart.isEmpty && c.fotosFinish.isEmpty))
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(Icons.photo_library_outlined, size: 36, color: Colors.grey.shade300),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Belum ada foto pengerjaan',
+                                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Cleaner wajib mengunggah foto pengerjaan melalui aplikasi mobile.',
+                                    style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            ...order.cleaners.map((c) => _buildCleanerPhotos(c)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                   ],
                 ),
+              ),
+            ),
+
+            // Sticky Bottom Action Bar
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, -4)),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _showRejectEditModal(order);
+                      },
+                      icon: const Icon(Icons.close_rounded, size: 18, color: Color(0xFFDC2626)),
+                      label: Text('Tolak', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626))),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: const BorderSide(color: Color(0xFFDC2626), width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        backgroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 3,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _showApproveEditConfirm(order);
+                      },
+                      icon: const Icon(Icons.check_circle_rounded, size: 18, color: Colors.white),
+                      label: Text('Setujui Pengajuan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF059669),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 2,
+                        shadowColor: const Color(0xFF059669).withOpacity(0.4),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -2708,6 +3215,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       ),
     );
   }
+
 
   void _showApproveEditConfirm(OrderModel order) {
     showDialog(
@@ -2722,15 +3230,31 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
             child: const Text('Batal'),
           ),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                order.hasPendingEditRequest = false;
-                order.status = OrderStatus.finishedByCleaner;
-              });
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Pengajuan edit berhasil disetujui! CS sekarang dapat mengedit pesanan.'), backgroundColor: Color(0xFF059669)),
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
               );
+              try {
+                final identifier = order.pengajuanEditId?.toString() ?? order.id;
+                await _financeService.approvePengajuanEdit(identifier, 'approved');
+                if (mounted) Navigator.pop(context);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Pengajuan edit berhasil disetujui! Status pesanan dikembalikan agar CS dapat mengedit ulang.'), backgroundColor: Color(0xFF059669)),
+                  );
+                  _fetchData();
+                }
+              } catch (e) {
+                if (mounted) Navigator.pop(context);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), foregroundColor: Colors.white),
             child: const Text('Ya, Setujui'),
@@ -2769,14 +3293,38 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
             child: const Text('Batal'),
           ),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                order.hasPendingEditRequest = false;
-              });
+            onPressed: () async {
+              final reason = reasonCtrl.text.trim();
+              if (reason.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Alasan penolakan wajib diisi!'), backgroundColor: Colors.red),
+                );
+                return;
+              }
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Pengajuan edit ditolak.'), backgroundColor: Color(0xFFDC2626)),
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
               );
+              try {
+                final identifier = order.pengajuanEditId?.toString() ?? order.id;
+                await _financeService.approvePengajuanEdit(identifier, 'rejected', alasan: reason);
+                if (mounted) Navigator.pop(context);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Pengajuan edit ditolak.'), backgroundColor: Color(0xFFDC2626)),
+                  );
+                  _fetchData();
+                }
+              } catch (e) {
+                if (mounted) Navigator.pop(context);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
             child: const Text('Tolak'),
@@ -3235,208 +3783,361 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     );
   }
 
-  // --- Modal Detail Pembatalan Bottom Sheet (Matching Screenshot 2) ---
+  // --- Modal Detail Pembatalan Bottom Sheet UI UX Pro Max ---
   void _showCancelDetailModal(OrderModel order, String csName, String dateStr) {
     final subtotal = order.services.fold<int>(0, (sum, s) => sum + s.subtotal);
-    final cancelReason = order.cancelReason?.isNotEmpty == true ? order.cancelReason! : 'customer cancel';
+    final cancelReason = order.cancelReason?.isNotEmpty == true ? order.cancelReason! : 'Dibatalkan atas permintaan pelanggan / operasional.';
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.85,
+        height: MediaQuery.of(context).size.height * 0.88,
         decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          color: Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          boxShadow: [
+            BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, -4)),
+          ],
         ),
-        padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            // Header Content
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top Handle Bar
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(3)),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Title Row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text(
-                        'Detail Pembatalan ${order.id}',
-                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                      Expanded(
+                        child: Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 10,
+                          runSpacing: 6,
+                          children: [
+                            Text(
+                              order.id.isNotEmpty ? order.id : 'Order #${order.id}',
+                              style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEE2E2),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFFECACA)),
+                              ),
+                              child: Text(
+                                'Dibatalkan',
+                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626)),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      Text(
-                        order.customer.name,
-                        style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded, size: 22, color: AppColors.textMuted),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                       ),
                     ],
                   ),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Tutup', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    'Pelanggan: ${order.customer.name}',
+                    style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Red/Rose Gradient Hero Card (INFORMASI PEMBATALAN)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFE11D48), Color(0xFFBE123C)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(color: const Color(0xFFE11D48).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.cancel_outlined, size: 16, color: Colors.white),
+                            const SizedBox(width: 6),
+                            Text(
+                              'ALASAN PEMBATALAN',
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white.withOpacity(0.9), letterSpacing: 0.8),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          cancelReason,
+                          style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white, height: 1.3),
+                        ),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.18),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: Colors.white.withOpacity(0.25)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.person_outline_rounded, size: 14, color: Colors.white),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Oleh: $csName',
+                                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.18),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: Colors.white.withOpacity(0.25)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.access_time_rounded, size: 14, color: Colors.white),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    dateStr,
+                                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
             ),
-            const Divider(),
+
+            // Scrollable Section Cards
             Expanded(
               child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Red Box for Informasi Pembatalan (Persis Screenshot 2)
+                    // 1. Informasi Pelanggan & Pesanan Card
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Informasi Pembatalan',
-                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFB91C1C)),
-                          ),
+                          _buildSectionHeader('Informasi Pelanggan & Pesanan', icon: Icons.person_rounded, accentColor: const Color(0xFFE11D48)),
                           const SizedBox(height: 6),
-                          Text('Dibatalkan Oleh: $csName', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFFB91C1C))),
-                          Text('Waktu Batal: $dateStr', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFFB91C1C))),
-                          Text('Alasan: $cancelReason', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFFB91C1C))),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Tidak ada bukti gambar pembatalan.',
-                            style: GoogleFonts.inter(fontSize: 11, fontStyle: FontStyle.italic, color: const Color(0xFFB91C1C)),
+                          _buildDetailRow('Nama', order.customer.name),
+                          _buildDetailRow('No. WhatsApp', order.customer.phone),
+                          _buildDetailRow('Alamat', order.customer.address),
+                          _buildDetailRow('Area / Cabang', order.customer.area),
+                          _buildDetailRow('CS Pembuat', csName),
+                          _buildDetailRow('Jadwal', _formatTanggal(order.schedule)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 2. Rincian Layanan Card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionHeader('Rincian Layanan & Tagihan', icon: Icons.receipt_long_rounded, accentColor: const Color(0xFFE11D48)),
+                          const SizedBox(height: 8),
+                          ...order.services.map((s) => Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(6)),
+                                      child: Text('x${s.qty}', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF475569))),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Text(s.name, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                                  ],
+                                ),
+                                Text(_currencyFormat.format(s.price * (int.tryParse(s.qty) ?? 1)), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                              ],
+                            ),
+                          )),
+                          const Divider(height: 20, color: Color(0xFFE2E8F0), thickness: 1.5),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Subtotal Layanan', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
+                              Text(_currencyFormat.format(subtotal), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Status Tagihan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626))),
+                              Text('Dibatalkan (Rp 0)', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: const Color(0xFFDC2626))),
+                            ],
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 16),
 
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    // 3. Foto Pengerjaan Cleaner Section
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              _buildSectionHeader('Informasi Pelanggan'),
-                              _buildDetailRow('Nama', order.customer.name),
-                              _buildDetailRow('No. WA', order.customer.phone),
-                              _buildDetailRow('Alamat', order.customer.address),
-                              const SizedBox(height: 12),
-                              _buildSectionHeader('Informasi Pesanan'),
-                              _buildDetailRow('Cabang', order.customer.area),
-                              _buildDetailRow('CS Pembuat', csName),
+                              _buildSectionHeader('Foto Pengerjaan Cleaner', icon: Icons.photo_camera_rounded, accentColor: const Color(0xFFE11D48)),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDCFCE7),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFF86EFAC)),
+                                ),
+                                child: Text(
+                                  'Total ${order.cleaners.fold(0, (sum, c) => sum + c.fotosStart.length + c.fotosFinish.length)} Foto',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF15803D)),
+                                ),
+                              ),
                             ],
                           ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey.shade200),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                 _buildSectionHeader('Rincian Layanan'),
-                                ...order.services.map((s) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 6),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(child: Text(s.name, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark))),
-                                      Text(_currencyFormat.format(s.price), style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primary)),
-                                    ],
+                          const SizedBox(height: 8),
+                          if (order.cleaners.isEmpty || order.cleaners.every((c) => c.fotosStart.isEmpty && c.fotosFinish.isEmpty))
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(Icons.photo_library_outlined, size: 36, color: Colors.grey.shade300),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Belum ada foto pengerjaan',
+                                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
                                   ),
-                                )),
-                                 const Divider(height: 12),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('Subtotal', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                                    Text(_currencyFormat.format(subtotal), style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('Total Akhir', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                                    Text('Rp 0', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Tidak ada unggahan foto untuk pesanan yang dibatalkan ini.',
+                                    style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            ...order.cleaners.map((c) => _buildCleanerPhotos(c)),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 16),
-
-                    // Foto Pengerjaan Cleaner Section (Persis Screenshot 2)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildSectionHeader('Foto Pengerjaan Cleaner'),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF86EFAC)),
-                          ),
-                          child: Text(
-                            'Total ${order.cleaners.fold(0, (sum, c) => sum + c.fotosStart.length + c.fotosFinish.length)} Foto',
-                            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF15803D)),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    if (order.cleaners.isEmpty || order.cleaners.every((c) => c.fotosStart.isEmpty && c.fotosFinish.isEmpty))
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(Icons.image_outlined, size: 42, color: Colors.grey.shade300),
-                            const SizedBox(height: 10),
-                            Text(
-                              'Belum ada foto pengerjaan',
-                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Cleaner wajib mengunggah foto minimal 2 saat mulai dan 2 saat selesai pengerjaan melalui aplikasi mobile.',
-                              style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      ...order.cleaners.map((c) => _buildCleanerPhotos(c)),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
                   ],
+                ),
+              ),
+            ),
+
+            // Sticky Bottom Action Bar
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, -4)),
+                ],
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.arrow_back_rounded, size: 18, color: Colors.white),
+                  label: Text('Kembali ke Daftar Pembatalan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF334155),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 2,
+                    shadowColor: const Color(0xFF334155).withOpacity(0.4),
+                  ),
                 ),
               ),
             ),
@@ -3529,45 +4230,112 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
           return Container(
             height: MediaQuery.of(context).size.height * 0.88,
             decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              color: Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              boxShadow: [
+                BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, -4)),
+              ],
             ),
-            padding: const EdgeInsets.all(20),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                // Header Content
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 44,
+                          height: 5,
+                          decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(3)),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Edit Pesanan #${order.id}',
-                            style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                          Expanded(
+                            child: Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 10,
+                              runSpacing: 6,
+                              children: [
+                                Text(
+                                  'Edit Pesanan #${order.id}',
+                                  style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE0E7FF),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: const Color(0xFFC7D2FE)),
+                                  ),
+                                  child: Text(
+                                    'Full Authority',
+                                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF4338CA)),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          Text(
-                            'Finance memiliki wewenang penuh untuk mengubah detail pesanan, pelanggan, cleaner, status, bonus, dan pembayaran.',
-                            style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted),
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.close_rounded, size: 22, color: AppColors.textMuted),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
                           ),
                         ],
                       ),
-                    ),
-                    IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded)),
-                  ],
+                      const SizedBox(height: 14),
+
+                      // Indigo Gradient Hero Card
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF4F46E5), Color(0xFF3730A3)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(color: const Color(0xFF4F46E5).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.admin_panel_settings_rounded, size: 16, color: Colors.white),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'WEWENANG PENUH FINANCE',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white.withOpacity(0.9), letterSpacing: 0.8),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Anda dapat mengubah detail administrasi, pelanggan, cleaner, status pengerjaan/pembayaran/bonus, dan rincian layanan pesanan ini secara langsung.',
+                              style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withOpacity(0.95), height: 1.4),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
                 ),
-                const Divider(),
+
+                // Scrollable Form Cards
                 Expanded(
                   child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -4155,84 +4923,139 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 20),
-
-                        // Action Buttons: Batal & Simpan Seluruh Perubahan (Persis Screenshot 3)
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () => Navigator.pop(context),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                ),
-                                child: Text('Batal', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold)),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              flex: 2,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  setState(() {
-                                    order.customer.name = customerNameCtrl.text.trim();
-                                    order.customer.phone = customerPhoneCtrl.text.trim();
-                                    order.customer.area = selectedCabang;
-                                    order.createdByName = csName;
-                                    order.statusPengerjaan = statusPengerjaan;
-                                    order.statusBonus = statusBonus;
-
-                                    if (statusPembayaran == 'Disetujui') {
-                                      order.paymentStatus = 'approved';
-                                    } else if (statusPembayaran == 'Menunggu Approval') {
-                                      order.paymentStatus = 'pending';
-                                    } else if (statusPembayaran == 'Ditolak') {
-                                      order.paymentStatus = 'rejected';
-                                    }
-
-                                    if (liveStatusUtama == 'Done') {
-                                      order.status = OrderStatus.completed;
-                                    } else if (liveStatusUtama == 'Dibatalkan') {
-                                      order.status = OrderStatus.cancelled;
-                                    } else if (liveStatusUtama == 'Draft') {
-                                      order.status = OrderStatus.draft;
-                                    } else {
-                                      order.status = OrderStatus.waitingPaymentApproval;
-                                    }
-                                  });
-                                  Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Perubahan order berhasil disimpan oleh Finance!'),
-                                      backgroundColor: Color(0xFF059669),
-                                    ),
-                                  );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                ),
-                                child: Text('Simpan Seluruh Perubahan', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold)),
-                              ),
-                            ),
-                          ],
-                        ),
+                        const SizedBox(height: 24),
                       ],
                     );
                   },
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
               ],
             ),
           ),
         ),
-              ],
-            ),
-          );
-        },
+
+        // Sticky Bottom Action Bar
+        Container(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, -4)),
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: const BorderSide(color: Color(0xFF64748B), width: 1.5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    backgroundColor: Colors.white,
+                  ),
+                  child: Text('Batal', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF64748B))),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+                    );
+
+                    String backendStatusPesanan = 'assigned';
+                    if (liveStatusUtama == 'Done') backendStatusPesanan = 'completed';
+                    else if (liveStatusUtama == 'Dibatalkan') backendStatusPesanan = 'cancelled';
+                    else if (liveStatusUtama == 'Draft') backendStatusPesanan = 'draft';
+                    else if (statusPengerjaan == 'In Progress (Dikerjakan)') backendStatusPesanan = 'in_progress';
+                    else if (statusPengerjaan == 'Finished by Cleaner') backendStatusPesanan = 'finished_by_cleaner';
+                    else if (statusPengerjaan == 'Waiting Payment Approval') backendStatusPesanan = 'waiting_payment_approval';
+                    else if (statusPengerjaan == 'Waiting Cancel Approval') backendStatusPesanan = 'waiting_cancel_approval';
+
+                    String backendStatusPembayaran = 'pending';
+                    if (statusPembayaran == 'Approved (Disetujui)' || statusPembayaran == 'Disetujui') backendStatusPembayaran = 'approved';
+                    else if (statusPembayaran == 'Rejected (Ditolak)' || statusPembayaran == 'Ditolak') backendStatusPembayaran = 'rejected';
+                    else if (statusPembayaran == 'Cancelled (Batal)' || statusPembayaran == 'Dibatalkan') backendStatusPembayaran = 'cancelled';
+                    else if (statusPembayaran == 'Belum Dibayar') backendStatusPembayaran = 'belum_dibayar';
+
+                    String backendStatusBonus = 'pending';
+                    if (statusBonus == 'Input') backendStatusBonus = 'input';
+                    else if (statusBonus == 'Selesai') backendStatusBonus = 'selesai';
+                    else if (statusBonus == 'Cancelled (Batal)') backendStatusBonus = 'cancelled';
+
+                    final data = {
+                      'pelanggan_name': customerNameCtrl.text.trim(),
+                      'pelanggan_phone': customerPhoneCtrl.text.trim(),
+                      'cabang_name': selectedCabang,
+                      'cs_name': csName,
+                      'status_pesanan': backendStatusPesanan,
+                      'status_pembayaran': backendStatusPembayaran,
+                      'status_bonus': backendStatusBonus,
+                      'metode_pembayaran': order.paymentMethod.isNotEmpty ? order.paymentMethod : 'transfer',
+                      'diskon_persen': order.discount ?? 0,
+                      'ppn': order.ppn ?? 0,
+                      'pph': order.pph ?? 0,
+                      'keterangan_order': order.notes,
+                      'chat_dari': order.chatDari == ChatSource.organik ? 'organik' : (order.chatDari == ChatSource.ads ? 'ads' : 'lama'),
+                      'details': order.services.map((s) => {
+                        'name': s.name,
+                        'qty': s.qty.toString(),
+                        'harga': s.price,
+                        'tanggal_pengerjaan': s.tanggalPengerjaan.isNotEmpty ? s.tanggalPengerjaan : null,
+                        'waktu_pengerjaan': s.waktuPengerjaan.isNotEmpty ? s.waktuPengerjaan : null,
+                      }).toList(),
+                      'cleaner_names': order.cleaners.map((c) => c.name).toList(),
+                    };
+
+                    try {
+                      await _financeService.updatePesanan(order.id, data);
+                      if (mounted) Navigator.pop(context); // close loading
+                      if (mounted) Navigator.pop(context); // close edit modal
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Perubahan order berhasil disimpan ke server oleh Finance!'),
+                            backgroundColor: Color(0xFF059669),
+                          ),
+                        );
+                        _fetchData();
+                      }
+                    } catch (e) {
+                      if (mounted) Navigator.pop(context); // close loading
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(e.toString().replaceAll('Exception: ', '')),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.save_rounded, size: 18, color: Colors.white),
+                  label: Text('Simpan Perubahan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4F46E5),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 2,
+                    shadowColor: const Color(0xFF4F46E5).withOpacity(0.4),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+},
       ),
     );
   }

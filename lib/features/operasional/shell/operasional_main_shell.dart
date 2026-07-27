@@ -2,27 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../profile/screens/profile_screen.dart';
 import '../screens/operasional_dashboard_screen.dart';
 import '../screens/operasional_order_list_screen.dart';
 import '../screens/operasional_report_kpi_screen.dart';
 import '../screens/operasional_kpi_cs_screen.dart';
 import '../screens/operasional_data_chat_screen.dart';
 import '../screens/operasional_pengaturan_screen.dart';
-
-// Sementara menggunakan Container kosong sampai layar aslinya dibuat di Fase selanjutnya
-class PlaceholderScreen extends StatelessWidget {
-  final String title;
-  const PlaceholderScreen({super.key, required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(child: Text('Layar $title sedang dalam pengembangan (Fase Berikutnya)')),
-    );
-  }
-}
 
 class OperasionalMainShell extends StatefulWidget {
   const OperasionalMainShell({

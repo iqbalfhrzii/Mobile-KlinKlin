@@ -31,6 +31,32 @@ class FinanceService {
     }
   }
 
+  Future<void> approvePengajuanEdit(String identifier, String status, {String? alasan}) async {
+    try {
+      final data = {
+        'status_approval': status,
+        if (alasan != null && status == 'rejected') 'alasan_penolakan': alasan,
+      };
+      await _dio.patch('/finance/pengajuan-edit/$identifier/approval', data: data);
+    } catch (e) {
+      if (e is DioException) {
+        throw Exception(e.response?.data['message'] ?? 'Gagal memproses approval pengajuan edit');
+      }
+    }
+  }
+
+  Future<OrderModel> updatePesanan(String pesananId, Map<String, dynamic> data) async {
+    try {
+      final response = await _dio.put('/finance/pesanan/$pesananId', data: data);
+      return OrderModel.fromJson(response.data['data']);
+    } catch (e) {
+      if (e is DioException) {
+        throw Exception(e.response?.data['message'] ?? 'Gagal memperbarui pesanan oleh Finance');
+      }
+      throw Exception('Gagal memperbarui pesanan oleh Finance: $e');
+    }
+  }
+
   Future<List<OrderModel>> fetchPendingPembayaran({String? search, int? cabangId, String? startDate, String? endDate}) async {
     try {
       final Map<String, dynamic> query = {};

@@ -8,7 +8,7 @@ import '../../profile/screens/profile_screen.dart';
 import '../screens/finance_dashboard_screen.dart';
 import '../screens/finance_audit_screen.dart';
 import '../screens/finance_gaji_screen.dart';
-import '../screens/finance_keuangan_menu_screen.dart';
+import '../screens/finance_download_screen.dart';
 
 class FinanceMainShell extends StatefulWidget {
   const FinanceMainShell({
@@ -40,7 +40,7 @@ class _FinanceMainShellState extends State<FinanceMainShell> {
     _NavItem(Icons.grid_view_rounded, Icons.grid_view_rounded, 'Dashboard'),
     _NavItem(Icons.fact_check_outlined, Icons.fact_check_rounded, 'Audit'),
     _NavItem(Icons.credit_card_outlined, Icons.credit_card_rounded, 'Gaji'),
-    _NavItem(Icons.account_balance_wallet_outlined, Icons.account_balance_wallet_rounded, 'Keuangan'),
+    _NavItem(Icons.download_outlined, Icons.download_rounded, 'Download'),
     _NavItem(Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
   ];
 
@@ -50,7 +50,7 @@ class _FinanceMainShellState extends State<FinanceMainShell> {
       FinanceDashboardScreen(),
       FinanceAuditScreen(),
       FinanceGajiScreen(),
-      FinanceKeuanganMenuScreen(),
+      FinanceDownloadScreen(),
       ProfileScreen(),
     ];
 
