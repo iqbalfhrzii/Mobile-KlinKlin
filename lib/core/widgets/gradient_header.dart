@@ -14,6 +14,17 @@ class GradientHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final topPadding = MediaQuery.of(context).padding.top;
+    double extraTop = padding.top;
+    if (padding.top >= 50) extraTop = padding.top - 36;
+    
+    final finalPadding = EdgeInsets.fromLTRB(
+      padding.left, 
+      topPadding + extraTop, 
+      padding.right, 
+      padding.bottom
+    );
+
     return ClipRRect(
       borderRadius: const BorderRadius.only(
         bottomLeft: Radius.circular(28),
@@ -49,7 +60,7 @@ class GradientHeader extends StatelessWidget {
               ),
             ),
             // Content
-            Padding(padding: padding, child: child),
+            Padding(padding: finalPadding, child: child),
           ],
         ),
       ),

@@ -86,7 +86,7 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
       // Search
       final q = _searchQuery.toLowerCase();
       final matchQ = q.isEmpty ||
-          o.id.toLowerCase().contains(q) ||
+          o.nomorPesanan.toLowerCase().contains(q) ||
           o.customer.name.toLowerCase().contains(q) ||
           o.cleaners.any((c) => c.name.toLowerCase().contains(q));
 
@@ -286,7 +286,7 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
           rows: data.map((o) {
             return DataRow(
               cells: [
-                DataCell(Text(o.id, style: GoogleFonts.inter(fontWeight: FontWeight.bold))),
+                DataCell(Text(o.nomorPesanan, style: GoogleFonts.inter(fontWeight: FontWeight.bold))),
                 DataCell(Text(o.customer.area)),
                 DataCell(
                   Column(

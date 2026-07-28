@@ -151,7 +151,7 @@ class _FinanceCancelDetailScreenState extends State<FinanceCancelDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(order.id, style: GoogleFonts.inter(
+                      Text(order.nomorPesanan, style: GoogleFonts.inter(
                           fontSize: 11, color: Colors.white.withOpacity(0.7))),
                       Text('Approval Batal', style: GoogleFonts.inter(
                           fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),

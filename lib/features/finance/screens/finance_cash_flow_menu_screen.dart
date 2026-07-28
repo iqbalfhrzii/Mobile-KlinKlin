@@ -99,7 +99,7 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
   List<OrderModel> _applyFilters(List<OrderModel> list, {bool ignoreDate = false}) {
     return list.where((o) {
       final q = _query.toLowerCase();
-      final matchQ = o.id.toLowerCase().contains(q) ||
+      final matchQ = o.nomorPesanan.toLowerCase().contains(q) ||
           o.customer.name.toLowerCase().contains(q) ||
           o.services.any((s) => s.name.toLowerCase().contains(q));
       final matchDate = ignoreDate || _filterStart == null || (
@@ -308,7 +308,7 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Order #${order.id}', style: GoogleFonts.inter(
+                Text('Order #${order.nomorPesanan}', style: GoogleFonts.inter(
                   fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -379,7 +379,7 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Order #${order.id}', style: GoogleFonts.inter(
+                Text('Order #${order.nomorPesanan}', style: GoogleFonts.inter(
                   fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -487,7 +487,7 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Order #${order.id}', style: GoogleFonts.inter(
+                Text('Order #${order.nomorPesanan}', style: GoogleFonts.inter(
                   fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

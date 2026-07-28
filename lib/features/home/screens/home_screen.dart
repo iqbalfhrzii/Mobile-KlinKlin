@@ -176,10 +176,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     backgroundColor: AppColors.surface,
                     child: SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          _buildQuickActions(),
+                          const SizedBox(height: 16),
                           _buildStatCards(),
                           const SizedBox(height: 16),
                           _buildOmzetCard(),
@@ -187,8 +189,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           _buildGrafikHarian(),
                           const SizedBox(height: 16),
                           _buildGrafikBulanan(),
-                          const SizedBox(height: 16),
-                          _buildQuickActions(),
                           const SizedBox(height: 16),
                           _buildRecentOrders(),
                         ],
@@ -213,7 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
         : 'Selamat Malam';
 
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 52, 20, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -506,7 +506,7 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisCount: 2,
       crossAxisSpacing: 12,
       mainAxisSpacing: 12,
-      childAspectRatio: 1.6,
+      childAspectRatio: 1.4,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       children: items.map((s) => _StatCard(stat: s)).toList(),
@@ -524,12 +524,12 @@ class _HomeScreenState extends State<HomeScreen> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+          colors: [AppColors.primaryLight, AppColors.primary],
         ),
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withOpacity(0.35),
+            color: AppColors.primary.withOpacity(0.35),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -602,7 +602,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      _formatRupiah(_rataRataOrder.toInt()),
+                      _formatRupiah(_rataRataOrder.round()),
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -892,6 +892,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildQuickActions() {
     final actions = [
       _QuickAction(
+        'Absensi',
+        Icons.fingerprint_rounded,
+        Colors.white,
+        const Color(0xFFF59E0B),
+      ),
+      _QuickAction(
         'Buat Pesanan',
         Icons.add_circle_outline_rounded,
         AppColors.primary,
@@ -902,12 +908,6 @@ class _HomeScreenState extends State<HomeScreen> {
         Icons.people_outline_rounded,
         const Color(0xFF7C3AED),
         const Color(0xFFEDE9FE),
-      ),
-      _QuickAction(
-        'Absensi',
-        Icons.fingerprint_rounded,
-        const Color(0xFF0ea5e9),
-        const Color(0xFFe0f2fe),
       ),
       _QuickAction(
         'Chat Harian',
@@ -936,11 +936,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         const SizedBox(height: 10),
-        Row(
-          children: actions
-              .map(
-                (a) => Expanded(
-                  child: GestureDetector(
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            children: actions
+                .map(
+                  (a) => GestureDetector(
                     onTap: () {
                       if (a.label == 'Buat Pesanan') {
                         Navigator.push(
@@ -948,11 +950,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           MaterialPageRoute(
                             builder: (_) => const CreateOrderScreen(),
                           ),
-                        );
-                      } else if (a.label == 'KPI Karyawan') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const KpiScreen()),
                         );
                       } else if (a.label == 'Absensi') {
                         Navigator.push(
@@ -969,44 +966,70 @@ class _HomeScreenState extends State<HomeScreen> {
                           context,
                           MaterialPageRoute(builder: (_) => const CustomerListScreen()),
                         );
+                      } else if (a.label == 'KPI Karyawan') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const KpiScreen()),
+                        );
                       }
                     },
                     child: Container(
-                      margin: EdgeInsets.only(right: a == actions.last ? 0 : 8),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      width: 85,
+                      margin: EdgeInsets.only(right: a == actions.last ? 0 : 12),
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.border),
-                        boxShadow: [AppColors.cardShadow],
+                        gradient: a.label == 'Absensi' 
+                          ? const LinearGradient(
+                              colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
+                        color: a.label == 'Absensi' ? null : AppColors.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: a.label == 'Absensi' ? Colors.transparent : AppColors.border,
+                        ),
+                        boxShadow: [
+                          if (a.label == 'Absensi')
+                            BoxShadow(
+                              color: const Color(0xFFF59E0B).withOpacity(0.4),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            )
+                          else
+                            AppColors.cardShadow
+                        ],
                       ),
                       child: Column(
                         children: [
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: a.bg,
+                              color: a.label == 'Absensi' ? Colors.white.withOpacity(0.2) : a.bg,
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(a.icon, color: a.color, size: 20),
+                            child: Icon(a.icon, color: a.color, size: 22),
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 8),
                           Text(
                             a.label,
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.textDark,
-                            ),
                             textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: a.label == 'Absensi' ? FontWeight.bold : FontWeight.w600,
+                              color: a.label == 'Absensi' ? Colors.white : AppColors.textDark,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
                   ),
-                ),
-              )
-              .toList(),
+                )
+                .toList(),
+          ),
         ),
       ],
     );
@@ -1261,11 +1284,12 @@ class _StatCard extends StatelessWidget {
                   Text(
                     stat.label,
                     style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.textDark,
+                      height: 1.1,
                     ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (stat.hint.isNotEmpty)

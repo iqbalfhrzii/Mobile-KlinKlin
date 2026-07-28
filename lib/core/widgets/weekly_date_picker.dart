@@ -297,24 +297,8 @@ class _WeeklyDatePickerState extends State<WeeklyDatePicker> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      // Bulan ini
-                      _isAllTime
-                          ? _buildActiveChip('Bulan ini', () {
-                              setState(() {
-                                _isAllTime = false;
-                                _selectedDate = null;
-                              });
-                              _notifyParent();
-                            })
-                          : _buildInactiveChip('Bulan ini', () {
-                              setState(() {
-                                _isAllTime = true;
-                                _selectedDate = null;
-                                _currentWeekStart = _getStartOfWeek(DateTime.now());
-                              });
-                              _notifyParent();
-                            }),
-                      const SizedBox(width: 8),
+                      // Removed Bulan ini filter
+
                       // Kemarin
                       _buildShortcutChip('Kemarin', DateTime.now().subtract(const Duration(days: 1))),
                       const SizedBox(width: 8),

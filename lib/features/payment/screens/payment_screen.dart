@@ -57,7 +57,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   List<OrderModel> get _allFilteredWithoutStatus {
     return _allOrders.where((o) {
       final q = _query.toLowerCase();
-      final matchQ = o.id.toLowerCase().contains(q) ||
+      final matchQ = o.nomorPesanan.toLowerCase().contains(q) ||
           o.customer.name.toLowerCase().contains(q) ||
           o.services.any((s) => s.name.toLowerCase().contains(q));
       final matchDate = _filterStart == null || (
@@ -361,7 +361,7 @@ class _PaymentCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
             Row(children: [
-              Text(order.id,
+              Text(order.nomorPesanan,
                   style: const TextStyle(
                       fontSize: 10,
                       color: AppColors.textMuted,

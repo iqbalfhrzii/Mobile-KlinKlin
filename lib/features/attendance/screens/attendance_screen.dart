@@ -13,6 +13,8 @@ import '../../attendance/screens/admin_attendance_detail_screen.dart';
 import 'camera_screen.dart';
 import '../services/mock_location_service.dart';
 import '../data/attendance_model.dart';
+import '../../profile/screens/leave_request_screen.dart';
+import '../../profile/screens/leave_history_screen.dart';
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
@@ -375,9 +377,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        _buildActionButtons(),
+                        const SizedBox(height: 16),
                         _buildLocationCard(),
                         const SizedBox(height: 16),
-                        _buildActionButtons(),
+                        _buildLeaveMenu(),
                         const SizedBox(height: 24),
                         _buildHistoryList(),
                       ],
@@ -390,20 +394,77 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
+  Widget _buildLeaveMenu() {
+    return InkWell(
+      onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaveRequestScreen()));
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.event_available_rounded, color: AppColors.primary, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Pengajuan Cuti / Izin', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                  const SizedBox(height: 2),
+                  Text('Buat pengajuan baru', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildClockHeader() {
     final timeStr = "${_currentTime.hour.toString().padLeft(2, '0')}:${_currentTime.minute.toString().padLeft(2, '0')}:${_currentTime.second.toString().padLeft(2, '0')}";
     final dateStr = "${_dayName(_currentTime.weekday)}, ${_currentTime.day} ${_monthName(_currentTime.month)} ${_currentTime.year}";
     
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
-      child: Center(
-        child: Column(
-          children: [
-            Text(timeStr, style: GoogleFonts.inter(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 2)),
-            const SizedBox(height: 4),
-            Text(dateStr, style: GoogleFonts.inter(fontSize: 16, color: Colors.white.withOpacity(0.9))),
-          ],
-        ),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      child: Stack(
+        children: [
+          Align(
+            alignment: Alignment.topLeft,
+            child: HeaderBackButton(onTap: () => Navigator.pop(context)),
+          ),
+          Center(
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Text(timeStr, style: GoogleFonts.inter(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 2)),
+                const SizedBox(height: 4),
+                Text(dateStr, style: GoogleFonts.inter(fontSize: 16, color: Colors.white.withOpacity(0.9))),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -617,6 +678,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     }
   }
 
+  String _formatTanggal(String rawDate) {
+    try {
+      final dt = DateTime.parse(rawDate);
+      return '${_dayName(dt.weekday)}, ${dt.day} ${_monthName(dt.month)} ${dt.year}';
+    } catch (_) {
+      return rawDate;
+    }
+  }
+
   Widget _buildHistoryList() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -624,7 +694,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         Row(
            mainAxisAlignment: MainAxisAlignment.spaceBetween,
            children: [
-              Text('Riwayat Absensi', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+              Text('Riwayat Aktivitas', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
               TextButton.icon(
                  onPressed: _selectMonth,
                  icon: const Icon(Icons.calendar_month, size: 16),
@@ -632,7 +702,39 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               )
            ]
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
+        Row(
+           children: [
+             Expanded(
+               child: OutlinedButton.icon(
+                 onPressed: () {},
+                 icon: const Icon(Icons.check_circle_outline, size: 16),
+                 label: const Text('Absensi'),
+                 style: OutlinedButton.styleFrom(
+                   foregroundColor: AppColors.primary,
+                   side: const BorderSide(color: AppColors.primary),
+                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                 ),
+               ),
+             ),
+             const SizedBox(width: 8),
+             Expanded(
+               child: OutlinedButton.icon(
+                 onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaveHistoryScreen()));
+                 },
+                 icon: const Icon(Icons.history_rounded, size: 16),
+                 label: const Text('Cuti & Izin'),
+                 style: OutlinedButton.styleFrom(
+                   foregroundColor: Colors.purple,
+                   side: const BorderSide(color: Colors.purple),
+                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                 ),
+               ),
+             ),
+           ]
+        ),
+        const SizedBox(height: 12),
         if (_history.isEmpty)
            Center(
              child: Padding(
@@ -661,7 +763,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                          children: [
                            Text(
-                             group.tanggal,
+                             _formatTanggal(group.tanggal),
                              style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
                            ),
                            Icon(Icons.chevron_right, color: Colors.grey.shade400),

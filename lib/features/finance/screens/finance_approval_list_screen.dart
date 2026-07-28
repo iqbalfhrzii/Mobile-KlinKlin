@@ -122,7 +122,7 @@ class _FinanceApprovalListScreenState extends State<FinanceApprovalListScreen> {
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
         final matchCust = o.customer.name.toLowerCase().contains(q);
-        final matchId = o.id.toLowerCase().contains(q);
+        final matchId = o.nomorPesanan.toLowerCase().contains(q);
         if (!matchCust && !matchId) return false;
       }
       return true;

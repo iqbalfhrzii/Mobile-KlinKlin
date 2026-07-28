@@ -1498,7 +1498,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
         final matchCust = o.customer.name.toLowerCase().contains(q);
-        final matchId = o.id.toLowerCase().contains(q);
+        final matchId = o.nomorPesanan.toLowerCase().contains(q);
         final matchCleaners = o.cleaners.any((c) => c.name.toLowerCase().contains(q));
         if (!matchCust && !matchId && !matchCleaners) return false;
       }
@@ -1573,7 +1573,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
         final matchCust = o.customer.name.toLowerCase().contains(q);
-        final matchId = o.id.toLowerCase().contains(q);
+        final matchId = o.nomorPesanan.toLowerCase().contains(q);
         if (!matchCust && !matchId) return false;
       }
       return true;
@@ -2464,7 +2464,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Konfirmasi Approval', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-        content: Text('Apakah Anda yakin ingin menyetujui pembayaran ${order.id} sebesar ${_currencyFormat.format(order.total)}?'),
+        content: Text('Apakah Anda yakin ingin menyetujui pembayaran ${order.nomorPesanan} sebesar ${_currencyFormat.format(order.total)}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -2519,7 +2519,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Masukkan alasan penolakan pembayaran ${order.id}:', style: GoogleFonts.inter(fontSize: 12)),
+            Text('Masukkan alasan penolakan pembayaran ${order.nomorPesanan}:', style: GoogleFonts.inter(fontSize: 12)),
             const SizedBox(height: 10),
             TextField(
               controller: reasonCtrl,
@@ -2610,7 +2610,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
         final matchCust = o.customer.name.toLowerCase().contains(q);
-        final matchId = o.id.toLowerCase().contains(q);
+        final matchId = o.nomorPesanan.toLowerCase().contains(q);
         if (!matchCust && !matchId) return false;
       }
       return true;
@@ -3223,7 +3223,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Setujui Pengajuan Edit', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-        content: Text('Apakah Anda yakin ingin menyetujui pengajuan edit pesanan ${order.id}? Pesanan akan diizinkan untuk diedit ulang.'),
+        content: Text('Apakah Anda yakin ingin menyetujui pengajuan edit pesanan ${order.nomorPesanan}? Pesanan akan diizinkan untuk diedit ulang.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -3275,7 +3275,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Masukkan alasan penolakan pengajuan edit ${order.id}:', style: GoogleFonts.inter(fontSize: 12)),
+            Text('Masukkan alasan penolakan pengajuan edit ${order.nomorPesanan}:', style: GoogleFonts.inter(fontSize: 12)),
             const SizedBox(height: 10),
             TextField(
               controller: reasonCtrl,
@@ -3367,7 +3367,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
         final matchCust = o.customer.name.toLowerCase().contains(q);
-        final matchId = o.id.toLowerCase().contains(q);
+        final matchId = o.nomorPesanan.toLowerCase().contains(q);
         final matchPhone = o.customer.phone.contains(q);
         if (!matchCust && !matchId && !matchPhone) return false;
       }
@@ -3641,7 +3641,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
         final matchCust = o.customer.name.toLowerCase().contains(q);
-        final matchId = o.id.toLowerCase().contains(q);
+        final matchId = o.nomorPesanan.toLowerCase().contains(q);
         if (!matchCust && !matchId) return false;
       }
       return true;

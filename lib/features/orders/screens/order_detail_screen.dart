@@ -289,6 +289,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       if (_canEdit) ...[
                         const SizedBox(height: 12),
                         _buildAlokasiBonusButton(o),
+                        const SizedBox(height: 12),
+                        _buildSelesaiBonusButton(o),
                       ],
                     ] else ...[
                       _buildEmptyCleanerCard(o),
@@ -336,7 +338,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       ),
                     ),
                     Text(
-                      o.id,
+                      o.nomorPesanan,
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         color: Colors.white.withOpacity(0.6),
@@ -1931,7 +1933,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             enabled: true,
             onTap: () async {
               await Printing.layoutPdf(
-                name: 'KLINKLIN-${o.customer.name}-${o.customer.area}-${o.id}'
+                name: 'KLINKLIN-${o.customer.name}-${o.customer.area}-${o.nomorPesanan}'
                     .replaceAll(' ', '_'),
                 onLayout: (format) => PdfInvoiceService.generateInvoice(o),
               );
@@ -3183,15 +3185,64 @@ klinklin.co.id/aduanpayment''';
           style: GoogleFonts.inter(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: AppColors.primary,
           ),
         ),
         style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          foregroundColor: AppColors.primary,
+          side: BorderSide(color: AppColors.primary.withOpacity(0.4)),
+          padding: const EdgeInsets.symmetric(vertical: 10),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
-          side: const BorderSide(color: AppColors.primary),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSelesaiBonusButton(OrderModel o) {
+    final isSelesai = o.statusBonus.toLowerCase() == 'selesai';
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: _isLoading
+            ? null
+            : () async {
+                setState(() => _isLoading = true);
+                try {
+                  await _orderService.toggleStatusBonus(o.id);
+                  _fetchDetail();
+                } catch (e) {
+                  setState(() => _isLoading = false);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(e.toString().replaceAll('Exception: ', '')),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                  }
+                }
+              },
+        icon: Icon(
+          isSelesai ? Icons.close_rounded : Icons.check_circle_rounded,
+          size: 18,
+          color: isSelesai ? AppColors.textMuted : Colors.white,
+        ),
+        label: Text(
+          isSelesai ? 'Batal Selesai' : 'Selesai Input Bonus',
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: isSelesai ? AppColors.textMuted : Colors.white,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isSelesai ? Colors.grey[200] : AppColors.statusDone,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       ),
     );

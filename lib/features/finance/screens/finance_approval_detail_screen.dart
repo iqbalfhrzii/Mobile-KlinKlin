@@ -158,7 +158,7 @@ class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScree
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(widget.order.id, style: GoogleFonts.inter(
+                      Text(widget.order.nomorPesanan, style: GoogleFonts.inter(
                           fontSize: 11, color: Colors.white.withOpacity(0.7))),
                       Text('Approval Pembayaran', style: GoogleFonts.inter(
                           fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),

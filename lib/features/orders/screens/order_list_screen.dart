@@ -90,7 +90,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
     return _orders.where((o) {
       final q = _query.toLowerCase();
       final matchQ =
-          o.id.toLowerCase().contains(q) ||
+          o.nomorPesanan.toLowerCase().contains(q) ||
           o.customer.name.toLowerCase().contains(q) ||
           o.services.any((s) => s.name.toLowerCase().contains(q));
       final matchF = _statusFilter == 'Semua' || o.status.name == _statusFilter;
@@ -545,6 +545,35 @@ class _OrderCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      if (o.customer.address.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 2,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.location_on_outlined,
+                                size: 12,
+                                color: AppColors.textMuted,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  o.customer.address,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: AppColors.textMuted,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       const SizedBox(height: 10),
                       const Divider(color: AppColors.border, height: 1),
                       Padding(
@@ -631,34 +660,7 @@ class _OrderCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 6),
                             ],
-                            const Spacer(),
-
-                            InkWell(
-                              onTap: () async {
-                                await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        CreateOrderScreen(existingOrder: o),
-                                  ),
-                                );
-                                onRefresh();
-                              },
-                              borderRadius: BorderRadius.circular(10),
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  border: Border.all(color: AppColors.border),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(
-                                  Icons.edit_outlined,
-                                  size: 16,
-                                  color: AppColors.textMuted,
-                                ),
-                              ),
-                            ),
+                            // Removed Spacer and Edit button
                           ],
                         ),
                       ),

@@ -115,7 +115,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Detail Pembayaran', style: GoogleFonts.inter(
               fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
-          Text(_o.id, style: GoogleFonts.inter(
+          Text(_o.nomorPesanan, style: GoogleFonts.inter(
               fontSize: 11, color: Colors.white.withOpacity(0.65))),
         ])),
         StatusBadge(status: _o.status, order: _o),
@@ -711,7 +711,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                         Text('Upload Bukti Bayar', style: GoogleFonts.inter(
                             fontSize: 16, fontWeight: FontWeight.bold,
                             color: AppColors.textDark)),
-                        Text(_o.id, style: GoogleFonts.inter(
+                        Text(_o.nomorPesanan, style: GoogleFonts.inter(
                             fontSize: 11, color: AppColors.textMuted)),
                       ])),
                     ]),
@@ -1066,7 +1066,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                               content: Row(children: [
                                 const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
                                 const SizedBox(width: 8),
-                                Text('Pembayaran ${_o.id} berhasil dikirim!', style: GoogleFonts.inter(color: Colors.white, fontSize: 13)),
+                                Text('Pembayaran ${_o.nomorPesanan} berhasil dikirim!', style: GoogleFonts.inter(color: Colors.white, fontSize: 13)),
                               ]),
                               backgroundColor: AppColors.statusDone,
                               behavior: SnackBarBehavior.floating,
@@ -1174,7 +1174,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                       Text('Upload Bukti Cancel', style: GoogleFonts.inter(
                           fontSize: 15, fontWeight: FontWeight.bold,
                           color: AppColors.error)),
-                      Text('${_o.id} · ${_fmt((_o.total * 1.11).round())}',
+                      Text('${_o.nomorPesanan} · ${_fmt((_o.total * 1.11).round())}',
                           style: GoogleFonts.inter(
                               fontSize: 12, color: AppColors.textMuted)),
                     ])),
@@ -1315,7 +1315,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                     const Icon(Icons.check_circle_rounded,
                                         color: Colors.white, size: 18),
                                     const SizedBox(width: 8),
-                                    Text('Pesanan ${_o.id} berhasil dibatalkan.',
+                                    Text('Pesanan ${_o.nomorPesanan} berhasil dibatalkan.',
                                         style: GoogleFonts.inter(
                                             color: Colors.white, fontSize: 13)),
                                   ]),

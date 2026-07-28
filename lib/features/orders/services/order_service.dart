@@ -23,7 +23,9 @@ class OrderService {
         cabangId = prefs.getInt('user_cabang_id');
       }
 
-      final Map<String, dynamic> queryParams = {};
+      final Map<String, dynamic> queryParams = {
+        'per_page': 100,
+      };
       if (statusPesanan != null && statusPesanan != 'Semua') {
         queryParams['status_pesanan'] = statusPesanan;
       }
@@ -60,7 +62,22 @@ class OrderService {
 
       return allRawOrders.map((json) => OrderModel.fromJson(json)).toList();
     } catch (e) {
+      if (e is DioException) {
+        throw Exception(e.response?.data['message'] ?? 'Gagal mengambil data pesanan');
+      }
       throw Exception('Gagal mengambil data pesanan: $e');
+    }
+  }
+
+  /// Toggle status bonus (pending <-> selesai)
+  Future<void> toggleStatusBonus(String id) async {
+    try {
+      await _dio.post('/pesanan/$id/toggle-status-bonus');
+    } catch (e) {
+      if (e is DioException) {
+        throw Exception(e.response?.data['message'] ?? 'Gagal mengubah status bonus');
+      }
+      throw Exception('Gagal mengubah status bonus: $e');
     }
   }
 

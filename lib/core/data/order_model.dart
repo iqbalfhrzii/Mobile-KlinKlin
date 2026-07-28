@@ -362,6 +362,7 @@ class OrderPayment {
 class OrderModel {
   OrderModel({
     required this.id,
+    this.nomorPesanan = '',
     required this.cabangId,
     required this.customer,
     this.chatDari = ChatSource.organik,
@@ -395,6 +396,7 @@ class OrderModel {
   });
 
   String id;
+  String nomorPesanan;
   String cabangId;
   OrderCustomer customer;
   ChatSource chatDari;
@@ -569,7 +571,8 @@ class OrderModel {
         : (json['pesanan'] != null && json['status_pembayaran'] != null ? OrderPayment.fromJson(json) : null);
 
     return OrderModel(
-      id: orderJson['nomor_pesanan']?.toString() ?? orderJson['id']?.toString() ?? json['pesanan_id']?.toString() ?? json['id']?.toString() ?? '',
+      id: orderJson['id']?.toString() ?? json['pesanan_id']?.toString() ?? json['id']?.toString() ?? '',
+      nomorPesanan: orderJson['nomor_pesanan']?.toString() ?? orderJson['id']?.toString() ?? '',
       cabangId: orderJson['cabang_id']?.toString() ?? json['cabang_id']?.toString() ?? '',
       customer: OrderCustomer.fromJson(customerData, orderJson),
       chatDari: _parseChatSource(orderJson['chat_dari'] ?? json['chat_dari']),
