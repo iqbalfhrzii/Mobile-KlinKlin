@@ -20,6 +20,7 @@ import '../../attendance/screens/attendance_screen.dart';
 import 'chat_harian_screen.dart';
 import '../services/dashboard_service.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../widgets/closing_rate_dashboard.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -180,11 +181,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          _buildOmzetCard(),
+                          const SizedBox(height: 16),
                           _buildQuickActions(),
                           const SizedBox(height: 16),
-                          _buildStatCards(),
+                          const ClosingRateDashboard(),
                           const SizedBox(height: 16),
-                          _buildOmzetCard(),
+                          _buildStatCards(),
                           const SizedBox(height: 16),
                           _buildGrafikHarian(),
                           const SizedBox(height: 16),

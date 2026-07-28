@@ -15,13 +15,13 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:printing/printing.dart';
 import '../../../core/services/pdf_invoice_service.dart';
 import '../../../core/api/api_client.dart';
-import '../../../core/widgets/badges.dart';
 import '../../../core/widgets/whatsapp_icon.dart';
 import '../../../core/utils/currency_formatter.dart';
 
 class OrderDetailScreen extends StatefulWidget {
-  const OrderDetailScreen({super.key, required this.order});
+  const OrderDetailScreen({super.key, required this.order, this.isReadOnly = false});
   final OrderModel order;
+  final bool isReadOnly;
 
   @override
   State<OrderDetailScreen> createState() => _OrderDetailScreenState();
@@ -33,6 +33,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   bool _isLoading = false;
 
   bool get _canEdit {
+    if (widget.isReadOnly) return false;
     return _o.statusUtamaLabel != 'Done' &&
         _o.status != OrderStatus.completed &&
         _o.status != OrderStatus.cancelled;
@@ -187,7 +188,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             child: const Text('Batal'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final reason = reasonCtrl.text.trim();
               if (reason.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -195,17 +196,29 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 );
                 return;
               }
-              setState(() {
-                _o.hasPendingEditRequest = true;
-                _o.alasanPengajuanEdit = reason;
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Pengajuan edit layanan berhasil dikirim ke Finance!'),
-                  backgroundColor: Color(0xFF059669),
-                ),
-              );
+              Navigator.pop(context); // Tutup dialog
+              
+              setState(() => _isLoading = true);
+              try {
+                await _orderService.submitPengajuanEdit(widget.order.id, reason);
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Pengajuan edit layanan berhasil dikirim ke Finance!'),
+                    backgroundColor: Color(0xFF059669),
+                  ),
+                );
+                _fetchDetail(); // Tarik ulang data dari server
+              } catch (e) {
+                if (!mounted) return;
+                setState(() => _isLoading = false);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(e.toString()),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
@@ -348,83 +361,85 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   ],
                 ),
               ),
-              if (canEdit) ...[
-                const SizedBox(width: 8),
-                InkWell(
-                  onTap: () async {
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => CreateOrderScreen(existingOrder: o),
-                      ),
-                    );
-                    if (result == true) {
-                      _fetchDetail();
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.25),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.3),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.edit_rounded,
-                          color: Colors.white,
-                          size: 14,
+              if (!widget.isReadOnly) ...[
+                if (_canEdit) ...[
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CreateOrderScreen(existingOrder: o),
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Edit Pesanan',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                      );
+                      if (result == true) {
+                        _fetchDetail();
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.25),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.edit_rounded,
                             color: Colors.white,
+                            size: 14,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 6),
+                          Text(
+                            'Edit Pesanan',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ] else ...[
-                const SizedBox(width: 8),
-                InkWell(
-                  onTap: _showRequestEditDialog,
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFEF3C7),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFFDE68A)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.edit_note_rounded, color: Color(0xFFD97706), size: 14),
-                        const SizedBox(width: 4),
-                        Text(
-                          o.hasPendingEditRequest ? 'Edit Pending' : 'Ajukan Edit',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFFD97706),
+                ] else ...[
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: _showRequestEditDialog,
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFFDE68A)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.edit_note_rounded, color: Color(0xFFD97706), size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            o.hasPendingEditRequest ? 'Edit Pending' : 'Ajukan Edit',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFFD97706),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
+                ],
               ],
             ],
           ),
@@ -475,46 +490,48 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
-              InkWell(
-                onTap: () => _launchWA(o.customer.phone),
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF25D366),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF25D366).withOpacity(0.15),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const WhatsAppIcon(
-                        size: 18,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Chat WA',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+              if (!widget.isReadOnly) ...[
+                const SizedBox(width: 12),
+                InkWell(
+                  onTap: () => _launchWA(o.customer.phone),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF25D366),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF25D366).withOpacity(0.15),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const WhatsAppIcon(
+                          size: 18,
                           color: Colors.white,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        Text(
+                          'Chat WA',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
           const SizedBox(height: 14),
@@ -1245,7 +1262,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   ],
                 ),
               ),
-              if (cleaner.phone.isNotEmpty) ...[
+              if (!widget.isReadOnly && cleaner.phone.isNotEmpty) ...[
                 const SizedBox(width: 12),
                 InkWell(
                   onTap: () => _launchWA(cleaner.phone),
@@ -1372,6 +1389,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   children: [
                     const WhatsAppIcon(
                       size: 18,
+                      color: Color(0xFF25D366),
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -1732,7 +1750,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
     return Column(
       children: [
-        if (_canEdit) ...[
+        if (_canEdit && !widget.isReadOnly) ...[
           _buildBigActionBtn(
             isLoading: _isLoading,
             title: 'Edit Pesanan',
@@ -1755,7 +1773,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           ),
           const SizedBox(height: 12),
         ],
-        if (showNotifyBtn) ...[
+        if (showNotifyBtn && !widget.isReadOnly) ...[
           _buildBigActionBtn(
             isLoading: _isLoading,
             title: 'Beritahu Cleaner',
@@ -1881,27 +1899,29 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           ),
           const SizedBox(height: 12),
         ],
-        _buildBigActionBtn(
-          isLoading: _isLoading,
-          title: 'Pembayaran',
-          subtitle: 'Lihat rincian & status pembayaran',
-          icon: Icons.payments_rounded,
-          color: AppColors.primary,
-          isDone: isPaid,
-          enabled:
-              o.status != OrderStatus.cancelled &&
-              o.status != OrderStatus.waitingCancelApproval,
-          onTap: () async {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => PaymentDetailScreen(order: o)),
-            );
-            if (result == true) {
-              _fetchDetail();
-            }
-          },
-        ),
-        if (o.status != OrderStatus.cancelled &&
+        if (!widget.isReadOnly) ...[
+          _buildBigActionBtn(
+            isLoading: _isLoading,
+            title: 'Pembayaran',
+            subtitle: 'Lihat rincian & status pembayaran',
+            icon: Icons.payments_rounded,
+            color: AppColors.primary,
+            isDone: isPaid,
+            enabled:
+                o.status != OrderStatus.cancelled &&
+                o.status != OrderStatus.waitingCancelApproval,
+            onTap: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => PaymentDetailScreen(order: o)),
+              );
+              if (result == true) {
+                _fetchDetail();
+              }
+            },
+          ),
+        ],
+        if (!widget.isReadOnly && o.status != OrderStatus.cancelled &&
             o.status != OrderStatus.waitingCancelApproval) ...[
           const SizedBox(height: 12),
           _buildBigActionBtn(
@@ -1937,6 +1957,38 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     .replaceAll(' ', '_'),
                 onLayout: (format) => PdfInvoiceService.generateInvoice(o),
               );
+            },
+          ),
+        ],
+        if (!widget.isReadOnly && o.statusUtamaLabel.toLowerCase() == 'pending') ...[
+          const SizedBox(height: 12),
+          _buildBigActionBtn(
+            isLoading: _isLoading,
+            title: 'Tandai Selesai',
+            subtitle: 'Selesaikan pesanan secara manual',
+            icon: Icons.check_circle_outline_rounded,
+            color: const Color(0xFF059669),
+            isDone: false,
+            enabled: true,
+            onTap: () async {
+              setState(() => _isLoading = true);
+              try {
+                await _orderService.updateStatusUtamaRaw(o.id, 'done');
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Status pesanan berhasil diubah menjadi Selesai.'),
+                    backgroundColor: Color(0xFF059669),
+                  ),
+                );
+                _fetchDetail();
+              } catch (e) {
+                if (!mounted) return;
+                setState(() => _isLoading = false);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
+                );
+              }
             },
           ),
         ],

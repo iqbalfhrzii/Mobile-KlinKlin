@@ -16,9 +16,17 @@ class ChatHarianScreen extends StatefulWidget {
 
 class _ChatHarianScreenState extends State<ChatHarianScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _organikController = TextEditingController();
-  final _adsController = TextEditingController();
-  final _lamaController = TextEditingController();
+  final _cbOrganikCtrl = TextEditingController();
+  final _cbIklanCtrl = TextEditingController();
+  final _cLamaCtrl = TextEditingController();
+  
+  final _closingCbOrganikCtrl = TextEditingController();
+  final _closingCbIklanCtrl = TextEditingController();
+  final _closingCLamaCtrl = TextEditingController();
+  
+  final _jmlOrderanCtrl = TextEditingController();
+  final _telpCtrl = TextEditingController();
+  
   final ChatService _service = ChatService();
   
   DateTime _selectedDate = DateTime.now();
@@ -55,16 +63,26 @@ class _ChatHarianScreenState extends State<ChatHarianScreen> {
     try {
       await _service.submitChatHarian(
         date: _selectedDate,
-        organik: int.parse(_organikController.text),
-        ads: int.parse(_adsController.text),
-        lama: int.parse(_lamaController.text),
+        custBaruOrganik: int.tryParse(_cbOrganikCtrl.text) ?? 0,
+        custBaruIklan: int.tryParse(_cbIklanCtrl.text) ?? 0,
+        custLama: int.tryParse(_cLamaCtrl.text) ?? 0,
+        closingOrganik: int.tryParse(_closingCbOrganikCtrl.text) ?? 0,
+        closingIklan: int.tryParse(_closingCbIklanCtrl.text) ?? 0,
+        closingLama: int.tryParse(_closingCLamaCtrl.text) ?? 0,
+        jumlahOrderan: int.tryParse(_jmlOrderanCtrl.text) ?? 0,
+        telp: int.tryParse(_telpCtrl.text) ?? 0,
       );
       
       if (mounted) {
         SnackbarUtils.showSuccess(context, 'Data chat berhasil disimpan');
-        _organikController.clear();
-        _adsController.clear();
-        _lamaController.clear();
+        _cbOrganikCtrl.clear();
+        _cbIklanCtrl.clear();
+        _cLamaCtrl.clear();
+        _closingCbOrganikCtrl.clear();
+        _closingCbIklanCtrl.clear();
+        _closingCLamaCtrl.clear();
+        _jmlOrderanCtrl.clear();
+        _telpCtrl.clear();
         _loadHistory();
       }
     } catch (e) {
@@ -108,7 +126,7 @@ class _ChatHarianScreenState extends State<ChatHarianScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text('Masukkan jumlah chat yang masuk hari ini', style: GoogleFonts.inter(
+                Text('Masukkan jumlah chat dan orderan yang masuk hari ini', style: GoogleFonts.inter(
                   fontSize: 14, color: Colors.white.withOpacity(0.8),
                 )),
               ],
@@ -136,91 +154,153 @@ class _ChatHarianScreenState extends State<ChatHarianScreen> {
   }
 
   Widget _buildForm() {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // TANGGAL
+          _buildCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Tanggal', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () => _selectDate(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calendar_today, size: 18, color: AppColors.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          DateFormat('dd MMM yyyy').format(_selectedDate),
+                          style: GoogleFonts.inter(fontSize: 14, color: AppColors.textDark),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ]
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // CUSTOMER BARU & LAMA
+          _buildCard(
+            title: 'CUSTOMER BARU & LAMA',
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: _buildInputField('Cust Baru Organik', _cbOrganikCtrl)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildInputField('Cust Baru Iklan', _cbIklanCtrl)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _buildInputField('Cust Lama', _cLamaCtrl),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // CLOSING
+          _buildCard(
+            title: 'CLOSING',
+            titleColor: const Color(0xFF059669),
+            borderColor: const Color(0xFF059669).withOpacity(0.3),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: _buildInputField('Closing Cust Baru Organik', _closingCbOrganikCtrl)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildInputField('Closing Cust Baru Iklan', _closingCbIklanCtrl)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _buildInputField('Closing Cust Lama', _closingCLamaCtrl),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // LAINNYA
+          _buildCard(
+            title: 'LAINNYA',
+            child: Row(
+              children: [
+                Expanded(child: _buildInputField('Jumlah Orderan', _jmlOrderanCtrl)),
+                const SizedBox(width: 12),
+                Expanded(child: _buildInputField('Telp', _telpCtrl)),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _isLoading ? null : _submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: _isLoading
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Text('Simpan Data Chat', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildCard({String? title, Color? titleColor, Color? borderColor, required Widget child}) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: borderColor ?? AppColors.border),
         boxShadow: [AppColors.cardShadow],
       ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Tanggal', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-            const SizedBox(height: 8),
-            InkWell(
-              onTap: () => _selectDate(context),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.border),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.calendar_today, size: 18, color: AppColors.primary),
-                    const SizedBox(width: 8),
-                    Text(
-                      DateFormat('dd MMM yyyy').format(_selectedDate),
-                      style: GoogleFonts.inter(fontSize: 14, color: AppColors.textDark),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (title != null) ...[
+            Text(title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: titleColor ?? AppColors.textDark)),
             const SizedBox(height: 16),
-            
-            Row(
-              children: [
-                Expanded(child: _buildInputField('Chat Organik', _organikController, Icons.nature_people_rounded)),
-                const SizedBox(width: 12),
-                Expanded(child: _buildInputField('Chat Ads', _adsController, Icons.campaign_rounded)),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildInputField('Chat Database Lama', _lamaController, Icons.history_rounded),
-            
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _submit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: _isLoading
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : Text('Simpan Data Chat', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-              ),
-            ),
           ],
-        ),
+          child,
+        ],
       ),
     );
   }
 
-  Widget _buildInputField(String label, TextEditingController controller, IconData icon) {
+  Widget _buildInputField(String label, TextEditingController controller) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+        Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
-            prefixIcon: Icon(icon, size: 18, color: AppColors.textMuted),
             hintText: '0',
             filled: true,
             fillColor: AppColors.background,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
           ),
           validator: (val) => val == null || val.isEmpty ? 'Wajib' : null,
         ),
@@ -249,7 +329,7 @@ class _ChatHarianScreenState extends State<ChatHarianScreen> {
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final item = _history[index];
-        final total = item['total_chat'] ?? 0;
+        final total = (item['cust_baru_organik'] ?? 0) + (item['cust_baru_iklan'] ?? 0) + (item['cust_lama'] ?? 0);
         final date = DateTime.parse(item['tanggal']);
         
         return Container(
@@ -267,7 +347,8 @@ class _ChatHarianScreenState extends State<ChatHarianScreen> {
                 children: [
                   Text(DateFormat('dd MMMM yyyy').format(date), style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
                   const SizedBox(height: 4),
-                  Text('Org: ${item['chat_organik']} | Ads: ${item['chat_ads']} | Lama: ${item['chat_lama']}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+                  Text('Cust Baru: ${(item['cust_baru_organik'] ?? 0) + (item['cust_baru_iklan'] ?? 0)} | Lama: ${item['cust_lama'] ?? 0}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+                  Text('Closing Baru: ${(item['closing_cust_baru_organik'] ?? 0) + (item['closing_cust_baru_iklan'] ?? 0)} | Order: ${item['jumlah_orderan'] ?? 0}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
                 ],
               ),
               Container(
@@ -275,8 +356,8 @@ class _ChatHarianScreenState extends State<ChatHarianScreen> {
                 decoration: BoxDecoration(color: AppColors.surfaceBlue, borderRadius: BorderRadius.circular(10)),
                 child: Column(
                   children: [
-                    Text('Total', style: GoogleFonts.inter(fontSize: 10, color: AppColors.primary)),
-                    Text('$total', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                    Text('Chat', style: GoogleFonts.inter(fontSize: 10, color: AppColors.primary)),
+                    Text('${total}', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary)),
                   ],
                 ),
               ),

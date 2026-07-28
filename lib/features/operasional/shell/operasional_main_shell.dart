@@ -4,10 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../screens/operasional_dashboard_screen.dart';
 import '../screens/operasional_order_list_screen.dart';
-import '../screens/operasional_report_kpi_screen.dart';
-import '../screens/operasional_kpi_cs_screen.dart';
+import '../screens/operasional_kpi_main_screen.dart';
 import '../screens/operasional_data_chat_screen.dart';
-import '../screens/operasional_pengaturan_screen.dart';
+import '../../profile/screens/profile_screen.dart';
 
 class OperasionalMainShell extends StatefulWidget {
   const OperasionalMainShell({
@@ -34,19 +33,17 @@ class _OperasionalMainShellState extends State<OperasionalMainShell> {
   List<Widget> get _screens => [
     const OperasionalDashboardScreen(),
     const OperasionalOrderListScreen(),
-    const OperasionalReportKpiScreen(),
-    const OperasionalKpiCsScreen(),
+    const OperasionalKpiMainScreen(),
     const OperasionalDataChatScreen(),
-    const OperasionalPengaturanScreen(),
+    const ProfileScreen(),
   ];
 
   static const _navItems = [
     _NavItem(Icons.grid_view_rounded, Icons.grid_view_rounded, 'Omzet'),
     _NavItem(Icons.receipt_long_outlined, Icons.receipt_long_rounded, 'Pesanan'),
     _NavItem(Icons.analytics_outlined, Icons.analytics_rounded, 'KPI'),
-    _NavItem(Icons.support_agent_outlined, Icons.support_agent_rounded, 'KPI CS'),
     _NavItem(Icons.chat_outlined, Icons.chat_rounded, 'Data Chat'),
-    _NavItem(Icons.settings_outlined, Icons.settings_rounded, 'Pengaturan'),
+    _NavItem(Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
   ];
 
   @override

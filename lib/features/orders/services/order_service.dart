@@ -159,6 +159,40 @@ class OrderService {
     }
   }
 
+  /// Mengajukan edit layanan ke Finance
+  Future<void> submitPengajuanEdit(String id, String keterangan) async {
+    try {
+      final response = await _dio.post('/pesanan/$id/pengajuan-edit', data: {
+        'keterangan': keterangan,
+      });
+      if (response.data is Map && response.data['status'] == false) {
+        throw Exception(response.data['message'] ?? 'Gagal mengajukan edit');
+      }
+    } catch (e) {
+      if (e is DioException) {
+        throw Exception(e.response?.data['message'] ?? 'Gagal mengajukan edit: ${e.message}');
+      }
+      throw Exception('Gagal mengajukan edit: $e');
+    }
+  }
+
+  /// Mengubah status utama pesanan secara manual (override)
+  Future<void> updateStatusUtamaRaw(String id, String statusUtama) async {
+    try {
+      final response = await _dio.patch('/pesanan/$id/status-utama', data: {
+        'status_utama_raw': statusUtama,
+      });
+      if (response.data is Map && response.data['status'] == false) {
+        throw Exception(response.data['message'] ?? 'Gagal mengubah status utama');
+      }
+    } catch (e) {
+      if (e is DioException) {
+        throw Exception(e.response?.data['message'] ?? 'Gagal mengubah status utama: ${e.message}');
+      }
+      throw Exception('Gagal mengubah status utama: $e');
+    }
+  }
+
   /// Mengalokasikan bonus layanan ke cleaner
   Future<void> allocateBonusLayanan(String id, List<Map<String, dynamic>> items) async {
     try {

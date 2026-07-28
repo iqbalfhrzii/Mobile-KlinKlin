@@ -13,18 +13,28 @@ class ChatService {
 
   Future<Map<String, dynamic>> submitChatHarian({
     required DateTime date,
-    required int organik,
-    required int ads,
-    required int lama,
+    required int custBaruOrganik,
+    required int custBaruIklan,
+    required int custLama,
+    required int closingOrganik,
+    required int closingIklan,
+    required int closingLama,
+    required int jumlahOrderan,
+    required int telp,
   }) async {
     try {
       final response = await ApiClient.instance.post(
         '/chat-harian',
         data: {
           'tanggal': date.toIso8601String().split('T')[0],
-          'chat_organik': organik,
-          'chat_ads': ads,
-          'chat_lama': lama,
+          'cust_baru_organik': custBaruOrganik,
+          'cust_baru_iklan': custBaruIklan,
+          'cust_lama': custLama,
+          'closing_cust_baru_organik': closingOrganik,
+          'closing_cust_baru_iklan': closingIklan,
+          'closing_cust_lama': closingLama,
+          'jumlah_orderan': jumlahOrderan,
+          'telp': telp,
         },
       );
       return response.data;

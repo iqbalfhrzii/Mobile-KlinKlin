@@ -57,7 +57,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   bool get _isPending => _o.paymentStatus == 'pending' || _o.status == OrderStatus.waitingPaymentApproval;
   bool get _isCancelled => _o.paymentStatus == 'cancelled' || _o.paymentStatus == 'rejected' || _o.status == OrderStatus.cancelled;
 
-  bool get _canAct => !_isPaid && !_isPending && !_isCancelled && !_isWaitingCancel;
+  bool get _canAct => !_isPaid && !_isCancelled && !_isWaitingCancel;
 
   @override
   Widget build(BuildContext context) {

@@ -382,6 +382,9 @@ class _OperasionalDataChatScreenState extends State<OperasionalDataChatScreen> {
   }
 
   Widget _buildCustLamaCard(Map<String, dynamic> summary) {
+    final rateLama = (summary['total_orderan'] ?? 0) > 0 
+        ? ((summary['order_lama'] ?? 0) / summary['total_orderan'] * 100).toStringAsFixed(1)
+        : '0.0';
     return Container(
       width: 200,
       padding: const EdgeInsets.all(20),
@@ -440,7 +443,7 @@ class _OperasionalDataChatScreenState extends State<OperasionalDataChatScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            '${summary['rate_lama_orderan']}% dari total orderan',
+            '$rateLama% dari total orderan',
             style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted),
           )
         ],

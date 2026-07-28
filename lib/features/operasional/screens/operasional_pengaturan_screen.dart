@@ -19,6 +19,10 @@ class OperasionalPengaturanScreen extends StatelessWidget {
           GradientHeader(
             child: Row(
               children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -50,19 +54,6 @@ class OperasionalPengaturanScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                _buildMenuCard(
-                  context,
-                  icon: Icons.person_outline_rounded,
-                  title: 'Profil Karyawan',
-                  subtitle: 'Informasi akun dan logout',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const ProfileScreen()),
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
                 _buildMenuCard(
                   context,
                   icon: Icons.business,

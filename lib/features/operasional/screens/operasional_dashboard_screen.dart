@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../services/operasional_service.dart';
 import '../../../core/widgets/gradient_header.dart';
-
+import 'operasional_pengaturan_screen.dart';
 class OperasionalDashboardScreen extends StatefulWidget {
   const OperasionalDashboardScreen({super.key});
 
@@ -164,6 +164,24 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                         ),
                       ),
                     ],
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const OperasionalPengaturanScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.settings_rounded, color: Colors.white),
+                    tooltip: 'Pengaturan',
                   ),
                 ),
               ],

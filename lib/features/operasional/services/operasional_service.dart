@@ -61,6 +61,18 @@ class OperasionalService {
     }
   }
 
+  Future<Map<String, dynamic>> updateKpiCs(Map<String, dynamic> data) async {
+    try {
+      final response = await _dio.post('/operasional/kpi-cs/update', data: data);
+      return response.data;
+    } on DioException catch (e) {
+      if (e.response != null && e.response?.data != null) {
+        throw Exception(e.response?.data['message'] ?? 'Gagal menyimpan data KPI CS');
+      }
+      throw Exception('Tidak dapat terhubung ke server');
+    }
+  }
+
   Future<Map<String, dynamic>> getDataChat({
     String? startDate,
     String? endDate,

@@ -11,6 +11,7 @@ import 'order_detail_screen.dart';
 import 'create_order_screen.dart';
 import '../services/order_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 
 class OrderListScreen extends StatefulWidget {
   final String? initialStatusFilter;
@@ -34,6 +35,12 @@ class _OrderListScreenState extends State<OrderListScreen> {
 
   String _query = '';
   String _statusFilter = 'Semua';
+  String _statusUtamaFilter = 'Semua';
+  String _statusPembayaranFilter = 'Semua';
+  String _statusBonusFilter = 'Semua';
+  String _periodFilter = 'weekly_date';
+  DateTimeRange? _customRange;
+  
   DateTime? _filterStart;
   DateTime? _filterEnd;
 
@@ -57,6 +64,22 @@ class _OrderListScreenState extends State<OrderListScreen> {
     'completed': 'Selesai',
     'cancelled': 'Dibatalkan',
   };
+
+  static const _statusUtamaFilters = ['Semua', 'Selesai', 'Process', 'Pending', 'Draft', 'Dibatalkan'];
+  static const _statusPembayaranFilters = [
+    'Semua',
+    'Belum Dibayar',
+    'Menunggu Approval',
+    'Disetujui',
+    'Ditolak',
+    'Dibatalkan',
+  ];
+
+  static const _statusBonusFilters = [
+    'Semua',
+    'Pending',
+    'Selesai',
+  ];
 
   @override
   void initState() {
@@ -92,13 +115,47 @@ class _OrderListScreenState extends State<OrderListScreen> {
       final matchQ =
           o.nomorPesanan.toLowerCase().contains(q) ||
           o.customer.name.toLowerCase().contains(q) ||
+          o.customer.phone.toLowerCase().contains(q) ||
           o.services.any((s) => s.name.toLowerCase().contains(q));
-      final matchF = _statusFilter == 'Semua' || o.status.name == _statusFilter;
-      final matchDate =
-          _filterStart == null ||
-          (!o.scheduleDateTime.isBefore(_filterStart!) &&
-              !o.scheduleDateTime.isAfter(_filterEnd!));
-      return matchQ && matchF && matchDate;
+      final matchStatusPengerjaan = _statusFilter == 'Semua' || o.status.name == _statusFilter;
+      
+      final matchStatusUtama = _statusUtamaFilter == 'Semua' || 
+          (o.statusUtamaLabel.toLowerCase() == (_statusUtamaFilter.toLowerCase() == 'selesai' ? 'done' : _statusUtamaFilter.toLowerCase()));
+          
+      final matchStatusPembayaran = _statusPembayaranFilter == 'Semua' || 
+          o.statusPembayaranLabel.toLowerCase() == _statusPembayaranFilter.toLowerCase();
+      final matchStatusBonus = _statusBonusFilter == 'Semua' || 
+          o.statusBonusLabel.toLowerCase() == _statusBonusFilter.toLowerCase();
+      
+      bool matchDate = true;
+      if (q.isEmpty) {
+        final dt = o.scheduleDateTime;
+        if (_periodFilter == 'semua') {
+          matchDate = true;
+        } else if (_periodFilter == 'weekly_date' && _filterStart != null && _filterEnd != null) {
+          final start = DateTime(_filterStart!.year, _filterStart!.month, _filterStart!.day);
+          final end = DateTime(_filterEnd!.year, _filterEnd!.month, _filterEnd!.day, 23, 59, 59);
+          matchDate = !dt.isBefore(start) && !dt.isAfter(end);
+        } else {
+          final now = DateTime.now();
+          if (_periodFilter == 'hari_ini') {
+            matchDate = dt.year == now.year && dt.month == now.month && dt.day == now.day;
+          } else if (_periodFilter == 'kemarin') {
+            final yest = now.subtract(const Duration(days: 1));
+            matchDate = dt.year == yest.year && dt.month == yest.month && dt.day == yest.day;
+          } else if (_periodFilter == 'besok') {
+            final tom = now.add(const Duration(days: 1));
+            matchDate = dt.year == tom.year && dt.month == tom.month && dt.day == tom.day;
+          } else if (_periodFilter == 'bulan_ini') {
+            matchDate = dt.year == now.year && dt.month == now.month;
+          } else if (_periodFilter == 'custom' && _customRange != null) {
+            final cStart = DateTime(_customRange!.start.year, _customRange!.start.month, _customRange!.start.day);
+            final cEnd = DateTime(_customRange!.end.year, _customRange!.end.month, _customRange!.end.day, 23, 59, 59);
+            matchDate = !dt.isBefore(cStart) && !dt.isAfter(cEnd);
+          }
+        }
+      }
+      return matchQ && matchStatusUtama && matchStatusPengerjaan && matchStatusPembayaran && matchStatusBonus && matchDate;
     }).toList();
   }
 
@@ -120,6 +177,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                 child: Column(
                   children: [
                     WeeklyDatePicker(
+                      showAllMonthButton: false,
                       searchQuery: _query,
                       initialDate: widget.isTodayOnly ? DateTime.now() : null,
                       onSearchChanged: (val) => setState(() => _query = val),
@@ -127,11 +185,11 @@ class _OrderListScreenState extends State<OrderListScreen> {
                         setState(() {
                           _filterStart = start;
                           _filterEnd = end;
+                          if (start != null) _periodFilter = 'weekly_date';
                         });
                       },
+                      trailingWidget: _buildFilterButton(),
                     ),
-                    const SizedBox(height: 16),
-                    _buildFilterRow(context),
                     const SizedBox(height: 12),
                     if (_isLoading)
                       const Padding(
@@ -268,42 +326,334 @@ class _OrderListScreenState extends State<OrderListScreen> {
     );
   }
 
-  Widget _buildFilterRow(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          // Status filter chips
-          ..._filters.map((f) {
-            final active = _statusFilter == f;
-            return GestureDetector(
-              onTap: () => setState(() => _statusFilter = f),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: active ? AppColors.primary : AppColors.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: active ? AppColors.primary : AppColors.border,
-                  ),
-                ),
-                child: Text(
-                  _filterLabels[f]!,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: active ? Colors.white : AppColors.textMuted,
-                  ),
+  Future<void> _pickCustomRange() async {
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      initialDateRange: _customRange ?? DateTimeRange(start: DateTime.now().subtract(const Duration(days: 7)), end: DateTime.now()),
+    );
+    if (picked != null) {
+      setState(() {
+        _customRange = picked;
+        _periodFilter = 'custom';
+      });
+    }
+  }
+
+  void _showFilterBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Handle Bar
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Title
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Filter Transaksi', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                        IconButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          icon: const Icon(Icons.close_rounded, size: 20),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(height: 1),
+                    const SizedBox(height: 16),
+  
+                    // 1. Status Utama
+                    Text('Status Utama', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _statusUtamaFilters.map((f) {
+                        final isSel = _statusUtamaFilter == f;
+                        return ChoiceChip(
+                          label: Text(f == 'Semua' ? 'Semua Status' : f),
+                          selected: isSel,
+                          onSelected: (val) {
+                            if (val) {
+                              setModalState(() => _statusUtamaFilter = f);
+                              setState(() => _statusUtamaFilter = f);
+                            }
+                          },
+                          selectedColor: const Color(0xFFEFF6FF),
+                          labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.w500, color: isSel ? const Color(0xFF1D4ED8) : AppColors.textDark),
+                          side: BorderSide(color: isSel ? const Color(0xFF3B82F6) : Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          showCheckmark: false,
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // 2. Status Pengerjaan
+                    Text('Status Pengerjaan', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _filters.map((f) {
+                        final isSel = _statusFilter == f;
+                        return ChoiceChip(
+                          label: Text(_filterLabels[f]!),
+                          selected: isSel,
+                          onSelected: (val) {
+                            if (val) {
+                              setModalState(() => _statusFilter = f);
+                              setState(() => _statusFilter = f);
+                            }
+                          },
+                          selectedColor: const Color(0xFFEFF6FF),
+                          labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.w500, color: isSel ? const Color(0xFF1D4ED8) : AppColors.textDark),
+                          side: BorderSide(color: isSel ? const Color(0xFF3B82F6) : Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          showCheckmark: false,
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+  
+                    // 3. Status Pembayaran
+                    Text('Status Pembayaran', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _statusPembayaranFilters.map((f) {
+                        final isSel = _statusPembayaranFilter == f;
+                        return ChoiceChip(
+                          label: Text(f),
+                          selected: isSel,
+                          onSelected: (val) {
+                            if (val) {
+                              setModalState(() => _statusPembayaranFilter = f);
+                              setState(() => _statusPembayaranFilter = f);
+                            }
+                          },
+                          selectedColor: const Color(0xFFFFFBEB),
+                          labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.w500, color: isSel ? const Color(0xFFD97706) : AppColors.textDark),
+                          side: BorderSide(color: isSel ? const Color(0xFFF59E0B) : Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          showCheckmark: false,
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+  
+                    // 4. Status Bonus
+                    Text('Status Bonus', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _statusBonusFilters.map((f) {
+                        final isSel = _statusBonusFilter == f;
+                        return ChoiceChip(
+                          label: Text(f == 'Semua' ? 'Semua Bonus' : f),
+                          selected: isSel,
+                          onSelected: (val) {
+                            if (val) {
+                              setModalState(() => _statusBonusFilter = f);
+                              setState(() => _statusBonusFilter = f);
+                            }
+                          },
+                          selectedColor: const Color(0xFFF3E8FF),
+                          labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.w500, color: isSel ? const Color(0xFF7E22CE) : AppColors.textDark),
+                          side: BorderSide(color: isSel ? const Color(0xFFA855F7) : Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          showCheckmark: false,
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+  
+                    // 5. Rentang Waktu
+                    Text('Rentang Waktu', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ...[
+                          {'key': 'semua', 'label': 'Semua Waktu'},
+                          {'key': 'hari_ini', 'label': 'Hari Ini'},
+                          {'key': 'kemarin', 'label': 'Kemarin'},
+                          {'key': 'besok', 'label': 'Besok'},
+                          {'key': 'bulan_ini', 'label': 'Bulan Ini'},
+                        ].map((item) {
+                          final isSel = _periodFilter == item['key'];
+                          return ChoiceChip(
+                            label: Text(item['label']!),
+                            selected: isSel,
+                            onSelected: (val) {
+                              if (val) {
+                                setModalState(() {
+                                  _periodFilter = item['key']!;
+                                  _customRange = null;
+                                  if (_periodFilter == 'semua') {
+                                    _filterStart = null;
+                                    _filterEnd = null;
+                                  }
+                                });
+                                setState(() {
+                                  _periodFilter = item['key']!;
+                                  _customRange = null;
+                                  if (_periodFilter == 'semua') {
+                                    _filterStart = null;
+                                    _filterEnd = null;
+                                  }
+                                });
+                              } else {
+                                setModalState(() {
+                                  _periodFilter = 'weekly_date';
+                                  _customRange = null;
+                                });
+                                setState(() {
+                                  _periodFilter = 'weekly_date';
+                                  _customRange = null;
+                                });
+                              }
+                            },
+                            selectedColor: const Color(0xFFECFDF5),
+                            labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.w500, color: isSel ? const Color(0xFF047857) : AppColors.textDark),
+                            side: BorderSide(color: isSel ? const Color(0xFF10B981) : Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            showCheckmark: false,
+                          );
+                        }),
+                        ActionChip(
+                          avatar: const Icon(Icons.calendar_month_rounded, size: 14, color: Color(0xFF4F46E5)),
+                          label: Text(
+                            _periodFilter == 'custom' && _customRange != null
+                                ? '${DateFormat('dd/MM').format(_customRange!.start)} - ${DateFormat('dd/MM').format(_customRange!.end)}'
+                                : 'Pilih Tanggal',
+                            style: GoogleFonts.inter(fontSize: 12, fontWeight: _periodFilter == 'custom' ? FontWeight.bold : FontWeight.w500, color: _periodFilter == 'custom' ? const Color(0xFF4F46E5) : AppColors.textDark),
+                          ),
+                          onPressed: () async {
+                            Navigator.pop(ctx);
+                            await _pickCustomRange();
+                          },
+                          backgroundColor: _periodFilter == 'custom' ? const Color(0xFFEEF2FF) : Colors.white,
+                          side: BorderSide(color: _periodFilter == 'custom' ? const Color(0xFF6366F1) : Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+  
+                    // Button Actions
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              setModalState(() {
+                                _statusFilter = 'Semua';
+                                _statusUtamaFilter = 'Semua';
+                                _statusPembayaranFilter = 'Semua';
+                                _statusBonusFilter = 'Semua';
+                                _periodFilter = 'weekly_date';
+                                _customRange = null;
+                                _filterStart = null;
+                                _filterEnd = null;
+                              });
+                              setState(() {
+                                _statusFilter = 'Semua';
+                                _statusUtamaFilter = 'Semua';
+                                _statusPembayaranFilter = 'Semua';
+                                _statusBonusFilter = 'Semua';
+                                _periodFilter = 'weekly_date';
+                                _customRange = null;
+                                _filterStart = null;
+                                _filterEnd = null;
+                              });
+                            },
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: BorderSide(color: Colors.grey.shade300),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: Text('Reset', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                            child: Text('Terapkan Filter', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             );
-          }),
-        ],
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterButton() {
+    return GestureDetector(
+      onTap: _showFilterBottomSheet,
+      child: Container(
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.tune_rounded, size: 16, color: AppColors.textDark),
+            const SizedBox(width: 6),
+            Text(
+              'Filter',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textDark,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -381,6 +731,125 @@ class _OrderCard extends StatelessWidget {
     }
   }
 
+  Widget _buildSimpleBadge(String label, Color color, Color bg) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusUtama(String label) {
+    Color color;
+    Color bg;
+    final l = label.toLowerCase();
+    if (l == 'done') {
+      color = const Color(0xFF047857);
+      bg = const Color(0xFFD1FAE5);
+    } else if (l == 'process') {
+      color = const Color(0xFF0284C7);
+      bg = const Color(0xFFE0F2FE);
+    } else if (l == 'dibatalkan') {
+      color = const Color(0xFFDC2626);
+      bg = const Color(0xFFFEE2E2);
+    } else {
+      color = const Color(0xFFD97706);
+      bg = const Color(0xFFFEF3C7);
+    }
+    return _buildSimpleBadge(label, color, bg);
+  }
+
+  Widget _buildStatusBonus(String label) {
+    Color color;
+    Color bg;
+    final l = label.toLowerCase();
+    if (l == 'selesai' || l == 'disetujui') {
+      color = const Color(0xFF7E22CE);
+      bg = const Color(0xFFF3E8FF);
+    } else {
+      color = const Color(0xFF6B7280);
+      bg = const Color(0xFFF3F4F6);
+    }
+    return _buildSimpleBadge('Bonus: $label', color, bg);
+  }
+
+  Widget _buildInfoItem(IconData icon, Color iconColor, String text) {
+    return Expanded(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 14, color: iconColor),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                text,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textDark,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWAButton({required String label, required VoidCallback onTap, required bool isOutlined}) {
+    const color = Color(0xFF25D366);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isOutlined ? Colors.transparent : color,
+          border: Border.all(color: color, width: 1.5),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            WhatsAppIcon(size: 16, color: isOutlined ? color : Colors.white),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isOutlined ? color : Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final o = order;
@@ -402,274 +871,199 @@ class _OrderCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-          boxShadow: [AppColors.cardShadow],
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  width: 5,
-                  color: isCancelled
-                      ? AppColors.error
-                      : (isDone ? AppColors.statusDone : AppColors.primary),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                o.customer.name,
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textDark,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            StatusBadge(status: o.status, order: o),
-                          ],
+        child: Column(
+          children: [
+            // Header Section
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        o.customer.name.isNotEmpty ? o.customer.name.substring(0, 1).toUpperCase() : '?',
+                        style: GoogleFonts.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 2,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          o.customer.name,
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        child: Row(
+                        const SizedBox(height: 4),
+                        Row(
                           children: [
-                            const Icon(
-                              Icons.description_outlined,
-                              size: 14,
-                              color: AppColors.textMuted,
-                            ),
-                            const SizedBox(width: 6),
+                            Icon(Icons.location_on_rounded, size: 14, color: Colors.red.shade400),
+                            const SizedBox(width: 4),
                             Expanded(
                               child: Text(
-                                dateStr,
+                                o.customer.address.isNotEmpty ? o.customer.address : '-',
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
                                   color: AppColors.textMuted,
                                 ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.border.withOpacity(0.5),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                o.paymentMethod.toUpperCase(),
-                                style: GoogleFonts.inter(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textDark.withOpacity(0.8),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 6,
-                        ),
-                        child: Row(
-                          children: [
-                            Text(
-                              _fmt(totalAkhir),
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                            Text(
-                              ' · ',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textMuted,
-                              ),
-                            ),
-                            Expanded(
-                              child: Text(
-                                o.cleaners.isNotEmpty
-                                    ? o.cleaners.map((c) => c.name).join(', ')
-                                    : 'Belum ada cleaner',
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textDark,
-                                ),
+                                maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
                         ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildStatusUtama(o.statusUtamaLabel),
+                ],
+              ),
+            ),
+            
+            Divider(height: 1, thickness: 1, color: AppColors.border.withValues(alpha: 0.5)),
+            
+            // Details Grid
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      _buildInfoItem(Icons.calendar_month_rounded, Colors.orange, dateStr),
+                      const SizedBox(width: 12),
+                      _buildInfoItem(
+                        Icons.cleaning_services_rounded, 
+                        Colors.blue, 
+                        o.services.isNotEmpty ? o.services.map((s) => s.name).join(', ') : '-',
                       ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 2,
-                        ),
-                        child: Text(
-                          o.services.map((s) => s.name).join(', '),
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFFAD6800),
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      _buildInfoItem(
+                        Icons.person_rounded, 
+                        Colors.purple, 
+                        o.cleaners.isNotEmpty ? o.cleaners.map((c) => c.name).join(', ') : 'Belum ada cleaner'
                       ),
-                      if (o.customer.address.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 2,
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Icon(
-                                Icons.location_on_outlined,
-                                size: 12,
-                                color: AppColors.textMuted,
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  o.customer.address,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    color: AppColors.textMuted,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      const SizedBox(height: 10),
-                      const Divider(color: AppColors.border, height: 1),
-                      Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: Row(
-                          children: [
-
-                            InkWell(
-                              onTap: () => _launchWA(context, o.customer.phone),
-                              borderRadius: BorderRadius.circular(10),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF25D366),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                     const WhatsAppIcon(
-                                       size: 18,
-                                       color: Colors.white,
-                                     ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'Cust',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            if (o.cleaners.isNotEmpty) ...[
-                              InkWell(
-                                onTap: () {
-                                  final withPhone = o.cleaners.firstWhere(
-                                    (c) => c.phone.isNotEmpty,
-                                    orElse: () => o.cleaners.first,
-                                  );
-                                  _launchWA(
-                                    context,
-                                    withPhone.phone.isNotEmpty
-                                        ? withPhone.phone
-                                        : '',
-                                  );
-                                },
-                                borderRadius: BorderRadius.circular(10),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF25D366),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                       const WhatsAppIcon(
-                                         size: 18,
-                                         color: Colors.white,
-                                       ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'Cleaner',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                            ],
-                            // Removed Spacer and Edit button
-                          ],
+                      const SizedBox(width: 12),
+                      _buildInfoItem(
+                        Icons.payments_rounded, 
+                        Colors.green, 
+                        o.paymentMethod.toUpperCase()
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            
+            // Bottom Action Section
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total Biaya',
+                        style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w500),
+                      ),
+                      Text(
+                        _fmt(totalAkhir),
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        WorkStatusBadge(status: o.status),
+                        PaymentStatusBadge(order: o),
+                        _buildStatusBonus(o.statusBonusLabel),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildWAButton(
+                          label: 'Chat Customer',
+                          onTap: () => _launchWA(context, o.customer.phone),
+                          isOutlined: true,
+                        ),
+                      ),
+                      if (o.cleaners.isNotEmpty) ...[
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildWAButton(
+                            label: 'Chat Cleaner',
+                            onTap: () {
+                              final withPhone = o.cleaners.firstWhere(
+                                (c) => c.phone.isNotEmpty,
+                                orElse: () => o.cleaners.first,
+                              );
+                              _launchWA(context, withPhone.phone.isNotEmpty ? withPhone.phone : '');
+                            },
+                            isOutlined: false,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
