@@ -9,6 +9,7 @@ import '../../attendance/services/attendance_service.dart';
 import '../services/hrd_service.dart';
 import 'gaji_karyawan/gaji_karyawan_list_screen.dart';
 import 'insentif/insentif_cleaner_list_screen.dart';
+import 'cuti/hrd_cuti_screen.dart';
 
 class HrdDashboardScreen extends StatefulWidget {
   const HrdDashboardScreen({super.key});
@@ -191,6 +192,8 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
                   _buildPenggajianCard(context),
                   const SizedBox(height: 12),
                   _buildAbsensiQuickCard(context),
+                  const SizedBox(height: 12),
+                  _buildCutiIzinCard(context),
                   const SizedBox(height: 24),
 
                   // --- 4. Banner Info Master Data ---
@@ -787,6 +790,84 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
                       const SizedBox(height: 2),
                       Text(
                         'Rekap kehadiran, filter periode, & foto selfie cleaner',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.white.withOpacity(0.88),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCutiIzinCard(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0F766E), Color(0xFF0D9488)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F766E).withOpacity(0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const HrdCutiScreen()),
+          ),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.event_available_rounded,
+                    color: Colors.white,
+                    size: 26,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Cuti & Izin',
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Persetujuan izin cuti dan pengaturan kuota',
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           color: Colors.white.withOpacity(0.88),

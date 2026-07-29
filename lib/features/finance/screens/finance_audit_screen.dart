@@ -2570,18 +2570,18 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
   void _showApproveConfirm(OrderModel order) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Konfirmasi Approval', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
         content: Text('Apakah Anda yakin ingin menyetujui pembayaran ${order.nomorPesanan} sebesar ${_currencyFormat.format(order.total)}?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Batal'),
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               showDialog(
                 context: context,
                 barrierDismissible: false,
@@ -2621,7 +2621,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     final reasonCtrl = TextEditingController();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Tolak Pembayaran', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.red.shade700)),
         content: Column(
@@ -2642,7 +2642,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Batal'),
           ),
           ElevatedButton(
@@ -2654,7 +2654,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                 );
                 return;
               }
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               showDialog(
                 context: context,
                 barrierDismissible: false,
