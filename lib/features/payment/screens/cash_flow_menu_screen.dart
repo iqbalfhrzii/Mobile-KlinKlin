@@ -70,7 +70,7 @@ class CashFlowMenuScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Manajemen', style: GoogleFonts.inter(
-                  fontSize: 11, color: Colors.white.withOpacity(0.7))),
+                  fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
               Text('Cash Flow', style: GoogleFonts.inter(
                   fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
             ],

@@ -58,7 +58,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                       fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white,
                     )),
                     Text('Isi data pelanggan baru', style: GoogleFonts.inter(
-                      fontSize: 11, color: Colors.white.withOpacity(0.65),
+                      fontSize: 11, color: Colors.white.withValues(alpha: 0.65),
                     )),
                   ],
                 ),
@@ -125,7 +125,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                                   margin: EdgeInsets.only(right: s == 'aktif' ? 8 : 0, left: s == 'non aktif' ? 8 : 0),
                                   padding: const EdgeInsets.symmetric(vertical: 14),
                                   decoration: BoxDecoration(
-                                    color: sel ? color.withOpacity(0.1) : AppColors.background,
+                                    color: sel ? color.withValues(alpha: 0.1) : AppColors.background,
                                     border: Border.all(color: sel ? color : Colors.transparent, width: 1.5),
                                     borderRadius: BorderRadius.circular(14),
                                   ),
@@ -196,10 +196,10 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border.withOpacity(0.5)),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -258,7 +258,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted),
-            prefixIcon: Icon(icon, size: 20, color: AppColors.primary.withOpacity(0.7)),
+            prefixIcon: Icon(icon, size: 20, color: AppColors.primary.withValues(alpha: 0.7)),
             contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
             filled: true,
             fillColor: AppColors.background,

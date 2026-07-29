@@ -125,7 +125,7 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
                           'Lacak capaian performa bulanan setiap cabang',
                           style: GoogleFonts.inter(
                             fontSize: 12,
-                            color: Colors.white.withOpacity(0.8),
+                            color: Colors.white.withValues(alpha: 0.8),
                           ),
                         ),
                       ],
@@ -252,7 +252,7 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -397,7 +397,7 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -431,7 +431,7 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
                           const SizedBox(height: 2),
                           Text(
                             'Bulan: ${_bulanNames[_selectedBulan - 1]} $_selectedTahun',
-                            style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withOpacity(0.8)),
+                            style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.8)),
                           ),
                         ],
                       ),
@@ -495,7 +495,7 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -679,7 +679,7 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.02),
+              color: Colors.black.withValues(alpha: 0.02),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),

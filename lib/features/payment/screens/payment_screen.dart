@@ -337,7 +337,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 'Manajemen',
                 style: GoogleFonts.inter(
                   fontSize: 11,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                 ),
               ),
               Text(
@@ -356,7 +356,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -899,7 +899,7 @@ class _PaymentCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isCancelled
-                ? AppColors.error.withOpacity(0.2)
+                ? AppColors.error.withValues(alpha: 0.2)
                 : AppColors.border,
           ),
           boxShadow: [AppColors.cardShadow],
@@ -992,7 +992,7 @@ class _PaymentCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: isCancelled || isWaitingCancel
-                        ? AppColors.error.withOpacity(0.1)
+                        ? AppColors.error.withValues(alpha: 0.1)
                         : isPaid
                         ? AppColors.statusDoneBg
                         : isPending

@@ -105,7 +105,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 'Langkah ${_step + 1} dari 4 · ${_steps[_step]}',
                 style: GoogleFonts.inter(
                   fontSize: 11,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -265,7 +265,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 disabledBackgroundColor: AppColors.border,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 elevation: canNext && !_isSaving ? 4 : 0,
-                shadowColor: AppColors.primary.withOpacity(0.4),
+                shadowColor: AppColors.primary.withValues(alpha: 0.4),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -508,7 +508,7 @@ class _Step1InfoState extends State<_Step1Info> {
                 decoration: BoxDecoration(
                   color: widget.draft.customer == null
                       ? AppColors.surface
-                      : AppColors.surfaceBlue.withOpacity(0.5),
+                      : AppColors.surfaceBlue.withValues(alpha: 0.5),
                   border: Border.all(
                     color: widget.draft.customer == null
                         ? AppColors.border
@@ -650,7 +650,7 @@ class _Step1InfoState extends State<_Step1Info> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
                       color: active
-                          ? AppColors.primary.withOpacity(0.08)
+                          ? AppColors.primary.withValues(alpha: 0.08)
                           : AppColors.surface,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
@@ -705,7 +705,7 @@ class _Step1InfoState extends State<_Step1Info> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
                       color: active
-                          ? AppColors.primary.withOpacity(0.08)
+                          ? AppColors.primary.withValues(alpha: 0.08)
                           : AppColors.surface,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
@@ -1230,7 +1230,7 @@ class _Step2Services extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: AppColors.surfaceBlue.withOpacity(0.5),
+                                    color: AppColors.surfaceBlue.withValues(alpha: 0.5),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(
@@ -1564,7 +1564,7 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.cleaning_services_rounded, color: AppColors.textMuted.withOpacity(0.3), size: 48),
+                                  Icon(Icons.cleaning_services_rounded, color: AppColors.textMuted.withValues(alpha: 0.3), size: 48),
                                   const SizedBox(height: 12),
                                   Text(
                                     'Layanan tidak ditemukan',
@@ -1588,8 +1588,8 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
                                       color: isSelected 
-                                          ? AppColors.primary.withOpacity(0.1) 
-                                          : AppColors.primary.withOpacity(0.05),
+                                          ? AppColors.primary.withValues(alpha: 0.1) 
+                                          : AppColors.primary.withValues(alpha: 0.05),
                                       shape: BoxShape.circle,
                                     ),
                                     child: Icon(
@@ -1761,7 +1761,7 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
                 foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 52),
                 elevation: 4,
-                shadowColor: AppColors.primary.withOpacity(0.4),
+                shadowColor: AppColors.primary.withValues(alpha: 0.4),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -2026,7 +2026,7 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.people_outline_rounded, color: AppColors.textMuted.withOpacity(0.3), size: 48),
+                      Icon(Icons.people_outline_rounded, color: AppColors.textMuted.withValues(alpha: 0.3), size: 48),
                       const SizedBox(height: 12),
                       Text(
                         'Cleaner tidak ditemukan',
@@ -2052,7 +2052,7 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
-                        color: isSelected ? AppColors.primary.withOpacity(0.04) : AppColors.surface,
+                        color: isSelected ? AppColors.primary.withValues(alpha: 0.04) : AppColors.surface,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: isSelected ? AppColors.primary : AppColors.border,
@@ -2102,7 +2102,7 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
                                     Uri.encodeFull(fullUrl),
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) => CircleAvatar(
-                                      backgroundColor: isSelected ? AppColors.primary.withOpacity(0.1) : AppColors.surfaceBlue,
+                                      backgroundColor: isSelected ? AppColors.primary.withValues(alpha: 0.1) : AppColors.surfaceBlue,
                                       child: Icon(Icons.person, color: isSelected ? AppColors.primary : AppColors.textMuted),
                                     ),
                                   ),
@@ -2111,7 +2111,7 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
                             }
                             return CircleAvatar(
                               radius: 22,
-                              backgroundColor: isSelected ? AppColors.primary.withOpacity(0.1) : AppColors.surfaceBlue,
+                              backgroundColor: isSelected ? AppColors.primary.withValues(alpha: 0.1) : AppColors.surfaceBlue,
                               child: Icon(Icons.person, color: isSelected ? AppColors.primary : AppColors.textMuted),
                             );
                           },
@@ -2434,9 +2434,9 @@ class _Step4SummaryState extends State<_Step4Summary> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.05),
+              color: AppColors.primary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [

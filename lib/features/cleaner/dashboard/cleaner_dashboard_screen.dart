@@ -260,7 +260,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
                     const SizedBox(height: 8),
                     Text(
                       '$greeting,',
-                      style: GoogleFonts.inter(fontSize: 14, color: Colors.white.withOpacity(0.9)),
+                      style: GoogleFonts.inter(fontSize: 14, color: Colors.white.withValues(alpha: 0.9)),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -273,9 +273,9 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white.withOpacity(0.3)),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -295,9 +295,9 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
               Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 2),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, spreadRadius: 2),
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, spreadRadius: 2),
                   ],
                 ),
                 child: _buildAvatar(),
@@ -308,15 +308,15 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.2)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
                   child: const Icon(Icons.tips_and_updates_rounded, color: Colors.white, size: 24),
                 ),
                 const SizedBox(width: 16),
@@ -333,7 +333,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
                       const SizedBox(height: 4),
                       Text(
                         'Tetap semangat dan jaga kesehatan ya!',
-                        style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withOpacity(0.9)),
+                        style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.9)),
                       ),
                     ],
                   ),
@@ -348,7 +348,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
 
   Widget _buildAvatar() {
     if (_userPhoto == null || _userPhoto!.isEmpty) {
-      return InitialsAvatar(name: _userName, size: 56, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35));
+      return InitialsAvatar(name: _userName, size: 56, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35));
     }
     
     if (_userPhoto!.startsWith('data:image')) {
@@ -356,7 +356,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
         final base64Str = _userPhoto!.split(',').last;
         return ClipOval(child: Image.memory(base64Decode(base64Str), width: 56, height: 56, fit: BoxFit.cover));
       } catch (_) {
-        return InitialsAvatar(name: _userName, size: 56, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35));
+        return InitialsAvatar(name: _userName, size: 56, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35));
       }
     }
     
@@ -371,13 +371,13 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
             if (loadingProgress == null) return child;
             return const SizedBox(width: 56, height: 56, child: Center(child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)));
           },
-          errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 56, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35))
+          errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 56, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35))
         )
       );
     }
     
     if (_userPhoto!.startsWith('/')) {
-      return ClipOval(child: Image.file(File(_userPhoto!), width: 56, height: 56, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 56, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35))));
+      return ClipOval(child: Image.file(File(_userPhoto!), width: 56, height: 56, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 56, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35))));
     }
     
     return ClipOval(
@@ -390,7 +390,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
           if (loadingProgress == null) return child;
           return const SizedBox(width: 56, height: 56, child: Center(child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)));
         },
-        errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 56, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35))
+        errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 56, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35))
       )
     );
   }
@@ -404,16 +404,16 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
-            BoxShadow(color: color.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4)),
+            BoxShadow(color: color.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4)),
           ],
-          border: Border.all(color: color.withOpacity(0.1)),
+          border: Border.all(color: color.withValues(alpha: 0.1)),
         ),
         child: Stack(
           children: [
             Positioned(
               right: -15,
               bottom: -15,
-              child: Icon(icon, size: 80, color: color.withOpacity(0.05)),
+              child: Icon(icon, size: 80, color: color.withValues(alpha: 0.05)),
             ),
             Padding(
               padding: const EdgeInsets.all(16),
@@ -424,7 +424,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
+                      color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(icon, color: color, size: 24),
@@ -458,7 +458,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFFFD700).withOpacity(0.3),
+            color: const Color(0xFFFFD700).withValues(alpha: 0.3),
             blurRadius: 16,
             offset: const Offset(0, 8),
           )
@@ -470,16 +470,16 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
           Positioned(
             right: -10,
             top: -10,
-            child: Icon(Icons.star_rounded, size: 120, color: Colors.white.withOpacity(0.2)),
+            child: Icon(Icons.star_rounded, size: 120, color: Colors.white.withValues(alpha: 0.2)),
           ),
           Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.5)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
                 ),
                 child: const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 36),
               ),
@@ -488,7 +488,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Bonus Bulan Ini', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white.withOpacity(0.9))),
+                    Text('Bonus Bulan Ini', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.9))),
                     const SizedBox(height: 4),
                     Text(_formatRupiah(_bonusThisMonth), style: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white)),
                   ],
@@ -548,7 +548,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [AppColors.primary, AppColors.primary.withOpacity(0.7)],
+                            colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.7)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),

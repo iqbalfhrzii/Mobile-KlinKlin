@@ -152,7 +152,7 @@ class _FinanceCancelDetailScreenState extends State<FinanceCancelDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(order.nomorPesanan, style: GoogleFonts.inter(
-                          fontSize: 11, color: Colors.white.withOpacity(0.7))),
+                          fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
                       Text('Approval Batal', style: GoogleFonts.inter(
                           fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
                     ],
@@ -187,14 +187,14 @@ class _FinanceCancelDetailScreenState extends State<FinanceCancelDetailScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: statusColor.withOpacity(0.2)),
+                      border: Border.all(color: statusColor.withValues(alpha: 0.2)),
                     ),
                     child: Column(
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.1),
+                            color: statusColor.withValues(alpha: 0.1),
                             borderRadius: const BorderRadius.only(
                               topLeft: Radius.circular(16),
                               topRight: Radius.circular(16),
@@ -461,7 +461,7 @@ class _FinanceCancelDetailScreenState extends State<FinanceCancelDetailScreen> {
                               Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: AppColors.error.withOpacity(0.1),
+                                  color: AppColors.error.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: const Icon(Icons.image_outlined, color: AppColors.error, size: 22),
@@ -537,7 +537,7 @@ class _FinanceCancelDetailScreenState extends State<FinanceCancelDetailScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),

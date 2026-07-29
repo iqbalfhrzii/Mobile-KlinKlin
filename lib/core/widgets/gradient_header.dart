@@ -81,7 +81,7 @@ class HeaderBackButton extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
+          color: Colors.white.withValues(alpha: 0.15),
           shape: BoxShape.circle,
         ),
         child: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 16),
@@ -114,9 +114,9 @@ class HeaderIconButton extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withOpacity(0.2)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
             ),
             child: Icon(icon, color: Colors.white, size: 18),
           ),
@@ -205,7 +205,7 @@ class DateChip extends StatelessWidget {
                 alignment: Alignment.center,
                 margin: const EdgeInsets.only(right: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.12),
+                  color: AppColors.primary.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(

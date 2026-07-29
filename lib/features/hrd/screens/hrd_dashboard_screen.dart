@@ -157,7 +157,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.08),
+                          color: AppColors.primary.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -224,7 +224,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.18),
+                        color: Colors.white.withValues(alpha: 0.18),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Text(
@@ -232,7 +232,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white.withOpacity(0.95),
+                          color: Colors.white.withValues(alpha: 0.95),
                         ),
                       ),
                     ),
@@ -250,7 +250,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
                       'Panel Kontrol HRD & Operasional',
                       style: GoogleFonts.inter(
                         fontSize: 13,
-                        color: Colors.white.withOpacity(0.85),
+                        color: Colors.white.withValues(alpha: 0.85),
                       ),
                     ),
                   ],
@@ -259,12 +259,12 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Colors.white.withOpacity(0.3)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
+                      color: Colors.black.withValues(alpha: 0.08),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -284,10 +284,10 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.grey.withOpacity(0.18)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.18)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.06),
+            color: AppColors.primary.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -397,7 +397,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -486,10 +486,10 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.15)),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.08),
+            color: color.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -510,7 +510,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [
                     BoxShadow(
-                      color: color.withOpacity(0.12),
+                      color: color.withValues(alpha: 0.12),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
@@ -518,7 +518,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
                 ),
                 child: Icon(icon, color: color, size: 18),
               ),
-              Icon(Icons.trending_up_rounded, color: color.withOpacity(0.5), size: 16),
+              Icon(Icons.trending_up_rounded, color: color.withValues(alpha: 0.5), size: 16),
             ],
           ),
           const SizedBox(height: 8),
@@ -537,7 +537,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
             style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: AppColors.textDark.withOpacity(0.85),
+              color: AppColors.textDark.withValues(alpha: 0.85),
             ),
           ),
           Text(
@@ -588,7 +588,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F766E).withOpacity(0.3),
+            color: const Color(0xFF0F766E).withValues(alpha: 0.3),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -609,7 +609,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -636,7 +636,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
                         'Rekapitulasi total insentif & rincian bonus cleaner',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Colors.white.withOpacity(0.88),
+                          color: Colors.white.withValues(alpha: 0.88),
                         ),
                       ),
                     ],
@@ -666,7 +666,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF4F46E5).withOpacity(0.3),
+            color: const Color(0xFF4F46E5).withValues(alpha: 0.3),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -687,7 +687,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -714,7 +714,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
                         'Kelola slip gaji, draft payroll, & cetak PDF slip',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Colors.white.withOpacity(0.88),
+                          color: Colors.white.withValues(alpha: 0.88),
                         ),
                       ),
                     ],
@@ -744,7 +744,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF2563EB).withOpacity(0.3),
+            color: const Color(0xFF2563EB).withValues(alpha: 0.3),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -765,7 +765,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -792,7 +792,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
                         'Rekap kehadiran, filter periode, & foto selfie cleaner',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Colors.white.withOpacity(0.88),
+                          color: Colors.white.withValues(alpha: 0.88),
                         ),
                       ),
                     ],
@@ -822,7 +822,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F766E).withOpacity(0.3),
+            color: const Color(0xFF0F766E).withValues(alpha: 0.3),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -843,7 +843,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -870,7 +870,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
                         'Persetujuan izin cuti dan pengaturan kuota',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Colors.white.withOpacity(0.88),
+                          color: Colors.white.withValues(alpha: 0.88),
                         ),
                       ),
                     ],
@@ -896,10 +896,10 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.withOpacity(0.18)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.18)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -910,7 +910,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(

@@ -328,7 +328,7 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
                         'Pantau riwayat & rekapan kehadiran karyawan',
                         style: GoogleFonts.inter(
                           fontSize: 13,
-                          color: Colors.white.withOpacity(0.85),
+                          color: Colors.white.withValues(alpha: 0.85),
                         ),
                       ),
                     ],
@@ -399,7 +399,7 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
                         child: DropdownButtonHideUnderline(
@@ -488,7 +488,7 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
+                            color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Row(
@@ -649,16 +649,16 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: isActive ? color.withOpacity(0.15) : bgColor,
+            color: isActive ? color.withValues(alpha: 0.15) : bgColor,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isActive ? color : color.withOpacity(0.2),
+              color: isActive ? color : color.withValues(alpha: 0.2),
               width: isActive ? 2.5 : 1.0,
             ),
             boxShadow: isActive
                 ? [
                     BoxShadow(
-                      color: color.withOpacity(0.25),
+                      color: color.withValues(alpha: 0.25),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     )
@@ -670,7 +670,7 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, size: 20, color: color),
@@ -759,10 +759,10 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.15)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -788,7 +788,7 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
                 // Avatar Circle
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                   child: Text(
                     group.namaCleaner.isNotEmpty ? group.namaCleaner[0].toUpperCase() : 'C',
                     style: GoogleFonts.inter(
@@ -916,13 +916,13 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
           color: isSelected ? textColor : bgColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? textColor : textColor.withOpacity(0.3),
+            color: isSelected ? textColor : textColor.withValues(alpha: 0.3),
             width: isSelected ? 1.5 : 1,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: textColor.withOpacity(0.3),
+                    color: textColor.withValues(alpha: 0.3),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -967,10 +967,10 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: hasData ? color.withOpacity(0.08) : Colors.grey.shade100,
+        color: hasData ? color.withValues(alpha: 0.08) : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: hasData ? color.withOpacity(0.3) : Colors.grey.shade300,
+          color: hasData ? color.withValues(alpha: 0.3) : Colors.grey.shade300,
         ),
       ),
       child: Row(

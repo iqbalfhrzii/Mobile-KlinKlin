@@ -80,7 +80,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           ),
           if (_isLoading)
             Container(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               child: const Center(child: CircularProgressIndicator()),
             ),
         ],
@@ -174,9 +174,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           InitialsAvatar(
             name: c.name,
             size: 64,
-            backgroundColor: Colors.white.withOpacity(0.2),
+            backgroundColor: Colors.white.withValues(alpha: 0.2),
             textColor: Colors.white,
-            borderColor: Colors.white.withOpacity(0.35),
+            borderColor: Colors.white.withValues(alpha: 0.35),
           ),
           const SizedBox(height: 8),
           Container(
@@ -186,14 +186,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                   (c.status.toLowerCase() == 'aktif'
                           ? AppColors.statusDone
                           : AppColors.statusCancel)
-                      .withOpacity(0.2),
+                      .withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color:
                     (c.status.toLowerCase() == 'aktif'
                             ? AppColors.statusDone
                             : AppColors.statusCancel)
-                        .withOpacity(0.3),
+                        .withValues(alpha: 0.3),
               ),
             ),
             child: Text(
@@ -220,7 +220,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
             c.id,
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: Colors.white.withOpacity(0.6),
+              color: Colors.white.withValues(alpha: 0.6),
             ),
           ),
 
@@ -285,9 +285,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
+            color: Colors.white.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.2)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
           ),
           child: Column(
             children: [

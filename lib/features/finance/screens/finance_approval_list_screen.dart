@@ -317,7 +317,7 @@ class _FinanceApprovalListScreenState extends State<FinanceApprovalListScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Pending', style: GoogleFonts.inter(
-                  fontSize: 11, color: Colors.white.withOpacity(0.7))),
+                  fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
               Text('Pembayaran', style: GoogleFonts.inter(
                   fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
             ],

@@ -112,7 +112,7 @@ class _KaryawanListScreenState extends State<KaryawanListScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Data Master', style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withOpacity(0.8))),
+                    Text('Data Master', style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.8))),
                     Text('Karyawan', style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
                   ],
                 ),
@@ -225,10 +225,10 @@ class _KaryawanListScreenState extends State<KaryawanListScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 16,
             spreadRadius: 2,
             offset: const Offset(0, 6),
@@ -251,7 +251,7 @@ class _KaryawanListScreenState extends State<KaryawanListScreen> {
                   children: [
                     CircleAvatar(
                       radius: 24,
-                      backgroundColor: AppColors.primary.withOpacity(0.1),
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                       backgroundImage: karyawan.fotoProfil != null ? NetworkImage(karyawan.fotoProfil!) : null,
                       child: karyawan.fotoProfil == null ? Text(karyawan.nama.substring(0, 1).toUpperCase(), style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 18)) : null,
                     ),
@@ -274,7 +274,7 @@ class _KaryawanListScreenState extends State<KaryawanListScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: karyawan.status == 'aktif' ? Colors.green.withOpacity(0.15) : Colors.red.withOpacity(0.15),
+                                  color: karyawan.status == 'aktif' ? Colors.green.withValues(alpha: 0.15) : Colors.red.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -315,7 +315,7 @@ class _KaryawanListScreenState extends State<KaryawanListScreen> {
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                                decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
@@ -327,7 +327,7 @@ class _KaryawanListScreenState extends State<KaryawanListScreen> {
                               ),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                                decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [

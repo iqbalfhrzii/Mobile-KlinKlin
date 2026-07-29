@@ -102,7 +102,7 @@ class _PinDummyScreenState extends State<PinDummyScreen> {
               )),
               const SizedBox(height: 6),
               Text('Masukkan 6 digit angka bebas', style: GoogleFonts.inter(
-                fontSize: 13, color: Colors.white.withOpacity(0.6),
+                fontSize: 13, color: Colors.white.withValues(alpha: 0.6),
               )),
 
               const SizedBox(height: 24),
@@ -121,7 +121,7 @@ class _PinDummyScreenState extends State<PinDummyScreen> {
                       shape: BoxShape.circle,
                       color: filled
                           ? Colors.white
-                          : Colors.white.withOpacity(0.25),
+                          : Colors.white.withValues(alpha: 0.25),
                     ),
                   );
                 }),
@@ -187,16 +187,16 @@ class _NumKey extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.12),
+          color: Colors.white.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         ),
         alignment: Alignment.center,
         child: label != null
             ? Text(label!, style: GoogleFonts.inter(
                 fontSize: 22, fontWeight: FontWeight.w600, color: Colors.white,
               ))
-            : Icon(icon, color: Colors.white.withOpacity(0.8), size: 22),
+            : Icon(icon, color: Colors.white.withValues(alpha: 0.8), size: 22),
       ),
     );
   }

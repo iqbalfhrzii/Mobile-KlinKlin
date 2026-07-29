@@ -118,7 +118,7 @@ class _CabangDetailScreenState extends State<CabangDetailScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Detail Cabang', style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withOpacity(0.8))),
+                    Text('Detail Cabang', style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.8))),
                     Text(widget.cabang.namaCabang, style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
                   ],
                 ),
@@ -215,7 +215,7 @@ class _CabangDetailScreenState extends State<CabangDetailScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: widget.cabang.status == 'aktif' ? Colors.green.withOpacity(0.15) : Colors.red.withOpacity(0.15),
+                  color: widget.cabang.status == 'aktif' ? Colors.green.withValues(alpha: 0.15) : Colors.red.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -331,7 +331,7 @@ class _CabangDetailScreenState extends State<CabangDetailScreen> {
             if (changed) setModalState(() {});
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary.withOpacity(0.1),
+            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
             foregroundColor: AppColors.primary,
             elevation: 0,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

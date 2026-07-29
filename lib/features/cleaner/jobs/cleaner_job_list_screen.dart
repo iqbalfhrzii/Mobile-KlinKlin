@@ -381,12 +381,12 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(23),
                 border: Border.all(
-                  color: _query.isNotEmpty ? const Color(0xFF3B82F6) : Colors.grey.withOpacity(0.25),
+                  color: _query.isNotEmpty ? const Color(0xFF3B82F6) : Colors.grey.withValues(alpha: 0.25),
                   width: _query.isNotEmpty ? 1.5 : 1.0,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: _query.isNotEmpty ? const Color(0xFF3B82F6).withOpacity(0.12) : Colors.black.withOpacity(0.03),
+                    color: _query.isNotEmpty ? const Color(0xFF3B82F6).withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.03),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -448,19 +448,19 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
                 color: activeFilterCount > 0 ? null : Colors.white,
                 borderRadius: BorderRadius.circular(23),
                 border: Border.all(
-                  color: activeFilterCount > 0 ? Colors.transparent : Colors.grey.withOpacity(0.3),
+                  color: activeFilterCount > 0 ? Colors.transparent : Colors.grey.withValues(alpha: 0.3),
                   width: 1.5,
                 ),
                 boxShadow: [
                   if (activeFilterCount > 0)
                     BoxShadow(
-                      color: const Color(0xFF4F46E5).withOpacity(0.35),
+                      color: const Color(0xFF4F46E5).withValues(alpha: 0.35),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     )
                   else
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
+                      color: Colors.black.withValues(alpha: 0.03),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -488,7 +488,7 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.25),
+                        color: Colors.white.withValues(alpha: 0.25),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
@@ -705,12 +705,12 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
                 children: [
                   Text('Daftar Tugas', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
                   const SizedBox(height: 4),
-                  Text('Kelola tugas Anda', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withOpacity(0.8))),
+                  Text('Kelola tugas Anda', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.8))),
                 ],
               ),
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: IconButton(
@@ -746,7 +746,7 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.event_available_rounded, color: AppColors.textMuted.withOpacity(0.3), size: 80),
+          Icon(Icons.event_available_rounded, color: AppColors.textMuted.withValues(alpha: 0.3), size: 80),
           const SizedBox(height: 16),
           Text('Tidak ada tugas untuk tanggal ini', style: GoogleFonts.inter(fontSize: 14, color: AppColors.textMuted)),
         ],
@@ -797,10 +797,10 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.grey.withOpacity(0.15)),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.06),
+              color: AppColors.primary.withValues(alpha: 0.06),
               blurRadius: 15,
               offset: const Offset(0, 8),
             ),
@@ -814,7 +814,7 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppColors.primary.withOpacity(0.08), Colors.transparent],
+                  colors: [AppColors.primary.withValues(alpha: 0.08), Colors.transparent],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -827,7 +827,7 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
                     children: [
                       Container(
                         padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4)]),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4)]),
                         child: const Icon(Icons.receipt_long_rounded, size: 14, color: AppColors.primary),
                       ),
                       const SizedBox(width: 8),
@@ -871,7 +871,7 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.primary,
                           shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))],
+                          boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3))],
                         ),
                         child: const Icon(Icons.person_rounded, size: 24, color: Colors.white),
                       ),
@@ -1018,7 +1018,7 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12), border: Border.all(color: fg.withOpacity(0.3))),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12), border: Border.all(color: fg.withValues(alpha: 0.3))),
       child: Text(text, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: fg)),
     );
   }
@@ -1038,7 +1038,7 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.grey.withOpacity(0.15)),
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
             ),
             child: Shimmer.fromColors(
               baseColor: Colors.grey.shade200,

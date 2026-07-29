@@ -148,7 +148,7 @@ class _GajiPokokListScreenState extends State<GajiPokokListScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.grey.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: Colors.grey.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -227,10 +227,10 @@ class _GajiPokokListScreenState extends State<GajiPokokListScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 16,
             spreadRadius: 2,
             offset: const Offset(0, 6),
@@ -261,7 +261,7 @@ class _GajiPokokListScreenState extends State<GajiPokokListScreen> {
                   children: [
                     CircleAvatar(
                       radius: 24,
-                      backgroundColor: Colors.teal.withOpacity(0.15),
+                      backgroundColor: Colors.teal.withValues(alpha: 0.15),
                       child: const Icon(Icons.monetization_on_rounded, color: Colors.teal, size: 28),
                     ),
                     const SizedBox(width: 16),
@@ -283,7 +283,7 @@ class _GajiPokokListScreenState extends State<GajiPokokListScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Colors.teal.withOpacity(0.15),
+                                  color: Colors.teal.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -319,7 +319,7 @@ class _GajiPokokListScreenState extends State<GajiPokokListScreen> {
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                                decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
@@ -412,7 +412,7 @@ class _GajiPokokListScreenState extends State<GajiPokokListScreen> {
                     ),
                     Text(
                       'Kelola master data gaji pokok',
-                      style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withOpacity(0.8)),
+                      style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.8)),
                     ),
                   ],
                 ),
@@ -428,7 +428,7 @@ class _GajiPokokListScreenState extends State<GajiPokokListScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.money_off_csred_outlined, size: 64, color: Colors.grey.withOpacity(0.5)),
+                            Icon(Icons.money_off_csred_outlined, size: 64, color: Colors.grey.withValues(alpha: 0.5)),
                             const SizedBox(height: 16),
                             Text('Belum ada data gaji pokok', style: GoogleFonts.inter(color: Colors.grey)),
                           ],

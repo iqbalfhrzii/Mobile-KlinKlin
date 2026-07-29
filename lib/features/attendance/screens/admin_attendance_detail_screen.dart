@@ -121,7 +121,7 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                         '${widget.item.namaCleaner} · ${_formatIndonesianDate(widget.item.tanggal)}',
                         style: GoogleFonts.inter(
                           fontSize: 13,
-                          color: Colors.white.withOpacity(0.85),
+                          color: Colors.white.withValues(alpha: 0.85),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -146,10 +146,10 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                      border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.02),
+                          color: Colors.black.withValues(alpha: 0.02),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -224,7 +224,7 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                                       decoration: BoxDecoration(
                                         color: statusBg,
                                         borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: statusColor.withOpacity(0.3)),
+                                        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                                       ),
                                       child: Text(
                                         statusLabel,
@@ -249,10 +249,10 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                      border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.02),
+                          color: Colors.black.withValues(alpha: 0.02),
                           blurRadius: 8,
                           offset: const Offset(0, 3),
                         ),
@@ -357,7 +357,7 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                 hint,
                 style: GoogleFonts.inter(
                   fontSize: 11,
-                  color: isOrange ? const Color(0xFFE65100).withOpacity(0.85) : Colors.grey.shade600,
+                  color: isOrange ? const Color(0xFFE65100).withValues(alpha: 0.85) : Colors.grey.shade600,
                 ),
               ),
             ],
@@ -379,10 +379,10 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -469,7 +469,7 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                             decoration: BoxDecoration(
                               color: const Color(0xFFE8F5E9),
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFF2E7D32).withOpacity(0.3)),
+                              border: Border.all(color: const Color(0xFF2E7D32).withValues(alpha: 0.3)),
                             ),
                             child: Text(
                               (itemData.status.isEmpty ? 'DITERIMA' : itemData.status).toUpperCase(),
@@ -541,7 +541,7 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                                   margin: const EdgeInsets.all(12),
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.7),
+                                    color: Colors.black.withValues(alpha: 0.7),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Row(

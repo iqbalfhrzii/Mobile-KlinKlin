@@ -123,7 +123,7 @@ class _CabangListScreenState extends State<CabangListScreen> {
                       'Data Master',
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                       ),
                     ),
                     Text(
@@ -214,10 +214,10 @@ class _CabangListScreenState extends State<CabangListScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 16,
             spreadRadius: 2,
             offset: const Offset(0, 6),
@@ -294,10 +294,10 @@ class _CabangListScreenState extends State<CabangListScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: cabang.status == 'aktif' ? Colors.green.withOpacity(0.15) : Colors.red.withOpacity(0.15),
+                                color: cabang.status == 'aktif' ? Colors.green.withValues(alpha: 0.15) : Colors.red.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: cabang.status == 'aktif' ? Colors.green.withOpacity(0.3) : Colors.red.withOpacity(0.3),
+                                  color: cabang.status == 'aktif' ? Colors.green.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3),
                                 ),
                               ),
                               child: Text(

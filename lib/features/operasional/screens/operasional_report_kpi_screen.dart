@@ -142,7 +142,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
                         'Laporan pencapaian target omzet',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                         ),
                       ),
                     ],
@@ -232,7 +232,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
               border: Border.all(color: Colors.grey.shade200),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.06),
+                  color: Colors.grey.withValues(alpha: 0.06),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -301,15 +301,15 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
 
         if (kpiOmzet >= targetAman) {
           statusColor = Colors.green;
-          statusBgColor = Colors.green.withOpacity(0.1);
+          statusBgColor = Colors.green.withValues(alpha: 0.1);
           statusIcon = Icons.trending_up_rounded;
         } else if (kpiOmzet >= 70.0) {
           statusColor = Colors.amber.shade700;
-          statusBgColor = Colors.amber.withOpacity(0.15);
+          statusBgColor = Colors.amber.withValues(alpha: 0.15);
           statusIcon = Icons.trending_flat_rounded;
         } else {
           statusColor = Colors.red;
-          statusBgColor = Colors.red.withOpacity(0.1);
+          statusBgColor = Colors.red.withValues(alpha: 0.1);
           statusIcon = Icons.trending_down_rounded;
         }
 
@@ -326,12 +326,12 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: statusColor.withOpacity(0.3),
+              color: statusColor.withValues(alpha: 0.3),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: statusColor.withOpacity(0.05),
+                color: statusColor.withValues(alpha: 0.05),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -480,7 +480,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: (growth >= 0 ? Colors.green : Colors.red).withOpacity(0.1),
+                          color: (growth >= 0 ? Colors.green : Colors.red).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -502,7 +502,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
                 borderRadius: BorderRadius.circular(6),
                 child: LinearProgressIndicator(
                   value: progress,
-                  backgroundColor: statusColor.withOpacity(0.12),
+                  backgroundColor: statusColor.withValues(alpha: 0.12),
                   valueColor: AlwaysStoppedAnimation<Color>(statusColor),
                   minHeight: 8,
                 ),
@@ -534,7 +534,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.25),
+                    color: AppColors.primary.withValues(alpha: 0.25),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),

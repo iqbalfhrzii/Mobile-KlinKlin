@@ -354,7 +354,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       o.nomorPesanan,
                       style: GoogleFonts.inter(
                         fontSize: 11,
-                        color: Colors.white.withOpacity(0.6),
+                        color: Colors.white.withValues(alpha: 0.6),
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -383,10 +383,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.25),
+                        color: Colors.white.withValues(alpha: 0.25),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
+                          color: Colors.white.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Row(
@@ -505,7 +505,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF25D366).withOpacity(0.15),
+                          color: const Color(0xFF25D366).withValues(alpha: 0.15),
                           blurRadius: 6,
                           offset: const Offset(0, 2),
                         ),
@@ -681,9 +681,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.05),
+              color: AppColors.primary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
             ),
             child: Row(
               children: [
@@ -775,10 +775,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.surfaceBlue.withOpacity(0.8),
+                            color: AppColors.surfaceBlue.withValues(alpha: 0.8),
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
-                              color: AppColors.primary.withOpacity(0.2),
+                              color: AppColors.primary.withValues(alpha: 0.2),
                             ),
                           ),
                           child: Text.rich(
@@ -1042,7 +1042,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.surfaceBlue.withOpacity(0.5),
+              color: AppColors.surfaceBlue.withValues(alpha: 0.5),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -1125,7 +1125,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   color: AppColors.surfaceBlue,
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(
-                    color: AppColors.primary.withOpacity(0.3),
+                    color: AppColors.primary.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
@@ -1277,7 +1277,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF25D366).withOpacity(0.15),
+                          color: const Color(0xFF25D366).withValues(alpha: 0.15),
                           blurRadius: 6,
                           offset: const Offset(0, 2),
                         ),
@@ -1364,7 +1364,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                               '  ${b.keterangan}',
                               style: GoogleFonts.inter(
                                 fontSize: 11,
-                                color: const Color(0xFFAD6800).withOpacity(0.8),
+                                color: const Color(0xFFAD6800).withValues(alpha: 0.8),
                                 fontStyle: FontStyle.italic,
                               ),
                             ),
@@ -1431,7 +1431,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 label: const Text('Tambah Bonus'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primary,
-                  side: BorderSide(color: AppColors.primary.withOpacity(0.4)),
+                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -1509,7 +1509,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             color: AppColors.surfaceBlue,
                             borderRadius: BorderRadius.circular(4),
                             border: Border.all(
-                              color: AppColors.primary.withOpacity(0.3),
+                              color: AppColors.primary.withValues(alpha: 0.3),
                             ),
                           ),
                           child: Row(
@@ -2177,7 +2177,7 @@ klinklin.co.id/aduanpayment''';
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: (enabled && !isLoading) ? bgColor : bgColor.withOpacity(0.5),
+          color: (enabled && !isLoading) ? bgColor : bgColor.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -2187,7 +2187,7 @@ klinklin.co.id/aduanpayment''';
                 margin: const EdgeInsets.only(right: 12),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -2213,7 +2213,7 @@ klinklin.co.id/aduanpayment''';
                     subtitle,
                     style: GoogleFonts.inter(
                       fontSize: 11,
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                     ),
                   ),
                 ],
@@ -2528,7 +2528,7 @@ klinklin.co.id/aduanpayment''';
                                 Container(
                                   padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primary.withOpacity(0.08),
+                                    color: AppColors.primary.withValues(alpha: 0.08),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(
@@ -3059,11 +3059,11 @@ klinklin.co.id/aduanpayment''';
                                                     decoration: BoxDecoration(
                                                       color: !isBusy
                                                           ? AppColors.statusDone
-                                                                .withOpacity(
+                                                                .withValues(alpha: 
                                                                   0.1,
                                                                 )
                                                           : AppColors.error
-                                                                .withOpacity(
+                                                                .withValues(alpha: 
                                                                   0.1,
                                                                 ),
                                                       borderRadius:
@@ -3210,7 +3210,7 @@ klinklin.co.id/aduanpayment''';
         ),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
-          side: BorderSide(color: AppColors.primary.withOpacity(0.4)),
+          side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
           padding: const EdgeInsets.symmetric(vertical: 10),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
@@ -3875,7 +3875,7 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
                               Container(
                                 padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.08),
+                                  color: AppColors.primary.withValues(alpha: 0.08),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
@@ -3919,7 +3919,7 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
                                     Container(
                                       padding: const EdgeInsets.all(6),
                                       decoration: BoxDecoration(
-                                        color: AppColors.statusDone.withOpacity(
+                                        color: AppColors.statusDone.withValues(alpha: 
                                           0.08,
                                         ),
                                         shape: BoxShape.circle,
@@ -4312,7 +4312,7 @@ class __TambahLayananOrderDetailSheetState
                                 children: [
                                   Icon(
                                     Icons.cleaning_services_rounded,
-                                    color: AppColors.textMuted.withOpacity(0.3),
+                                    color: AppColors.textMuted.withValues(alpha: 0.3),
                                     size: 48,
                                   ),
                                   const SizedBox(height: 12),
@@ -4352,9 +4352,9 @@ class __TambahLayananOrderDetailSheetState
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
                                       color: isSelected
-                                          ? AppColors.primary.withOpacity(0.1)
+                                          ? AppColors.primary.withValues(alpha: 0.1)
                                           : AppColors.primary
-                                              .withOpacity(0.05),
+                                              .withValues(alpha: 0.05),
                                       shape: BoxShape.circle,
                                     ),
                                     child: Icon(

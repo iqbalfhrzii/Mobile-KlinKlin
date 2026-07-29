@@ -222,7 +222,7 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Manajemen', style: GoogleFonts.inter(
-                  fontSize: 11, color: Colors.white.withOpacity(0.7))),
+                  fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
               Text('Cash Flow', style: GoogleFonts.inter(
                   fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
             ],
@@ -250,7 +250,7 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
       Expanded(child: _SmallCard(
         label: 'Batal', value: _fmt(totalBatal),
         icon: Icons.cancel_presentation_rounded,
-        color: const Color(0xFFF59E0B), bg: const Color(0xFFF59E0B).withOpacity(0.1),
+        color: const Color(0xFFF59E0B), bg: const Color(0xFFF59E0B).withValues(alpha: 0.1),
         count: _filteredBatal.length,
         isActive: _statusFilter == 'Semua' || _statusFilter == 'Batal',
         onTap: () => _changeTab('Batal'),
@@ -384,7 +384,7 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF59E0B).withOpacity(0.1),
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text('Menunggu Approval Batal', style: GoogleFonts.inter(
@@ -492,7 +492,7 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
+                    color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(statusText, style: GoogleFonts.inter(

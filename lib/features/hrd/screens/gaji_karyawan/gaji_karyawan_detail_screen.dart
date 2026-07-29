@@ -175,7 +175,7 @@ class GajiKaryawanDetailScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(colors: [Colors.indigo.shade600, Colors.indigo.shade900]),
                       borderRadius: BorderRadius.circular(20),
-                      boxShadow: [BoxShadow(color: Colors.indigo.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
+                      boxShadow: [BoxShadow(color: Colors.indigo.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))],
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

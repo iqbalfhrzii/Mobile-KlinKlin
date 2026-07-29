@@ -367,7 +367,7 @@ class _OperasionalTargetOmzetScreenState extends State<OperasionalTargetOmzetScr
             border: Border.all(color: Colors.grey.shade200),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),

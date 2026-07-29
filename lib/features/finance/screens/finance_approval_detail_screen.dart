@@ -193,7 +193,7 @@ class _FinanceApprovalDetailScreenState
                         widget.order.nomorPesanan,
                         style: GoogleFonts.inter(
                           fontSize: 11,
-                          color: Colors.white.withOpacity(0.7),
+                          color: Colors.white.withValues(alpha: 0.7),
                         ),
                       ),
                       Text(
@@ -240,7 +240,7 @@ class _FinanceApprovalDetailScreenState
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: AppColors.statusPending.withOpacity(0.2),
+                        color: AppColors.statusPending.withValues(alpha: 0.2),
                       ),
                     ),
                     child: Column(
@@ -592,7 +592,7 @@ class _FinanceApprovalDetailScreenState
                               Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: AppColors.statusPending.withOpacity(
+                                  color: AppColors.statusPending.withValues(alpha: 
                                     0.1,
                                   ),
                                   borderRadius: BorderRadius.circular(10),
@@ -682,7 +682,7 @@ class _FinanceApprovalDetailScreenState
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),

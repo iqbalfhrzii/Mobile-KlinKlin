@@ -178,7 +178,7 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
                           'Lihat semua data pesanan dari seluruh cabang',
                           style: GoogleFonts.inter(
                             fontSize: 12,
-                            color: Colors.white.withOpacity(0.8),
+                            color: Colors.white.withValues(alpha: 0.8),
                           ),
                         ),
                       ],
@@ -229,12 +229,12 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(23),
                 border: Border.all(
-                  color: _searchQuery.isNotEmpty ? AppColors.primary : Colors.grey.withOpacity(0.25),
+                  color: _searchQuery.isNotEmpty ? AppColors.primary : Colors.grey.withValues(alpha: 0.25),
                   width: _searchQuery.isNotEmpty ? 1.5 : 1.0,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: _searchQuery.isNotEmpty ? AppColors.primary.withOpacity(0.12) : Colors.black.withOpacity(0.03),
+                    color: _searchQuery.isNotEmpty ? AppColors.primary.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.03),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -287,9 +287,9 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
               decoration: BoxDecoration(
                 color: activeFilterCount > 0 ? AppColors.primary : Colors.white,
                 borderRadius: BorderRadius.circular(23),
-                border: Border.all(color: activeFilterCount > 0 ? AppColors.primary : Colors.grey.withOpacity(0.25)),
+                border: Border.all(color: activeFilterCount > 0 ? AppColors.primary : Colors.grey.withValues(alpha: 0.25)),
                 boxShadow: [
-                  BoxShadow(color: activeFilterCount > 0 ? AppColors.primary.withOpacity(0.3) : Colors.black.withOpacity(0.03), blurRadius: 6, offset: const Offset(0, 2)),
+                  BoxShadow(color: activeFilterCount > 0 ? AppColors.primary.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2)),
                 ],
               ),
               child: Row(
@@ -403,9 +403,9 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.white,
+          color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isSelected ? AppColors.primary : Colors.grey.withOpacity(0.3)),
+          border: Border.all(color: isSelected ? AppColors.primary : Colors.grey.withValues(alpha: 0.3)),
         ),
         child: Text(
           label,
@@ -481,7 +481,7 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         label,
@@ -532,7 +532,7 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
+              color: iconColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, size: 14, color: iconColor),
@@ -575,9 +575,9 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.border.withOpacity(0.8)),
+          border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
+            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))
           ],
         ),
         child: Column(
@@ -591,7 +591,7 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
                   Container(
                     width: 44,
                     height: 44,
-                    decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
                     child: Center(
                       child: Text(
                         o.customer.name.isNotEmpty ? o.customer.name.substring(0, 1).toUpperCase() : '?',
@@ -634,7 +634,7 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
               ),
             ),
             
-            Divider(height: 1, thickness: 1, color: AppColors.border.withOpacity(0.5)),
+            Divider(height: 1, thickness: 1, color: AppColors.border.withValues(alpha: 0.5)),
             
             // Details Grid
             Padding(

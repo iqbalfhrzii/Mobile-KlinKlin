@@ -203,7 +203,7 @@ class _KpiScreenState extends State<KpiScreen> {
                       'Pantau performa & target mingguanmu',
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                       ),
                     ),
                   ],
@@ -212,9 +212,9 @@ class _KpiScreenState extends State<KpiScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withOpacity(0.3)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -238,9 +238,9 @@ class _KpiScreenState extends State<KpiScreen> {
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.12),
+              color: Colors.white.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.2)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
@@ -253,7 +253,7 @@ class _KpiScreenState extends State<KpiScreen> {
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white.withOpacity(0.75),
+                          color: Colors.white.withValues(alpha: 0.75),
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -275,7 +275,7 @@ class _KpiScreenState extends State<KpiScreen> {
                             style: GoogleFonts.inter(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                             ),
                           ),
                         ],
@@ -289,7 +289,7 @@ class _KpiScreenState extends State<KpiScreen> {
                                 : 'Ayo tingkatkan performa minggu ini! 🚀',
                         style: GoogleFonts.inter(
                           fontSize: 11,
-                          color: Colors.white.withOpacity(0.85),
+                          color: Colors.white.withValues(alpha: 0.85),
                         ),
                       ),
                     ],
@@ -298,7 +298,7 @@ class _KpiScreenState extends State<KpiScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: scoreColor.withOpacity(0.25),
+                    color: scoreColor.withValues(alpha: 0.25),
                     shape: BoxShape.circle,
                     border: Border.all(color: scoreColor, width: 2),
                   ),
@@ -353,7 +353,7 @@ class _KpiScreenState extends State<KpiScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDone ? const Color(0xFF10B981).withOpacity(0.4) : AppColors.border, width: isDone ? 1.5 : 1),
+        border: Border.all(color: isDone ? const Color(0xFF10B981).withValues(alpha: 0.4) : AppColors.border, width: isDone ? 1.5 : 1),
         boxShadow: [AppColors.cardShadow],
       ),
       child: Column(
@@ -570,7 +570,7 @@ class _KpiScreenState extends State<KpiScreen> {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: accent.withOpacity(0.2)),
+        border: Border.all(color: accent.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -602,9 +602,9 @@ class _KpiScreenState extends State<KpiScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: accent.withOpacity(0.15)),
+                border: Border.all(color: accent.withValues(alpha: 0.15)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,

@@ -190,7 +190,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                     'Manajemen Audit',
                     style: GoogleFonts.inter(
                       fontSize: 13,
-                      color: Colors.white.withOpacity(0.85),
+                      color: Colors.white.withValues(alpha: 0.85),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -207,9 +207,9 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
+                  color: Colors.white.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withOpacity(0.3)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -313,8 +313,8 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  border: Border.all(color: color.withOpacity(0.3)),
+                  color: color.withValues(alpha: 0.1),
+                  border: Border.all(color: color.withValues(alpha: 0.3)),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Row(
@@ -369,7 +369,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                             child: IconButton(
                               icon: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
                               style: IconButton.styleFrom(
-                                backgroundColor: Colors.black.withOpacity(0.5),
+                                backgroundColor: Colors.black.withValues(alpha: 0.5),
                                 padding: const EdgeInsets.all(8),
                               ),
                               onPressed: () => Navigator.pop(ctx),
@@ -488,10 +488,10 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -542,14 +542,14 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.08),
+              color: AppColors.primary.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.fact_check_outlined, size: 36, color: AppColors.primary),
@@ -628,7 +628,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.withOpacity(0.2)),
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
           ),
           child: Row(
             children: [
@@ -796,10 +796,10 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.18)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.18)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -848,7 +848,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                 ],
               ),
             ),
-            VerticalDivider(width: 14, thickness: 1, color: Colors.grey.withOpacity(0.15)),
+            VerticalDivider(width: 14, thickness: 1, color: Colors.grey.withValues(alpha: 0.15)),
 
             // 2. Disetujui
             Expanded(
@@ -890,7 +890,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                 ],
               ),
             ),
-            VerticalDivider(width: 14, thickness: 1, color: Colors.grey.withOpacity(0.15)),
+            VerticalDivider(width: 14, thickness: 1, color: Colors.grey.withValues(alpha: 0.15)),
 
             // 3. Menunggu Audit
             Expanded(
@@ -944,10 +944,10 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.18)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.18)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -977,7 +977,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                 ],
               ),
             ),
-            VerticalDivider(width: 20, thickness: 1, color: Colors.grey.withOpacity(0.15)),
+            VerticalDivider(width: 20, thickness: 1, color: Colors.grey.withValues(alpha: 0.15)),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1021,12 +1021,12 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(23),
               border: Border.all(
-                color: _searchQuery.isNotEmpty ? const Color(0xFF3B82F6) : Colors.grey.withOpacity(0.25),
+                color: _searchQuery.isNotEmpty ? const Color(0xFF3B82F6) : Colors.grey.withValues(alpha: 0.25),
                 width: _searchQuery.isNotEmpty ? 1.5 : 1.0,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: _searchQuery.isNotEmpty ? const Color(0xFF3B82F6).withOpacity(0.12) : Colors.black.withOpacity(0.03),
+                  color: _searchQuery.isNotEmpty ? const Color(0xFF3B82F6).withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.03),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -1084,19 +1084,19 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
               color: activeFilterCount > 0 ? null : Colors.white,
               borderRadius: BorderRadius.circular(23),
               border: Border.all(
-                color: activeFilterCount > 0 ? Colors.transparent : Colors.grey.withOpacity(0.3),
+                color: activeFilterCount > 0 ? Colors.transparent : Colors.grey.withValues(alpha: 0.3),
                 width: 1.5,
               ),
               boxShadow: [
                 if (activeFilterCount > 0)
                   BoxShadow(
-                    color: const Color(0xFF4F46E5).withOpacity(0.35),
+                    color: const Color(0xFF4F46E5).withValues(alpha: 0.35),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   )
                 else
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
+                    color: Colors.black.withValues(alpha: 0.03),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -1124,7 +1124,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.25),
+                      color: Colors.white.withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
@@ -1477,10 +1477,10 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.25)),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -1504,7 +1504,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
+                  color: color.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, size: 14, color: color),
@@ -1521,7 +1521,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
           const SizedBox(height: 2),
           Text(
             subtitle,
-            style: GoogleFonts.inter(fontSize: 10, color: color.withOpacity(0.85)),
+            style: GoogleFonts.inter(fontSize: 10, color: color.withValues(alpha: 0.85)),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -1586,7 +1586,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
@@ -1663,7 +1663,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
@@ -1714,10 +1714,10 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.025),
+            color: Colors.black.withValues(alpha: 0.025),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1733,17 +1733,17 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: order.statusUtamaLabel == 'Dibatalkan'
-                    ? const Color(0xFFFEE2E2).withOpacity(0.4)
+                    ? const Color(0xFFFEE2E2).withValues(alpha: 0.4)
                     : order.statusUtamaLabel == 'Done'
-                        ? const Color(0xFFF0FDF4).withOpacity(0.5)
-                        : const Color(0xFFFEF3C7).withOpacity(0.4),
+                        ? const Color(0xFFF0FDF4).withValues(alpha: 0.5)
+                        : const Color(0xFFFEF3C7).withValues(alpha: 0.4),
                 border: Border(
                   bottom: BorderSide(
                     color: order.statusUtamaLabel == 'Dibatalkan'
-                        ? const Color(0xFFFCA5A5).withOpacity(0.5)
+                        ? const Color(0xFFFCA5A5).withValues(alpha: 0.5)
                         : order.statusUtamaLabel == 'Done'
-                            ? const Color(0xFFBBF7D0).withOpacity(0.5)
-                            : const Color(0xFFFDE68A).withOpacity(0.5),
+                            ? const Color(0xFFBBF7D0).withValues(alpha: 0.5)
+                            : const Color(0xFFFDE68A).withValues(alpha: 0.5),
                   ),
                 ),
               ),
@@ -1822,7 +1822,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                     children: [
                       CircleAvatar(
                         radius: 15,
-                        backgroundColor: AppColors.primary.withOpacity(0.1),
+                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                         child: Text(
                           order.customer.name.isNotEmpty ? order.customer.name[0].toUpperCase() : 'C',
                           style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
@@ -1914,7 +1914,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                             label: const Text('Periksa'),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 9),
-                              side: BorderSide(color: AppColors.primary.withOpacity(0.4)),
+                              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
                             ),
@@ -1969,7 +1969,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                           label: const Text('Lihat Rincian Audit'),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            side: BorderSide(color: AppColors.primary.withOpacity(0.4)),
+                            side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
                           ),
@@ -2106,7 +2106,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                       ),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
-                        BoxShadow(color: const Color(0xFF0D52BA).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                        BoxShadow(color: const Color(0xFF0D52BA).withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
                       ],
                     ),
                     child: Column(
@@ -2114,7 +2114,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                       children: [
                         Text(
                           'TOTAL AKHIR PEMBAYARAN',
-                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white.withOpacity(0.85), letterSpacing: 0.8),
+                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white.withValues(alpha: 0.85), letterSpacing: 0.8),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -2125,9 +2125,9 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.18),
+                            color: Colors.white.withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white.withOpacity(0.25)),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -2176,7 +2176,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
                         ],
                       ),
                       child: Column(
@@ -2201,7 +2201,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
                         ],
                       ),
                       child: Column(
@@ -2226,7 +2226,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
                         ],
                       ),
                       child: Column(
@@ -2304,7 +2304,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
                         ],
                       ),
                       child: Column(
@@ -2353,7 +2353,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
                         ],
                       ),
                       child: Column(
@@ -2397,7 +2397,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
                         ],
                       ),
                       child: Column(
@@ -2466,7 +2466,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, -4)),
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 12, offset: const Offset(0, -4)),
                   ],
                 ),
                 child: Row(
@@ -2504,7 +2504,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           elevation: 2,
-                          shadowColor: const Color(0xFF059669).withOpacity(0.4),
+                          shadowColor: const Color(0xFF059669).withValues(alpha: 0.4),
                         ),
                       ),
                     ),
@@ -2732,7 +2732,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
@@ -2811,7 +2811,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.primary,
                             padding: const EdgeInsets.symmetric(vertical: 9),
-                            side: BorderSide(color: AppColors.primary.withOpacity(0.5)),
+                            side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             textStyle: GoogleFonts.inter(fontSize: 12),
                           ),
@@ -2953,7 +2953,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                       ),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
-                        BoxShadow(color: const Color(0xFFD97706).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                        BoxShadow(color: const Color(0xFFD97706).withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
                       ],
                     ),
                     child: Column(
@@ -2965,7 +2965,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                             const SizedBox(width: 6),
                             Text(
                               'ALASAN PENGAJUAN EDIT',
-                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white.withOpacity(0.9), letterSpacing: 0.8),
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white.withValues(alpha: 0.9), letterSpacing: 0.8),
                             ),
                           ],
                         ),
@@ -2978,9 +2978,9 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.18),
+                            color: Colors.white.withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white.withOpacity(0.25)),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -3029,7 +3029,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
                         ],
                       ),
                       child: Column(
@@ -3055,7 +3055,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
                         ],
                       ),
                       child: Column(
@@ -3113,7 +3113,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
                         ],
                       ),
                       child: Column(
@@ -3181,7 +3181,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, -4)),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 12, offset: const Offset(0, -4)),
                 ],
               ),
               child: Row(
@@ -3219,7 +3219,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         elevation: 2,
-                        shadowColor: const Color(0xFF059669).withOpacity(0.4),
+                        shadowColor: const Color(0xFF059669).withValues(alpha: 0.4),
                       ),
                     ),
                   ),
@@ -3397,7 +3397,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
@@ -3521,7 +3521,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
@@ -3567,7 +3567,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                     label: const Text('Lihat Rincian Audit'),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      side: BorderSide(color: AppColors.primary.withOpacity(0.4)),
+                      side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       foregroundColor: AppColors.primary,
                       textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
@@ -3675,7 +3675,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                       ),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
-                        BoxShadow(color: const Color(0xFFE11D48).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                        BoxShadow(color: const Color(0xFFE11D48).withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
                       ],
                     ),
                     child: Column(
@@ -3687,7 +3687,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                             const SizedBox(width: 6),
                             Text(
                               'ALASAN PEMBATALAN',
-                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white.withOpacity(0.9), letterSpacing: 0.8),
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white.withValues(alpha: 0.9), letterSpacing: 0.8),
                             ),
                           ],
                         ),
@@ -3704,9 +3704,9 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.18),
+                                color: Colors.white.withValues(alpha: 0.18),
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Colors.white.withOpacity(0.25)),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -3723,9 +3723,9 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.18),
+                                color: Colors.white.withValues(alpha: 0.18),
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Colors.white.withOpacity(0.25)),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -3766,7 +3766,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
                         ],
                       ),
                       child: Column(
@@ -3794,7 +3794,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
                         ],
                       ),
                       child: Column(
@@ -3852,7 +3852,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
                         ],
                       ),
                       child: Column(
@@ -3920,7 +3920,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, -4)),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 12, offset: const Offset(0, -4)),
                 ],
               ),
               child: SizedBox(
@@ -3935,7 +3935,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     elevation: 2,
-                    shadowColor: const Color(0xFF334155).withOpacity(0.4),
+                    shadowColor: const Color(0xFF334155).withValues(alpha: 0.4),
                   ),
                 ),
               ),
@@ -4101,7 +4101,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                           ),
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
-                            BoxShadow(color: const Color(0xFF4F46E5).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                            BoxShadow(color: const Color(0xFF4F46E5).withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
                           ],
                         ),
                         child: Column(
@@ -4113,14 +4113,14 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                                 const SizedBox(width: 6),
                                 Text(
                                   'WEWENANG PENUH FINANCE',
-                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white.withOpacity(0.9), letterSpacing: 0.8),
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white.withValues(alpha: 0.9), letterSpacing: 0.8),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 6),
                             Text(
                               'Anda dapat mengubah detail administrasi, pelanggan, cleaner, status pengerjaan/pembayaran/bonus, dan rincian layanan pesanan ini secara langsung.',
-                              style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withOpacity(0.95), height: 1.4),
+                              style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.95), height: 1.4),
                             ),
                           ],
                         ),
@@ -4687,7 +4687,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
                               minimumSize: const Size(0, 26),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                              side: BorderSide(color: order.cleaners.isEmpty ? Colors.grey.shade300 : AppColors.primary.withOpacity(0.5)),
+                              side: BorderSide(color: order.cleaners.isEmpty ? Colors.grey.shade300 : AppColors.primary.withValues(alpha: 0.5)),
                               backgroundColor: order.cleaners.isEmpty ? Colors.grey.shade100 : const Color(0xFFEFF6FF),
                             ),
                             child: Text('+ Tambah Bonus Manual', style: GoogleFonts.inter(fontSize: 10, color: order.cleaners.isEmpty ? Colors.grey : const Color(0xFF1D4ED8), fontWeight: FontWeight.bold)),
@@ -4844,7 +4844,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, -4)),
+              BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 12, offset: const Offset(0, -4)),
             ],
           ),
           child: Row(
@@ -4957,7 +4957,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     elevation: 2,
-                    shadowColor: const Color(0xFF4F46E5).withOpacity(0.4),
+                    shadowColor: const Color(0xFF4F46E5).withValues(alpha: 0.4),
                   ),
                 ),
               ),

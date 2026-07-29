@@ -264,7 +264,7 @@ class _GajiPokokFormScreenState extends State<GajiPokokFormScreen> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                               decoration: BoxDecoration(
-                                color: _isBpjsAktif ? AppColors.primary.withOpacity(0.05) : AppColors.surface,
+                                color: _isBpjsAktif ? AppColors.primary.withValues(alpha: 0.05) : AppColors.surface,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(color: _isBpjsAktif ? AppColors.primary : Colors.transparent),
                               ),

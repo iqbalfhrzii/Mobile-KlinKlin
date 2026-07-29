@@ -112,7 +112,7 @@ class _JenisBonusListScreenState extends State<JenisBonusListScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Data Master', style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withOpacity(0.8))),
+                    Text('Data Master', style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.8))),
                     Text('Kategori Bonus', style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
                   ],
                 ),
@@ -177,7 +177,7 @@ class _JenisBonusListScreenState extends State<JenisBonusListScreen> {
         border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade200.withOpacity(0.5),
+            color: Colors.grey.shade200.withValues(alpha: 0.5),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -193,7 +193,7 @@ class _JenisBonusListScreenState extends State<JenisBonusListScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.purple.withOpacity(0.1),
+                  color: Colors.purple.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Icon(Icons.card_giftcard_rounded, color: Colors.purple, size: 28),
@@ -221,7 +221,7 @@ class _JenisBonusListScreenState extends State<JenisBonusListScreen> {
                   IconButton(
                     icon: Container(
                       padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                      decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                       child: const Icon(Icons.edit_rounded, color: Colors.blue, size: 18),
                     ),
                     onPressed: () async {
@@ -235,7 +235,7 @@ class _JenisBonusListScreenState extends State<JenisBonusListScreen> {
                   IconButton(
                     icon: Container(
                       padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                      decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                       child: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 18),
                     ),
                     onPressed: () => _delete(jenisBonus),

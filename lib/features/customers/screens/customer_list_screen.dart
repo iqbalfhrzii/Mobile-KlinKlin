@@ -147,7 +147,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Manajemen', style: GoogleFonts.inter(
-                    fontSize: 11, color: Colors.white.withOpacity(0.7),
+                    fontSize: 11, color: Colors.white.withValues(alpha: 0.7),
                   )),
                   Text('Pelanggan', style: GoogleFonts.inter(
                     fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white,
@@ -158,7 +158,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text('${_customers.length} Total', style: GoogleFonts.inter(
@@ -174,17 +174,17 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
             style: GoogleFonts.inter(fontSize: 14, color: Colors.white),
             decoration: InputDecoration(
               hintText: 'Cari nama, nomor HP...',
-              hintStyle: GoogleFonts.inter(color: Colors.white.withOpacity(0.5), fontSize: 14),
+              hintStyle: GoogleFonts.inter(color: Colors.white.withValues(alpha: 0.5), fontSize: 14),
               filled: true,
-              fillColor: Colors.white.withOpacity(0.12),
-              prefixIcon: Icon(Icons.search, color: Colors.white.withOpacity(0.5), size: 18),
+              fillColor: Colors.white.withValues(alpha: 0.12),
+              prefixIcon: Icon(Icons.search, color: Colors.white.withValues(alpha: 0.5), size: 18),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -291,7 +291,7 @@ class _CustomerCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: (isAktif ? AppColors.statusDone : AppColors.statusCancel).withOpacity(0.1),
+                          color: (isAktif ? AppColors.statusDone : AppColors.statusCancel).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(

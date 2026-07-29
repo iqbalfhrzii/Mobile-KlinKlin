@@ -154,7 +154,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text('Ajukan cuti atau izin Anda di sini', style: GoogleFonts.inter(
-                  fontSize: 14, color: Colors.white.withOpacity(0.8),
+                  fontSize: 14, color: Colors.white.withValues(alpha: 0.8),
                 )),
               ],
             ),
@@ -174,7 +174,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.surfaceBlue,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -320,7 +320,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                             : Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.add_photo_alternate_outlined, size: 40, color: AppColors.primary.withOpacity(0.5)),
+                                  Icon(Icons.add_photo_alternate_outlined, size: 40, color: AppColors.primary.withValues(alpha: 0.5)),
                                   const SizedBox(height: 8),
                                   Text('Tap untuk unggah foto (Opsional)', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
                                 ],

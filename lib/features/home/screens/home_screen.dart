@@ -265,7 +265,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -285,7 +285,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
@@ -311,9 +311,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.12),
+              color: Colors.white.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withOpacity(0.15)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
             ),
             child: Row(
               children: [
@@ -324,7 +324,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       'Omzet Hari Ini',
                       style: GoogleFonts.inter(
                         fontSize: 11,
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 0.7),
                       ),
                     ),
                     Text(
@@ -344,7 +344,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -369,9 +369,9 @@ class _HomeScreenState extends State<HomeScreen> {
       return InitialsAvatar(
         name: _userName,
         size: 48,
-        backgroundColor: Colors.white.withOpacity(0.2),
+        backgroundColor: Colors.white.withValues(alpha: 0.2),
         textColor: Colors.white,
-        borderColor: Colors.white.withOpacity(0.35),
+        borderColor: Colors.white.withValues(alpha: 0.35),
       );
     }
 
@@ -390,9 +390,9 @@ class _HomeScreenState extends State<HomeScreen> {
         return InitialsAvatar(
           name: _userName,
           size: 48,
-          backgroundColor: Colors.white.withOpacity(0.2),
+          backgroundColor: Colors.white.withValues(alpha: 0.2),
           textColor: Colors.white,
-          borderColor: Colors.white.withOpacity(0.35),
+          borderColor: Colors.white.withValues(alpha: 0.35),
         );
       }
     }
@@ -407,9 +407,9 @@ class _HomeScreenState extends State<HomeScreen> {
           errorBuilder: (_, __, ___) => InitialsAvatar(
             name: _userName,
             size: 48,
-            backgroundColor: Colors.white.withOpacity(0.2),
+            backgroundColor: Colors.white.withValues(alpha: 0.2),
             textColor: Colors.white,
-            borderColor: Colors.white.withOpacity(0.35),
+            borderColor: Colors.white.withValues(alpha: 0.35),
           ),
         ),
       );
@@ -425,9 +425,9 @@ class _HomeScreenState extends State<HomeScreen> {
           errorBuilder: (_, __, ___) => InitialsAvatar(
             name: _userName,
             size: 48,
-            backgroundColor: Colors.white.withOpacity(0.2),
+            backgroundColor: Colors.white.withValues(alpha: 0.2),
             textColor: Colors.white,
-            borderColor: Colors.white.withOpacity(0.35),
+            borderColor: Colors.white.withValues(alpha: 0.35),
           ),
         ),
       );
@@ -442,9 +442,9 @@ class _HomeScreenState extends State<HomeScreen> {
         errorBuilder: (_, __, ___) => InitialsAvatar(
           name: _userName,
           size: 48,
-          backgroundColor: Colors.white.withOpacity(0.2),
+          backgroundColor: Colors.white.withValues(alpha: 0.2),
           textColor: Colors.white,
-          borderColor: Colors.white.withOpacity(0.35),
+          borderColor: Colors.white.withValues(alpha: 0.35),
         ),
       ),
     );
@@ -545,7 +545,7 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.35),
+            color: AppColors.primary.withValues(alpha: 0.35),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -568,10 +568,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withOpacity(0.2),
+                        color: const Color(0xFF10B981).withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: const Color(0xFF10B981).withOpacity(0.4),
+                          color: const Color(0xFF10B981).withValues(alpha: 0.4),
                         ),
                       ),
                       child: Row(
@@ -614,9 +614,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white.withOpacity(0.15)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -625,7 +625,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       'Rata-rata Order',
                       style: GoogleFonts.inter(
                         fontSize: 10,
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 0.7),
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -650,7 +650,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 'Target Bulanan: ${_formatRupiah(target)}',
                 style: GoogleFonts.inter(
                   fontSize: 12,
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                 ),
               ),
               Text(
@@ -668,7 +668,7 @@ class _HomeScreenState extends State<HomeScreen> {
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: pct,
-              backgroundColor: Colors.white.withOpacity(0.15),
+              backgroundColor: Colors.white.withValues(alpha: 0.15),
               valueColor: const AlwaysStoppedAnimation<Color>(
                 Color(0xFF10B981),
               ),
@@ -787,7 +787,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     dotData: const FlDotData(show: false),
                     belowBarData: BarAreaData(
                       show: true,
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                     ),
                   ),
                 ],
@@ -1034,7 +1034,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         boxShadow: [
                           if (a.label == 'Absensi')
                             BoxShadow(
-                              color: const Color(0xFFF59E0B).withOpacity(0.4),
+                              color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             )
@@ -1048,7 +1048,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               color: a.label == 'Absensi'
-                                  ? Colors.white.withOpacity(0.2)
+                                  ? Colors.white.withValues(alpha: 0.2)
                                   : a.bg,
                               shape: BoxShape.circle,
                             ),
@@ -1319,10 +1319,10 @@ class _StatCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: stat.color.withOpacity(0.3), width: 1.2),
+          border: Border.all(color: stat.color.withValues(alpha: 0.3), width: 1.2),
           boxShadow: [
             BoxShadow(
-              color: stat.color.withOpacity(0.06),
+              color: stat.color.withValues(alpha: 0.06),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -1333,7 +1333,7 @@ class _StatCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: stat.color.withOpacity(0.12),
+                color: stat.color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(stat.icon, color: stat.color, size: 22),

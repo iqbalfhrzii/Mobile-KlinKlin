@@ -98,10 +98,10 @@ class _GajiKaryawanListScreenState extends State<GajiKaryawanListScreen> with Si
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 16,
             spreadRadius: 2,
             offset: const Offset(0, 6),
@@ -129,7 +129,7 @@ class _GajiKaryawanListScreenState extends State<GajiKaryawanListScreen> with Si
                   children: [
                     CircleAvatar(
                       radius: 24,
-                      backgroundColor: Colors.indigo.withOpacity(0.15),
+                      backgroundColor: Colors.indigo.withValues(alpha: 0.15),
                       child: const Icon(Icons.receipt_long_rounded, color: Colors.indigo, size: 28),
                     ),
                     const SizedBox(width: 16),
@@ -151,7 +151,7 @@ class _GajiKaryawanListScreenState extends State<GajiKaryawanListScreen> with Si
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Colors.indigo.withOpacity(0.15),
+                                  color: Colors.indigo.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -189,7 +189,7 @@ class _GajiKaryawanListScreenState extends State<GajiKaryawanListScreen> with Si
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                                decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
@@ -281,7 +281,7 @@ class _GajiKaryawanListScreenState extends State<GajiKaryawanListScreen> with Si
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
@@ -315,7 +315,7 @@ class _GajiKaryawanListScreenState extends State<GajiKaryawanListScreen> with Si
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(Icons.add, color: Colors.white),
@@ -331,7 +331,7 @@ class _GajiKaryawanListScreenState extends State<GajiKaryawanListScreen> with Si
                   indicatorColor: Colors.white,
                   dividerColor: Colors.transparent,
                   labelColor: Colors.white,
-                  unselectedLabelColor: Colors.white.withOpacity(0.5),
+                  unselectedLabelColor: Colors.white.withValues(alpha: 0.5),
                   tabs: const [
                     Tab(text: 'Bulanan'),
                     Tab(text: 'Harian'),

@@ -122,10 +122,10 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.grey.withOpacity(0.18)),
+                        border: Border.all(color: Colors.grey.withValues(alpha: 0.18)),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
+                            color: Colors.black.withValues(alpha: 0.02),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -183,7 +183,7 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
                         ),
                         child: Column(
                           children: [
@@ -241,7 +241,7 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
                     'Kelola slip gaji bulanan & harian karyawan',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                     ),
                   ),
                 ],
@@ -249,7 +249,7 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -310,10 +310,10 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.withOpacity(0.15)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -332,7 +332,7 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [AppColors.primary.withOpacity(0.15), AppColors.primary.withOpacity(0.05)],
+                        colors: [AppColors.primary.withValues(alpha: 0.15), AppColors.primary.withValues(alpha: 0.05)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -382,7 +382,7 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
             ],
           ),
           const SizedBox(height: 14),
-          Divider(color: Colors.grey.withOpacity(0.15), height: 1),
+          Divider(color: Colors.grey.withValues(alpha: 0.15), height: 1),
           const SizedBox(height: 14),
 
           // Body Content: Synchronized with Web table columns
@@ -510,7 +510,7 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
                   backgroundColor: const Color(0xFFD97706),
                   foregroundColor: Colors.white,
                   elevation: 2,
-                  shadowColor: const Color(0xFFD97706).withOpacity(0.4),
+                  shadowColor: const Color(0xFFD97706).withValues(alpha: 0.4),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700),
@@ -612,13 +612,13 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
                         ),
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
-                          BoxShadow(color: const Color(0xFF3B82F6).withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 6)),
+                          BoxShadow(color: const Color(0xFF3B82F6).withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 6)),
                         ],
                       ),
                       child: Stack(
                         children: [
-                          Positioned(top: -20, right: -20, child: Container(width: 80, height: 80, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.08)))),
-                          Positioned(bottom: -15, left: -15, child: Container(width: 60, height: 60, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.06)))),
+                          Positioned(top: -20, right: -20, child: Container(width: 80, height: 80, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.08)))),
+                          Positioned(bottom: -15, left: -15, child: Container(width: 60, height: 60, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.06)))),
                           Padding(
                             padding: const EdgeInsets.all(18),
                             child: Column(
@@ -628,7 +628,7 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
                                   children: [
                                     Container(
                                       padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
+                                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
                                       child: const Icon(Icons.receipt_long_rounded, color: Colors.white, size: 22),
                                     ),
                                     const SizedBox(width: 12),
@@ -638,7 +638,7 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
                                         children: [
                                           Text('Slip Gaji $jenisStr', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                                           const SizedBox(height: 2),
-                                          Text(periodeLabel, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white.withOpacity(0.8))),
+                                          Text(periodeLabel, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.8))),
                                         ],
                                       ),
                                     ),
@@ -646,7 +646,7 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
                                       onTap: () => Navigator.pop(context),
                                       child: Container(
                                         padding: const EdgeInsets.all(6),
-                                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
+                                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
                                         child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
                                       ),
                                     ),
@@ -655,12 +655,12 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
                                 const SizedBox(height: 16),
                                 Container(
                                   padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
+                                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
                                   child: Row(
                                     children: [
                                       Container(
                                         width: 36, height: 36,
-                                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(10)),
+                                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(10)),
                                         child: Center(child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white))),
                                       ),
                                       const SizedBox(width: 10),
@@ -670,7 +670,7 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
                                           children: [
                                             Text(name, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis),
                                             const SizedBox(height: 2),
-                                            Text('$jabatan • $cabang', style: GoogleFonts.inter(fontSize: 10.5, color: Colors.white.withOpacity(0.75)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                            Text('$jabatan • $cabang', style: GoogleFonts.inter(fontSize: 10.5, color: Colors.white.withValues(alpha: 0.75)), maxLines: 1, overflow: TextOverflow.ellipsis),
                                           ],
                                         ),
                                       ),
@@ -729,7 +729,7 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(colors: [Color(0xFF059669), Color(0xFF10B981)]),
                         borderRadius: BorderRadius.circular(16),
-                        boxShadow: [BoxShadow(color: const Color(0xFF059669).withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4))],
+                        boxShadow: [BoxShadow(color: const Color(0xFF059669).withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
                       ),
                       child: Column(
                         children: [
@@ -737,11 +737,11 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(10)),
+                                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(10)),
                                 child: const Icon(Icons.account_balance_wallet_rounded, color: Colors.white, size: 20),
                               ),
                               const SizedBox(width: 10),
-                              Text('TAKE HOME PAY', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white.withOpacity(0.85), letterSpacing: 1)),
+                              Text('TAKE HOME PAY', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white.withValues(alpha: 0.85), letterSpacing: 1)),
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -804,8 +804,8 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
     return Container(
       decoration: BoxDecoration(
         color: Colors.white, borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor.withOpacity(0.5)),
-        boxShadow: [BoxShadow(color: headerColor.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 3))],
+        border: Border.all(color: borderColor.withValues(alpha: 0.5)),
+        boxShadow: [BoxShadow(color: headerColor.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 3))],
       ),
       child: Column(
         children: [
@@ -816,7 +816,7 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
               children: [
                 Container(
                   padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(color: headerColor.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(color: headerColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
                   child: Icon(icon, size: 16, color: headerColor),
                 ),
                 const SizedBox(width: 10),
@@ -872,12 +872,12 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
               color: Colors.white,
               borderRadius: BorderRadius.circular(23),
               border: Border.all(
-                color: _searchQuery.isNotEmpty ? const Color(0xFF3B82F6) : Colors.grey.withOpacity(0.25),
+                color: _searchQuery.isNotEmpty ? const Color(0xFF3B82F6) : Colors.grey.withValues(alpha: 0.25),
                 width: _searchQuery.isNotEmpty ? 1.5 : 1.0,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: _searchQuery.isNotEmpty ? const Color(0xFF3B82F6).withOpacity(0.12) : Colors.black.withOpacity(0.03),
+                  color: _searchQuery.isNotEmpty ? const Color(0xFF3B82F6).withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.03),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -935,19 +935,19 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
               color: activeFilterCount > 0 ? null : Colors.white,
               borderRadius: BorderRadius.circular(23),
               border: Border.all(
-                color: activeFilterCount > 0 ? Colors.transparent : Colors.grey.withOpacity(0.3),
+                color: activeFilterCount > 0 ? Colors.transparent : Colors.grey.withValues(alpha: 0.3),
                 width: 1.5,
               ),
               boxShadow: [
                 if (activeFilterCount > 0)
                   BoxShadow(
-                    color: const Color(0xFF4F46E5).withOpacity(0.35),
+                    color: const Color(0xFF4F46E5).withValues(alpha: 0.35),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   )
                 else
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
+                    color: Colors.black.withValues(alpha: 0.03),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -975,7 +975,7 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.25),
+                      color: Colors.white.withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(

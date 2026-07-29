@@ -183,7 +183,7 @@ class _ClosingRateDashboardState extends State<ClosingRateDashboard> {
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.35),
+            color: AppColors.primary.withValues(alpha: 0.35),
             blurRadius: 15,
             offset: const Offset(0, 8),
           )
@@ -220,7 +220,7 @@ class _ClosingRateDashboardState extends State<ClosingRateDashboard> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.15),
+              color: Colors.black.withValues(alpha: 0.15),
               borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(22), bottomRight: Radius.circular(22)),
             ),
             child: Row(

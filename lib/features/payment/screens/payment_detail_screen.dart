@@ -145,7 +145,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                   _o.nomorPesanan,
                   style: GoogleFonts.inter(
                     fontSize: 11,
-                    color: Colors.white.withOpacity(0.65),
+                    color: Colors.white.withValues(alpha: 0.65),
                   ),
                 ),
               ],
@@ -172,7 +172,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
       statusText = 'Pembayaran Ditolak';
       statusIcon = Icons.error_outline_rounded;
     } else if (_isWaitingCancel) {
-      accent = AppColors.error.withOpacity(0.8);
+      accent = AppColors.error.withValues(alpha: 0.8);
       statusText = 'Menunggu Approval Cancel';
       statusIcon = Icons.pending_actions_rounded;
     } else if (_isPaid) {
@@ -193,7 +193,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: accent.withOpacity(0.25)),
+        border: Border.all(color: accent.withValues(alpha: 0.25)),
         boxShadow: [AppColors.cardShadow],
       ),
       child: Column(
@@ -203,7 +203,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
             decoration: BoxDecoration(
-              color: accent.withOpacity(0.1),
+              color: accent.withValues(alpha: 0.1),
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(20),
               ),
@@ -434,7 +434,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.primary.withOpacity(0.3),
+                              color: AppColors.primary.withValues(alpha: 0.3),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -708,7 +708,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFFFFF1F1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.error.withOpacity(0.2)),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -718,7 +718,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: AppColors.error.withOpacity(0.1),
+                  color: AppColors.error.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
@@ -749,7 +749,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
           ),
           if (_o.cancelProof != null && _o.cancelProof!.isNotEmpty) ...[
             const SizedBox(height: 16),
-            Divider(color: AppColors.error.withOpacity(0.2), thickness: 1),
+            Divider(color: AppColors.error.withValues(alpha: 0.2), thickness: 1),
             const SizedBox(height: 16),
             GestureDetector(
               onTap: () => _showImageDialog(context, _o.cancelProof!),
@@ -757,7 +757,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                  border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -765,7 +765,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppColors.error.withOpacity(0.1),
+                        color: AppColors.error.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(
@@ -941,7 +941,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
         border: Border(top: BorderSide(color: AppColors.border)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, -4),
           ),
@@ -969,7 +969,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.35),
+                    color: AppColors.primary.withValues(alpha: 0.35),
                     blurRadius: 14,
                     offset: const Offset(0, 5),
                   ),
@@ -1000,7 +1000,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                         _fmt((_o.total * 1.11).round()),
                         style: GoogleFonts.inter(
                           fontSize: 11,
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                         ),
                       ),
                     ],
@@ -1017,9 +1017,9 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
               width: double.infinity,
               height: 52,
               decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.05),
+                color: AppColors.error.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.error.withOpacity(0.5)),
+                border: Border.all(color: AppColors.error.withValues(alpha: 0.5)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1178,13 +1178,13 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          AppColors.primary.withOpacity(0.08),
-                          AppColors.primary.withOpacity(0.03),
+                          AppColors.primary.withValues(alpha: 0.08),
+                          AppColors.primary.withValues(alpha: 0.03),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: AppColors.primary.withOpacity(0.15),
+                        color: AppColors.primary.withValues(alpha: 0.15),
                       ),
                     ),
                     child: Row(
@@ -1353,7 +1353,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                         ),
                         decoration: BoxDecoration(
                           color: sel
-                              ? AppColors.primary.withOpacity(0.06)
+                              ? AppColors.primary.withValues(alpha: 0.06)
                               : AppColors.background,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
@@ -1368,7 +1368,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                               height: 40,
                               decoration: BoxDecoration(
                                 color: sel
-                                    ? AppColors.primary.withOpacity(0.12)
+                                    ? AppColors.primary.withValues(alpha: 0.12)
                                     : AppColors.surface,
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -1621,7 +1621,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                         color: const Color(0xFFFEF2F2),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: AppColors.error.withOpacity(0.3),
+                          color: AppColors.error.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Row(
@@ -1736,7 +1736,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withOpacity(0.3),
+                            color: AppColors.primary.withValues(alpha: 0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -1829,7 +1829,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                       color: const Color(0xFFFFF1F1),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: AppColors.error.withOpacity(0.2),
+                        color: AppColors.error.withValues(alpha: 0.2),
                       ),
                     ),
                     child: Row(
@@ -1837,7 +1837,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: AppColors.error.withOpacity(0.1),
+                            color: AppColors.error.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Icon(
@@ -1921,7 +1921,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: AppColors.error.withOpacity(0.6),
+                          color: AppColors.error.withValues(alpha: 0.6),
                         ),
                       ),
                     ),
@@ -1947,7 +1947,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.error.withOpacity(0.1),
+                          color: AppColors.error.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -1990,7 +1990,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: proofFile != null
-                              ? AppColors.error.withOpacity(0.3)
+                              ? AppColors.error.withValues(alpha: 0.3)
                               : AppColors.border,
                         ),
                       ),

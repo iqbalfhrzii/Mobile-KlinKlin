@@ -66,7 +66,7 @@ class _HrdMainShellState extends State<HrdMainShell> {
         if (widget.requirePinChange)
           Positioned.fill(
             child: Container(
-              color: Colors.black.withOpacity(0.85),
+              color: Colors.black.withValues(alpha: 0.85),
               child: SafeArea(
                 child: Center(
                   child: Container(
@@ -77,7 +77,7 @@ class _HrdMainShellState extends State<HrdMainShell> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
+                          color: Colors.black.withValues(alpha: 0.2),
                           blurRadius: 24,
                           offset: const Offset(0, 8),
                         ),
@@ -91,7 +91,7 @@ class _HrdMainShellState extends State<HrdMainShell> {
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFF3CD),
                             shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFFFFC107).withOpacity(0.3), width: 4),
+                            border: Border.all(color: const Color(0xFFFFC107).withValues(alpha: 0.3), width: 4),
                           ),
                           child: const Icon(Icons.lock_reset_rounded, size: 40, color: Color(0xFFE6A300)),
                         ),
@@ -153,7 +153,7 @@ class _HrdMainShellState extends State<HrdMainShell> {
         border: const Border(top: BorderSide(color: AppColors.border)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.06),
+            color: AppColors.primary.withValues(alpha: 0.06),
             blurRadius: 20,
             offset: const Offset(0, -4),
           ),

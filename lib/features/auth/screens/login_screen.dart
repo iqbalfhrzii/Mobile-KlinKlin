@@ -74,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 20,
                           ),
                         ],
@@ -107,7 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       'Selamat Datang,',
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 0.7),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -128,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 0.7),
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -144,21 +144,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: InputDecoration(
                         hintText: 'Masukkan email kamu',
                         hintStyle: GoogleFonts.inter(
-                          color: Colors.white.withOpacity(0.4),
+                          color: Colors.white.withValues(alpha: 0.4),
                           fontSize: 14,
                         ),
                         filled: true,
-                        fillColor: Colors.white.withOpacity(0.15),
+                        fillColor: Colors.white.withValues(alpha: 0.15),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
                           borderSide: BorderSide(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                           ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
                           borderSide: BorderSide(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
@@ -170,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         prefixIcon: Icon(
                           Icons.email_outlined,
-                          color: Colors.white.withOpacity(0.5),
+                          color: Colors.white.withValues(alpha: 0.5),
                           size: 18,
                         ),
                         contentPadding: const EdgeInsets.symmetric(
@@ -234,7 +234,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         '© 2026 KlinKlin · Cleaning Service App',
                         style: GoogleFonts.inter(
                           fontSize: 11,
-                          color: Colors.white.withOpacity(0.4),
+                          color: Colors.white.withValues(alpha: 0.4),
                         ),
                       ),
                     ),
@@ -254,7 +254,7 @@ class _LoginScreenState extends State<LoginScreen> {
     height: size,
     decoration: BoxDecoration(
       shape: BoxShape.circle,
-      color: Colors.white.withOpacity(opacity),
+      color: Colors.white.withValues(alpha: opacity),
     ),
   );
 }

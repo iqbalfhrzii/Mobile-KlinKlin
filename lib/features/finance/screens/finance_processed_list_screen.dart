@@ -105,7 +105,7 @@ class _FinanceProcessedListScreenState extends State<FinanceProcessedListScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Riwayat / Selesai', style: GoogleFonts.inter(
-                  fontSize: 11, color: Colors.white.withOpacity(0.7))),
+                  fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
               Text('Pesanan Diproses', style: GoogleFonts.inter(
                   fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
             ],
@@ -176,7 +176,7 @@ class _FinanceProcessedListScreenState extends State<FinanceProcessedListScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
+                  color: statusColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(

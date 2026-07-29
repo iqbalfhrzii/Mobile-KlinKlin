@@ -222,7 +222,7 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
                               children: [
                                 CircleAvatar(
                                   radius: 20,
-                                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                                   backgroundImage: k['foto_profil'] != null ? NetworkImage(k['foto_profil']) : null,
                                   child: k['foto_profil'] == null ? Text(k['nama'][0].toUpperCase(), style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)) : null,
                                 ),
@@ -347,7 +347,7 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Column(
           children: [
@@ -381,7 +381,7 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(p['jenis'].toString().toUpperCase(), style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold)),

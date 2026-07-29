@@ -67,14 +67,14 @@ class GajiPokokDetailScreen extends StatelessWidget {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
-                        BoxShadow(color: Colors.grey.withOpacity(0.08), blurRadius: 16, offset: const Offset(0, 6)),
+                        BoxShadow(color: Colors.grey.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 6)),
                       ],
                     ),
                     child: Column(
                       children: [
                         CircleAvatar(
                           radius: 36,
-                          backgroundColor: Colors.teal.withOpacity(0.1),
+                          backgroundColor: Colors.teal.withValues(alpha: 0.1),
                           child: const Icon(Icons.monetization_on_rounded, size: 36, color: Colors.teal),
                         ),
                         const SizedBox(height: 16),
@@ -86,7 +86,7 @@ class GajiPokokDetailScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
+                            color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -111,7 +111,7 @@ class GajiPokokDetailScreen extends StatelessWidget {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
-                        BoxShadow(color: Colors.grey.withOpacity(0.08), blurRadius: 16, offset: const Offset(0, 6)),
+                        BoxShadow(color: Colors.grey.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 6)),
                       ],
                     ),
                     child: Column(

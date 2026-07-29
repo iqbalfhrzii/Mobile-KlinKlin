@@ -530,14 +530,14 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
                         fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
                 Text('Unduh data Order & Gaji ke file CSV/Excel',
                     style: GoogleFonts.inter(
-                        fontSize: 11, color: Colors.white.withOpacity(0.8))),
+                        fontSize: 11, color: Colors.white.withValues(alpha: 0.8))),
               ],
             ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(

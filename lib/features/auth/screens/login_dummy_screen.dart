@@ -73,7 +73,7 @@ class _LoginDummyScreenState extends State<LoginDummyScreen> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20),
                         ],
                       ),
                       child: Row(
@@ -91,7 +91,7 @@ class _LoginDummyScreenState extends State<LoginDummyScreen> {
 
                     const SizedBox(height: 32),
                     Text('Selamat Datang,', style: GoogleFonts.inter(
-                      fontSize: 14, color: Colors.white.withOpacity(0.7),
+                      fontSize: 14, color: Colors.white.withValues(alpha: 0.7),
                     )),
                     const SizedBox(height: 4),
                     Text('Masuk ke Akun\nAnda (Demo)', style: GoogleFonts.inter(
@@ -103,7 +103,7 @@ class _LoginDummyScreenState extends State<LoginDummyScreen> {
                     // Email input
                     Text('Email', style: GoogleFonts.inter(
                       fontSize: 12, fontWeight: FontWeight.w600,
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                       letterSpacing: 0.5,
                     )),
                     const SizedBox(height: 8),
@@ -115,24 +115,24 @@ class _LoginDummyScreenState extends State<LoginDummyScreen> {
                       decoration: InputDecoration(
                         hintText: 'Masukkan email kamu',
                         hintStyle: GoogleFonts.inter(
-                          color: Colors.white.withOpacity(0.4), fontSize: 14,
+                          color: Colors.white.withValues(alpha: 0.4), fontSize: 14,
                         ),
                         filled: true,
-                        fillColor: Colors.white.withOpacity(0.15),
+                        fillColor: Colors.white.withValues(alpha: 0.15),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
                           borderSide: const BorderSide(color: Colors.white, width: 1.5),
                         ),
                         prefixIcon: Icon(Icons.email_outlined,
-                          color: Colors.white.withOpacity(0.5), size: 18),
+                          color: Colors.white.withValues(alpha: 0.5), size: 18),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       ),
                     ),
@@ -177,7 +177,7 @@ class _LoginDummyScreenState extends State<LoginDummyScreen> {
                       child: Text(
                         '© 2026 KlinKlin · Customer Service App (Demo)',
                         style: GoogleFonts.inter(
-                          fontSize: 11, color: Colors.white.withOpacity(0.4),
+                          fontSize: 11, color: Colors.white.withValues(alpha: 0.4),
                         ),
                       ),
                     ),
@@ -197,7 +197,7 @@ class _LoginDummyScreenState extends State<LoginDummyScreen> {
     height: size,
     decoration: BoxDecoration(
       shape: BoxShape.circle,
-      color: Colors.white.withOpacity(opacity),
+      color: Colors.white.withValues(alpha: opacity),
     ),
   );
 }

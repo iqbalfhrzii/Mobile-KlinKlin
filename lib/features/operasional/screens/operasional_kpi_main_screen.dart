@@ -50,14 +50,14 @@ class _OperasionalKpiMainScreenState extends State<OperasionalKpiMainScreen> wit
                   'Laporan pencapaian target cabang, cleaner & CS',
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
                 const SizedBox(height: 16),
                 Container(
                   height: 42,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
+                    color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: TabBar(
@@ -67,7 +67,7 @@ class _OperasionalKpiMainScreenState extends State<OperasionalKpiMainScreen> wit
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 4,
                           offset: const Offset(0, 2),
                         ),
@@ -75,7 +75,7 @@ class _OperasionalKpiMainScreenState extends State<OperasionalKpiMainScreen> wit
                     ),
                     indicatorSize: TabBarIndicatorSize.tab,
                     labelColor: AppColors.primary,
-                    unselectedLabelColor: Colors.white.withOpacity(0.8),
+                    unselectedLabelColor: Colors.white.withValues(alpha: 0.8),
                     labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
                     unselectedLabelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500),
                     dividerColor: Colors.transparent,

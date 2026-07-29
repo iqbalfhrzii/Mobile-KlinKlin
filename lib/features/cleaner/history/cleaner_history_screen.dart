@@ -93,14 +93,14 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
                       children: [
                         Text('Riwayat Pekerjaan', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
                         const SizedBox(height: 4),
-                        Text('Daftar pekerjaan selesai dan bonusmu', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withOpacity(0.8))),
+                        Text('Daftar pekerjaan selesai dan bonusmu', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.8))),
                       ],
                     ),
                   ),
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.history_rounded, color: Colors.white),
@@ -126,7 +126,7 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline_rounded, size: 64, color: AppColors.error.withOpacity(0.5)),
+            Icon(Icons.error_outline_rounded, size: 64, color: AppColors.error.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text(
               _error,
@@ -189,7 +189,7 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.textMuted.withOpacity(0.08),
+            color: AppColors.textMuted.withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -303,14 +303,14 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+          colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
+            color: AppColors.primary.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -322,7 +322,7 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
             'Total Bonus Terkumpul',
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
             ),
           ),
           const SizedBox(height: 8),
@@ -354,7 +354,7 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.textMuted.withOpacity(0.08),
+            color: AppColors.textMuted.withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),

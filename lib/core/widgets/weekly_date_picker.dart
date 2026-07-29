@@ -204,12 +204,12 @@ class _WeeklyDatePickerState extends State<WeeklyDatePicker> {
                     color: isSelected ? AppColors.primary : AppColors.surface,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isSelected ? AppColors.primary : (_isAllTime ? AppColors.border.withOpacity(0.5) : AppColors.border),
+                      color: isSelected ? AppColors.primary : (_isAllTime ? AppColors.border.withValues(alpha: 0.5) : AppColors.border),
                     ),
                     boxShadow: [
                       if (isSelected)
                         BoxShadow(
-                          color: AppColors.primary.withOpacity(0.3),
+                          color: AppColors.primary.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         )
@@ -225,7 +225,7 @@ class _WeeklyDatePickerState extends State<WeeklyDatePicker> {
                         style: GoogleFonts.inter(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
-                          color: isSelected ? Colors.white.withOpacity(0.8) : (_isAllTime ? AppColors.textMuted.withOpacity(0.5) : AppColors.textMuted),
+                          color: isSelected ? Colors.white.withValues(alpha: 0.8) : (_isAllTime ? AppColors.textMuted.withValues(alpha: 0.5) : AppColors.textMuted),
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -234,7 +234,7 @@ class _WeeklyDatePickerState extends State<WeeklyDatePicker> {
                         style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: isSelected ? Colors.white : (_isAllTime ? AppColors.textMuted.withOpacity(0.5) : AppColors.textDark),
+                          color: isSelected ? Colors.white : (_isAllTime ? AppColors.textMuted.withValues(alpha: 0.5) : AppColors.textDark),
                         ),
                       ),
                       if (isSelected) ...[

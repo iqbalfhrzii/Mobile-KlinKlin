@@ -116,7 +116,7 @@ class _PelangganListScreenState extends State<PelangganListScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.grey.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: Colors.grey.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -163,10 +163,10 @@ class _PelangganListScreenState extends State<PelangganListScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
         boxShadow: [
           BoxShadow(
-            color: Colors.blueAccent.withOpacity(0.05),
+            color: Colors.blueAccent.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -181,7 +181,7 @@ class _PelangganListScreenState extends State<PelangganListScreen> {
               children: [
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                   child: Text(
                     pelanggan.namaPelanggan.isNotEmpty ? pelanggan.namaPelanggan[0].toUpperCase() : '?',
                     style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 18),
@@ -277,7 +277,7 @@ class _PelangganListScreenState extends State<PelangganListScreen> {
                   ),
                 ),
               ),
-              Container(width: 1, height: 24, color: Colors.grey.withOpacity(0.2)),
+              Container(width: 1, height: 24, color: Colors.grey.withValues(alpha: 0.2)),
               Expanded(
                 child: TextButton.icon(
                   onPressed: () => _deletePelanggan(pelanggan),
@@ -335,7 +335,7 @@ class _PelangganListScreenState extends State<PelangganListScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.people_alt_outlined, size: 64, color: Colors.grey.withOpacity(0.5)),
+                            Icon(Icons.people_alt_outlined, size: 64, color: Colors.grey.withValues(alpha: 0.5)),
                             const SizedBox(height: 16),
                             Text('Belum ada data pelanggan', style: GoogleFonts.inter(color: Colors.grey)),
                           ],

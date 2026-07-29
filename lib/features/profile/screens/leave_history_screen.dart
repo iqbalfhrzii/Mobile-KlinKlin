@@ -69,7 +69,7 @@ class _LeaveHistoryScreenState extends State<LeaveHistoryScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text('Daftar pengajuan cuti dan izin Anda', style: GoogleFonts.inter(
-                  fontSize: 14, color: Colors.white.withOpacity(0.8),
+                  fontSize: 14, color: Colors.white.withValues(alpha: 0.8),
                 )),
               ],
             ),
@@ -131,7 +131,7 @@ class _LeaveHistoryScreenState extends State<LeaveHistoryScreen> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: _getStatusColor(item['status']).withOpacity(0.1),
+                                        color: _getStatusColor(item['status']).withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Text(

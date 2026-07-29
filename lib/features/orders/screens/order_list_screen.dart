@@ -336,7 +336,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                     'Manajemen',
                     style: GoogleFonts.inter(
                       fontSize: 11,
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                     ),
                   ),
                   Text(
@@ -356,7 +356,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(

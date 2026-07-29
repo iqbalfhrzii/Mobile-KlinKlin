@@ -316,7 +316,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                                 borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.06),
+                                    color: Colors.black.withValues(alpha: 0.06),
                                     blurRadius: 8,
                                     offset: const Offset(0, 4),
                                   ),
@@ -343,7 +343,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                                     shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
+                                        color: Colors.black.withValues(alpha: 0.1),
                                         blurRadius: 4,
                                       ),
                                     ],
@@ -624,10 +624,10 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.06),
+            color: AppColors.primary.withValues(alpha: 0.06),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -650,7 +650,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.statusProgress.withOpacity(0.1),
+                  color: AppColors.statusProgress.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -684,7 +684,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.statusProgress.withOpacity(0.1),
+                  color: AppColors.statusProgress.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -776,7 +776,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.statusDone.withOpacity(0.3)),
+        border: Border.all(color: AppColors.statusDone.withValues(alpha: 0.3)),
         boxShadow: [AppColors.cardShadow],
       ),
       child: Column(
@@ -796,7 +796,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.statusDone.withOpacity(0.1),
+                  color: AppColors.statusDone.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -816,7 +816,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.statusDone.withOpacity(0.1),
+                  color: AppColors.statusDone.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -925,7 +925,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.statusPending.withOpacity(0.1),
+                  color: AppColors.statusPending.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -945,7 +945,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -1077,7 +1077,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontStyle: FontStyle.italic,
-                          color: const Color(0xFFAD6800).withOpacity(0.8),
+                          color: const Color(0xFFAD6800).withValues(alpha: 0.8),
                         ),
                       ),
                     ],
@@ -1148,7 +1148,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                                 BoxShadow(
                                   color: const Color(
                                     0xFF0F172A,
-                                  ).withOpacity(0.04),
+                                  ).withValues(alpha: 0.04),
                                   blurRadius: 15,
                                   offset: const Offset(0, 4),
                                 ),
@@ -1176,7 +1176,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                                             BoxShadow(
                                               color: const Color(
                                                 0xFF2563EB,
-                                              ).withOpacity(0.3),
+                                              ).withValues(alpha: 0.3),
                                               blurRadius: 8,
                                               offset: const Offset(0, 3),
                                             ),
@@ -1239,7 +1239,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                                             decoration: BoxDecoration(
                                               color: const Color(
                                                 0xFF25D366,
-                                              ).withOpacity(0.15),
+                                              ).withValues(alpha: 0.15),
                                               shape: BoxShape.circle,
                                             ),
                                             child: const WhatsAppIcon(
@@ -1542,7 +1542,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                                   BoxShadow(
                                     color: const Color(
                                       0xFF0F172A,
-                                    ).withOpacity(0.03),
+                                    ).withValues(alpha: 0.03),
                                     blurRadius: 10,
                                     offset: const Offset(0, 2),
                                   ),
@@ -1635,7 +1635,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                                   BoxShadow(
                                     color: const Color(
                                       0xFFF59E0B,
-                                    ).withOpacity(0.15),
+                                    ).withValues(alpha: 0.15),
                                     blurRadius: 12,
                                     offset: const Offset(0, 4),
                                   ),
@@ -1745,7 +1745,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                     '#$orderId',
                     style: GoogleFonts.inter(
                       fontSize: 11,
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -1766,19 +1766,19 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
     switch (status) {
       case 'assigned':
       case 'notified':
-        bg = AppColors.statusPending.withOpacity(0.1);
+        bg = AppColors.statusPending.withValues(alpha: 0.1);
         fg = AppColors.statusPending;
         text = 'Siap Dikerjakan';
         icon = Icons.play_circle_outline;
         break;
       case 'in_progress':
-        bg = AppColors.statusProgress.withOpacity(0.1);
+        bg = AppColors.statusProgress.withValues(alpha: 0.1);
         fg = AppColors.statusProgress;
         text = 'Sedang Dikerjakan';
         icon = Icons.timelapse;
         break;
       case 'finished':
-        bg = AppColors.statusDone.withOpacity(0.1);
+        bg = AppColors.statusDone.withValues(alpha: 0.1);
         fg = AppColors.statusDone;
         text = 'Selesai';
         icon = Icons.check_circle_outline;

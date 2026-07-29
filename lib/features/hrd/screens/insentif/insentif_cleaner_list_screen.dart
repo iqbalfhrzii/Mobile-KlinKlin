@@ -147,7 +147,7 @@ class _InsentifCleanerListScreenState extends State<InsentifCleanerListScreen> {
                   'Pantau dan kelola insentif / bonus cleaner',
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -211,7 +211,7 @@ class _InsentifCleanerListScreenState extends State<InsentifCleanerListScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<int?>(
@@ -371,10 +371,10 @@ class _InsentifCleanerListScreenState extends State<InsentifCleanerListScreen> {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.04),
+                                  color: Colors.black.withValues(alpha: 0.04),
                                   blurRadius: 10,
                                   offset: const Offset(0, 4),
                                 ),
@@ -384,7 +384,7 @@ class _InsentifCleanerListScreenState extends State<InsentifCleanerListScreen> {
                               children: [
                                 CircleAvatar(
                                   radius: 22,
-                                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                                   child: Text(
                                     item.namaCleaner.isNotEmpty ? item.namaCleaner[0].toUpperCase() : 'C',
                                     style: GoogleFonts.inter(
@@ -647,7 +647,7 @@ class _InsentifDetailBottomSheetState extends State<_InsentifDetailBottomSheet> 
                     decoration: BoxDecoration(
                       color: AppColors.background,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                      border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
                     ),
                     child: Row(
                       children: [
@@ -740,7 +740,7 @@ class _InsentifDetailBottomSheetState extends State<_InsentifDetailBottomSheet> 
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.grey.withOpacity(0.25)),
+                            border: Border.all(color: Colors.grey.withValues(alpha: 0.25)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,

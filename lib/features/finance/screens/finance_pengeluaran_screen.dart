@@ -109,7 +109,7 @@ class _FinancePengeluaranScreenState extends State<FinancePengeluaranScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Pengeluaran', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-                      Text('Daftar Pengeluaran Operasional', style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withOpacity(0.8))),
+                      Text('Daftar Pengeluaran Operasional', style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.8))),
                     ],
                   ),
                 ),
@@ -167,9 +167,9 @@ class _FinancePengeluaranScreenState extends State<FinancePengeluaranScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
+                  color: Colors.red.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -202,7 +202,7 @@ class _FinancePengeluaranScreenState extends State<FinancePengeluaranScreen> {
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(color: Colors.grey.shade200),
                                   boxShadow: [
-                                    BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2)),
+                                    BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
                                   ],
                                 ),
                                 child: Column(

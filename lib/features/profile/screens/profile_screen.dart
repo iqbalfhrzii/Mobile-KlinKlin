@@ -141,11 +141,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(_userRole, style: GoogleFonts.inter(
-                  fontSize: 11, color: Colors.white.withOpacity(0.85),
+                  fontSize: 11, color: Colors.white.withValues(alpha: 0.85),
                 )),
               ),
               if (_userBranch != '-') ...[
@@ -153,11 +153,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
+                    color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text('📍 $_userBranch', style: GoogleFonts.inter(
-                    fontSize: 11, color: Colors.white.withOpacity(0.85),
+                    fontSize: 11, color: Colors.white.withValues(alpha: 0.85),
                   )),
                 ),
               ],
@@ -172,7 +172,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildAvatar() {
     if (_userPhoto == null || _userPhoto!.isEmpty) {
-      return InitialsAvatar(name: _userName, size: 72, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35));
+      return InitialsAvatar(name: _userName, size: 72, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35));
     }
     
     if (_userPhoto!.startsWith('data:image')) {
@@ -180,19 +180,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final base64Str = _userPhoto!.split(',').last;
         return ClipOval(child: Image.memory(base64Decode(base64Str), width: 72, height: 72, fit: BoxFit.cover));
       } catch (_) {
-        return InitialsAvatar(name: _userName, size: 72, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35));
+        return InitialsAvatar(name: _userName, size: 72, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35));
       }
     }
     
     if (_userPhoto!.startsWith('http')) {
-      return ClipOval(child: Image.network(_userPhoto!, width: 72, height: 72, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 72, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35))));
+      return ClipOval(child: Image.network(_userPhoto!, width: 72, height: 72, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 72, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35))));
     }
     
     if (_userPhoto!.startsWith('/')) {
-      return ClipOval(child: Image.file(File(_userPhoto!), width: 72, height: 72, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 72, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35))));
+      return ClipOval(child: Image.file(File(_userPhoto!), width: 72, height: 72, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 72, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35))));
     }
     
-    return ClipOval(child: Image.network('http://192.168.1.242:8000/storage/$_userPhoto', width: 72, height: 72, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 72, backgroundColor: Colors.white.withOpacity(0.2), textColor: Colors.white, borderColor: Colors.white.withOpacity(0.35))));
+    return ClipOval(child: Image.network('http://192.168.1.242:8000/storage/$_userPhoto', width: 72, height: 72, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 72, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35))));
   }
 
   Widget _buildInfoCard() {

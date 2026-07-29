@@ -127,7 +127,7 @@ class _ChatHarianScreenState extends State<ChatHarianScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text('Masukkan jumlah chat dan orderan yang masuk hari ini', style: GoogleFonts.inter(
-                  fontSize: 14, color: Colors.white.withOpacity(0.8),
+                  fontSize: 14, color: Colors.white.withValues(alpha: 0.8),
                 )),
               ],
             ),
@@ -214,7 +214,7 @@ class _ChatHarianScreenState extends State<ChatHarianScreen> {
           _buildCard(
             title: 'CLOSING',
             titleColor: const Color(0xFF059669),
-            borderColor: const Color(0xFF059669).withOpacity(0.3),
+            borderColor: const Color(0xFF059669).withValues(alpha: 0.3),
             child: Column(
               children: [
                 Row(

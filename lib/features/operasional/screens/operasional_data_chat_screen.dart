@@ -128,7 +128,7 @@ class _OperasionalDataChatScreenState extends State<OperasionalDataChatScreen> {
                         '0 laporan',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                         ),
                       ),
                     ],
@@ -267,7 +267,7 @@ class _OperasionalDataChatScreenState extends State<OperasionalDataChatScreen> {
         children: [
           Text(
             'CLOSING RATE — CUSTOMER BARU',
-            style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withOpacity(0.8), fontWeight: FontWeight.bold),
+            style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.8), fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           Row(
@@ -287,7 +287,7 @@ class _OperasionalDataChatScreenState extends State<OperasionalDataChatScreen> {
           const SizedBox(height: 8),
           Text(
             '${summary['closing_baru']} closing dari ${summary['chat_baru']} chat customer baru • ${summary['hari_lapor']} hari lapor',
-            style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withOpacity(0.8)),
+            style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.8)),
           ),
           const SizedBox(height: 20),
           Row(
@@ -296,14 +296,14 @@ class _OperasionalDataChatScreenState extends State<OperasionalDataChatScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Chat Baru', style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withOpacity(0.8))),
+                  Text('Chat Baru', style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.8))),
                   Text('${summary['chat_baru']}', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                 ],
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Closing Baru', style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withOpacity(0.8))),
+                  Text('Closing Baru', style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.8))),
                   Text('${summary['closing_baru']}', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                 ],
               ),
@@ -336,7 +336,7 @@ class _OperasionalDataChatScreenState extends State<OperasionalDataChatScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.2),
+                  color: Colors.orange.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -406,7 +406,7 @@ class _OperasionalDataChatScreenState extends State<OperasionalDataChatScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.2),
+                  color: Colors.grey.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -472,7 +472,7 @@ class _OperasionalDataChatScreenState extends State<OperasionalDataChatScreen> {
             border: Border.all(color: Colors.grey.shade200, width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.05),
+                color: Colors.grey.withValues(alpha: 0.05),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -490,7 +490,7 @@ class _OperasionalDataChatScreenState extends State<OperasionalDataChatScreen> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(Icons.storefront_rounded, color: AppColors.primary, size: 18),
@@ -596,9 +596,9 @@ class _OperasionalDataChatScreenState extends State<OperasionalDataChatScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.06),
+        color: color.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [

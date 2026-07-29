@@ -160,7 +160,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                         'Kinerja pendapatan & penjualan',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                         ),
                       ),
                     ],
@@ -168,7 +168,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                 ),
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
+                    color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: IconButton(
@@ -404,7 +404,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.25),
+                    color: AppColors.primary.withValues(alpha: 0.25),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -452,7 +452,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -492,7 +492,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: valueColor.withOpacity(0.1),
+                    color: valueColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -542,14 +542,14 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [AppColors.primary, AppColors.primary.withOpacity(0.85)],
+              colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.85)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withOpacity(0.3),
+                color: AppColors.primary.withValues(alpha: 0.3),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -577,8 +577,8 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                     ),
                     decoration: BoxDecoration(
                       color: isTotalPos
-                          ? Colors.green.shade400.withOpacity(0.3)
-                          : Colors.red.shade400.withOpacity(0.3),
+                          ? Colors.green.shade400.withValues(alpha: 0.3)
+                          : Colors.red.shade400.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: isTotalPos
@@ -629,7 +629,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.12),
+                  color: Colors.white.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -679,7 +679,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
               border: Border.all(color: Colors.grey.shade200),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
+                  color: Colors.black.withValues(alpha: 0.02),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -696,7 +696,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
+                            color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
@@ -930,7 +930,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.orange.withOpacity(0.3),
+                color: Colors.orange.withValues(alpha: 0.3),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -1028,7 +1028,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
               border: Border.all(color: Colors.grey.shade200),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
+                  color: Colors.black.withValues(alpha: 0.02),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -1042,7 +1042,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
@@ -1123,7 +1123,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
+        color: Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -1186,7 +1186,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: color.shade50.withOpacity(0.5),
+        color: color.shade50.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: color.shade100),
       ),
@@ -1270,7 +1270,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
             border: Border.all(color: Colors.grey.shade200),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(alpha: 0.03),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -1286,7 +1286,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                   vertical: 14,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.06),
+                  color: AppColors.primary.withValues(alpha: 0.06),
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(16),
                   ),
@@ -1397,7 +1397,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.12),
+                            color: Colors.orange.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -1554,7 +1554,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -1610,7 +1610,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: progress.clamp(0.0, 1.0),
-              backgroundColor: color.withOpacity(0.1),
+              backgroundColor: color.withValues(alpha: 0.1),
               valueColor: AlwaysStoppedAnimation<Color>(color),
               minHeight: 6,
             ),
