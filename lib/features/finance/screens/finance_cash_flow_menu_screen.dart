@@ -316,7 +316,7 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
                     color: AppColors.statusPendingBg,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text('Menunggu Approval', style: GoogleFonts.inter(
+                  child: Text('Pending', style: GoogleFonts.inter(
                     fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.statusPending)),
                 ),
               ],

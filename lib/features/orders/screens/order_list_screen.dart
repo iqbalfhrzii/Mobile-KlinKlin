@@ -40,7 +40,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
   String _statusBonusFilter = 'Semua';
   String _periodFilter = 'weekly_date';
   DateTimeRange? _customRange;
-  
+
   DateTime? _filterStart;
   DateTime? _filterEnd;
 
@@ -60,26 +60,29 @@ class _OrderListScreenState extends State<OrderListScreen> {
     'assigned': 'Ditugaskan',
     'inProgress': 'Dikerjakan',
     'finishedByCleaner': 'Selesai (Cleaner)',
-    'waitingPaymentApproval': 'Menunggu Approve',
+    'waitingPaymentApproval': 'Pending',
     'completed': 'Selesai',
     'cancelled': 'Dibatalkan',
   };
 
-  static const _statusUtamaFilters = ['Semua', 'Selesai', 'Process', 'Pending', 'Draft', 'Dibatalkan'];
+  static const _statusUtamaFilters = [
+    'Semua',
+    'Selesai',
+    'Process',
+    'Pending',
+    'Draft',
+    'Dibatalkan',
+  ];
   static const _statusPembayaranFilters = [
     'Semua',
     'Belum Dibayar',
-    'Menunggu Approval',
+    'Pending',
     'Disetujui',
     'Ditolak',
     'Dibatalkan',
   ];
 
-  static const _statusBonusFilters = [
-    'Semua',
-    'Pending',
-    'Selesai',
-  ];
+  static const _statusBonusFilters = ['Semua', 'Pending', 'Selesai'];
 
   @override
   void initState() {
@@ -117,45 +120,91 @@ class _OrderListScreenState extends State<OrderListScreen> {
           o.customer.name.toLowerCase().contains(q) ||
           o.customer.phone.toLowerCase().contains(q) ||
           o.services.any((s) => s.name.toLowerCase().contains(q));
-      final matchStatusPengerjaan = _statusFilter == 'Semua' || o.status.name == _statusFilter;
-      
-      final matchStatusUtama = _statusUtamaFilter == 'Semua' || 
-          (o.statusUtamaLabel.toLowerCase() == (_statusUtamaFilter.toLowerCase() == 'selesai' ? 'done' : _statusUtamaFilter.toLowerCase()));
-          
-      final matchStatusPembayaran = _statusPembayaranFilter == 'Semua' || 
-          o.statusPembayaranLabel.toLowerCase() == _statusPembayaranFilter.toLowerCase();
-      final matchStatusBonus = _statusBonusFilter == 'Semua' || 
+      final matchStatusPengerjaan =
+          _statusFilter == 'Semua' || o.status.name == _statusFilter;
+
+      final matchStatusUtama =
+          _statusUtamaFilter == 'Semua' ||
+          (o.statusUtamaLabel.toLowerCase() ==
+              (_statusUtamaFilter.toLowerCase() == 'selesai'
+                  ? 'done'
+                  : _statusUtamaFilter.toLowerCase()));
+
+      final matchStatusPembayaran =
+          _statusPembayaranFilter == 'Semua' ||
+          o.statusPembayaranLabel.toLowerCase() ==
+              _statusPembayaranFilter.toLowerCase();
+      final matchStatusBonus =
+          _statusBonusFilter == 'Semua' ||
           o.statusBonusLabel.toLowerCase() == _statusBonusFilter.toLowerCase();
-      
+
       bool matchDate = true;
       if (q.isEmpty) {
         final dt = o.scheduleDateTime;
         if (_periodFilter == 'semua') {
           matchDate = true;
-        } else if (_periodFilter == 'weekly_date' && _filterStart != null && _filterEnd != null) {
-          final start = DateTime(_filterStart!.year, _filterStart!.month, _filterStart!.day);
-          final end = DateTime(_filterEnd!.year, _filterEnd!.month, _filterEnd!.day, 23, 59, 59);
+        } else if (_periodFilter == 'weekly_date' &&
+            _filterStart != null &&
+            _filterEnd != null) {
+          final start = DateTime(
+            _filterStart!.year,
+            _filterStart!.month,
+            _filterStart!.day,
+          );
+          final end = DateTime(
+            _filterEnd!.year,
+            _filterEnd!.month,
+            _filterEnd!.day,
+            23,
+            59,
+            59,
+          );
           matchDate = !dt.isBefore(start) && !dt.isAfter(end);
         } else {
           final now = DateTime.now();
           if (_periodFilter == 'hari_ini') {
-            matchDate = dt.year == now.year && dt.month == now.month && dt.day == now.day;
+            matchDate =
+                dt.year == now.year &&
+                dt.month == now.month &&
+                dt.day == now.day;
           } else if (_periodFilter == 'kemarin') {
             final yest = now.subtract(const Duration(days: 1));
-            matchDate = dt.year == yest.year && dt.month == yest.month && dt.day == yest.day;
+            matchDate =
+                dt.year == yest.year &&
+                dt.month == yest.month &&
+                dt.day == yest.day;
           } else if (_periodFilter == 'besok') {
             final tom = now.add(const Duration(days: 1));
-            matchDate = dt.year == tom.year && dt.month == tom.month && dt.day == tom.day;
+            matchDate =
+                dt.year == tom.year &&
+                dt.month == tom.month &&
+                dt.day == tom.day;
           } else if (_periodFilter == 'bulan_ini') {
             matchDate = dt.year == now.year && dt.month == now.month;
           } else if (_periodFilter == 'custom' && _customRange != null) {
-            final cStart = DateTime(_customRange!.start.year, _customRange!.start.month, _customRange!.start.day);
-            final cEnd = DateTime(_customRange!.end.year, _customRange!.end.month, _customRange!.end.day, 23, 59, 59);
+            final cStart = DateTime(
+              _customRange!.start.year,
+              _customRange!.start.month,
+              _customRange!.start.day,
+            );
+            final cEnd = DateTime(
+              _customRange!.end.year,
+              _customRange!.end.month,
+              _customRange!.end.day,
+              23,
+              59,
+              59,
+            );
             matchDate = !dt.isBefore(cStart) && !dt.isAfter(cEnd);
           }
         }
       }
-      return matchQ && matchStatusUtama && matchStatusPengerjaan && matchStatusPembayaran && matchStatusBonus && matchDate;
+      return matchQ &&
+          matchStatusUtama &&
+          matchStatusPengerjaan &&
+          matchStatusPembayaran &&
+          matchStatusBonus &&
+          matchDate;
     }).toList();
   }
 
@@ -331,7 +380,12 @@ class _OrderListScreenState extends State<OrderListScreen> {
       context: context,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
-      initialDateRange: _customRange ?? DateTimeRange(start: DateTime.now().subtract(const Duration(days: 7)), end: DateTime.now()),
+      initialDateRange:
+          _customRange ??
+          DateTimeRange(
+            start: DateTime.now().subtract(const Duration(days: 7)),
+            end: DateTime.now(),
+          ),
     );
     if (picked != null) {
       setState(() {
@@ -365,7 +419,10 @@ class _OrderListScreenState extends State<OrderListScreen> {
                       child: Container(
                         width: 40,
                         height: 4,
-                        decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -373,7 +430,14 @@ class _OrderListScreenState extends State<OrderListScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Filter Transaksi', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                        Text(
+                          'Filter Transaksi',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
+                          ),
+                        ),
                         IconButton(
                           onPressed: () => Navigator.pop(ctx),
                           icon: const Icon(Icons.close_rounded, size: 20),
@@ -385,9 +449,16 @@ class _OrderListScreenState extends State<OrderListScreen> {
                     const SizedBox(height: 16),
                     const Divider(height: 1),
                     const SizedBox(height: 16),
-  
+
                     // 1. Status Utama
-                    Text('Status Utama', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    Text(
+                      'Status Utama',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                    ),
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
@@ -404,9 +475,23 @@ class _OrderListScreenState extends State<OrderListScreen> {
                             }
                           },
                           selectedColor: const Color(0xFFEFF6FF),
-                          labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.w500, color: isSel ? const Color(0xFF1D4ED8) : AppColors.textDark),
-                          side: BorderSide(color: isSel ? const Color(0xFF3B82F6) : Colors.grey.shade300),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          labelStyle: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: isSel
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            color: isSel
+                                ? const Color(0xFF1D4ED8)
+                                : AppColors.textDark,
+                          ),
+                          side: BorderSide(
+                            color: isSel
+                                ? const Color(0xFF3B82F6)
+                                : Colors.grey.shade300,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           showCheckmark: false,
                         );
                       }).toList(),
@@ -414,7 +499,14 @@ class _OrderListScreenState extends State<OrderListScreen> {
                     const SizedBox(height: 20),
 
                     // 2. Status Pengerjaan
-                    Text('Status Pengerjaan', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    Text(
+                      'Status Pengerjaan',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                    ),
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
@@ -431,17 +523,38 @@ class _OrderListScreenState extends State<OrderListScreen> {
                             }
                           },
                           selectedColor: const Color(0xFFEFF6FF),
-                          labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.w500, color: isSel ? const Color(0xFF1D4ED8) : AppColors.textDark),
-                          side: BorderSide(color: isSel ? const Color(0xFF3B82F6) : Colors.grey.shade300),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          labelStyle: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: isSel
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            color: isSel
+                                ? const Color(0xFF1D4ED8)
+                                : AppColors.textDark,
+                          ),
+                          side: BorderSide(
+                            color: isSel
+                                ? const Color(0xFF3B82F6)
+                                : Colors.grey.shade300,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           showCheckmark: false,
                         );
                       }).toList(),
                     ),
                     const SizedBox(height: 20),
-  
+
                     // 3. Status Pembayaran
-                    Text('Status Pembayaran', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    Text(
+                      'Status Pembayaran',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                    ),
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
@@ -458,17 +571,38 @@ class _OrderListScreenState extends State<OrderListScreen> {
                             }
                           },
                           selectedColor: const Color(0xFFFFFBEB),
-                          labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.w500, color: isSel ? const Color(0xFFD97706) : AppColors.textDark),
-                          side: BorderSide(color: isSel ? const Color(0xFFF59E0B) : Colors.grey.shade300),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          labelStyle: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: isSel
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            color: isSel
+                                ? const Color(0xFFD97706)
+                                : AppColors.textDark,
+                          ),
+                          side: BorderSide(
+                            color: isSel
+                                ? const Color(0xFFF59E0B)
+                                : Colors.grey.shade300,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           showCheckmark: false,
                         );
                       }).toList(),
                     ),
                     const SizedBox(height: 20),
-  
+
                     // 4. Status Bonus
-                    Text('Status Bonus', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    Text(
+                      'Status Bonus',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                    ),
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
@@ -485,17 +619,38 @@ class _OrderListScreenState extends State<OrderListScreen> {
                             }
                           },
                           selectedColor: const Color(0xFFF3E8FF),
-                          labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.w500, color: isSel ? const Color(0xFF7E22CE) : AppColors.textDark),
-                          side: BorderSide(color: isSel ? const Color(0xFFA855F7) : Colors.grey.shade300),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          labelStyle: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: isSel
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            color: isSel
+                                ? const Color(0xFF7E22CE)
+                                : AppColors.textDark,
+                          ),
+                          side: BorderSide(
+                            color: isSel
+                                ? const Color(0xFFA855F7)
+                                : Colors.grey.shade300,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           showCheckmark: false,
                         );
                       }).toList(),
                     ),
                     const SizedBox(height: 20),
-  
+
                     // 5. Rentang Waktu
-                    Text('Rentang Waktu', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    Text(
+                      'Rentang Waktu',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                    ),
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
@@ -542,32 +697,66 @@ class _OrderListScreenState extends State<OrderListScreen> {
                               }
                             },
                             selectedColor: const Color(0xFFECFDF5),
-                            labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.w500, color: isSel ? const Color(0xFF047857) : AppColors.textDark),
-                            side: BorderSide(color: isSel ? const Color(0xFF10B981) : Colors.grey.shade300),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            labelStyle: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: isSel
+                                  ? FontWeight.bold
+                                  : FontWeight.w500,
+                              color: isSel
+                                  ? const Color(0xFF047857)
+                                  : AppColors.textDark,
+                            ),
+                            side: BorderSide(
+                              color: isSel
+                                  ? const Color(0xFF10B981)
+                                  : Colors.grey.shade300,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             showCheckmark: false,
                           );
                         }),
                         ActionChip(
-                          avatar: const Icon(Icons.calendar_month_rounded, size: 14, color: Color(0xFF4F46E5)),
+                          avatar: const Icon(
+                            Icons.calendar_month_rounded,
+                            size: 14,
+                            color: Color(0xFF4F46E5),
+                          ),
                           label: Text(
                             _periodFilter == 'custom' && _customRange != null
                                 ? '${DateFormat('dd/MM').format(_customRange!.start)} - ${DateFormat('dd/MM').format(_customRange!.end)}'
                                 : 'Pilih Tanggal',
-                            style: GoogleFonts.inter(fontSize: 12, fontWeight: _periodFilter == 'custom' ? FontWeight.bold : FontWeight.w500, color: _periodFilter == 'custom' ? const Color(0xFF4F46E5) : AppColors.textDark),
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: _periodFilter == 'custom'
+                                  ? FontWeight.bold
+                                  : FontWeight.w500,
+                              color: _periodFilter == 'custom'
+                                  ? const Color(0xFF4F46E5)
+                                  : AppColors.textDark,
+                            ),
                           ),
                           onPressed: () async {
                             Navigator.pop(ctx);
                             await _pickCustomRange();
                           },
-                          backgroundColor: _periodFilter == 'custom' ? const Color(0xFFEEF2FF) : Colors.white,
-                          side: BorderSide(color: _periodFilter == 'custom' ? const Color(0xFF6366F1) : Colors.grey.shade300),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          backgroundColor: _periodFilter == 'custom'
+                              ? const Color(0xFFEEF2FF)
+                              : Colors.white,
+                          side: BorderSide(
+                            color: _periodFilter == 'custom'
+                                ? const Color(0xFF6366F1)
+                                : Colors.grey.shade300,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 24),
-  
+
                     // Button Actions
                     Row(
                       children: [
@@ -598,9 +787,18 @@ class _OrderListScreenState extends State<OrderListScreen> {
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               side: BorderSide(color: Colors.grey.shade300),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
-                            child: Text('Reset', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                            child: Text(
+                              'Reset',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textDark,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -611,10 +809,19 @@ class _OrderListScreenState extends State<OrderListScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
                               padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                               elevation: 0,
                             ),
-                            child: Text('Terapkan Filter', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                            child: Text(
+                              'Terapkan Filter',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -687,10 +894,28 @@ class _OrderCard extends StatelessWidget {
 
     try {
       final dt = DateTime.parse(datePart);
-      final days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      final days = [
+        'Minggu',
+        'Senin',
+        'Selasa',
+        'Rabu',
+        'Kamis',
+        'Jumat',
+        'Sabtu',
+      ];
       final months = [
-        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+        'Januari',
+        'Februari',
+        'Maret',
+        'April',
+        'Mei',
+        'Juni',
+        'Juli',
+        'Agustus',
+        'September',
+        'Oktober',
+        'November',
+        'Desember',
       ];
       final dayNameReal = days[dt.weekday == 7 ? 0 : dt.weekday];
       final monthName = months[dt.month - 1];
@@ -818,7 +1043,11 @@ class _OrderCard extends StatelessWidget {
     );
   }
 
-  Widget _buildWAButton({required String label, required VoidCallback onTap, required bool isOutlined}) {
+  Widget _buildWAButton({
+    required String label,
+    required VoidCallback onTap,
+    required bool isOutlined,
+  }) {
     const color = Color(0xFF25D366);
     return InkWell(
       onTap: onTap,
@@ -881,7 +1110,7 @@ class _OrderCard extends StatelessWidget {
               color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 10,
               offset: const Offset(0, 4),
-            )
+            ),
           ],
         ),
         child: Column(
@@ -901,7 +1130,9 @@ class _OrderCard extends StatelessWidget {
                     ),
                     child: Center(
                       child: Text(
-                        o.customer.name.isNotEmpty ? o.customer.name.substring(0, 1).toUpperCase() : '?',
+                        o.customer.name.isNotEmpty
+                            ? o.customer.name.substring(0, 1).toUpperCase()
+                            : '?',
                         style: GoogleFonts.inter(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -928,11 +1159,17 @@ class _OrderCard extends StatelessWidget {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            Icon(Icons.location_on_rounded, size: 14, color: Colors.red.shade400),
+                            Icon(
+                              Icons.location_on_rounded,
+                              size: 14,
+                              color: Colors.red.shade400,
+                            ),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
-                                o.customer.address.isNotEmpty ? o.customer.address : '-',
+                                o.customer.address.isNotEmpty
+                                    ? o.customer.address
+                                    : '-',
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
                                   color: AppColors.textMuted,
@@ -951,9 +1188,13 @@ class _OrderCard extends StatelessWidget {
                 ],
               ),
             ),
-            
-            Divider(height: 1, thickness: 1, color: AppColors.border.withValues(alpha: 0.5)),
-            
+
+            Divider(
+              height: 1,
+              thickness: 1,
+              color: AppColors.border.withValues(alpha: 0.5),
+            ),
+
             // Details Grid
             Padding(
               padding: const EdgeInsets.all(16),
@@ -961,12 +1202,18 @@ class _OrderCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      _buildInfoItem(Icons.calendar_month_rounded, Colors.orange, dateStr),
+                      _buildInfoItem(
+                        Icons.calendar_month_rounded,
+                        Colors.orange,
+                        dateStr,
+                      ),
                       const SizedBox(width: 12),
                       _buildInfoItem(
-                        Icons.cleaning_services_rounded, 
-                        Colors.blue, 
-                        o.services.isNotEmpty ? o.services.map((s) => s.name).join(', ') : '-',
+                        Icons.cleaning_services_rounded,
+                        Colors.blue,
+                        o.services.isNotEmpty
+                            ? o.services.map((s) => s.name).join(', ')
+                            : '-',
                       ),
                     ],
                   ),
@@ -974,22 +1221,24 @@ class _OrderCard extends StatelessWidget {
                   Row(
                     children: [
                       _buildInfoItem(
-                        Icons.person_rounded, 
-                        Colors.purple, 
-                        o.cleaners.isNotEmpty ? o.cleaners.map((c) => c.name).join(', ') : 'Belum ada cleaner'
+                        Icons.person_rounded,
+                        Colors.purple,
+                        o.cleaners.isNotEmpty
+                            ? o.cleaners.map((c) => c.name).join(', ')
+                            : 'Belum ada cleaner',
                       ),
                       const SizedBox(width: 12),
                       _buildInfoItem(
-                        Icons.payments_rounded, 
-                        Colors.green, 
-                        o.paymentMethod.toUpperCase()
+                        Icons.payments_rounded,
+                        Colors.green,
+                        o.paymentMethod.toUpperCase(),
                       ),
                     ],
                   ),
                 ],
               ),
             ),
-            
+
             // Bottom Action Section
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -1007,7 +1256,11 @@ class _OrderCard extends StatelessWidget {
                     children: [
                       Text(
                         'Total Biaya',
-                        style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w500),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppColors.textMuted,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       Text(
                         _fmt(totalAkhir),
@@ -1052,7 +1305,12 @@ class _OrderCard extends StatelessWidget {
                                 (c) => c.phone.isNotEmpty,
                                 orElse: () => o.cleaners.first,
                               );
-                              _launchWA(context, withPhone.phone.isNotEmpty ? withPhone.phone : '');
+                              _launchWA(
+                                context,
+                                withPhone.phone.isNotEmpty
+                                    ? withPhone.phone
+                                    : '',
+                              );
                             },
                             isOutlined: false,
                           ),

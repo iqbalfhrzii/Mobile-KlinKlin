@@ -167,10 +167,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -181,48 +178,90 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                 );
                 return;
               }
-              final XFile? file = await picker.pickImage(
-                source: source,
-                imageQuality: 60,
-                maxWidth: 1024,
-                maxHeight: 1024,
-              );
-              if (file != null) {
-                setModalState(() {
-                  selectedPhotos.add(File(file.path));
-                });
+
+              if (source == ImageSource.gallery) {
+                final List<XFile>? files = await picker.pickMultiImage(
+                  imageQuality: 60,
+                  maxWidth: 1024,
+                  maxHeight: 1024,
+                );
+                if (files != null && files.isNotEmpty) {
+                  setModalState(() {
+                    for (var file in files) {
+                      if (selectedPhotos.length < 3) {
+                        selectedPhotos.add(File(file.path));
+                      }
+                    }
+                  });
+                }
+              } else {
+                final XFile? file = await picker.pickImage(
+                  source: source,
+                  imageQuality: 60,
+                  maxWidth: 1024,
+                  maxHeight: 1024,
+                );
+                if (file != null) {
+                  setModalState(() {
+                    selectedPhotos.add(File(file.path));
+                  });
+                }
               }
             }
 
-            return Padding(
+            return Container(
               padding: EdgeInsets.only(
-                top: 20,
-                left: 20,
-                right: 20,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                top: 24,
+                left: 24,
+                right: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Handle Bar
+                  Center(
+                    child: Container(
+                      width: 48,
+                      height: 5,
+                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        action == 'start' ? 'Foto Start Pekerjaan' : 'Foto Finish Pekerjaan',
-                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            action == 'start' ? 'Mulai Pekerjaan' : 'Selesaikan Pekerjaan',
+                            style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Upload 1 - 3 foto bukti.',
+                            style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B)),
+                          ),
+                        ],
                       ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(color: const Color(0xFFF1F5F9), shape: BoxShape.circle),
+                          child: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF64748B)),
+                        ),
                       ),
                     ],
                   ),
-                  Text(
-                    'Wajib pilih/ambil 2-3 foto pekerjaan.',
-                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
-                  ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
 
                   Row(
                     children: [
@@ -232,20 +271,18 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                         return Stack(
                           children: [
                             Container(
-                              margin: const EdgeInsets.only(right: 12),
-                              width: 80,
-                              height: 80,
+                              margin: const EdgeInsets.only(right: 14),
+                              width: 86,
+                              height: 86,
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                image: DecorationImage(
-                                  image: FileImage(f),
-                                  fit: BoxFit.cover,
-                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 4))],
+                                image: DecorationImage(image: FileImage(f), fit: BoxFit.cover),
                               ),
                             ),
                             Positioned(
-                              top: 2,
-                              right: 14,
+                              top: -4,
+                              right: 6,
                               child: GestureDetector(
                                 onTap: () {
                                   setModalState(() {
@@ -253,12 +290,13 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                                   });
                                 },
                                 child: Container(
-                                  padding: const EdgeInsets.all(2),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
                                     shape: BoxShape.circle,
+                                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)],
                                   ),
-                                  child: const Icon(Icons.close, size: 14, color: Colors.white),
+                                  child: const Icon(Icons.close_rounded, size: 16, color: Color(0xFFDC2626)),
                                 ),
                               ),
                             ),
@@ -270,67 +308,90 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                           onTap: () {
                             showModalBottomSheet(
                               context: context,
-                              builder: (_) => SafeArea(
-                                child: Wrap(
+                              backgroundColor: Colors.transparent,
+                              builder: (_) => Container(
+                                margin: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     ListTile(
-                                      leading: const Icon(Icons.camera_alt),
-                                      title: const Text('Kamera'),
+                                      leading: Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(10)),
+                                        child: const Icon(Icons.camera_alt_rounded, color: Color(0xFF2563EB)),
+                                      ),
+                                      title: Text('Ambil Foto Kamera', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: const Color(0xFF1E293B))),
                                       onTap: () {
                                         Navigator.pop(context);
                                         pickPhoto(ImageSource.camera);
                                       },
                                     ),
+                                    const Divider(height: 1, color: Color(0xFFF1F5F9)),
                                     ListTile(
-                                      leading: const Icon(Icons.photo_library),
-                                      title: const Text('Galeri'),
+                                      leading: Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(color: const Color(0xFFF5F3FF), borderRadius: BorderRadius.circular(10)),
+                                        child: const Icon(Icons.photo_library_rounded, color: Color(0xFF8B5CF6)),
+                                      ),
+                                      title: Text('Pilih dari Galeri', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: const Color(0xFF1E293B))),
+                                      subtitle: Text('Bisa pilih lebih dari 1 foto', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B))),
                                       onTap: () {
                                         Navigator.pop(context);
                                         pickPhoto(ImageSource.gallery);
                                       },
                                     ),
+                                    const SizedBox(height: 8),
                                   ],
                                 ),
                               ),
                             );
                           },
                           child: Container(
-                            width: 80,
-                            height: 80,
+                            width: 86,
+                            height: 86,
                             decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.border),
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5, style: BorderStyle.none),
                             ),
-                            child: const Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.add_a_photo, color: AppColors.primary),
-                                SizedBox(height: 4),
-                                Text('Tambah', style: TextStyle(fontSize: 10, color: AppColors.primary)),
-                              ],
+                            child: CustomPaint(
+                              painter: _DottedBorderPainter(),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.add_photo_alternate_rounded, color: Color(0xFF94A3B8), size: 28),
+                                  const SizedBox(height: 6),
+                                  Text('Tambah', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF94A3B8))),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                     ],
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
+                      onPressed: selectedPhotos.isEmpty ? null : () {
                         Navigator.pop(context);
                         _updateStatus(action, selectedPhotos);
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: action == 'start' ? AppColors.primary : AppColors.statusDone,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        backgroundColor: action == 'start' ? const Color(0xFF2563EB) : const Color(0xFF10B981),
+                        disabledBackgroundColor: const Color(0xFFE2E8F0),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        elevation: selectedPhotos.isEmpty ? 0 : 4,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                       child: Text(
-                        action == 'start' ? 'Kirim & Start Pekerjaan' : 'Kirim & Selesaikan Pekerjaan',
-                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                        action == 'start' ? 'Upload & Mulai' : 'Upload & Selesai',
+                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: selectedPhotos.isEmpty ? const Color(0xFF94A3B8) : Colors.white),
                       ),
                     ),
                   ),
@@ -799,332 +860,299 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
         Navigator.pop(context, _hasChanged);
       },
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: const Color(0xFFF8FAFC), // Modern soft background
         body: Column(
           children: [
             _buildHeader(context, pesanan['id']?.toString() ?? '-'),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildFuturisticScheduleOrTimerCard(status, globalTgl, globalWaktu),
-                        const SizedBox(height: 20),
-                        _buildStatusHeader(status),
-                        const SizedBox(height: 24),
-                        
-                        // Detail Pelanggan & Alamat
-                        Text('Informasi Pelanggan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                        const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white, 
-                            borderRadius: BorderRadius.circular(16), 
-                            border: Border.all(color: AppColors.border),
-                            boxShadow: [AppColors.cardShadow],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 22,
-                                    backgroundColor: AppColors.primary.withOpacity(0.1),
-                                    child: Text(
-                                      (pelanggan['nama_pelanggan'] ?? 'P').toString().substring(0, 1).toUpperCase(),
-                                      style: GoogleFonts.inter(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          pelanggan['nama_pelanggan'] ?? '-',
-                                          style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                                        ),
-                                        if (pelanggan['no_wa'] != null) ...[
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            pelanggan['no_wa'],
-                                            style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                  if (pelanggan['no_wa'] != null && (_job['show_wa'] == true || _job['show_wa'] == 1 || _job['show_wa'] == '1'))
-                                    InkWell(
-                                      onTap: () => _launchWA(pelanggan['no_wa']),
-                                      borderRadius: BorderRadius.circular(20),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF25D366),
-                                          borderRadius: BorderRadius.circular(20),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color(0xFF25D366).withOpacity(0.15),
-                                              blurRadius: 6,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const WhatsAppIcon(size: 18, color: Colors.white),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              'Chat WA',
-                                              style: GoogleFonts.inter(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              const SizedBox(height: 14),
-                              const Divider(color: AppColors.border, height: 1),
-                              const SizedBox(height: 14),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Icon(Icons.location_on_rounded, color: AppColors.error, size: 18),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Alamat Pengerjaan',
-                                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMuted),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          pelanggan['alamat_pelanggan'] ?? pelanggan['alamat'] ?? 'Alamat tidak tersedia',
-                                          style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, height: 1.4),
-                                        ),
-                                        if (pelanggan['patokan_alamat'] != null && pelanggan['patokan_alamat'].toString().trim().isNotEmpty) ...[
-                                          const SizedBox(height: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.surfaceBlue,
-                                              borderRadius: BorderRadius.circular(8),
-                                              border: Border.all(color: AppColors.primary.withOpacity(0.1)),
-                                            ),
-                                            child: Row(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                const Icon(Icons.flag_rounded, size: 14, color: AppColors.primary),
-                                                const SizedBox(width: 6),
-                                                Expanded(
-                                                  child: Text(
-                                                    'Patokan: ${pelanggan['patokan_alamat']}',
-                                                    style: GoogleFonts.inter(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w500),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (pelanggan['catatan'] != null && pelanggan['catatan'].toString().trim().isNotEmpty && pelanggan['catatan'].toString().trim() != 'null') ...[
-                                const SizedBox(height: 14),
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF9F9F9),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: AppColors.border),
-                                  ),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Icon(Icons.note_alt_rounded, color: AppColors.primary, size: 16),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Catatan Pelanggan',
-                                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              pelanggan['catatan'].toString(),
-                                              style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                              if (pesanan['keterangan_order'] != null && pesanan['keterangan_order'].toString().trim().isNotEmpty) ...[
-                                const SizedBox(height: 14),
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade50,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.grey.shade200),
-                                  ),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Icon(Icons.notes_rounded, color: Colors.grey.shade600, size: 16),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Catatan Pesanan',
-                                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textMuted),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              pesanan['keterangan_order'].toString(),
-                                              style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark, fontStyle: FontStyle.italic),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),const SizedBox(height: 8),
-
-                  // Detail Layanan
-                  Text('Layanan Dipesan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                  const SizedBox(height: 12),
-                  ...details.map((d) {
-                    final l = d['layanan'] ?? {};
-                    return Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white, 
-                        borderRadius: BorderRadius.circular(16), 
-                        border: Border.all(color: AppColors.border),
-                        boxShadow: [AppColors.cardShadow],
-                      ),
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(l['nama_layanan'] ?? '-', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                          _buildStatusHeader(status),
+                          const SizedBox(height: 16),
+                          _buildFuturisticScheduleOrTimerCard(status, globalTgl, globalWaktu),
+                          const SizedBox(height: 24),
+                          
+                          // Customer Info Pro Max
+                          Text('Informasi Pelanggan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
                           const SizedBox(height: 12),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            width: double.infinity,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFFFBE6),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFFFE58F)),
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                              boxShadow: [
+                                BoxShadow(color: const Color(0xFF0F172A).withOpacity(0.04), blurRadius: 15, offset: const Offset(0, 4)),
+                              ],
                             ),
-                            child: Row(
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(Icons.info_outline, size: 18, color: Color(0xFFD48806)),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text('Qty/Catatan: ${d['qty'] ?? '-'}', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFFAD6800))),
+                                Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 50,
+                                        height: 50,
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFF2563EB)]),
+                                          shape: BoxShape.circle,
+                                          boxShadow: [BoxShadow(color: const Color(0xFF2563EB).withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))],
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            (pelanggan['nama_pelanggan'] ?? 'P').toString().substring(0, 1).toUpperCase(),
+                                            style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              pelanggan['nama_pelanggan'] ?? '-',
+                                              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                                            ),
+                                            if (pelanggan['no_wa'] != null) ...[
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                pelanggan['no_wa'],
+                                                style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                      if (pelanggan['no_wa'] != null && (_job['show_wa'] == true || _job['show_wa'] == 1 || _job['show_wa'] == '1'))
+                                        GestureDetector(
+                                          onTap: () => _launchWA(pelanggan['no_wa']),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF25D366).withOpacity(0.15),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const WhatsAppIcon(size: 20, color: Color(0xFF25D366)),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                 ),
+                                const Divider(color: Color(0xFFF1F5F9), height: 1, thickness: 1),
+                                Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(10)),
+                                        child: const Icon(Icons.location_on_rounded, color: Color(0xFFDC2626), size: 18),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Alamat Pengerjaan', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              pelanggan['alamat_pelanggan'] ?? pelanggan['alamat'] ?? 'Alamat tidak tersedia',
+                                              style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF1E293B), height: 1.5, fontWeight: FontWeight.w500),
+                                            ),
+                                            if (pelanggan['patokan_alamat'] != null && pelanggan['patokan_alamat'].toString().trim().isNotEmpty) ...[
+                                              const SizedBox(height: 10),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFEFF6FF),
+                                                  borderRadius: BorderRadius.circular(10),
+                                                  border: Border.all(color: const Color(0xFFDBEAFE)),
+                                                ),
+                                                child: Row(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    const Icon(Icons.flag_rounded, size: 14, color: Color(0xFF2563EB)),
+                                                    const SizedBox(width: 6),
+                                                    Expanded(
+                                                      child: Text(
+                                                        'Patokan: ${pelanggan['patokan_alamat']}',
+                                                        style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF1D4ED8), fontWeight: FontWeight.w600),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if ((pelanggan['catatan'] != null && pelanggan['catatan'].toString().trim().isNotEmpty && pelanggan['catatan'].toString().trim() != 'null') || (pesanan['keterangan_order'] != null && pesanan['keterangan_order'].toString().trim().isNotEmpty)) ...[
+                                  const Divider(color: Color(0xFFF1F5F9), height: 1, thickness: 1),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFF8FAFC),
+                                      borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        if (pelanggan['catatan'] != null && pelanggan['catatan'].toString().trim().isNotEmpty && pelanggan['catatan'].toString().trim() != 'null') ...[
+                                          Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const Icon(Icons.note_alt_rounded, color: Color(0xFFF59E0B), size: 16),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text('Catatan Pelanggan', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFD97706))),
+                                                    const SizedBox(height: 2),
+                                                    Text(pelanggan['catatan'].toString(), style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF475569), fontWeight: FontWeight.w500)),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          if (pesanan['keterangan_order'] != null && pesanan['keterangan_order'].toString().trim().isNotEmpty) const SizedBox(height: 12),
+                                        ],
+                                        if (pesanan['keterangan_order'] != null && pesanan['keterangan_order'].toString().trim().isNotEmpty) ...[
+                                          Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const Icon(Icons.notes_rounded, color: Color(0xFF64748B), size: 16),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text('Catatan Pesanan', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF64748B))),
+                                                    const SizedBox(height: 2),
+                                                    Text(pesanan['keterangan_order'].toString(), style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF475569), fontStyle: FontStyle.italic)),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ]
                               ],
                             ),
                           ),
-                        ],
-                      ),
-                    );
-                  }),
-                  const SizedBox(height: 12),
+                          const SizedBox(height: 24),
 
-                  // Bonus
-                  if (bonusList.isNotEmpty || totalBonus > 0) ...[
-                    Text('Bonus Anda', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                    const SizedBox(height: 12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(color: const Color(0xFFFFFBE6), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFFFE58F))),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ...bonusWidgets,
-                          if (bonusWidgets.isNotEmpty) const Divider(color: Color(0xFFFFE58F)),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('Total Bonus', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFFAD6800))),
-                              Text(_formatRupiah(totalBonus.toInt()), style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: const Color(0xFFD48806))),
-                            ],
-                          ),
+                          // Detail Layanan
+                          Text('Layanan Dipesan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
+                          const SizedBox(height: 12),
+                          ...details.map((d) {
+                            final l = d['layanan'] ?? {};
+                            return Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                boxShadow: [BoxShadow(color: const Color(0xFF0F172A).withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 2))],
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(12)),
+                                    child: const Icon(Icons.cleaning_services_rounded, color: Color(0xFF3B82F6), size: 24),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(l['nama_layanan'] ?? '-', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
+                                        const SizedBox(height: 4),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(color: const Color(0xFFFFFBEB), borderRadius: BorderRadius.circular(6)),
+                                          child: Text('Qty: ${d['qty'] ?? '-'}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFFD97706))),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                          const SizedBox(height: 12),
+
+                          // Bonus Pro Max
+                          if (bonusList.isNotEmpty || totalBonus > 0) ...[
+                            Text('Bonus Anda', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
+                            const SizedBox(height: 12),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(colors: [Color(0xFFFEF3C7), Color(0xFFFDE68A)]),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: const Color(0xFFFCD34D)),
+                                boxShadow: [BoxShadow(color: const Color(0xFFF59E0B).withOpacity(0.15), blurRadius: 12, offset: const Offset(0, 4))],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  ...bonusWidgets,
+                                  if (bonusWidgets.isNotEmpty) const Divider(color: Color(0xFFF59E0B), height: 24),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text('Total Bonus', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFFB45309))),
+                                      Text(_formatRupiah(totalBonus.toInt()), style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w900, color: const Color(0xFF92400E))),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
-                  ],
-                ],
-              ),
             ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: isStartable || isFinishable
-
-          ? Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))],
-              ),
-              child: SafeArea(
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : () => _showPhotoPickerSheet(isStartable ? 'start' : 'finish'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isStartable ? AppColors.primary : AppColors.statusDone,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: Text(
-                      isStartable ? 'Mulai Pekerjaan' : 'Selesaikan Pekerjaan',
-                      style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
+          ],
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+        floatingActionButton: isStartable || isFinishable
+            ? Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                width: double.infinity,
+                child: FloatingActionButton.extended(
+                  onPressed: _isLoading ? null : () => _showPhotoPickerSheet(isStartable ? 'start' : 'finish'),
+                  backgroundColor: isStartable ? const Color(0xFF2563EB) : const Color(0xFF10B981),
+                  elevation: 6,
+                  icon: Icon(isStartable ? Icons.play_arrow_rounded : Icons.check_circle_rounded, color: Colors.white),
+                  label: Text(
+                    isStartable ? 'Mulai Pekerjaan' : 'Selesaikan Pekerjaan',
+                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                 ),
-              ),
-            )
-          : null,
+              )
+            : null,
       ),
     );
   }
@@ -1197,4 +1225,41 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
       ),
     );
   }
+}
+
+class _DottedBorderPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFCBD5E1)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    const dashWidth = 6.0;
+    const dashSpace = 4.0;
+    
+    final path = Path()
+      ..addRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(0, 0, size.width, size.height),
+        const Radius.circular(16),
+      ));
+
+    final dashPath = Path();
+    for (var metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        dashPath.addPath(
+          metric.extractPath(distance, distance + dashWidth),
+          Offset.zero,
+        );
+        distance += dashWidth + dashSpace;
+      }
+    }
+    
+    canvas.drawPath(dashPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

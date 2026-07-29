@@ -12,35 +12,43 @@ class FinanceApprovalDetailScreen extends StatefulWidget {
   final OrderModel order;
 
   @override
-  State<FinanceApprovalDetailScreen> createState() => _FinanceApprovalDetailScreenState();
+  State<FinanceApprovalDetailScreen> createState() =>
+      _FinanceApprovalDetailScreenState();
 }
 
-class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScreen> {
+class _FinanceApprovalDetailScreenState
+    extends State<FinanceApprovalDetailScreen> {
   final FinanceService _financeService = FinanceService();
   bool _isProcessing = false;
 
   Future<void> _handleApprove() async {
     setState(() => _isProcessing = true);
     try {
-      final int pId = widget.order.pembayaran?.id ??
-          int.tryParse(widget.order.id.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      final int pId =
+          widget.order.pembayaran?.id ??
+          int.tryParse(widget.order.id.replaceAll(RegExp(r'[^0-9]'), '')) ??
+          0;
       if (pId == 0) {
         throw Exception('Data pembayaran tidak ditemukan');
       }
       await _financeService.approvePembayaran(pId, 'approved');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Pembayaran berhasil disetujui'),
-          backgroundColor: AppColors.success,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pembayaran berhasil disetujui'),
+            backgroundColor: AppColors.success,
+          ),
+        );
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
-          backgroundColor: AppColors.error,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
+            backgroundColor: AppColors.error,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isProcessing = false);
@@ -48,7 +56,11 @@ class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScree
   }
 
   String _formatCurrency(int amount) {
-    final format = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final format = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
     return format.format(amount);
   }
 
@@ -93,9 +105,16 @@ class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScree
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.broken_image, color: AppColors.textMuted, size: 48),
+                      const Icon(
+                        Icons.broken_image,
+                        color: AppColors.textMuted,
+                        size: 48,
+                      ),
                       const SizedBox(height: 16),
-                      Text('Gagal memuat gambar', style: GoogleFonts.inter(color: AppColors.textMuted)),
+                      Text(
+                        'Gagal memuat gambar',
+                        style: GoogleFonts.inter(color: AppColors.textMuted),
+                      ),
                     ],
                   ),
                 ),
@@ -122,13 +141,15 @@ class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScree
     final int subtotal = widget.order.total;
     final int diskonValue = (subtotal * (diskonPersen / 100)).round();
     final int totalSetelahDiskon = subtotal - diskonValue;
-    
+
     final int ppnPercentage = payment?.ppn ?? widget.order.ppn ?? 0;
     final int ppn = (totalSetelahDiskon * (ppnPercentage / 100)).round();
     final int total = totalSetelahDiskon + ppn;
-    
-    final String dateStr = DateFormat('yyyy-MM-dd - HH:mm:ss').format(widget.order.tanggalInput);
-    
+
+    final String dateStr = DateFormat(
+      'yyyy-MM-dd - HH:mm:ss',
+    ).format(widget.order.tanggalInput);
+
     String cleanerName = '-';
     if (widget.order.cleaners.isNotEmpty) {
       cleanerName = widget.order.cleaners.map((e) => e.name).join(', ');
@@ -138,7 +159,13 @@ class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScree
     if (paymentMethod == '-') {
       paymentMethod = 'Belum dipilih';
     } else {
-      paymentMethod = paymentMethod.replaceAll('_', ' ').split(' ').map((s) => s.isNotEmpty ? '${s[0].toUpperCase()}${s.substring(1)}' : '').join(' ');
+      paymentMethod = paymentMethod
+          .replaceAll('_', ' ')
+          .split(' ')
+          .map(
+            (s) => s.isNotEmpty ? '${s[0].toUpperCase()}${s.substring(1)}' : '',
+          )
+          .join(' ');
     }
 
     return Scaffold(
@@ -151,28 +178,46 @@ class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScree
               children: [
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
-                  child: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+                  child: const Icon(
+                    Icons.arrow_back_ios,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(widget.order.nomorPesanan, style: GoogleFonts.inter(
-                          fontSize: 11, color: Colors.white.withOpacity(0.7))),
-                      Text('Approval Pembayaran', style: GoogleFonts.inter(
-                          fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                      Text(
+                        widget.order.nomorPesanan,
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: Colors.white.withOpacity(0.7),
+                        ),
+                      ),
+                      Text(
+                        'Approval Pembayaran',
+                        style: GoogleFonts.inter(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
-                    'Menunggu Approval',
+                    'Pending',
                     style: GoogleFonts.inter(
                       color: AppColors.statusPending,
                       fontSize: 12,
@@ -194,12 +239,17 @@ class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScree
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.statusPending.withOpacity(0.2)),
+                      border: Border.all(
+                        color: AppColors.statusPending.withOpacity(0.2),
+                      ),
                     ),
                     child: Column(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.statusPendingBg,
                             borderRadius: const BorderRadius.only(
@@ -209,7 +259,11 @@ class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScree
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.info_outline, color: AppColors.statusPending, size: 20),
+                              const Icon(
+                                Icons.info_outline,
+                                color: AppColors.statusPending,
+                                size: 20,
+                              ),
                               const SizedBox(width: 8),
                               Text(
                                 'Pembayaran Diajukan CS',
@@ -245,7 +299,11 @@ class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScree
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  const Icon(Icons.access_time, color: AppColors.textMuted, size: 14),
+                                  const Icon(
+                                    Icons.access_time,
+                                    color: AppColors.textMuted,
+                                    size: 14,
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
                                     dateStr,
@@ -303,11 +361,16 @@ class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScree
                               const SizedBox(height: 2),
                               Row(
                                 children: [
-                                  const Icon(Icons.location_on_outlined, size: 14, color: AppColors.textMuted),
+                                  const Icon(
+                                    Icons.location_on_outlined,
+                                    size: 14,
+                                    color: AppColors.textMuted,
+                                  ),
                                   const SizedBox(width: 4),
                                   Expanded(
                                     child: Text(
-                                      widget.order.customer.address ?? 'Tidak ada alamat',
+                                      widget.order.customer.address ??
+                                          'Tidak ada alamat',
                                       style: GoogleFonts.inter(
                                         color: AppColors.textMuted,
                                         fontSize: 13,
@@ -328,58 +391,76 @@ class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScree
 
                   // Rincian Layanan Card
                   _buildSectionCard('RINCIAN LAYANAN', [
-                    ...widget.order.services.map((service) => Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE8F0FE),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(Icons.cleaning_services_outlined, color: AppColors.primary, size: 22),
+                    ...widget.order.services.map(
+                      (service) => Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE8F0FE),
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      service.name,
-                                      style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
+                              child: const Icon(
+                                Icons.cleaning_services_outlined,
+                                color: AppColors.primary,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    service.name,
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${service.qty} x layanan',
-                                      style: GoogleFonts.inter(
-                                        color: AppColors.textMuted,
-                                        fontSize: 13,
-                                      ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${service.qty} x layanan',
+                                    style: GoogleFonts.inter(
+                                      color: AppColors.textMuted,
+                                      fontSize: 13,
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                              Text(
-                                _formatCurrency(service.subtotal),
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
+                            ),
+                            Text(
+                              _formatCurrency(service.subtotal),
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
                               ),
-                            ],
-                          ),
-                        )),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                     Divider(color: Colors.grey[200], thickness: 1),
                     const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Subtotal', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13)),
-                        Text(_formatCurrency(subtotal), style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
+                        Text(
+                          'Subtotal',
+                          style: GoogleFonts.inter(
+                            color: AppColors.textMuted,
+                            fontSize: 13,
+                          ),
+                        ),
+                        Text(
+                          _formatCurrency(subtotal),
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
                       ],
                     ),
                     if (diskonValue > 0) ...[
@@ -387,8 +468,21 @@ class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScree
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Diskon ${diskonPersen == diskonPersen.toInt() ? diskonPersen.toInt() : diskonPersen}%', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13)),
-                          Text('-${_formatCurrency(diskonValue)}', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.error)),
+                          Text(
+                            'Diskon ${diskonPersen == diskonPersen.toInt() ? diskonPersen.toInt() : diskonPersen}%',
+                            style: GoogleFonts.inter(
+                              color: AppColors.textMuted,
+                              fontSize: 13,
+                            ),
+                          ),
+                          Text(
+                            '-${_formatCurrency(diskonValue)}',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: AppColors.error,
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -396,18 +490,34 @@ class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScree
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                      Row(
-                        children: [
-                          Icon(
-                            ppnPercentage > 0 ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
-                            size: 16,
-                            color: ppnPercentage > 0 ? AppColors.primary : AppColors.textMuted,
+                        Row(
+                          children: [
+                            Icon(
+                              ppnPercentage > 0
+                                  ? Icons.check_box_rounded
+                                  : Icons.check_box_outline_blank_rounded,
+                              size: 16,
+                              color: ppnPercentage > 0
+                                  ? AppColors.primary
+                                  : AppColors.textMuted,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'PPN (11%)',
+                              style: GoogleFonts.inter(
+                                color: AppColors.textMuted,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          _formatCurrency(ppn),
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
                           ),
-                          const SizedBox(width: 6),
-                          Text('PPN (11%)', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13)),
-                        ],
-                      ),
-                        Text(_formatCurrency(ppn), style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -416,7 +526,13 @@ class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScree
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Total Pembayaran', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14)),
+                        Text(
+                          'Total Pembayaran',
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
                         Text(
                           _formatCurrency(total),
                           style: GoogleFonts.inter(
@@ -432,19 +548,39 @@ class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScree
 
                   // Informasi Pembayaran Card
                   _buildSectionCard('INFORMASI PEMBAYARAN', [
-                    _buildInfoRow(Icons.credit_card_outlined, 'Metode Bayar', paymentMethod, isBold: true),
+                    _buildInfoRow(
+                      Icons.credit_card_outlined,
+                      'Metode Bayar',
+                      paymentMethod,
+                      isBold: true,
+                    ),
                     const SizedBox(height: 16),
-                    _buildInfoRow(Icons.access_time, 'Status Pembayaran', 'Menunggu Approval', valueColor: AppColors.statusPending, isBold: true),
+                    _buildInfoRow(
+                      Icons.access_time,
+                      'Status Pembayaran',
+                      'Pending',
+                      valueColor: AppColors.statusPending,
+                      isBold: true,
+                    ),
                     const SizedBox(height: 16),
-                    _buildInfoRow(Icons.person_outline, 'Petugas Kebersihan', cleanerName, isBold: true),
+                    _buildInfoRow(
+                      Icons.person_outline,
+                      'Petugas Kebersihan',
+                      cleanerName,
+                      isBold: true,
+                    ),
                   ]),
                   const SizedBox(height: 16),
 
                   // Bukti Pembayaran Card (if any)
-                  if (widget.order.paymentProof != null && widget.order.paymentProof!.isNotEmpty)
+                  if (widget.order.paymentProof != null &&
+                      widget.order.paymentProof!.isNotEmpty)
                     _buildSectionCard('BUKTI PEMBAYARAN', [
                       GestureDetector(
-                        onTap: () => _showImageDialog(context, widget.order.paymentProof!),
+                        onTap: () => _showImageDialog(
+                          context,
+                          widget.order.paymentProof!,
+                        ),
                         child: Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
@@ -456,10 +592,16 @@ class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScree
                               Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: AppColors.statusPending.withOpacity(0.1),
+                                  color: AppColors.statusPending.withOpacity(
+                                    0.1,
+                                  ),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: const Icon(Icons.receipt_long, color: AppColors.statusPending, size: 22),
+                                child: const Icon(
+                                  Icons.receipt_long,
+                                  color: AppColors.statusPending,
+                                  size: 22,
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -486,14 +628,17 @@ class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScree
                                   ],
                                 ),
                               ),
-                              const Icon(Icons.info_outline, color: AppColors.statusPending),
+                              const Icon(
+                                Icons.info_outline,
+                                color: AppColors.statusPending,
+                              ),
                             ],
                           ),
                         ),
                       ),
                     ]),
                   const SizedBox(height: 24),
-                  
+
                   if (_isProcessing)
                     const Center(child: CircularProgressIndicator())
                   else ...[
@@ -504,11 +649,17 @@ class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScree
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.success,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         child: Text(
                           'Setujui Pembayaran',
-                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
@@ -556,7 +707,13 @@ class _FinanceApprovalDetailScreenState extends State<FinanceApprovalDetailScree
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value, {Color? valueColor, bool isBold = false}) {
+  Widget _buildInfoRow(
+    IconData icon,
+    String label,
+    String value, {
+    Color? valueColor,
+    bool isBold = false,
+  }) {
     return Row(
       children: [
         Icon(icon, size: 18, color: AppColors.textMuted),

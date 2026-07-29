@@ -266,10 +266,13 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Ringkasan Nilai KPI per Cabang',
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                Expanded(
+                  child: Text(
+                    'Ringkasan Nilai KPI per Cabang',
+                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
@@ -278,7 +281,7 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
                     border: Border.all(color: Colors.red.shade200),
                   ),
                   child: Text(
-                    'Merah = Belum Capai Target (100%)',
+                    'Merah = Belum Capai Target',
                     style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.red.shade700),
                   ),
                 ),
@@ -286,43 +289,77 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
             ),
           ),
           const Divider(height: 1, color: Color(0xFFEEEEEE)),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              headingRowColor: MaterialStateProperty.all(Colors.grey.shade50),
-              dataRowMinHeight: 46,
-              dataRowMaxHeight: 46,
-              horizontalMargin: 16,
-              columnSpacing: 24,
-              columns: [
-                DataColumn(label: Text('CABANG', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textMuted))),
-                DataColumn(label: Text('REALISASI OMZET', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textMuted))),
-                DataColumn(label: Text('TARGET KPI', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textMuted))),
-                DataColumn(label: Text('TOTAL NILAI KPI', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textMuted))),
-              ],
-              rows: _data.map((item) {
-                final totalNilai = (item['total_nilai_kpi'] as num).toDouble();
-                final isAman = totalNilai >= 100.0;
-                final color = isAman ? AppColors.textDark : Colors.red.shade700;
-                
-                return DataRow(
-                  cells: [
-                    DataCell(Text(item['nama_cabang'].toString(), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark))),
-                    DataCell(Text(_formatCurrency(item['realisasi_omzet']), style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark))),
-                    DataCell(Text(item['target_nilai_kpi'].toString(), style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark))),
-                    DataCell(Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _data.length,
+            separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFEEEEEE)),
+            itemBuilder: (context, index) {
+              final item = _data[index];
+              final totalNilai = (item['total_nilai_kpi'] as num).toDouble();
+              final isAman = totalNilai >= 100.0;
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item['nama_cabang'].toString(),
+                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Realisasi Omzet', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
+                                    const SizedBox(height: 2),
+                                    Text(_formatCurrency(item['realisasi_omzet']), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Target KPI', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
+                                    const SizedBox(height: 2),
+                                    Text(item['target_nilai_kpi'].toString(), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         color: isAman ? Colors.green.shade50 : Colors.red.shade50,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: isAman ? Colors.green.shade200 : Colors.red.shade200),
                       ),
-                      child: Text('${totalNilai.toStringAsFixed(1)}%', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: isAman ? Colors.green.shade700 : Colors.red.shade700)),
-                    )),
-                  ]
-                );
-              }).toList(),
-            ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('TOTAL', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: isAman ? Colors.green.shade700 : Colors.red.shade700)),
+                          const SizedBox(height: 2),
+                          Text('${totalNilai.toStringAsFixed(1)}%', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: isAman ? Colors.green.shade700 : Colors.red.shade700)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
           Container(
             padding: const EdgeInsets.all(16),
@@ -376,51 +413,29 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
               color: AppColors.primary,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item['nama_cabang'].toString().toUpperCase(),
-                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Bulan: ${_bulanNames[_selectedBulan - 1]} $_selectedTahun',
-                        style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withOpacity(0.8)),
-                      ),
-                    ],
-                  ),
-                ),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isAman ? Colors.green : Colors.red,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        'Total ${totalNilai.toStringAsFixed(1)}%',
-                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        'Target ${item['target_nilai_kpi']}',
-                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item['nama_cabang'].toString().toUpperCase(),
+                            style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Bulan: ${_bulanNames[_selectedBulan - 1]} $_selectedTahun',
+                            style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withOpacity(0.8)),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 8),
                     InkWell(
                       onTap: () {
                         showModalBottomSheet(
@@ -447,6 +462,7 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(Icons.edit_note_rounded, size: 14, color: AppColors.primary),
                             const SizedBox(width: 4),
@@ -460,44 +476,79 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isAman ? Colors.green : Colors.red,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'Total ${totalNilai.toStringAsFixed(1)}%',
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'Target ${item['target_nilai_kpi']}',
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
           
-          // Metrics Table
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              headingRowColor: MaterialStateProperty.all(Colors.grey.shade50),
-              dataRowMinHeight: 52,
-              dataRowMaxHeight: 52,
-              horizontalMargin: 16,
-              columnSpacing: 24,
-              columns: [
-                DataColumn(label: Text('ITEM', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textMuted))),
-                DataColumn(label: Text('TARGET', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textMuted))),
-                DataColumn(label: Text('BOBOT', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textMuted))),
-                DataColumn(label: Text('NILAI (REALISASI)', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textMuted))),
-                DataColumn(label: Text('CAPAIAN', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textMuted))),
-              ],
-              rows: [
-                _buildMetricRow('Omzet', true, _formatCurrency(item['target_omzet']), '${item['bobot_omzet']}%', _formatCurrency(item['realisasi_omzet']), item['capaian_omzet']),
-                _buildMetricRow('Closing Rate', true, '${item['target_closing_rate']}%', '${item['bobot_closing_rate']}%', '${item['realisasi_closing_rate']}%', item['capaian_closing_rate']),
-                _buildMetricRow('Closing Chat (Rata-rata/Hari)', true, '${item['target_closing_chat']}', '${item['bobot_closing_chat']}%', '${item['realisasi_closing_chat']}\ndari ${item['total_hari_chat']} hari', item['capaian_closing_chat'], isMultilineRealisasi: true),
-                _buildMetricRow('Stock Opname', false, '${item['target_stock_opname']}', '${item['bobot_stock_opname']}%', '${item['nilai_stock_opname']}', item['capaian_stock_opname']),
-                _buildMetricRow('Review Maps', false, '${item['target_review_maps']}', '${item['bobot_review_maps']}%', '${item['nilai_review_maps']}', item['capaian_review_maps']),
-                DataRow(
-                  color: MaterialStateProperty.all(Colors.grey.shade50),
-                  cells: [
-                    DataCell(Text('TOTAL KPI', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark))),
-                    DataCell(const SizedBox()),
-                    DataCell(const SizedBox()),
-                    DataCell(Text('TARGET ${item['target_nilai_kpi']}', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textMuted))),
-                    DataCell(Text('${totalNilai.toStringAsFixed(1)}%', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: isAman ? Colors.green.shade700 : Colors.red.shade700))),
-                  ]
+          // Metrics List
+          Column(
+            children: [
+              _buildMetricItem('Omzet', true, _formatCurrency(item['target_omzet']), '${item['bobot_omzet']}%', _formatCurrency(item['realisasi_omzet']), item['capaian_omzet']),
+              const Divider(height: 1, color: Color(0xFFEEEEEE)),
+              _buildMetricItem('Closing Rate', true, '${item['target_closing_rate']}%', '${item['bobot_closing_rate']}%', '${item['realisasi_closing_rate']}%', item['capaian_closing_rate']),
+              const Divider(height: 1, color: Color(0xFFEEEEEE)),
+              _buildMetricItem('Closing Chat (Rata-rata/Hari)', true, '${item['target_closing_chat']}', '${item['bobot_closing_chat']}%', '${item['realisasi_closing_chat']} dari ${item['total_hari_chat']} hr', item['capaian_closing_chat']),
+              const Divider(height: 1, color: Color(0xFFEEEEEE)),
+              _buildMetricItem('Stock Opname', false, '${item['target_stock_opname']}', '${item['bobot_stock_opname']}%', '${item['nilai_stock_opname']}', item['capaian_stock_opname']),
+              const Divider(height: 1, color: Color(0xFFEEEEEE)),
+              _buildMetricItem('Review Maps', false, '${item['target_review_maps']}', '${item['bobot_review_maps']}%', '${item['nilai_review_maps']}', item['capaian_review_maps']),
+              const Divider(height: 1, color: Color(0xFFEEEEEE)),
+              
+              // Total Row
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('TOTAL KPI', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    Row(
+                      children: [
+                        Text('Target: ${item['target_nilai_kpi']}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+                        const SizedBox(width: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isAman ? Colors.green.shade50 : Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: isAman ? Colors.green.shade200 : Colors.red.shade200),
+                          ),
+                          child: Text('${totalNilai.toStringAsFixed(1)}%', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: isAman ? Colors.green.shade700 : Colors.red.shade700)),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
           
           const Divider(height: 1, color: Color(0xFFEEEEEE)),
@@ -538,38 +589,78 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
     );
   }
 
-  DataRow _buildMetricRow(String name, bool isAuto, String target, String bobot, String realisasi, dynamic capaian, {bool isMultilineRealisasi = false}) {
-    return DataRow(
-      cells: [
-        DataCell(
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(name, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-              if (isAuto) ...[
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: Colors.blue.shade200),
-                  ),
-                  child: Text('AUTO', style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
+  Widget _buildMetricItem(String name, bool isAuto, String target, String bobot, String realisasi, dynamic capaian) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            flex: 4,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: Text(name, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark))),
+                    if (isAuto) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.blue.shade200),
+                        ),
+                        child: Text('AUTO', style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 4,
+                  children: [
+                    Text('Target: $target', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                    Text('Bobot: $bobot', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                  ],
                 ),
               ],
-            ],
+            ),
           ),
-        ),
-        DataCell(Text(target, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark))),
-        DataCell(Text(bobot, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark))),
-        DataCell(
-          isMultilineRealisasi 
-              ? Text(realisasi, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark), textAlign: TextAlign.center)
-              : Text(realisasi, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-        ),
-        DataCell(Text('${(capaian as num).toStringAsFixed(1)}%', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark))),
-      ],
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text('Realisasi', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
+                const SizedBox(height: 2),
+                Text(realisasi, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark), textAlign: TextAlign.right),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            width: 55,
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('CAPAI', style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
+                const SizedBox(height: 2),
+                Text('${(capaian as num).toStringAsFixed(1)}%', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

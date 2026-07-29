@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../attendance/data/attendance_model.dart';
 import '../../attendance/services/attendance_service.dart';
+import '../../../../core/widgets/gradient_header.dart';
 
 class AttendanceHistoryScreen extends StatefulWidget {
   const AttendanceHistoryScreen({super.key});
@@ -42,31 +43,45 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Text('Riwayat Absensi', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-        foregroundColor: AppColors.textDark,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadHistory,
-              child: _history.isEmpty
-                  ? ListView(
-                      children: const [
-                        Padding(
-                          padding: EdgeInsets.all(32.0),
-                          child: Center(child: Text('Belum ada riwayat absensi.')),
-                        )
-                      ],
-                    )
+      body: Column(
+        children: [
+          GradientHeader(
+            child: Row(
+              children: [
+                HeaderBackButton(onTap: () => Navigator.pop(context)),
+                const SizedBox(width: 16),
+                Text(
+                  'Riwayat Absensi',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
+                    onRefresh: _loadHistory,
+                    child: _history.isEmpty
+                        ? ListView(
+                            children: const [
+                              Padding(
+                                padding: EdgeInsets.all(32.0),
+                                child: Center(child: Text('Belum ada riwayat absensi.')),
+                              )
+                            ],
+                          )
                   : ListView.builder(
                       padding: const EdgeInsets.all(16),
                       itemCount: _history.length,
                       itemBuilder: (context, index) {
                         final item = _history[index];
-                        final isCheckIn = item.type == 'check_in';
+                        final typeStr = item.type.toLowerCase();
+                        final isCheckIn = typeStr == 'check_in' || typeStr == 'masuk';
                         
                         return Card(
                           margin: const EdgeInsets.only(bottom: 12),
@@ -97,7 +112,10 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                         );
                       },
                     ),
+                  ),
             ),
+        ],
+      ),
     );
   }
 

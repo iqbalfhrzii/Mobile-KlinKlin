@@ -20,10 +20,10 @@ class CleanerJobListScreen extends StatefulWidget {
   });
 
   @override
-  State<CleanerJobListScreen> createState() => _CleanerJobListScreenState();
+  State<CleanerJobListScreen> createState() => CleanerJobListScreenState();
 }
 
-class _CleanerJobListScreenState extends State<CleanerJobListScreen> {
+class CleanerJobListScreenState extends State<CleanerJobListScreen> {
   final CleanerJobService _service = CleanerJobService();
   bool _isLoading = true;
   String _error = '';
@@ -31,6 +31,9 @@ class _CleanerJobListScreenState extends State<CleanerJobListScreen> {
   List<dynamic> _filteredJobs = [];
   
   String _query = '';
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _periodFilter = 'semua';
+  DateTimeRange? _customRange;
   DateTime? _filterStart;
   DateTime? _filterEnd;
   String _statusFilter = 'Semua';
@@ -60,6 +63,22 @@ class _CleanerJobListScreenState extends State<CleanerJobListScreen> {
     _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       _fetchJobs(isSilent: true);
     });
+  }
+
+  void applyFilter({String? statusFilter, bool isTodayOnly = false}) {
+    setState(() {
+      if (statusFilter != null) {
+        _statusFilter = statusFilter;
+      }
+      if (isTodayOnly) {
+        _filterStart = DateTime.now();
+        _filterEnd = DateTime.now();
+      } else {
+        _filterStart = null;
+        _filterEnd = null;
+      }
+    });
+    _filterJobs();
   }
 
   @override
@@ -237,24 +256,21 @@ class _CleanerJobListScreenState extends State<CleanerJobListScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: WeeklyDatePicker(
-                        searchQuery: _query,
                         initialDate: widget.isTodayOnly ? DateTime.now() : null,
-                        onSearchChanged: (val) {
-                          setState(() => _query = val);
-                          _filterJobs();
-                        },
+                        showAllMonthButton: false,
                         onFilterChanged: (start, end) {
                           setState(() {
                             _filterStart = start;
                             _filterEnd = end;
+                            _periodFilter = 'custom';
                           });
                           _filterJobs();
                         },
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    _buildFilterRow(),
                     const SizedBox(height: 8),
+                    _buildProMaxSearchAndFilterBar(),
+                    const SizedBox(height: 16),
                     if (_isLoading)
                       const Padding(
                         padding: EdgeInsets.only(top: 40),
@@ -292,80 +308,422 @@ class _CleanerJobListScreenState extends State<CleanerJobListScreen> {
     );
   }
 
-  Widget _buildFilterRow() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+  void _updateDateFilters() {
+    final now = DateTime.now();
+    if (_periodFilter == 'semua') {
+      _filterStart = null;
+      _filterEnd = null;
+    } else if (_periodFilter == 'hari_ini') {
+      _filterStart = DateTime(now.year, now.month, now.day);
+      _filterEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    } else if (_periodFilter == 'kemarin') {
+      final yest = now.subtract(const Duration(days: 1));
+      _filterStart = DateTime(yest.year, yest.month, yest.day);
+      _filterEnd = DateTime(yest.year, yest.month, yest.day, 23, 59, 59);
+    } else if (_periodFilter == 'besok') {
+      final tom = now.add(const Duration(days: 1));
+      _filterStart = DateTime(tom.year, tom.month, tom.day);
+      _filterEnd = DateTime(tom.year, tom.month, tom.day, 23, 59, 59);
+    } else if (_periodFilter == 'bulan_ini') {
+      _filterStart = DateTime(now.year, now.month, 1);
+      _filterEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    } else if (_periodFilter == 'custom' && _customRange != null) {
+      _filterStart = DateTime(_customRange!.start.year, _customRange!.start.month, _customRange!.start.day);
+      _filterEnd = DateTime(_customRange!.end.year, _customRange!.end.month, _customRange!.end.day, 23, 59, 59);
+    }
+    _filterJobs();
+  }
+
+  Future<void> _pickCustomRange() async {
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      initialDateRange: _customRange ?? DateTimeRange(
+        start: DateTime.now().subtract(const Duration(days: 7)),
+        end: DateTime.now(),
+      ),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              surface: AppColors.surface,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _periodFilter = 'custom';
+        _customRange = picked;
+        _updateDateFilters();
+      });
+      _showFilterBottomSheet();
+    }
+  }
+
+  Widget _buildProMaxSearchAndFilterBar() {
+    final int activeFilterCount = (_periodFilter != 'semua' ? 1 : 0) +
+        (_statusFilter != 'Semua' ? 1 : 0);
+
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
-        children: _filters.map((f) {
-          final active = _statusFilter == f;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              label: Text(
-                _filterLabels[f]!,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: active ? FontWeight.bold : FontWeight.w500,
-                  color: active ? Colors.white : AppColors.textMuted,
+        children: [
+          Expanded(
+            child: Container(
+              height: 46,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(23),
+                border: Border.all(
+                  color: _query.isNotEmpty ? const Color(0xFF3B82F6) : Colors.grey.withOpacity(0.25),
+                  width: _query.isNotEmpty ? 1.5 : 1.0,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: _query.isNotEmpty ? const Color(0xFF3B82F6).withOpacity(0.12) : Colors.black.withOpacity(0.03),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              selected: active,
-              onSelected: (val) {
-                if (val) {
-                  setState(() => _statusFilter = f);
-                  _filterJobs();
-                }
-              },
-              backgroundColor: Colors.white,
-              selectedColor: AppColors.primary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: BorderSide(
-                  color: active ? AppColors.primary : AppColors.border,
-                ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.search_rounded,
+                    size: 20,
+                    color: _query.isNotEmpty ? const Color(0xFF2563EB) : AppColors.textMuted,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchCtrl,
+                      onChanged: (val) {
+                        setState(() => _query = val);
+                        _filterJobs();
+                      },
+                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                      decoration: InputDecoration(
+                        hintText: 'Cari tugas atau pelanggan...',
+                        hintStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.normal, color: AppColors.textMuted),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+                  if (_query.isNotEmpty)
+                    GestureDetector(
+                      onTap: () {
+                        _searchCtrl.clear();
+                        setState(() => _query = '');
+                        _filterJobs();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(color: Color(0xFFF1F5F9), shape: BoxShape.circle),
+                        child: const Icon(Icons.close_rounded, size: 14, color: AppColors.textMuted),
+                      ),
+                    ),
+                ],
               ),
-              showCheckmark: false,
             ),
-          );
-        }).toList(),
+          ),
+          const SizedBox(width: 10),
+          GestureDetector(
+            onTap: () => _showFilterBottomSheet(),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              height: 46,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                gradient: activeFilterCount > 0
+                    ? const LinearGradient(colors: [Color(0xFF2563EB), Color(0xFF4F46E5)])
+                    : null,
+                color: activeFilterCount > 0 ? null : Colors.white,
+                borderRadius: BorderRadius.circular(23),
+                border: Border.all(
+                  color: activeFilterCount > 0 ? Colors.transparent : Colors.grey.withOpacity(0.3),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  if (activeFilterCount > 0)
+                    BoxShadow(
+                      color: const Color(0xFF4F46E5).withOpacity(0.35),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    )
+                  else
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.tune_rounded,
+                    size: 18,
+                    color: activeFilterCount > 0 ? Colors.white : AppColors.textDark,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Filter',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: activeFilterCount > 0 ? Colors.white : AppColors.textDark,
+                    ),
+                  ),
+                  if (activeFilterCount > 0) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.25),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '$activeFilterCount',
+                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  void _showFilterBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle Bar
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Title
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Filter Tugas', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(height: 1),
+                  const SizedBox(height: 16),
+
+                  // 1. Rentang Waktu
+                  Text('Rentang Waktu', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ...[
+                        {'key': 'semua', 'label': 'Semua Waktu'},
+                        {'key': 'hari_ini', 'label': 'Hari Ini'},
+                        {'key': 'kemarin', 'label': 'Kemarin'},
+                        {'key': 'besok', 'label': 'Besok'},
+                        {'key': 'bulan_ini', 'label': 'Bulan Ini'},
+                      ].map((item) {
+                        final isSel = _periodFilter == item['key'];
+                        return ChoiceChip(
+                          label: Text(item['label']!),
+                          selected: isSel,
+                          onSelected: (val) {
+                            if (val) {
+                              setModalState(() {
+                                _periodFilter = item['key']!;
+                                _customRange = null;
+                                _updateDateFilters();
+                              });
+                              setState(() {
+                                _periodFilter = item['key']!;
+                                _customRange = null;
+                                _updateDateFilters();
+                              });
+                            }
+                          },
+                          selectedColor: const Color(0xFFECFDF5),
+                          labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.w500, color: isSel ? const Color(0xFF047857) : AppColors.textDark),
+                          side: BorderSide(color: isSel ? const Color(0xFF10B981) : Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          showCheckmark: false,
+                        );
+                      }),
+                      ActionChip(
+                        avatar: const Icon(Icons.calendar_month_rounded, size: 14, color: Color(0xFF4F46E5)),
+                        label: Text(
+                          _periodFilter == 'custom' && _customRange != null
+                              ? '${_customRange!.start.day}/${_customRange!.start.month} - ${_customRange!.end.day}/${_customRange!.end.month}'
+                              : 'Pilih Tanggal',
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: _periodFilter == 'custom' ? FontWeight.bold : FontWeight.w500, color: _periodFilter == 'custom' ? const Color(0xFF4F46E5) : AppColors.textDark),
+                        ),
+                        onPressed: () async {
+                          Navigator.pop(ctx);
+                          await _pickCustomRange();
+                        },
+                        backgroundColor: _periodFilter == 'custom' ? const Color(0xFFEEF2FF) : Colors.white,
+                        side: BorderSide(color: _periodFilter == 'custom' ? const Color(0xFF6366F1) : Colors.grey.shade300),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // 2. Status Tugas
+                  Text('Status Tugas', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _filters.map((f) {
+                      final isSel = _statusFilter == f;
+                      return ChoiceChip(
+                        label: Text(_filterLabels[f]!),
+                        selected: isSel,
+                        onSelected: (val) {
+                          if (val) {
+                            setModalState(() => _statusFilter = f);
+                            setState(() => _statusFilter = f);
+                            _filterJobs();
+                          }
+                        },
+                        selectedColor: const Color(0xFFFFFBEB),
+                        labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.w500, color: isSel ? const Color(0xFFD97706) : AppColors.textDark),
+                        side: BorderSide(color: isSel ? const Color(0xFFF59E0B) : Colors.grey.shade300),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        showCheckmark: false,
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setModalState(() {
+                              _periodFilter = 'semua';
+                              _customRange = null;
+                              _statusFilter = 'Semua';
+                              _updateDateFilters();
+                            });
+                            setState(() {
+                              _periodFilter = 'semua';
+                              _customRange = null;
+                              _statusFilter = 'Semua';
+                              _updateDateFilters();
+                            });
+                          },
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: BorderSide(color: Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: Text('Reset', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2563EB),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: Text('Terapkan', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
   Widget _buildHeader(BuildContext context) {
     return GradientHeader(
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Daftar Tugas', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-                    const SizedBox(height: 4),
-                    Text('Kelola tugas Anda', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withOpacity(0.8))),
-                  ],
+      padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Daftar Tugas', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                  const SizedBox(height: 4),
+                  Text('Kelola tugas Anda', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withOpacity(0.8))),
+                ],
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-                    onPressed: _fetchJobs,
-                    tooltip: 'Refresh Data',
-                  ),
+                child: IconButton(
+                  icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                  onPressed: _fetchJobs,
+                  tooltip: 'Refresh Data',
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -405,6 +763,7 @@ class _CleanerJobListScreenState extends State<CleanerJobListScreen> {
     final details = pesanan['details'] as List? ?? [];
     
     String customerName = pelanggan['nama_pelanggan'] ?? '-';
+    String customerPhone = pelanggan['no_telp'] ?? pelanggan['no_hp'] ?? '';
     String customerAddress = pelanggan['alamat'] ?? '-';
     
     String jam = '-';
@@ -416,7 +775,6 @@ class _CleanerJobListScreenState extends State<CleanerJobListScreen> {
       tanggal = _formatDateWithDay(rawTanggal);
     }
 
-    // Format jam pengerjaan (remove seconds if present)
     if (jam.length > 5 && jam.contains(':')) {
       final parts = jam.split(':');
       if (parts.length >= 2) {
@@ -437,113 +795,177 @@ class _CleanerJobListScreenState extends State<CleanerJobListScreen> {
         }
       },
       child: Container(
+        margin: const EdgeInsets.only(bottom: 4),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-          boxShadow: [AppColors.cardShadow],
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.withOpacity(0.15)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withOpacity(0.06),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
-        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Row (ID and Status)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Text('#${pesanan['id'] ?? '-'}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
+            // Top Gradient Header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.primary.withOpacity(0.08), Colors.transparent],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (relativeDay != null) ...[
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        margin: const EdgeInsets.only(right: 6),
-                        decoration: BoxDecoration(
-                          color: (relativeDay == 'Hari Ini' || relativeDay == 'Besok') 
-                              ? AppColors.primary.withOpacity(0.08) 
-                              : Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: (relativeDay == 'Hari Ini' || relativeDay == 'Besok') 
-                                ? AppColors.primary.withOpacity(0.15) 
-                                : Colors.grey.shade200
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4)]),
+                        child: const Icon(Icons.receipt_long_rounded, size: 14, color: AppColors.primary),
+                      ),
+                      const SizedBox(width: 8),
+                      Text('#${pesanan['id'] ?? '-'}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      if (relativeDay != null) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: (relativeDay == 'Hari Ini' || relativeDay == 'Besok') ? AppColors.primary : Colors.grey.shade600,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            relativeDay,
+                            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
                           ),
                         ),
-                        child: Text(
-                          relativeDay,
-                          style: GoogleFonts.inter(
-                            fontSize: 10, 
-                            fontWeight: FontWeight.bold, 
-                            color: (relativeDay == 'Hari Ini' || relativeDay == 'Besok') 
-                                ? AppColors.primary 
-                                : AppColors.textMuted
-                          ),
+                      ],
+                      _buildStatusBadge(status),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Customer Info Pro Max
+                  Row(
+                    children: [
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                          boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))],
+                        ),
+                        child: const Icon(Icons.person_rounded, size: 24, color: Colors.white),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              customerName,
+                              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (customerPhone.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  const Icon(Icons.phone_android_rounded, size: 12, color: AppColors.textMuted),
+                                  const SizedBox(width: 4),
+                                  Text(customerPhone, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w500)),
+                                ],
+                              ),
+                            ]
+                          ],
                         ),
                       ),
                     ],
-                    _buildStatusBadge(status),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            
-            // Customer Row (Top and Prominent)
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: AppColors.primary.withOpacity(0.1),
-                  child: const Icon(Icons.person_rounded, size: 18, color: AppColors.primary),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    customerName,
-                    style: GoogleFonts.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            
-            // Highlighted Schedule (Waktu & Tanggal)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceBlue, // A soft blue background for schedule
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.primary.withOpacity(0.1)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.calendar_month_rounded, color: AppColors.primary, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(
+                  const SizedBox(height: 16),
+                  
+                  // Schedule & Location Container (Pro Max)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Jadwal Pengerjaan',
-                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primary.withOpacity(0.8), letterSpacing: 0.5),
+                        Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(10)),
+                                child: const Icon(Icons.calendar_month_rounded, color: Color(0xFF2563EB), size: 18),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Jadwal Pengerjaan', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
+                                    const SizedBox(height: 2),
+                                    Text('$tanggal · $jam WIB', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '$tanggal · $jam WIB',
-                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
+                        const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                        Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(10)),
+                                child: const Icon(Icons.location_on_rounded, color: Color(0xFFDC2626), size: 18),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Alamat', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      customerAddress,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A), height: 1.4),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -551,57 +973,21 @@ class _CleanerJobListScreenState extends State<CleanerJobListScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 14),
             
-            // Address Section
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.08),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.location_on_rounded, color: AppColors.error, size: 18),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Alamat Pengerjaan',
-                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMuted),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        customerAddress,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark, height: 1.4),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Divider(color: AppColors.border, height: 1),
-            const SizedBox(height: 12),
-            
-            // Card Footer
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Row(
-                  children: [
-                    Text('Lihat Detail', style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.bold)),
-                    const SizedBox(width: 2),
-                    const Icon(Icons.chevron_right_rounded, color: AppColors.primary, size: 16),
-                  ],
-                ),
-              ],
+            // Footer Action
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Lihat Detail Pekerjaan', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF2563EB), fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.arrow_forward_rounded, color: Color(0xFF2563EB), size: 16),
+                ],
+              ),
             ),
           ],
         ),
@@ -617,25 +1003,25 @@ class _CleanerJobListScreenState extends State<CleanerJobListScreen> {
     switch (status) {
       case 'assigned':
       case 'notified':
-        bg = AppColors.statusPending.withOpacity(0.1);
-        fg = AppColors.statusPending;
+        bg = const Color(0xFFFFFBEB);
+        fg = const Color(0xFFD97706);
         text = 'Tugas Baru';
         break;
       case 'in_progress':
-        bg = AppColors.statusProgress.withOpacity(0.1);
-        fg = AppColors.statusProgress;
+        bg = const Color(0xFFEFF6FF);
+        fg = const Color(0xFF2563EB);
         text = 'Dikerjakan';
         break;
       case 'finished':
-        bg = AppColors.statusDone.withOpacity(0.1);
-        fg = AppColors.statusDone;
+        bg = const Color(0xFFECFDF5);
+        fg = const Color(0xFF059669);
         text = 'Selesai';
         break;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
-      child: Text(text, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: fg)),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12), border: Border.all(color: fg.withOpacity(0.3))),
+      child: Text(text, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: fg)),
     );
   }
 }

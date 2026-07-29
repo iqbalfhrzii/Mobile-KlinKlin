@@ -75,7 +75,8 @@ class _HomeScreenState extends State<HomeScreen> {
           final now = DateTime.now();
 
           for (var o in orders) {
-            if (o.status == OrderStatus.cancelled || o.status == OrderStatus.draft) {
+            if (o.status == OrderStatus.cancelled ||
+                o.status == OrderStatus.draft) {
               continue;
             }
             bool isToday =
@@ -103,15 +104,27 @@ class _HomeScreenState extends State<HomeScreen> {
             }
           }
 
-          _omzetThisMonth = omzetBulan > 0 ? omzetBulan : (dbData['omzet_bulan_ini'] ?? 0);
-          _omzetToday = omzetHari > 0 || orders.isNotEmpty ? omzetHari : (dbData['omzet_hari_ini'] ?? 0);
+          _omzetThisMonth = omzetBulan > 0
+              ? omzetBulan
+              : (dbData['omzet_bulan_ini'] ?? 0);
+          _omzetToday = omzetHari > 0 || orders.isNotEmpty
+              ? omzetHari
+              : (dbData['omzet_hari_ini'] ?? 0);
           _rataRataOrder = countThisMonth > 0
               ? (omzetBulan / countThisMonth).toDouble()
               : (dbData['rata_rata_order'] ?? 0).toDouble();
-          _ordersToday = countToday > 0 || orders.isNotEmpty ? countToday : (dbData['pesanan_hari_ini'] ?? 0);
-          _waiting = waiting > 0 || orders.isNotEmpty ? waiting : (dbData['menunggu_approve'] ?? 0);
-          _active = active > 0 || orders.isNotEmpty ? active : (dbData['dikerjakan'] ?? 0);
-          _doneToday = done > 0 || orders.isNotEmpty ? done : (dbData['selesai_hari_ini'] ?? 0);
+          _ordersToday = countToday > 0 || orders.isNotEmpty
+              ? countToday
+              : (dbData['pesanan_hari_ini'] ?? 0);
+          _waiting = waiting > 0 || orders.isNotEmpty
+              ? waiting
+              : (dbData['menunggu_approve'] ?? 0);
+          _active = active > 0 || orders.isNotEmpty
+              ? active
+              : (dbData['dikerjakan'] ?? 0);
+          _doneToday = done > 0 || orders.isNotEmpty
+              ? done
+              : (dbData['selesai_hari_ini'] ?? 0);
           _targetOmzet = dbData['target_omzet'] ?? 15000000;
           _grafikHarian = dbData['grafik_harian'] ?? [];
           _grafikBulanan = dbData['grafik_bulanan'] ?? [];
@@ -455,7 +468,7 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
       _Stat(
-        'Menunggu Approve',
+        'Pending',
         '$_waiting',
         Icons.hourglass_empty_rounded,
         AppColors.statusPending,
@@ -550,16 +563,25 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF10B981).withOpacity(0.2),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFF10B981).withOpacity(0.4)),
+                        border: Border.all(
+                          color: const Color(0xFF10B981).withOpacity(0.4),
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.trending_up_rounded, color: Color(0xFF34D399), size: 14),
+                          const Icon(
+                            Icons.trending_up_rounded,
+                            color: Color(0xFF34D399),
+                            size: 14,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             'OMZET BULAN BERJALAN',
@@ -587,7 +609,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(14),
@@ -957,17 +982,23 @@ class _HomeScreenState extends State<HomeScreen> {
                       } else if (a.label == 'Absensi') {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const AttendanceScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const AttendanceScreen(),
+                          ),
                         );
                       } else if (a.label == 'Chat Harian') {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const ChatHarianScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const ChatHarianScreen(),
+                          ),
                         );
                       } else if (a.label == 'Kelola Pelanggan') {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const CustomerListScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const CustomerListScreen(),
+                          ),
                         );
                       } else if (a.label == 'KPI Karyawan') {
                         Navigator.push(
@@ -978,20 +1009,27 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     child: Container(
                       width: 85,
-                      margin: EdgeInsets.only(right: a == actions.last ? 0 : 12),
-                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+                      margin: EdgeInsets.only(
+                        right: a == actions.last ? 0 : 12,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 14,
+                        horizontal: 8,
+                      ),
                       decoration: BoxDecoration(
-                        gradient: a.label == 'Absensi' 
-                          ? const LinearGradient(
-                              colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            )
-                          : null,
+                        gradient: a.label == 'Absensi'
+                            ? const LinearGradient(
+                                colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              )
+                            : null,
                         color: a.label == 'Absensi' ? null : AppColors.surface,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: a.label == 'Absensi' ? Colors.transparent : AppColors.border,
+                          color: a.label == 'Absensi'
+                              ? Colors.transparent
+                              : AppColors.border,
                         ),
                         boxShadow: [
                           if (a.label == 'Absensi')
@@ -1001,7 +1039,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               offset: const Offset(0, 4),
                             )
                           else
-                            AppColors.cardShadow
+                            AppColors.cardShadow,
                         ],
                       ),
                       child: Column(
@@ -1009,7 +1047,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: a.label == 'Absensi' ? Colors.white.withOpacity(0.2) : a.bg,
+                              color: a.label == 'Absensi'
+                                  ? Colors.white.withOpacity(0.2)
+                                  : a.bg,
                               shape: BoxShape.circle,
                             ),
                             child: Icon(a.icon, color: a.color, size: 22),
@@ -1020,8 +1060,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             textAlign: TextAlign.center,
                             style: GoogleFonts.inter(
                               fontSize: 10,
-                              fontWeight: a.label == 'Absensi' ? FontWeight.bold : FontWeight.w600,
-                              color: a.label == 'Absensi' ? Colors.white : AppColors.textDark,
+                              fontWeight: a.label == 'Absensi'
+                                  ? FontWeight.bold
+                                  : FontWeight.w600,
+                              color: a.label == 'Absensi'
+                                  ? Colors.white
+                                  : AppColors.textDark,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -1055,7 +1099,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: AppColors.surfaceBlue,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.receipt_long_rounded, size: 16, color: AppColors.primary),
+                  child: const Icon(
+                    Icons.receipt_long_rounded,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -1087,150 +1135,170 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        ..._recentOrders.map(
-          (o) {
-            final bool isPaid = o.paymentStatus.toLowerCase() == 'paid' || 
-                                o.paymentStatus.toLowerCase() == 'approved' ||
-                                o.pembayaran?.statusPembayaran.toLowerCase() == 'approved';
-            return GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => OrderDetailScreen(order: o)),
-                );
-              },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppColors.border),
-                  boxShadow: [AppColors.cardShadow],
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.background,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '#${o.id}',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textMuted,
-                            ),
+        ..._recentOrders.map((o) {
+          final bool isPaid =
+              o.paymentStatus.toLowerCase() == 'paid' ||
+              o.paymentStatus.toLowerCase() == 'approved' ||
+              o.pembayaran?.statusPembayaran.toLowerCase() == 'approved';
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => OrderDetailScreen(order: o)),
+              );
+            },
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AppColors.border),
+                boxShadow: [AppColors.cardShadow],
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '#${o.id}',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textMuted,
                           ),
                         ),
-                        StatusBadge(status: o.status),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        InitialsAvatar(name: o.customer.name, size: 42),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                o.customer.name,
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textDark,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                o.services.isNotEmpty
-                                    ? o.services.first.name
-                                    : 'Pesanan Layanan',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: AppColors.textMuted,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: Divider(height: 1, color: AppColors.border),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
+                      ),
+                      StatusBadge(status: o.status),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      InitialsAvatar(name: o.customer.name, size: 42),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Total Tagihan',
+                              o.customer.name,
                               style: GoogleFonts.inter(
-                                fontSize: 10,
-                                color: AppColors.textMuted,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textDark,
                               ),
                             ),
+                            const SizedBox(height: 2),
                             Text(
-                              _formatRupiah(o.total),
+                              o.services.isNotEmpty
+                                  ? o.services.first.name
+                                  : 'Pesanan Layanan',
                               style: GoogleFonts.inter(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xFF059669),
+                                fontSize: 12,
+                                color: AppColors.textMuted,
                               ),
                             ),
                           ],
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isPaid ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7),
-                            borderRadius: BorderRadius.circular(20),
+                      ),
+                    ],
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Divider(height: 1, color: AppColors.border),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Total Tagihan',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: AppColors.textMuted,
+                            ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                isPaid ? Icons.check_circle_rounded : Icons.pending_rounded,
-                                size: 14,
-                                color: isPaid ? const Color(0xFF065F46) : const Color(0xFF92400E),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                isPaid ? 'Paid / Approved' : 'Unpaid / Pending',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: isPaid ? const Color(0xFF065F46) : const Color(0xFF92400E),
-                                ),
-                              ),
-                            ],
+                          Text(
+                            _formatRupiah(o.total),
+                            style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF059669),
+                            ),
                           ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
                         ),
-                      ],
-                    ),
-                  ],
-                ),
+                        decoration: BoxDecoration(
+                          color: isPaid
+                              ? const Color(0xFFD1FAE5)
+                              : const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isPaid
+                                  ? Icons.check_circle_rounded
+                                  : Icons.pending_rounded,
+                              size: 14,
+                              color: isPaid
+                                  ? const Color(0xFF065F46)
+                                  : const Color(0xFF92400E),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              isPaid ? 'Paid / Approved' : 'Unpaid / Pending',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: isPaid
+                                    ? const Color(0xFF065F46)
+                                    : const Color(0xFF92400E),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            );
-          },
-        ),
+            ),
+          );
+        }),
       ],
     );
   }
 }
 
 class _Stat {
-  const _Stat(this.label, this.value, this.icon, this.color, {this.hint = '', this.onTap});
+  const _Stat(
+    this.label,
+    this.value,
+    this.icon,
+    this.color, {
+    this.hint = '',
+    this.onTap,
+  });
   final String label, value, hint;
   final IconData icon;
   final Color color;

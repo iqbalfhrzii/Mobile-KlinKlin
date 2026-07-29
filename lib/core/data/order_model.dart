@@ -440,7 +440,7 @@ class OrderModel {
     final p = paymentStatus.toLowerCase();
     final pSub = pembayaran?.statusPembayaran.toLowerCase() ?? '';
     if (p == 'approved' || p == 'paid' || p == 'lunas' || pSub == 'approved') return 'Disetujui';
-    if (p == 'pending' || pSub == 'pending' || status == OrderStatus.waitingPaymentApproval) return 'Menunggu Approval';
+    if (p == 'pending' || pSub == 'pending' || status == OrderStatus.waitingPaymentApproval) return 'Pending';
     if (p == 'rejected' || pSub == 'rejected') return 'Ditolak';
     if (p == 'cancelled' || status == OrderStatus.cancelled) return 'Dibatalkan';
     return 'Belum Dibayar';

@@ -188,7 +188,7 @@ class _OperasionalDataChatScreenState extends State<OperasionalDataChatScreen> {
   }
 
   Widget _buildContent() {
-    final summary = _data!['summary'];
+    final summary = _data!['global'];
     final list = _data!['per_cabang'] as List;
 
     return SingleChildScrollView(

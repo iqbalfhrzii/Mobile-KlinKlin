@@ -1960,38 +1960,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             },
           ),
         ],
-        if (!widget.isReadOnly && o.statusUtamaLabel.toLowerCase() == 'pending') ...[
-          const SizedBox(height: 12),
-          _buildBigActionBtn(
-            isLoading: _isLoading,
-            title: 'Tandai Selesai',
-            subtitle: 'Selesaikan pesanan secara manual',
-            icon: Icons.check_circle_outline_rounded,
-            color: const Color(0xFF059669),
-            isDone: false,
-            enabled: true,
-            onTap: () async {
-              setState(() => _isLoading = true);
-              try {
-                await _orderService.updateStatusUtamaRaw(o.id, 'done');
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Status pesanan berhasil diubah menjadi Selesai.'),
-                    backgroundColor: Color(0xFF059669),
-                  ),
-                );
-                _fetchDetail();
-              } catch (e) {
-                if (!mounted) return;
-                setState(() => _isLoading = false);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
-                );
-              }
-            },
-          ),
-        ],
+
       ],
     );
   }

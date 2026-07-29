@@ -47,7 +47,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
   DateTimeRange? _customRange;
   DateTime? _filterStart;
   DateTime? _filterEnd;
-  String? _selectedStatusPembayaran; // 'Disetujui', 'Ditolak', 'Menunggu Approval', 'Belum Dibayar'
+  String? _selectedStatusPembayaran; // 'Disetujui', 'Ditolak', 'Pending', 'Belum Dibayar'
 
   // Pagination limits matching Absensi/Audit design
   int _limitAuditPending = 5;
@@ -1322,7 +1322,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         showCheckmark: false,
                       ),
-                      ...['Disetujui', 'Ditolak', 'Menunggu Approval', 'Belum Dibayar'].map((st) {
+                      ...['Disetujui', 'Ditolak', 'Pending', 'Belum Dibayar'].map((st) {
                         final isSel = _selectedStatusPembayaran == st;
                         Color chipColor;
                         Color chipBg;
@@ -1335,7 +1335,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                             chipColor = const Color(0xFFDC2626);
                             chipBg = const Color(0xFFFEF2F2);
                             break;
-                          case 'Menunggu Approval':
+                          case 'Pending':
                             chipColor = const Color(0xFFD97706);
                             chipBg = const Color(0xFFFFFBEB);
                             break;
@@ -2004,7 +2004,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     Color badgeBg = const Color(0xFFFEF3C7);
     Color badgeBorder = const Color(0xFFFDE68A);
     Color badgeText = const Color(0xFFD97706);
-    String badgeLabel = 'Menunggu Approval';
+    String badgeLabel = 'Pending';
 
     if (order.paymentStatus.toLowerCase() == 'approved' || order.paymentStatus.toLowerCase() == 'disetujui' || order.paymentStatus.toLowerCase() == 'paid') {
       badgeBg = const Color(0xFFDCFCE7);

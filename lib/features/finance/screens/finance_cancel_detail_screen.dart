@@ -132,7 +132,7 @@ class _FinanceCancelDetailScreenState extends State<FinanceCancelDetailScreen> {
 
     final isCancelled = order.status == OrderStatus.cancelled;
     final statusColor = isCancelled ? AppColors.error : AppColors.statusPending;
-    final statusText = isCancelled ? 'Dibatalkan' : 'Menunggu Approval';
+    final statusText = isCancelled ? 'Dibatalkan' : 'Menunggu Approval Batal';
 
     return Scaffold(
       backgroundColor: AppColors.background,

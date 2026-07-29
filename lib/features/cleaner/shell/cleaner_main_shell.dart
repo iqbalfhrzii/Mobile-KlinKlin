@@ -21,6 +21,14 @@ class CleanerMainShell extends StatefulWidget {
   final bool requirePinChange;
   final String? currentPin;
 
+  static void navigateToJobs(BuildContext context, {String? statusFilter, bool isTodayOnly = false}) {
+    final state = context.findAncestorStateOfType<_CleanerMainShellState>();
+    if (state != null) {
+      state.jobListKey.currentState?.applyFilter(statusFilter: statusFilter, isTodayOnly: isTodayOnly);
+      state.setState(() => state._currentIndex = 1);
+    }
+  }
+
   @override
   State<CleanerMainShell> createState() => _CleanerMainShellState();
 }
@@ -28,6 +36,7 @@ class CleanerMainShell extends StatefulWidget {
 class _CleanerMainShellState extends State<CleanerMainShell> {
   late int _currentIndex;
   int _dashKeyVal = 0;
+  final GlobalKey<CleanerJobListScreenState> jobListKey = GlobalKey<CleanerJobListScreenState>();
 
   @override
   void initState() {
@@ -38,11 +47,13 @@ class _CleanerMainShellState extends State<CleanerMainShell> {
 
   List<Widget> get _screens => [
     CleanerDashboardScreen(key: ValueKey('dash_$_dashKeyVal')),
-    const CleanerJobListScreen(),
+    CleanerJobListScreen(key: jobListKey),
     const AttendanceScreen(),
     const CleanerHistoryScreen(),
     const ProfileScreen(),
   ];
+
+
 
   static const _navItems = [
     _NavItem(Icons.grid_view_rounded, Icons.grid_view_rounded, 'Dashboard'),
