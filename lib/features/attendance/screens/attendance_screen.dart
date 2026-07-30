@@ -379,6 +379,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       children: [
                         _buildActionButtons(),
                         const SizedBox(height: 16),
+                        _buildScheduleCard(),
+                        const SizedBox(height: 16),
                         _buildLocationCard(),
                         const SizedBox(height: 16),
                         _buildLeaveMenu(),
@@ -466,6 +468,77 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildScheduleCard() {
+    String formatTime(String time) {
+      if (time.length >= 5) return time.substring(0, 5);
+      return time;
+    }
+
+    final rawJamMasuk = _status?.jamMasuk ?? '08:00';
+    final rawJamPulang = _status?.jamPulang ?? '17:00';
+    final toleransiMenit = _status?.toleransiTelatMenit ?? 15;
+
+    final jamMasuk = formatTime(rawJamMasuk);
+    final jamPulang = formatTime(rawJamPulang);
+    
+    String jamTelat = '-';
+    try {
+      final parts = rawJamMasuk.split(':');
+      if (parts.length >= 2) {
+        final dt = DateTime(2000, 1, 1, int.parse(parts[0]), int.parse(parts[1]));
+        final telatDt = dt.add(Duration(minutes: toleransiMenit));
+        jamTelat = '> ${telatDt.hour.toString().padLeft(2, '0')}:${telatDt.minute.toString().padLeft(2, '0')}';
+      }
+    } catch (_) {}
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white, 
+        borderRadius: BorderRadius.circular(16), 
+        boxShadow: [AppColors.cardShadow],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.access_time_filled_rounded, color: AppColors.primary, size: 20),
+              const SizedBox(width: 8),
+              Text('Jadwal Absensi', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildScheduleItem('Jam Masuk', jamMasuk, Colors.green),
+              ),
+              Container(width: 1, height: 30, color: Colors.grey.shade200),
+              Expanded(
+                child: _buildScheduleItem('Toleransi Telat', jamTelat, Colors.red),
+              ),
+              Container(width: 1, height: 30, color: Colors.grey.shade200),
+              Expanded(
+                child: _buildScheduleItem('Jam Pulang', jamPulang, Colors.orange),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScheduleItem(String label, String time, Color color) {
+    return Column(
+      children: [
+        Text(label, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+        const SizedBox(height: 4),
+        Text(time, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
+      ],
     );
   }
 

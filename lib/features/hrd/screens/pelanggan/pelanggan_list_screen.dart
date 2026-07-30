@@ -77,17 +77,21 @@ class _PelangganListScreenState extends State<PelangganListScreen> {
     }
   }
 
-  Future<void> _deletePelanggan(PelangganHrdModel pelanggan) async {
+  Future<void> _toggleStatusPelanggan(PelangganHrdModel pelanggan) async {
+    final isAktif = pelanggan.status.toLowerCase() == 'aktif';
+    final newStatus = isAktif ? 'nonaktif' : 'aktif';
+    final action = isAktif ? 'menonaktifkan' : 'mengaktifkan';
+    
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Nonaktifkan Pelanggan?'),
-        content: Text('Apakah Anda yakin ingin menonaktifkan ${pelanggan.namaPelanggan}?'),
+        title: Text('${isAktif ? 'Nonaktifkan' : 'Aktifkan'} Pelanggan?'),
+        content: Text('Apakah Anda yakin ingin $action ${pelanggan.namaPelanggan}?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true), 
-            child: const Text('Nonaktifkan', style: TextStyle(color: Colors.red)),
+            child: Text(isAktif ? 'Nonaktifkan' : 'Aktifkan', style: TextStyle(color: isAktif ? Colors.red : Colors.green)),
           ),
         ],
       ),
@@ -96,10 +100,10 @@ class _PelangganListScreenState extends State<PelangganListScreen> {
     if (confirm == true) {
       setState(() => _isLoading = true);
       try {
-        await _hrdService.deletePelanggan(pelanggan.id);
+        await _hrdService.updatePelanggan(pelanggan.id, {'status': newStatus});
         await _fetchPelanggan();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pelanggan dinonaktifkan')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Status pelanggan berhasil diubah')));
         }
       } catch (e) {
         if (mounted) {
@@ -158,140 +162,183 @@ class _PelangganListScreenState extends State<PelangganListScreen> {
   }
 
   Widget _buildItem(PelangganHrdModel pelanggan) {
+    final isAktif = pelanggan.status.toLowerCase() == 'aktif';
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.blueAccent.withValues(alpha: 0.05),
-            blurRadius: 12,
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                  child: Text(
-                    pelanggan.namaPelanggan.isNotEmpty ? pelanggan.namaPelanggan[0].toUpperCase() : '?',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 18),
-                  ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(color: AppColors.primary.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 2)),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                pelanggan.namaPelanggan.isNotEmpty ? pelanggan.namaPelanggan[0].toUpperCase() : '?',
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 20),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        pelanggan.namaPelanggan,
-                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                      Expanded(
+                        child: Text(
+                          pelanggan.namaPelanggan,
+                          style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        pelanggan.status.toUpperCase(),
-                        style: GoogleFonts.inter(
-                          fontSize: 12, 
-                          fontWeight: FontWeight.w600, 
-                          color: pelanggan.status.toLowerCase() == 'aktif' ? Colors.green : Colors.red
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isAktif ? Colors.green.shade50 : Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: isAktif ? Colors.green.shade200 : Colors.red.shade200),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: isAktif ? Colors.green : Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              pelanggan.status.toUpperCase(),
+                              style: GoogleFonts.inter(
+                                fontSize: 10, 
+                                fontWeight: FontWeight.bold, 
+                                color: isAktif ? Colors.green.shade700 : Colors.red.shade700,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.storefront_rounded, size: 16, color: Colors.grey),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        pelanggan.cabang?.namaCabang ?? '-',
-                        style: GoogleFonts.inter(fontSize: 14, color: AppColors.textDark),
-                      ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade100),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(Icons.phone_outlined, size: 16, color: Colors.grey),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        pelanggan.noWa ?? '-',
-                        style: GoogleFonts.inter(fontSize: 14, color: AppColors.textDark),
-                      ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.storefront_rounded, size: 16, color: Colors.blue.shade400),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                pelanggan.cabang?.namaCabang ?? '-',
+                                style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.phone_outlined, size: 16, color: Colors.green.shade400),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                pelanggan.noWa ?? '-',
+                                style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.location_on_outlined, size: 16, color: Colors.orange.shade400),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                pelanggan.alamat ?? '-',
+                                style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.location_on_outlined, size: 16, color: Colors.grey),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        pelanggan.alamat ?? '-',
-                        style: GoogleFonts.inter(fontSize: 14, color: AppColors.textDark),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          Row(
-            children: [
-              Expanded(
-                child: TextButton.icon(
-                  onPressed: () async {
-                    final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => PelangganFormScreen(pelanggan: pelanggan)));
-                    if (res == true) _fetchPelanggan();
-                  },
-                  icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.blueAccent),
-                  label: Text('Edit', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.blueAccent)),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.only(bottomLeft: Radius.circular(20))),
                   ),
-                ),
-              ),
-              Container(width: 1, height: 24, color: Colors.grey.withValues(alpha: 0.2)),
-              Expanded(
-                child: TextButton.icon(
-                  onPressed: () => _deletePelanggan(pelanggan),
-                  icon: const Icon(Icons.block_outlined, size: 18, color: Colors.redAccent),
-                  label: Text('Nonaktifkan', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.redAccent)),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.only(bottomRight: Radius.circular(20))),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () => _toggleStatusPelanggan(pelanggan),
+                        icon: Icon(isAktif ? Icons.block_outlined : Icons.check_circle_outline, size: 16),
+                        label: Text(isAktif ? 'Nonaktifkan' : 'Aktifkan', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+                        style: TextButton.styleFrom(
+                          foregroundColor: isAktif ? Colors.red.shade600 : Colors.green.shade600,
+                          backgroundColor: isAktif ? Colors.red.shade50 : Colors.green.shade50,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: () async {
+                          final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => PelangganFormScreen(pelanggan: pelanggan)));
+                          if (res == true) _fetchPelanggan();
+                        },
+                        icon: const Icon(Icons.edit_outlined, size: 16),
+                        label: Text('Edit Data', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

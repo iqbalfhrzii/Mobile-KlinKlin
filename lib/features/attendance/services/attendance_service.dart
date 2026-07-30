@@ -22,6 +22,9 @@ class AttendanceService {
         double? branchLat;
         double? branchLng;
         double? maxRadiusMeter;
+        String? jamMasuk;
+        int? toleransiTelatMenit;
+        String? jamPulang;
 
         final now = DateTime.now();
         final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
@@ -49,6 +52,9 @@ class AttendanceService {
               if (lat != null && branchLat == null) branchLat = double.tryParse(lat.toString());
               if (lng != null && branchLng == null) branchLng = double.tryParse(lng.toString());
               if (radius != null && maxRadiusMeter == null) maxRadiusMeter = double.tryParse(radius.toString());
+              if (c['jam_masuk'] != null && jamMasuk == null) jamMasuk = c['jam_masuk'].toString();
+              if (c['toleransi_telat_menit'] != null && toleransiTelatMenit == null) toleransiTelatMenit = int.tryParse(c['toleransi_telat_menit'].toString());
+              if (c['jam_pulang'] != null && jamPulang == null) jamPulang = c['jam_pulang'].toString();
             }
           }
         }
@@ -78,11 +84,14 @@ class AttendanceService {
                 if (lat != null && branchLat == null) branchLat = double.tryParse(lat.toString());
                 if (lng != null && branchLng == null) branchLng = double.tryParse(lng.toString());
                 if (radius != null && maxRadiusMeter == null) maxRadiusMeter = double.tryParse(radius.toString());
+                if (c['jam_masuk'] != null && jamMasuk == null) jamMasuk = c['jam_masuk'].toString();
+                if (c['toleransi_telat_menit'] != null && toleransiTelatMenit == null) toleransiTelatMenit = int.tryParse(c['toleransi_telat_menit'].toString());
+                if (c['jam_pulang'] != null && jamPulang == null) jamPulang = c['jam_pulang'].toString();
               }
             }
 
-            // 2. Fallback: If coordinates are STILL null, try fetching /cabangs
-            if (branchLat == null || branchLng == null) {
+            // 2. Fallback: If coordinates or schedule are STILL null, try fetching /cabangs
+            if (branchLat == null || branchLng == null || jamMasuk == null) {
               var cabangId = meData['cabang_id'] ?? meData['karyawan']?['cabang_id'] ?? meData['user']?['cabang_id'];
               
               if (cabangId == null) {
@@ -108,6 +117,9 @@ class AttendanceService {
                       if (lat != null && branchLat == null) branchLat = double.tryParse(lat.toString());
                       if (lng != null && branchLng == null) branchLng = double.tryParse(lng.toString());
                       if (radius != null && maxRadiusMeter == null) maxRadiusMeter = double.tryParse(radius.toString());
+                      if (myCabang['jam_masuk'] != null && jamMasuk == null) jamMasuk = myCabang['jam_masuk'].toString();
+                      if (myCabang['toleransi_telat_menit'] != null && toleransiTelatMenit == null) toleransiTelatMenit = int.tryParse(myCabang['toleransi_telat_menit'].toString());
+                      if (myCabang['jam_pulang'] != null && jamPulang == null) jamPulang = myCabang['jam_pulang'].toString();
                     }
                   }
                 } catch (_) {}
@@ -125,6 +137,9 @@ class AttendanceService {
           branchLat: branchLat,
           branchLng: branchLng,
           maxRadiusMeter: maxRadiusMeter,
+          jamMasuk: jamMasuk,
+          toleransiTelatMenit: toleransiTelatMenit,
+          jamPulang: jamPulang,
         );
       }
       throw Exception('Gagal mendapatkan status absensi');

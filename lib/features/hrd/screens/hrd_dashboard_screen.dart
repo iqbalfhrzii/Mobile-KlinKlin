@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../attendance/screens/admin_attendance_list_screen.dart';
@@ -32,6 +33,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
   int _todayMasuk = 0;
   int _todayTelat = 0;
   int _todayTidakAbsen = 0;
+  String _userName = '';
 
   @override
   void initState() {
@@ -41,6 +43,9 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
 
   Future<void> _fetchDashboardData() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      _userName = prefs.getString('user_name') ?? 'User';
+
       final now = DateTime.now();
       final todayStr = DateFormat('yyyy-MM-dd').format(now);
 
@@ -221,6 +226,11 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Image.asset(
+                      'assets/images/logo.png',
+                      height: 24,
+                    ),
+                    const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
@@ -238,9 +248,17 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _getGreeting(),
+                      _getGreeting() + ',',
                       style: GoogleFonts.inter(
-                        fontSize: 22,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      '$_userName ✨',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
@@ -345,7 +363,6 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
               ],
             ),
           ),
-          const Divider(height: 1),
 
           // Stat Pills
           Padding(

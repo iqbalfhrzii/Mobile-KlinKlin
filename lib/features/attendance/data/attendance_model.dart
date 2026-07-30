@@ -9,6 +9,9 @@ class AttendanceStatus {
   final double? branchLat;
   final double? branchLng;
   final double? maxRadiusMeter;
+  final String? jamMasuk;
+  final int? toleransiTelatMenit;
+  final String? jamPulang;
 
   AttendanceStatus({
     required this.hasCheckedIn,
@@ -19,6 +22,9 @@ class AttendanceStatus {
     this.branchLat,
     this.branchLng,
     this.maxRadiusMeter,
+    this.jamMasuk,
+    this.toleransiTelatMenit,
+    this.jamPulang,
   });
 
   factory AttendanceStatus.fromJson(Map<String, dynamic> json) {
@@ -31,6 +37,9 @@ class AttendanceStatus {
       branchLat: json['branch_lat'] != null ? double.tryParse(json['branch_lat'].toString()) : null,
       branchLng: json['branch_lng'] != null ? double.tryParse(json['branch_lng'].toString()) : null,
       maxRadiusMeter: json['max_radius_meter'] != null ? double.tryParse(json['max_radius_meter'].toString()) : 50.0,
+      jamMasuk: json['jam_masuk'],
+      toleransiTelatMenit: json['toleransi_telat_menit'] != null ? int.tryParse(json['toleransi_telat_menit'].toString()) : null,
+      jamPulang: json['jam_pulang'],
     );
   }
 }

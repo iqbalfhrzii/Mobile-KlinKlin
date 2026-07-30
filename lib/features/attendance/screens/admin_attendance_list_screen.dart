@@ -34,6 +34,8 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
   DateTime? _selectedTanggal;
   int? _selectedCabangId;
   String _searchQuery = '';
+  final TextEditingController _searchCtrl = TextEditingController();
+  DateTimeRange? _customRange;
   String? _activeStatFilter; // null, 'absen_masuk', 'absen_keluar', 'telat', 'tidak_absen'
 
   bool _isFinance = false;
@@ -277,29 +279,7 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
     _applyFilter();
   }
 
-  Widget _buildFilterChip(String label, String value) {
-    final isSelected = _filterWaktu == value && _selectedTanggal == null;
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (selected) {
-        if (selected) {
-          setState(() {
-            _filterWaktu = value;
-            _selectedTanggal = null;
-          });
-          _loadData();
-        }
-      },
-      selectedColor: AppColors.primary,
-      labelStyle: GoogleFonts.inter(
-        fontSize: 12,
-        color: isSelected ? Colors.white : AppColors.textDark,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-      ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-    );
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -315,13 +295,29 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Daftar Absensi',
-                        style: GoogleFonts.inter(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                      Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Daftar Absensi',
+                            style: GoogleFonts.inter(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -348,13 +344,6 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
                   children: [
                     // --- WeeklyDatePicker (Sama seperti CS List Pesanan & Insentif) ---
                     WeeklyDatePicker(
-                      searchQuery: _searchQuery,
-                      onSearchChanged: (val) {
-                        setState(() {
-                          _searchQuery = val;
-                        });
-                        _applyFilter();
-                      },
                       showAllMonthButton: false,
                       onFilterChanged: (start, end) {
                         if (start == null && end == null) {
@@ -376,60 +365,7 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Filter Periode Chips (di bawah pencarian)
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _buildFilterChip('Hari Ini', 'hari_ini'),
-                          const SizedBox(width: 8),
-                          _buildFilterChip('Kemarin', 'kemarin'),
-                          const SizedBox(width: 8),
-                          _buildFilterChip('Bulan Ini', 'bulan_ini'),
-                          const SizedBox(width: 8),
-                          _buildFilterChip('Semua', 'semua'),
-                        ],
-                      ),
-                    ),
-
-                    // Cabang Dropdown (Clean, tanpa icon)
-                    if (_cabangList.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<int?>(
-                            isExpanded: true,
-                            value: (_selectedCabangId != null && _cabangList.any((c) => c.id == _selectedCabangId))
-                                ? _selectedCabangId
-                                : null,
-                            icon: const Icon(Icons.arrow_drop_down_rounded, color: AppColors.textMuted),
-                            hint: Text('Semua Cabang', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark)),
-                            items: [
-                              DropdownMenuItem<int?>(
-                                value: null,
-                                child: Text('Semua Cabang', style: GoogleFonts.inter(fontSize: 13)),
-                              ),
-                              ..._cabangList.map(
-                                (c) => DropdownMenuItem<int?>(
-                                  value: c.id,
-                                  child: Text(c.namaCabang, style: GoogleFonts.inter(fontSize: 13)),
-                                ),
-                              ),
-                            ],
-                            onChanged: (int? newValue) {
-                              setState(() => _selectedCabangId = newValue);
-                              _loadData();
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
+                    _buildProMaxSearchAndFilterBar(),
 
                     // Stat Summary Cards (di bawah cabang dropdown, geser kanan)
                     const SizedBox(height: 12),
@@ -758,21 +694,21 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           onTap: () {
             Navigator.push(
               context,
@@ -786,19 +722,36 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
             child: Row(
               children: [
                 // Avatar Circle
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                  child: Text(
-                    group.namaCleaner.isNotEmpty ? group.namaCleaner[0].toUpperCase() : 'C',
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF1D4ED8).withValues(alpha: 0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      group.namaCleaner.isNotEmpty ? group.namaCleaner[0].toUpperCase() : 'C',
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 16),
 
                 // Name & Branch & Times
                 Expanded(
@@ -815,8 +768,9 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
                               group.namaCleaner,
                               style: GoogleFonts.inter(
                                 fontSize: 15,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w700,
                                 color: AppColors.textDark,
+                                letterSpacing: -0.2,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -828,7 +782,8 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
                                 color: statusBg,
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                               ),
                               child: Text(
                                 statusLabel,
@@ -844,24 +799,24 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
 
                       // Tanggal & Cabang
                       Row(
                         children: [
-                          Icon(Icons.calendar_today_rounded, size: 12, color: Colors.grey.shade500),
+                          Icon(Icons.calendar_month_rounded, size: 12, color: Colors.grey.shade500),
                           const SizedBox(width: 4),
                           Text(
                             group.tanggal,
-                            style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMuted),
                           ),
                           if (group.cabangName != null && group.cabangName!.isNotEmpty) ...[
-                            const SizedBox(width: 10),
-                            Icon(Icons.store_rounded, size: 12, color: Colors.grey.shade500),
+                            const SizedBox(width: 8),
+                            Icon(Icons.storefront_rounded, size: 12, color: Colors.grey.shade500),
                             const SizedBox(width: 4),
                             Text(
                               group.cabangName!,
-                              style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMuted),
                             ),
                           ],
                         ],
@@ -870,17 +825,44 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
 
                       // CheckIn / CheckOut Badges
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _buildTimeChip('Masuk', group.checkIn?.time, const Color(0xFF2E7D32)),
-                          const SizedBox(width: 8),
-                          _buildTimeChip('Keluar', group.checkOut?.time, const Color(0xFF1565C0)),
+                          Row(
+                            children: [
+                              _buildTimeChip('Masuk', group.checkIn?.time, const Color(0xFF2E7D32)),
+                              const SizedBox(width: 8),
+                              _buildTimeChip('Keluar', group.checkOut?.time, const Color(0xFF1565C0)),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF0284C7).withValues(alpha: 0.3),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              'Detail',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400, size: 20),
               ],
             ),
           ),
@@ -993,5 +975,325 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
         ],
       ),
     );
+  }
+
+  // --- Modern Filter UI ---
+  Widget _buildProMaxSearchAndFilterBar() {
+    final int activeFilterCount = (_selectedCabangId != null ? 1 : 0) +
+        (_filterWaktu != 'semua' && _filterWaktu.isNotEmpty ? 1 : 0) +
+        (_customRange != null || _selectedTanggal != null ? 1 : 0);
+
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 46,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(23),
+              border: Border.all(
+                color: _searchQuery.isNotEmpty ? const Color(0xFF3B82F6) : Colors.grey.withValues(alpha: 0.25),
+                width: _searchQuery.isNotEmpty ? 1.5 : 1.0,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: _searchQuery.isNotEmpty ? const Color(0xFF3B82F6).withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.search_rounded,
+                  size: 20,
+                  color: _searchQuery.isNotEmpty ? const Color(0xFF2563EB) : AppColors.textMuted,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _searchCtrl,
+                    onChanged: (val) {
+                      setState(() => _searchQuery = val);
+                      _applyFilter();
+                    },
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                    decoration: InputDecoration(
+                      hintText: 'Cari cleaner...',
+                      hintStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.normal, color: AppColors.textMuted),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+                if (_searchQuery.isNotEmpty)
+                  GestureDetector(
+                    onTap: () {
+                      _searchCtrl.clear();
+                      setState(() => _searchQuery = '');
+                      _applyFilter();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(color: Color(0xFFF1F5F9), shape: BoxShape.circle),
+                      child: const Icon(Icons.close_rounded, size: 14, color: AppColors.textMuted),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        GestureDetector(
+          onTap: () => _showFilterBottomSheet(),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            height: 46,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              gradient: activeFilterCount > 0
+                  ? const LinearGradient(colors: [Color(0xFF2563EB), Color(0xFF4F46E5)])
+                  : null,
+              color: activeFilterCount > 0 ? null : Colors.white,
+              borderRadius: BorderRadius.circular(23),
+              border: Border.all(
+                color: activeFilterCount > 0 ? Colors.transparent : Colors.grey.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+              boxShadow: [
+                if (activeFilterCount > 0)
+                  BoxShadow(
+                    color: const Color(0xFF4F46E5).withValues(alpha: 0.35),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  )
+                else
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.tune_rounded,
+                  size: 18,
+                  color: activeFilterCount > 0 ? Colors.white : AppColors.textDark,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Filter',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: activeFilterCount > 0 ? Colors.white : AppColors.textDark,
+                  ),
+                ),
+                if (activeFilterCount > 0) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '$activeFilterCount',
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showFilterBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Filter Absensi', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(height: 1),
+                  const SizedBox(height: 16),
+
+                  // 1. Cabang
+                  if (_cabangList.isNotEmpty) ...[
+                    Text('Pilih Cabang', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('Semua Cabang'),
+                          selected: _selectedCabangId == null,
+                          onSelected: (val) {
+                            setModalState(() => _selectedCabangId = null);
+                            setState(() => _selectedCabangId = null);
+                            _loadData();
+                          },
+                          selectedColor: const Color(0xFFEFF6FF),
+                          labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: _selectedCabangId == null ? FontWeight.bold : FontWeight.w500, color: _selectedCabangId == null ? const Color(0xFF1D4ED8) : AppColors.textDark),
+                          side: BorderSide(color: _selectedCabangId == null ? const Color(0xFF3B82F6) : Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          showCheckmark: false,
+                        ),
+                        ..._cabangList.map((c) {
+                          final isSel = _selectedCabangId == c.id;
+                          return ChoiceChip(
+                            label: Text(c.namaCabang),
+                            selected: isSel,
+                            onSelected: (val) {
+                              setModalState(() => _selectedCabangId = val ? c.id : null);
+                              setState(() => _selectedCabangId = val ? c.id : null);
+                              _loadData();
+                            },
+                            selectedColor: const Color(0xFFEFF6FF),
+                            labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.w500, color: isSel ? const Color(0xFF1D4ED8) : AppColors.textDark),
+                            side: BorderSide(color: isSel ? const Color(0xFF3B82F6) : Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            showCheckmark: false,
+                          );
+                        }),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+
+                  // 2. Rentang Waktu
+                  Text('Rentang Waktu', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ...[
+                        {'key': 'semua', 'label': 'Semua Waktu'},
+                        {'key': 'hari_ini', 'label': 'Hari Ini'},
+                        {'key': 'kemarin', 'label': 'Kemarin'},
+                        {'key': 'bulan_ini', 'label': 'Bulan Ini'},
+                      ].map((item) {
+                        final isSel = _filterWaktu == item['key'] && _selectedTanggal == null;
+                        return ChoiceChip(
+                          label: Text(item['label']!),
+                          selected: isSel,
+                          onSelected: (val) {
+                            if (val) {
+                              setModalState(() {
+                                _filterWaktu = item['key']!;
+                                _customRange = null;
+                                _selectedTanggal = null;
+                              });
+                              setState(() {
+                                _filterWaktu = item['key']!;
+                                _customRange = null;
+                                _selectedTanggal = null;
+                              });
+                              _loadData();
+                            }
+                          },
+                          selectedColor: const Color(0xFFECFDF5),
+                          labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.w500, color: isSel ? const Color(0xFF047857) : AppColors.textDark),
+                          side: BorderSide(color: isSel ? const Color(0xFF10B981) : Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          showCheckmark: false,
+                        );
+                      }),
+                      ActionChip(
+                        avatar: const Icon(Icons.calendar_month_rounded, size: 14, color: Color(0xFF4F46E5)),
+                        label: Text(
+                          _filterWaktu == 'custom' && _customRange != null
+                              ? '${DateFormat('dd/MM').format(_customRange!.start)} - ${DateFormat('dd/MM').format(_customRange!.end)}'
+                              : 'Pilih Tanggal',
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: _filterWaktu == 'custom' ? FontWeight.bold : FontWeight.w500, color: _filterWaktu == 'custom' ? const Color(0xFF4F46E5) : AppColors.textDark),
+                        ),
+                        onPressed: () async {
+                          Navigator.pop(ctx);
+                          await _pickCustomRange();
+                        },
+                        backgroundColor: _filterWaktu == 'custom' ? const Color(0xFFEEF2FF) : Colors.white,
+                        side: BorderSide(color: _filterWaktu == 'custom' ? const Color(0xFF6366F1) : Colors.grey.shade300),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _pickCustomRange() async {
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      initialDateRange: _customRange,
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: AppColors.primary,
+            onPrimary: Colors.white,
+            surface: Colors.white,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) {
+      setState(() {
+        _customRange = picked;
+        _filterWaktu = 'custom';
+        _selectedTanggal = picked.start;
+      });
+      _loadData();
+    }
   }
 }

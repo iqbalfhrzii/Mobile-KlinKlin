@@ -22,6 +22,8 @@ class _InsentifCleanerListScreenState extends State<InsentifCleanerListScreen> {
   String _filterWaktu = 'bulan_ini'; // bulan_ini, hari_ini, kemarin, semua
   int? _selectedCabangId;
   String _searchQuery = '';
+  final TextEditingController _searchCtrl = TextEditingController();
+  DateTimeRange? _customRange;
 
   DateTime? _selectedTanggal;
   List<InsentifCleanerModel> _allData = [];
@@ -164,8 +166,6 @@ class _InsentifCleanerListScreenState extends State<InsentifCleanerListScreen> {
                   children: [
                     // --- WeeklyDatePicker (Sama seperti CS List Pesanan) ---
                     WeeklyDatePicker(
-                      searchQuery: _searchQuery,
-                      onSearchChanged: (val) => setState(() => _searchQuery = val),
                       showAllMonthButton: false,
                       onFilterChanged: (start, end) {
                         if (start == null && end == null) {
@@ -187,58 +187,7 @@ class _InsentifCleanerListScreenState extends State<InsentifCleanerListScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Filter Periode Chips (di bawah pencarian)
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _buildFilterChip('Bulan Ini', 'bulan_ini'),
-                          const SizedBox(width: 8),
-                          _buildFilterChip('Hari Ini', 'hari_ini'),
-                          const SizedBox(width: 8),
-                          _buildFilterChip('Kemarin', 'kemarin'),
-                          const SizedBox(width: 8),
-                          _buildFilterChip('Semua', 'semua'),
-                        ],
-                      ),
-                    ),
-
-                    // Filter Cabang Dropdown
-                    if (_cabangList.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<int?>(
-                            isExpanded: true,
-                            value: _selectedCabangId,
-                            icon: const Icon(Icons.arrow_drop_down_rounded, color: AppColors.textMuted),
-                            hint: Text('Semua Cabang', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark)),
-                            items: [
-                              DropdownMenuItem<int?>(
-                                value: null,
-                                child: Text('Semua Cabang', style: GoogleFonts.inter(fontSize: 13)),
-                              ),
-                              ..._cabangList.map(
-                                (c) => DropdownMenuItem<int?>(
-                                  value: c.id,
-                                  child: Text(c.namaCabang, style: GoogleFonts.inter(fontSize: 13)),
-                                ),
-                              ),
-                            ],
-                            onChanged: (val) {
-                              setState(() => _selectedCabangId = val);
-                              _fetchData();
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
+                    _buildProMaxSearchAndFilterBar(),
 
                     // Stat Summary Cards (di bawah cabang dropdown, geser kanan)
                     const SizedBox(height: 12),
@@ -370,30 +319,48 @@ class _InsentifCleanerListScreenState extends State<InsentifCleanerListScreen> {
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.04),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
+                                  color: Colors.black.withValues(alpha: 0.03),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 8),
                                 ),
                               ],
                             ),
                             child: Row(
                               children: [
-                                CircleAvatar(
-                                  radius: 22,
-                                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                                  child: Text(
-                                    item.namaCleaner.isNotEmpty ? item.namaCleaner[0].toUpperCase() : 'C',
-                                    style: GoogleFonts.inter(
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primary,
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFF2DD4BF), Color(0xFF0F766E)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(14),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF0F766E).withValues(alpha: 0.2),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      item.namaCleaner.isNotEmpty ? item.namaCleaner[0].toUpperCase() : 'C',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 14),
+                                const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -402,11 +369,14 @@ class _InsentifCleanerListScreenState extends State<InsentifCleanerListScreen> {
                                         item.namaCleaner,
                                         style: GoogleFonts.inter(
                                           fontSize: 15,
-                                          fontWeight: FontWeight.bold,
+                                          fontWeight: FontWeight.w700,
                                           color: AppColors.textDark,
+                                          letterSpacing: -0.2,
                                         ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                      const SizedBox(height: 4),
+                                      const SizedBox(height: 6),
                                       Row(
                                         children: [
                                           Icon(Icons.storefront_rounded, size: 14, color: AppColors.textMuted),
@@ -415,22 +385,24 @@ class _InsentifCleanerListScreenState extends State<InsentifCleanerListScreen> {
                                             item.cabang,
                                             style: GoogleFonts.inter(
                                               fontSize: 12,
+                                              fontWeight: FontWeight.w500,
                                               color: AppColors.textMuted,
                                             ),
                                           ),
                                           const SizedBox(width: 8),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                             decoration: BoxDecoration(
-                                              color: Colors.teal.shade50,
-                                              borderRadius: BorderRadius.circular(6),
+                                              color: const Color(0xFFF0FDF4),
+                                              borderRadius: BorderRadius.circular(20),
+                                              border: Border.all(color: const Color(0xFFBBF7D0)),
                                             ),
                                             child: Text(
                                               '${item.jumlahBonus} bonus',
                                               style: GoogleFonts.inter(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                                color: const Color(0xFF00796B),
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: const Color(0xFF166534),
                                               ),
                                             ),
                                           ),
@@ -445,29 +417,38 @@ class _InsentifCleanerListScreenState extends State<InsentifCleanerListScreen> {
                                     Text(
                                       currencyFormatter.format(item.totalInsentif),
                                       style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: const Color(0xFF00796B),
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF0F766E),
+                                        letterSpacing: -0.5,
                                       ),
                                     ),
-                                    const SizedBox(height: 6),
-                                    OutlinedButton(
-                                      onPressed: () => _showDetailModal(item),
-                                      style: OutlinedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                        minimumSize: Size.zero,
-                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                        side: const BorderSide(color: AppColors.primary),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
+                                    const SizedBox(height: 8),
+                                    InkWell(
+                                      onTap: () => _showDetailModal(item),
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
+                                          ),
+                                          borderRadius: BorderRadius.circular(10),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(0xFF0284C7).withValues(alpha: 0.3),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 3),
+                                            ),
+                                          ],
                                         ),
-                                      ),
-                                      child: Text(
-                                        'Detail',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.primary,
+                                        child: Text(
+                                          'Detail',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -516,30 +497,320 @@ class _InsentifCleanerListScreenState extends State<InsentifCleanerListScreen> {
     );
   }
 
-  Widget _buildFilterChip(String label, String value) {
-    final isSelected = _filterWaktu == value && _selectedTanggal == null;
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (selected) {
-        if (selected) {
-          setState(() {
-            _filterWaktu = value;
-            _selectedTanggal = null;
-          });
-          _fetchData();
-        }
+  // --- Modern Filter UI ---
+  Widget _buildProMaxSearchAndFilterBar() {
+    final int activeFilterCount = (_selectedCabangId != null ? 1 : 0) +
+        (_filterWaktu != 'semua' && _filterWaktu.isNotEmpty ? 1 : 0) +
+        (_customRange != null || _selectedTanggal != null ? 1 : 0);
+
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 46,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(23),
+              border: Border.all(
+                color: _searchQuery.isNotEmpty ? const Color(0xFF3B82F6) : Colors.grey.withValues(alpha: 0.25),
+                width: _searchQuery.isNotEmpty ? 1.5 : 1.0,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: _searchQuery.isNotEmpty ? const Color(0xFF3B82F6).withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.search_rounded,
+                  size: 20,
+                  color: _searchQuery.isNotEmpty ? const Color(0xFF2563EB) : AppColors.textMuted,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _searchCtrl,
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                    decoration: InputDecoration(
+                      hintText: 'Cari cleaner...',
+                      hintStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.normal, color: AppColors.textMuted),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+                if (_searchQuery.isNotEmpty)
+                  GestureDetector(
+                    onTap: () {
+                      _searchCtrl.clear();
+                      setState(() => _searchQuery = '');
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(color: Color(0xFFF1F5F9), shape: BoxShape.circle),
+                      child: const Icon(Icons.close_rounded, size: 14, color: AppColors.textMuted),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        GestureDetector(
+          onTap: () => _showFilterBottomSheet(),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            height: 46,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              gradient: activeFilterCount > 0
+                  ? const LinearGradient(colors: [Color(0xFF2563EB), Color(0xFF4F46E5)])
+                  : null,
+              color: activeFilterCount > 0 ? null : Colors.white,
+              borderRadius: BorderRadius.circular(23),
+              border: Border.all(
+                color: activeFilterCount > 0 ? Colors.transparent : Colors.grey.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+              boxShadow: [
+                if (activeFilterCount > 0)
+                  BoxShadow(
+                    color: const Color(0xFF4F46E5).withValues(alpha: 0.35),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  )
+                else
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.tune_rounded,
+                  size: 18,
+                  color: activeFilterCount > 0 ? Colors.white : AppColors.textDark,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Filter',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: activeFilterCount > 0 ? Colors.white : AppColors.textDark,
+                  ),
+                ),
+                if (activeFilterCount > 0) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '$activeFilterCount',
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showFilterBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Filter Insentif', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(height: 1),
+                  const SizedBox(height: 16),
+
+                  // 1. Cabang
+                  if (_cabangList.isNotEmpty) ...[
+                    Text('Pilih Cabang', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('Semua Cabang'),
+                          selected: _selectedCabangId == null,
+                          onSelected: (val) {
+                            setModalState(() => _selectedCabangId = null);
+                            setState(() => _selectedCabangId = null);
+                            _fetchData();
+                          },
+                          selectedColor: const Color(0xFFEFF6FF),
+                          labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: _selectedCabangId == null ? FontWeight.bold : FontWeight.w500, color: _selectedCabangId == null ? const Color(0xFF1D4ED8) : AppColors.textDark),
+                          side: BorderSide(color: _selectedCabangId == null ? const Color(0xFF3B82F6) : Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          showCheckmark: false,
+                        ),
+                        ..._cabangList.map((c) {
+                          final isSel = _selectedCabangId == c.id;
+                          return ChoiceChip(
+                            label: Text(c.namaCabang),
+                            selected: isSel,
+                            onSelected: (val) {
+                              setModalState(() => _selectedCabangId = val ? c.id : null);
+                              setState(() => _selectedCabangId = val ? c.id : null);
+                              _fetchData();
+                            },
+                            selectedColor: const Color(0xFFEFF6FF),
+                            labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.w500, color: isSel ? const Color(0xFF1D4ED8) : AppColors.textDark),
+                            side: BorderSide(color: isSel ? const Color(0xFF3B82F6) : Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            showCheckmark: false,
+                          );
+                        }),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+
+                  // 2. Rentang Waktu
+                  Text('Rentang Waktu', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ...[
+                        {'key': 'semua', 'label': 'Semua Waktu'},
+                        {'key': 'hari_ini', 'label': 'Hari Ini'},
+                        {'key': 'kemarin', 'label': 'Kemarin'},
+                        {'key': 'bulan_ini', 'label': 'Bulan Ini'},
+                      ].map((item) {
+                        final isSel = _filterWaktu == item['key'] && _selectedTanggal == null;
+                        return ChoiceChip(
+                          label: Text(item['label']!),
+                          selected: isSel,
+                          onSelected: (val) {
+                            if (val) {
+                              setModalState(() {
+                                _filterWaktu = item['key']!;
+                                _customRange = null;
+                                _selectedTanggal = null;
+                              });
+                              setState(() {
+                                _filterWaktu = item['key']!;
+                                _customRange = null;
+                                _selectedTanggal = null;
+                              });
+                              _fetchData();
+                            }
+                          },
+                          selectedColor: const Color(0xFFECFDF5),
+                          labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.w500, color: isSel ? const Color(0xFF047857) : AppColors.textDark),
+                          side: BorderSide(color: isSel ? const Color(0xFF10B981) : Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          showCheckmark: false,
+                        );
+                      }),
+                      ActionChip(
+                        avatar: const Icon(Icons.calendar_month_rounded, size: 14, color: Color(0xFF4F46E5)),
+                        label: Text(
+                          _filterWaktu == 'custom' && _customRange != null
+                              ? '${DateFormat('dd/MM').format(_customRange!.start)} - ${DateFormat('dd/MM').format(_customRange!.end)}'
+                              : 'Pilih Tanggal',
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: _filterWaktu == 'custom' ? FontWeight.bold : FontWeight.w500, color: _filterWaktu == 'custom' ? const Color(0xFF4F46E5) : AppColors.textDark),
+                        ),
+                        onPressed: () async {
+                          Navigator.pop(ctx);
+                          await _pickCustomRange();
+                        },
+                        backgroundColor: _filterWaktu == 'custom' ? const Color(0xFFEEF2FF) : Colors.white,
+                        side: BorderSide(color: _filterWaktu == 'custom' ? const Color(0xFF6366F1) : Colors.grey.shade300),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            );
+          },
+        );
       },
-      selectedColor: AppColors.primary,
-      labelStyle: GoogleFonts.inter(
-        fontSize: 12,
-        color: isSelected ? Colors.white : AppColors.textDark,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+    );
+  }
+
+  Future<void> _pickCustomRange() async {
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      initialDateRange: _customRange,
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: AppColors.primary,
+            onPrimary: Colors.white,
+            surface: Colors.white,
+          ),
+        ),
+        child: child!,
       ),
     );
+    if (picked != null) {
+      setState(() {
+        _customRange = picked;
+        _filterWaktu = 'custom';
+        _selectedTanggal = picked.start;
+      });
+      _fetchData();
+    }
   }
 }
 
@@ -641,13 +912,23 @@ class _InsentifDetailBottomSheetState extends State<_InsentifDetailBottomSheet> 
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Total Card
+                  // Total Card (Pro Max)
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: AppColors.background,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF0F766E), Color(0xFF047857)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF047857).withValues(alpha: 0.3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
                     child: Row(
                       children: [
@@ -655,40 +936,67 @@ class _InsentifDetailBottomSheetState extends State<_InsentifDetailBottomSheet> 
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Total Insentif',
-                                style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade600),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.2),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.account_balance_wallet_rounded, color: Colors.white, size: 16),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Total Insentif',
+                                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.85)),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 10),
                               Text(
                                 widget.currencyFormatter.format(data.totalInsentif),
                                 style: GoogleFonts.inter(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF2E7D32),
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: -0.5,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        Container(height: 30, width: 1, color: Colors.grey.shade300),
+                        Container(height: 45, width: 1, color: Colors.white.withValues(alpha: 0.2)),
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsets.only(left: 16),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Jumlah Bonus',
-                                  style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade600),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.2),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.stars_rounded, color: Colors.white, size: 16),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Jumlah Bonus',
+                                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.85)),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 10),
                                 Text(
-                                  '${data.jumlahBonus} bonus',
+                                  '${data.jumlahBonus}x',
                                   style: GoogleFonts.inter(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.textDark,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
                                   ),
                                 ),
                               ],
@@ -736,11 +1044,18 @@ class _InsentifDetailBottomSheetState extends State<_InsentifDetailBottomSheet> 
                       itemBuilder: (context, idx) {
                         final r = data.riwayat[idx];
                         return Container(
-                          padding: const EdgeInsets.all(14),
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.grey.withValues(alpha: 0.25)),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.02),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -749,55 +1064,117 @@ class _InsentifDetailBottomSheetState extends State<_InsentifDetailBottomSheet> 
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
-                                    child: Text(
-                                      '${r.tanggal} · ${r.pelanggan}',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.textDark,
-                                      ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          r.pelanggan,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.textDark,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Row(
+                                          children: [
+                                            Icon(Icons.calendar_month_rounded, size: 12, color: AppColors.textMuted),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              r.tanggal,
+                                              style: GoogleFonts.inter(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                                color: AppColors.textMuted,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  Text(
-                                    widget.currencyFormatter.format(r.totalNominal),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: const Color(0xFF2E7D32),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF0FDF4),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: const Color(0xFFBBF7D0)),
+                                    ),
+                                    child: Text(
+                                      widget.currencyFormatter.format(r.totalNominal),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF166534),
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                               if (r.pesananIdVisual.isNotEmpty) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  r.pesananIdVisual,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    color: Colors.grey.shade600,
+                                const SizedBox(height: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.tag_rounded, size: 12, color: Colors.grey.shade600),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        r.pesananIdVisual,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                               if (r.items.isNotEmpty) ...[
-                                const SizedBox(height: 8),
-                                const Divider(height: 1),
-                                const SizedBox(height: 8),
-                                ...r.items.map((item) => Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 2),
+                                const SizedBox(height: 12),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      top: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+                                    ),
+                                  ),
+                                  padding: const EdgeInsets.only(top: 12),
+                                  child: Column(
+                                    children: r.items.map((item) => Padding(
+                                      padding: const EdgeInsets.only(bottom: 6),
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            '• ${item.jenisBonus}',
-                                            style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade700),
+                                          Container(
+                                            margin: const EdgeInsets.only(top: 5, right: 8),
+                                            width: 4,
+                                            height: 4,
+                                            decoration: const BoxDecoration(
+                                              color: Color(0xFF0F766E),
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: Text(
+                                              item.jenisBonus,
+                                              style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade700, height: 1.3),
+                                            ),
                                           ),
                                           Text(
                                             widget.currencyFormatter.format(item.nominal),
-                                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500),
+                                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
                                           ),
                                         ],
                                       ),
-                                    )),
+                                    )).toList(),
+                                  ),
+                                ),
                               ],
                             ],
                           ),

@@ -26,7 +26,7 @@ class _GajiPokokFormScreenState extends State<GajiPokokFormScreen> {
   
   int? _selectedCabang;
   int? _selectedJabatan;
-  String _status = 'tetap';
+  String _status = 'TETAP';
   
   List<CabangModel> _cabangs = [];
   List<JabatanModel> _jabatans = [];
@@ -50,8 +50,8 @@ class _GajiPokokFormScreenState extends State<GajiPokokFormScreen> {
     _selectedJabatan = widget.gajiPokok?.jabatanId;
     
     if (widget.gajiPokok != null) {
-      String statusVal = widget.gajiPokok!.statusKaryawan.toLowerCase();
-      _status = ['tetap', 'freelance', 'kontrak'].contains(statusVal) ? statusVal : 'tetap';
+      String statusVal = widget.gajiPokok!.statusKaryawan.toUpperCase();
+      _status = ['TETAP', 'KONTRAK', 'TRAINING', 'FREELANCE', 'TETAP KOOR'].contains(statusVal) ? statusVal : 'TETAP';
     }
     
     _fetchRefs();
@@ -235,9 +235,11 @@ class _GajiPokokFormScreenState extends State<GajiPokokFormScreen> {
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                             ),
                             items: const [
-                              DropdownMenuItem(value: 'tetap', child: Text('Tetap')),
-                              DropdownMenuItem(value: 'freelance', child: Text('Freelance')),
-                              DropdownMenuItem(value: 'kontrak', child: Text('Kontrak')),
+                              DropdownMenuItem(value: 'TETAP', child: Text('TETAP')),
+                              DropdownMenuItem(value: 'KONTRAK', child: Text('KONTRAK')),
+                              DropdownMenuItem(value: 'TRAINING', child: Text('TRAINING')),
+                              DropdownMenuItem(value: 'FREELANCE', child: Text('FREELANCE')),
+                              DropdownMenuItem(value: 'TETAP KOOR', child: Text('TETAP KOOR')),
                             ],
                             onChanged: (val) {
                               if (val != null) setState(() => _status = val);

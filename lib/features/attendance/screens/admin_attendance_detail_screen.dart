@@ -142,16 +142,19 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                 children: [
                   // --- 1. Cleaner & Status Overview Card ---
                   Container(
-                    padding: const EdgeInsets.all(18),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.02),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                          color: const Color(0xFF1D4ED8).withValues(alpha: 0.3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
@@ -163,27 +166,40 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Nama Cleaner', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                                  const SizedBox(height: 2),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.person_outline_rounded, size: 14, color: Colors.white.withValues(alpha: 0.8)),
+                                      const SizedBox(width: 4),
+                                      Text('Nama Cleaner', style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.8))),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
                                   Text(
                                     widget.item.namaCleaner,
-                                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                    style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
                             ),
+                            Container(width: 1, height: 40, color: Colors.white.withValues(alpha: 0.2)),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Cabang', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                                  const SizedBox(height: 2),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.storefront_rounded, size: 14, color: Colors.white.withValues(alpha: 0.8)),
+                                      const SizedBox(width: 4),
+                                      Text('Cabang', style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.8))),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
                                   Text(
                                     cabangName,
-                                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -192,18 +208,30 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                             ),
                           ],
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          height: 1,
+                          color: Colors.white.withValues(alpha: 0.2),
+                        ),
+                        const SizedBox(height: 16),
                         Row(
                           children: [
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Tanggal Absen', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                                  const SizedBox(height: 2),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.calendar_month_rounded, size: 14, color: Colors.white.withValues(alpha: 0.8)),
+                                      const SizedBox(width: 4),
+                                      Text('Tanggal Absen', style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.8))),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
                                   Text(
                                     _formatIndonesianDate(widget.item.tanggal),
-                                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -215,20 +243,32 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Status Kehadiran', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.fact_check_outlined, size: 14, color: Colors.white.withValues(alpha: 0.8)),
+                                      const SizedBox(width: 4),
+                                      Text('Status Kehadiran', style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.8))),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
                                   Align(
                                     alignment: Alignment.centerLeft,
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                       decoration: BoxDecoration(
-                                        color: statusBg,
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(20),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.1),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
                                       ),
                                       child: Text(
                                         statusLabel,
-                                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: statusColor),
+                                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: statusColor),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -248,13 +288,13 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.02),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
@@ -264,29 +304,49 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                         // Header Bar
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                           decoration: const BoxDecoration(
-                            color: Color(0xFFE3F2FD),
-                            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                            color: Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                            border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
                           ),
-                          child: Text(
-                            'Aturan Jam Operasional ${cabangName.toUpperCase()}',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF0D47A1),
-                            ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEFF6FF),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF2563EB)),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Aturan Jam Operasional ${cabangName.toUpperCase()}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF1E293B),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.all(14),
+                          padding: const EdgeInsets.all(18),
                           child: Column(
                             children: [
-                              _buildRuleRow('Jam Masuk Standard', '08:00', hint: '(+15 mnt toleransi)'),
-                              const Divider(height: 12),
-                              _buildRuleRow('Batas Terlambat', '08:15', hint: '(lewat ini = telat)', isOrange: true),
-                              const Divider(height: 12),
-                              _buildRuleRow('Jam Pulang Standard', '17:00'),
+                              _buildRuleRow('Jam Masuk Standard', '08:00', hint: '(+15 mnt toleransi)', icon: Icons.login_rounded, iconColor: const Color(0xFF22C55E)),
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                child: Divider(height: 1, color: Color(0xFFF1F5F9)),
+                              ),
+                              _buildRuleRow('Batas Terlambat', '08:15', hint: '(lewat ini = telat)', isOrange: true, icon: Icons.warning_amber_rounded, iconColor: const Color(0xFFF59E0B)),
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                child: Divider(height: 1, color: Color(0xFFF1F5F9)),
+                              ),
+                              _buildRuleRow('Jam Pulang Standard', '17:00', icon: Icons.logout_rounded, iconColor: const Color(0xFF3B82F6)),
                             ],
                           ),
                         ),
@@ -335,32 +395,49 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
     );
   }
 
-  Widget _buildRuleRow(String label, String value, {String? hint, bool isOrange = false}) {
+  Widget _buildRuleRow(String label, String value, {String? hint, bool isOrange = false, IconData? icon, Color? iconColor}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+        Row(
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 16, color: iconColor ?? AppColors.textMuted),
+              const SizedBox(width: 8),
+            ],
+            Text(label, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textDark)),
+          ],
+        ),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              value,
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: isOrange ? const Color(0xFFE65100) : AppColors.textDark,
-              ),
-            ),
             if (hint != null) ...[
-              const SizedBox(width: 6),
               Text(
                 hint,
                 style: GoogleFonts.inter(
                   fontSize: 11,
-                  color: isOrange ? const Color(0xFFE65100).withValues(alpha: 0.85) : Colors.grey.shade600,
+                  fontStyle: FontStyle.italic,
+                  color: isOrange ? const Color(0xFFF59E0B).withValues(alpha: 0.8) : Colors.grey.shade500,
                 ),
               ),
+              const SizedBox(width: 8),
             ],
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: isOrange ? const Color(0xFFFFFBEB) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: isOrange ? const Color(0xFFFDE68A) : const Color(0xFFE2E8F0)),
+              ),
+              child: Text(
+                value,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: isOrange ? const Color(0xFFD97706) : AppColors.textDark,
+                ),
+              ),
+            ),
           ],
         ),
       ],
@@ -383,8 +460,8 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
       ),

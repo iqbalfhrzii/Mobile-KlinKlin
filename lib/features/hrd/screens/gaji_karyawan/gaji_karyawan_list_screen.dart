@@ -267,9 +267,25 @@ class _GajiKaryawanListScreenState extends State<GajiKaryawanListScreen> with Si
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Gaji Karyawan',
-                      style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Gaji Karyawan',
+                          style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ],
                     ),
                     Row(
                       children: [
