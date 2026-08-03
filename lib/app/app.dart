@@ -11,7 +11,9 @@ import '../core/services/fcm_service.dart';
 final GlobalKey<NavigatorState> globalNavigatorKey = GlobalKey<NavigatorState>();
 
 class KlinklinApp extends StatefulWidget {
-  const KlinklinApp({super.key});
+  final bool isLoggedIn;
+  
+  const KlinklinApp({super.key, required this.isLoggedIn});
 
   @override
   State<KlinklinApp> createState() => _KlinklinAppState();
@@ -38,8 +40,8 @@ class _KlinklinAppState extends State<KlinklinApp> {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      // Sengaja diarahkan ke LoginDummyScreen (demo login tanpa API)
-      home: const LoginScreen(),
+      // Jika token sudah ada, langsung masuk ke MainShell. Jika belum, ke LoginScreen.
+      home: widget.isLoggedIn ? const MainShell() : const LoginScreen(),
     );
   }
 }

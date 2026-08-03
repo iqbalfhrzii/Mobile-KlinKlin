@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'core/network/dio_client.dart';
 import 'app/app.dart';
 
@@ -11,5 +12,9 @@ void main() async {
     debugPrint('Firebase init error: $e');
   }
   DioClient.instance.init();
-  runApp(const KlinklinApp());
+
+  final prefs = await SharedPreferences.getInstance();
+  final isLoggedIn = prefs.getString('auth_token') != null;
+
+  runApp(KlinklinApp(isLoggedIn: isLoggedIn));
 }
