@@ -2,7 +2,7 @@ class AppConstants {
   AppConstants._();
 
   // Base URL – ganti dengan URL API atau IP kamu saat tes device / production
-  static const String baseUrl = 'http://erp.klinklin.online/api';
+  static const String baseUrl = 'http://159.223.59.109/api';
 
   // Timeout dalam milidetik
   static const int connectTimeout = 30000;
