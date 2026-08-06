@@ -5,7 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../home/screens/home_screen.dart';
 import '../orders/screens/order_list_screen.dart';
 import '../customers/screens/customer_list_screen.dart';
-import '../payment/screens/payment_screen.dart';
+import '../uang_kas/screens/uang_kas_screen.dart';
 import '../profile/screens/profile_screen.dart';
 import '../auth/screens/change_pin_screen.dart';
 
@@ -39,7 +39,7 @@ class _MainShellState extends State<MainShell> {
     HomeScreen(),
     OrderListScreen(),
     CustomerListScreen(),
-    PaymentScreen(),
+    UangKasScreen(),
     ProfileScreen(),
   ];
 
@@ -47,7 +47,7 @@ class _MainShellState extends State<MainShell> {
     _NavItem(Icons.grid_view_rounded, Icons.grid_view_rounded, 'Dashboard'),
     _NavItem(Icons.receipt_long_outlined, Icons.receipt_long_rounded, 'Pesanan'),
     _NavItem(Icons.people_outline_rounded, Icons.people_rounded, 'Pelanggan'),
-    _NavItem(Icons.account_balance_wallet_outlined, Icons.account_balance_wallet_rounded, 'Cash Flow'),
+    _NavItem(Icons.account_balance_wallet_outlined, Icons.account_balance_wallet_rounded, 'Uang Kas'),
     _NavItem(Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
   ];
 
