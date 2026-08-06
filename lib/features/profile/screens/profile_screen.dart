@@ -80,12 +80,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     _buildInfoCard(),
                     const SizedBox(height: 12),
-                    _buildMenuSection('Karyawan', [
-                      _MenuItem(Icons.analytics_rounded, 'KPI & Evaluasi Kinerja', onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const KpiScreen()));
-                      }),
-                    ]),
-                    const SizedBox(height: 12),
+                    if (!_userRole.toLowerCase().contains('cleaner')) ...[
+                      _buildMenuSection('Karyawan', [
+                        _MenuItem(Icons.analytics_rounded, 'KPI & Evaluasi Kinerja', onTap: () {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const KpiScreen()));
+                        }),
+                      ]),
+                      const SizedBox(height: 12),
+                    ],
                     _buildMenuSection('Akun', [
                       _MenuItem(Icons.lock_outline_rounded, 'Ganti PIN', onTap: () => _changePIN(context)),
                       _MenuItem(Icons.notifications_outlined, 'Notifikasi', onTap: () {}),
@@ -317,11 +319,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Text('Batal', style: GoogleFonts.inter(color: AppColors.textMuted)),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pushAndRemoveUntil(context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
+            onPressed: () async {
+              // Menampilkan loading indikator
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => const Center(child: CircularProgressIndicator()),
               );
+              
+              await AuthService.logout();
+              
+              if (context.mounted) {
+                // Tutup loading
+                Navigator.pop(context);
+                // Navigasi ke halaman login
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,

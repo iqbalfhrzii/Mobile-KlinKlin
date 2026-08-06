@@ -579,6 +579,20 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
     }
   }
 
+  Future<void> _openMap(String address) async {
+    final query = Uri.encodeComponent(address);
+    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$query');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tidak dapat membuka Maps')),
+        );
+      }
+    }
+  }
+
   String _getFinishedDurationString() {
     DateTime? start = _parseServerTime(_job['started_at']) ?? 
                       _parseServerTime(_job['waktu_mulai']);
@@ -1108,7 +1122,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
         backgroundColor: const Color(0xFFF8FAFC), // Modern soft background
         body: Column(
           children: [
-            _buildHeader(context, pesanan['id']?.toString() ?? '-'),
+            _buildHeader(context, pesanan['nomor_pesanan']?.toString() ?? pesanan['id']?.toString() ?? '-'),
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -1357,6 +1371,31 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                                                 ),
                                               ),
                                             ],
+                                            const SizedBox(height: 12),
+                                            SizedBox(
+                                              width: double.infinity,
+                                              child: ElevatedButton.icon(
+                                                onPressed: () {
+                                                  final address = pelanggan['alamat_pelanggan'] ??
+                                                      pelanggan['alamat'] ??
+                                                      '';
+                                                  if (address.toString().trim().isNotEmpty) {
+                                                    _openMap(address.toString());
+                                                  }
+                                                },
+                                                icon: const Icon(Icons.map_rounded, size: 18),
+                                                label: Text('Buka di Maps', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: const Color(0xFFEFF6FF),
+                                                  foregroundColor: const Color(0xFF2563EB),
+                                                  elevation: 0,
+                                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(10),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -1515,6 +1554,221 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                             ),
                           ),
                           const SizedBox(height: 24),
+
+                          // Tim Cleaner
+                          Builder(
+                            builder: (context) {
+                              final cleanersData = pesanan['cleaners'] as List<dynamic>?;
+                              if (cleanersData == null || cleanersData.isEmpty) {
+                                return const SizedBox();
+                              }
+
+                              return Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.02),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primary.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: const Icon(
+                                            Icons.people_alt_rounded,
+                                            color: AppColors.primary,
+                                            size: 18,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          'Tim Cleaner (Rekan Kerja)',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textDark,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    ...cleanersData.asMap().entries.map((entry) {
+                                      final index = entry.key;
+                                      final c = entry.value;
+                                      
+                                      final cleanerInfo = c['cleaner'] ?? {};
+                                      final status = c['status_pengerjaan'] ?? 'assigned';
+                                      
+                                      Color statusColor = AppColors.statusPending;
+                                      String statusText = status.toString().toUpperCase();
+                                      
+                                      if (status == 'finished') {
+                                        statusColor = AppColors.statusDone;
+                                        statusText = 'SELESAI';
+                                      } else if (status == 'started') {
+                                        statusColor = AppColors.statusProgress;
+                                        statusText = 'DIPROSES';
+                                      } else if (status == 'notified') {
+                                        statusColor = AppColors.statusPending;
+                                        statusText = 'DIBERITAHU';
+                                      } else if (status == 'assigned') {
+                                        statusColor = AppColors.statusPending;
+                                        statusText = 'MENUNGGU';
+                                      }
+
+                                      final bool isMe = c['cleaner_id'] == _job['cleaner_id'];
+                                      final String nama = (cleanerInfo['nama'] ?? '-').toString().trim();
+                                      final String initial = nama.isNotEmpty ? nama[0].toUpperCase() : '?';
+
+                                      return Column(
+                                        children: [
+                                          Row(
+                                            children: [
+                                              // Avatar with gradient
+                                              Container(
+                                                width: 42,
+                                                height: 42,
+                                                decoration: BoxDecoration(
+                                                  gradient: LinearGradient(
+                                                    colors: isMe
+                                                        ? [AppColors.primary, AppColors.primary.withValues(alpha: 0.7)]
+                                                        : [const Color(0xFF64748B), const Color(0xFF94A3B8)],
+                                                    begin: Alignment.topLeft,
+                                                    end: Alignment.bottomRight,
+                                                  ),
+                                                  shape: BoxShape.circle,
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: (isMe ? AppColors.primary : Colors.black).withValues(alpha: 0.15),
+                                                      blurRadius: 6,
+                                                      offset: const Offset(0, 2),
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: Center(
+                                                  child: Text(
+                                                    initial,
+                                                    style: GoogleFonts.inter(
+                                                      color: Colors.white,
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 16,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 14),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Row(
+                                                      children: [
+                                                        Flexible(
+                                                          child: Text(
+                                                            nama,
+                                                            style: GoogleFonts.inter(
+                                                              fontSize: 14,
+                                                              fontWeight: FontWeight.bold,
+                                                              color: AppColors.textDark,
+                                                            ),
+                                                            maxLines: 1,
+                                                            overflow: TextOverflow.ellipsis,
+                                                          ),
+                                                        ),
+                                                        if (isMe)
+                                                          Container(
+                                                            margin: const EdgeInsets.only(left: 6),
+                                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                            decoration: BoxDecoration(
+                                                              color: AppColors.primary.withValues(alpha: 0.1),
+                                                              borderRadius: BorderRadius.circular(4),
+                                                            ),
+                                                            child: Text(
+                                                              'ANDA',
+                                                              style: GoogleFonts.inter(
+                                                                fontSize: 9,
+                                                                fontWeight: FontWeight.w900,
+                                                                color: AppColors.primary,
+                                                                letterSpacing: 0.5,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                      ],
+                                                    ),
+                                                    const SizedBox(height: 3),
+                                                    Row(
+                                                      children: [
+                                                        const Icon(
+                                                          Icons.phone_android_rounded,
+                                                          size: 12,
+                                                          color: AppColors.textMuted,
+                                                        ),
+                                                        const SizedBox(width: 4),
+                                                        Text(
+                                                          cleanerInfo['no_wa'] ?? '-',
+                                                          style: GoogleFonts.inter(
+                                                            fontSize: 12,
+                                                            color: AppColors.textMuted,
+                                                            fontWeight: FontWeight.w500,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                                decoration: BoxDecoration(
+                                                  color: statusColor.withValues(alpha: 0.1),
+                                                  borderRadius: BorderRadius.circular(20),
+                                                  border: Border.all(
+                                                    color: statusColor.withValues(alpha: 0.2),
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  statusText,
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: statusColor,
+                                                    letterSpacing: 0.5,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          if (index < cleanersData.length - 1)
+                                            Padding(
+                                              padding: const EdgeInsets.symmetric(vertical: 14),
+                                              child: Divider(
+                                                height: 1,
+                                                color: AppColors.border.withValues(alpha: 0.5),
+                                              ),
+                                            ),
+                                        ],
+                                      );
+                                    }),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
 
                           // Detail Layanan
                           Text(
@@ -1742,7 +1996,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                     ),
                   ),
                   Text(
-                    '#$orderId',
+                    orderId,
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       color: Colors.white.withValues(alpha: 0.6),

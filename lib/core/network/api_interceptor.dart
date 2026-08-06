@@ -1,8 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_constants.dart';
-
+import '../../app/app.dart';
+import '../../features/auth/screens/login_screen.dart';
 /// Interceptor untuk inject JWT token dan handle error global.
 class ApiInterceptor extends Interceptor {
   @override
@@ -32,18 +34,27 @@ class ApiInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    switch (err.response?.statusCode) {
-      case 401:
-        // Token expired / tidak valid → bisa trigger logout
-        // TODO: Tambahkan logic redirect ke halaman login
-        break;
-      case 403:
-        // Forbidden
-        break;
-      case 500:
-        // Server error
-        break;
+    if (err.response?.statusCode == 401) {
+      // Token expired / tidak valid → trigger logout & redirect
+      _handleUnauthorized();
     }
     return handler.next(err);
+  }
+
+  Future<void> _handleUnauthorized() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(AppConstants.tokenKey);
+      await prefs.remove('user_name');
+      await prefs.remove('user_role');
+      
+      // Redirect to LoginScreen using global navigator key
+      globalNavigatorKey.currentState?.pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => const LoginScreen(),
+        ),
+        (route) => false,
+      );
+    } catch (_) {}
   }
 }

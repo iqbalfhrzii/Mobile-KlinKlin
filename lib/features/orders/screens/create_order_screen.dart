@@ -2197,7 +2197,8 @@ class _Step4SummaryState extends State<_Step4Summary> {
   Widget build(BuildContext context) {
     final int subtotal = widget.draft.total;
     final int ppn = widget.draft.applyPpn ? (subtotal * 0.11).round() : 0;
-    final int totalAkhir = subtotal + ppn;
+    final int pph = widget.draft.applyPph ? (subtotal * 0.02).round() : 0;
+    final int totalAkhir = subtotal + ppn - pph;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -2397,6 +2398,50 @@ class _Step4SummaryState extends State<_Step4Summary> {
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         color: AppColors.textDark,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: Checkbox(
+                            value: widget.draft.applyPph,
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() {
+                                  widget.draft.applyPph = val;
+                                });
+                              }
+                            },
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            activeColor: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'PPh (2%)',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      '- Rp ${CurrencyInputFormatter.format(pph)}',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: AppColors.error,
                         fontWeight: FontWeight.w500,
                       ),
                     ),

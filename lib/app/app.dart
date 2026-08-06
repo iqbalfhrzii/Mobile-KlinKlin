@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import '../core/theme/app_theme.dart';
-//import '../features/auth/screens/login_dummy_screen.dart';
 import '../features/auth/screens/login_screen.dart';
 
 import '../core/services/auth_service.dart';
 import '../features/shell/main_shell.dart';
+import '../features/cleaner/shell/cleaner_main_shell.dart';
+import '../features/finance/shell/finance_main_shell.dart';
+import '../features/hrd/shell/hrd_main_shell.dart';
+import '../features/operasional/shell/operasional_main_shell.dart';
 import '../core/services/fcm_service.dart';
 
 final GlobalKey<NavigatorState> globalNavigatorKey = GlobalKey<NavigatorState>();
 
 class KlinklinApp extends StatefulWidget {
   final bool isLoggedIn;
+  final String userRole;
   
-  const KlinklinApp({super.key, required this.isLoggedIn});
+  const KlinklinApp({super.key, required this.isLoggedIn, required this.userRole});
 
   @override
   State<KlinklinApp> createState() => _KlinklinAppState();
@@ -24,6 +28,21 @@ class _KlinklinAppState extends State<KlinklinApp> {
   void initState() {
     super.initState();
     FcmService.instance.init(globalNavigatorKey);
+  }
+
+  Widget _getInitialShell(String role) {
+    role = role.toLowerCase();
+    if (role.contains('cleaner')) {
+      return const CleanerMainShell();
+    } else if (role.contains('finance') || role.contains('keuangan')) {
+      return const FinanceMainShell();
+    } else if (role.contains('hrd')) {
+      return const HrdMainShell();
+    } else if (role.contains('operasional')) {
+      return const OperasionalMainShell();
+    } else {
+      return const MainShell();
+    }
   }
 
   @override
@@ -40,8 +59,8 @@ class _KlinklinAppState extends State<KlinklinApp> {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      // Jika token sudah ada, langsung masuk ke MainShell. Jika belum, ke LoginScreen.
-      home: widget.isLoggedIn ? const MainShell() : const LoginScreen(),
+      // Route based on role if logged in
+      home: widget.isLoggedIn ? _getInitialShell(widget.userRole) : const LoginScreen(),
     );
   }
 }

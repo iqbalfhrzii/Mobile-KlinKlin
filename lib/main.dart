@@ -15,6 +15,7 @@ void main() async {
 
   final prefs = await SharedPreferences.getInstance();
   final isLoggedIn = prefs.getString('auth_token') != null;
+  final userRole = prefs.getString('user_role') ?? '';
 
-  runApp(KlinklinApp(isLoggedIn: isLoggedIn));
+  runApp(KlinklinApp(isLoggedIn: isLoggedIn, userRole: userRole));
 }

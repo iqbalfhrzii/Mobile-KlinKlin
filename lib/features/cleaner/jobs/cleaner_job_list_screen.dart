@@ -831,7 +831,7 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
                         child: const Icon(Icons.receipt_long_rounded, size: 14, color: AppColors.primary),
                       ),
                       const SizedBox(width: 8),
-                      Text('#${pesanan['id'] ?? '-'}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                      Text(pesanan['nomor_pesanan']?.toString() ?? pesanan['id']?.toString() ?? '-', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.primary)),
                     ],
                   ),
                   Row(

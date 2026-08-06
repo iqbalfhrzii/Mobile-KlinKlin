@@ -51,6 +51,20 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     _fetchDetail();
   }
 
+  Future<void> _openMap(String address) async {
+    final query = Uri.encodeComponent(address);
+    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$query');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tidak dapat membuka Maps')),
+        );
+      }
+    }
+  }
+
   Future<void> _togglePpn() async {
     if (_isPaid) return;
 
@@ -95,6 +109,57 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           ).showSnackBar(SnackBar(content: Text('Gagal memperbarui PPN: $e')));
           setState(() {
             _o.ppn = currentPpnStatus ? 11 : 0;
+          });
+        }
+      }
+    }
+  }
+
+  Future<void> _togglePph() async {
+    if (_isPaid) return;
+
+    final bool currentPphStatus = (_o.pph ?? _o.pembayaran?.pph ?? 0) > 0;
+    final int newPph = currentPphStatus ? 0 : 2;
+
+    setState(() {
+      _o.pph = newPph;
+    });
+
+    try {
+      final draft = OrderDraft(
+        customer: _o.customer,
+        chatDari: _o.chatDari,
+        tipeCustomer: _o.tipeCustomer,
+        services: List.from(_o.services),
+        cleaners: List.from(_o.cleaners),
+        notes: _o.notes,
+        applyPpn: (_o.ppn ?? _o.pembayaran?.ppn ?? 0) > 0,
+        applyPph: newPph > 0,
+      );
+
+      await _orderService.updateOrder(_o.id, draft);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Status PPh berhasil diperbarui')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        final errorMsg = e.toString().toLowerCase();
+        if (errorMsg.contains('selesai') ||
+            errorMsg.contains('pembayaran') ||
+            _o.status == OrderStatus.finishedByCleaner) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('PPh diubah lokal, akan disimpan saat pembayaran.'),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Gagal memperbarui PPh: $e')));
+          setState(() {
+            _o.pph = currentPphStatus ? 2 : 0;
           });
         }
       }
@@ -493,7 +558,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               if (!widget.isReadOnly) ...[
                 const SizedBox(width: 12),
                 InkWell(
-                  onTap: () => _launchWA(o.customer.phone),
+                  onTap: () => _sendInvoiceWA(o),
                   borderRadius: BorderRadius.circular(20),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -573,6 +638,28 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         color: AppColors.textMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          if (o.customer.address.trim().isNotEmpty) {
+                            _openMap(o.customer.address);
+                          }
+                        },
+                        icon: const Icon(Icons.map_rounded, size: 18),
+                        label: Text('Buka di Maps', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFEFF6FF),
+                          foregroundColor: const Color(0xFF2563EB),
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -842,7 +929,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               final int ppnPersen = o.ppn ?? o.pembayaran?.ppn ?? 0;
               final int ppnValue = (totalSetelahDiskon * (ppnPersen / 100))
                   .round();
-              final int totalAkhir = totalSetelahDiskon + ppnValue;
+              final int pphPersen = o.pph ?? o.pembayaran?.pph ?? 0;
+              final int pphValue = (totalSetelahDiskon * (pphPersen / 100))
+                  .round();
+              final int totalAkhir = totalSetelahDiskon + ppnValue - pphValue;
 
               return Column(
                 children: [
@@ -934,6 +1024,54 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      InkWell(
+                        onTap: () {
+                          if (!_isPaid) {
+                            _togglePph();
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(4),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 4,
+                            horizontal: 2,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                pphPersen > 0
+                                    ? Icons.check_box_rounded
+                                    : Icons.check_box_outline_blank_rounded,
+                                size: 18,
+                                color: pphPersen > 0
+                                    ? AppColors.primary
+                                    : AppColors.textMuted,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'PPh (2%)',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '- ${_formatRupiah(pphValue)}',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.error,
                         ),
                       ),
                     ],
@@ -1265,7 +1403,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               if (!widget.isReadOnly && cleaner.phone.isNotEmpty) ...[
                 const SizedBox(width: 12),
                 InkWell(
-                  onTap: () => _launchWA(cleaner.phone),
+                  onTap: () => _sendTugasToCleanerWA(o, targetPhone: cleaner.phone, targetName: cleaner.name),
                   borderRadius: BorderRadius.circular(20),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -1921,20 +2059,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             },
           ),
         ],
-        if (!widget.isReadOnly && o.status != OrderStatus.cancelled &&
-            o.status != OrderStatus.waitingCancelApproval) ...[
-          const SizedBox(height: 12),
-          _buildBigActionBtn(
-            isLoading: _isLoading,
-            title: 'Kirim Invoice WA',
-            subtitle: 'Kirim rincian tagihan ke WhatsApp',
-            icon: Icons.send_rounded,
-            color: const Color(0xFF25D366),
-            isDone: false,
-            enabled: true,
-            onTap: () => _sendInvoiceWA(o),
-          ),
-        ],
+
         if (o.status == OrderStatus.waitingPaymentApproval ||
             o.status == OrderStatus.finishedByCleaner ||
             o.status == OrderStatus.completed ||
@@ -2012,7 +2137,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   Future<void> _sendInvoiceWA(OrderModel o) async {
     final customerName = o.customer.name;
     final branchName = o.customer.area.toUpperCase();
-    final orderId = o.id;
+    final orderId = o.nomorPesanan.isNotEmpty ? o.nomorPesanan : o.id.toString();
     final address = o.customer.address;
 
     String rincian = '';
@@ -2088,6 +2213,90 @@ klinklin.co.id/aduanpayment''';
         await launchUrl(url, mode: LaunchMode.externalApplication);
       } else {
         // Fallback: just try to launch it anyway
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tidak dapat membuka WhatsApp'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _sendTugasToCleanerWA(OrderModel o, {String? targetPhone, String? targetName}) async {
+    final branchName = o.customer.area.toUpperCase();
+    final orderId = o.nomorPesanan.isNotEmpty ? o.nomorPesanan : o.id.toString();
+    final customerName = o.customer.name;
+    final address = o.customer.address;
+    
+    String rincian = '';
+    for (int i = 0; i < o.services.length; i++) {
+      final s = o.services[i];
+      rincian += '${i + 1}. ${s.name} : ${s.qty}\n';
+    }
+    if (rincian.isEmpty) rincian = '-';
+
+    final tglRaw = o.services.isNotEmpty ? o.services.first.tanggalPengerjaan : '';
+    final waktu = o.services.isNotEmpty ? o.services.first.waktuPengerjaan : '-';
+
+    final dateFmt = _formatWADate(tglRaw).split('|');
+    final hari = dateFmt[0];
+    final tanggal = dateFmt.length > 1 ? dateFmt[1] : '-';
+    
+    final keterangan = o.customer.notes.isNotEmpty ? o.customer.notes : o.notes.isNotEmpty ? o.notes : '-';
+    
+    String haloNames = '';
+    List<String> cleanerNames = o.cleaners.map((c) => c.name).toList();
+    if (cleanerNames.isEmpty) {
+      haloNames = 'Tim Cleaner';
+    } else if (cleanerNames.length == 1) {
+      haloNames = cleanerNames[0];
+    } else if (cleanerNames.length == 2) {
+      haloNames = '${cleanerNames[0]} dan ${cleanerNames[1]}';
+    } else {
+      haloNames = '${cleanerNames.sublist(0, cleanerNames.length - 1).join(', ')}, dan ${cleanerNames.last}';
+    }
+
+    final message = '''Halo $haloNames, ada tugas baru untukmu! 
+KLINKLIN $branchName
+--------------------------------
+No. Order : $orderId
+Nama Customer : $customerName
+Alamat : $address
+
+Rincian Pesanan:
+${rincian.trim()}
+
+Hari : $hari
+Waktu : $waktu
+Tanggal : $tanggal
+--------------------------------
+Keterangan Order:
+$keterangan
+
+Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
+
+    final encodedMsg = Uri.encodeComponent(message);
+    
+    Uri url;
+    if (targetPhone != null && targetPhone.isNotEmpty) {
+      String phone = targetPhone.replaceAll(RegExp(r'\D'), '');
+      if (phone.startsWith('0')) {
+        phone = '62${phone.substring(1)}';
+      }
+      url = Uri.parse('https://wa.me/$phone?text=$encodedMsg');
+    } else {
+      url = Uri.parse('https://wa.me/?text=$encodedMsg');
+    }
+    
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
         await launchUrl(url, mode: LaunchMode.externalApplication);
       }
     } catch (e) {

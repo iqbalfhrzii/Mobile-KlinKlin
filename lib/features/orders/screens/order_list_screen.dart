@@ -956,6 +956,210 @@ class _OrderCard extends StatelessWidget {
     }
   }
 
+  String _formatWADate(String rawDate) {
+    if (rawDate.isEmpty) return ' | ';
+    try {
+      final parts = rawDate.split('-');
+      if (parts.length != 3) return ' |$rawDate';
+      final dt = DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+      final weekdays = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+      return '${weekdays[dt.weekday - 1]}|${dt.day}-${dt.month}-${dt.year}';
+    } catch (_) {
+      return ' |$rawDate';
+    }
+  }
+
+  String _generateInvoiceMessage(OrderModel o) {
+    final customerName = o.customer.name;
+    final branchName = o.customer.area.toUpperCase();
+    final orderId = o.nomorPesanan.isNotEmpty ? o.nomorPesanan : o.id.toString();
+    final address = o.customer.address;
+    
+    String rincian = '';
+    for (int i = 0; i < o.services.length; i++) {
+      final s = o.services[i];
+      rincian += '${i + 1}. ${s.name} : ${s.qty}\n';
+    }
+    if (rincian.isEmpty) rincian = '-';
+
+    final tglRaw = o.services.isNotEmpty ? o.services.first.tanggalPengerjaan : '';
+    final waktu = o.services.isNotEmpty ? o.services.first.waktuPengerjaan : '-';
+
+    final dateFmt = _formatWADate(tglRaw).split('|');
+    final hari = dateFmt[0];
+    final tanggal = dateFmt.length > 1 ? dateFmt[1] : '-';
+
+    final subtotal = o.total;
+    final ppn = (subtotal * 0.11).round();
+    final totalAkhir = subtotal + ppn;
+
+    return '''Halo Kak $customerName
+Terimakasih sudah melakukan pemesanan di Klinklin $branchName, Berikut Rinciannya :
+
+📄 *KLINKLIN $branchName*
+--------------------------------
+No. Order : $orderId
+Nama Customer : *$customerName*
+Alamat : *$address*
+
+*Rincian Pesanan:*
+${rincian.trim()}
+
+Hari : $hari
+Waktu : $waktu
+Tanggal : $tanggal
+--------------------------------
+Total Awal : ${_fmt(subtotal).replaceAll('Rp ', '')}
+Diskon : 0
+PPn : ${_fmt(ppn).replaceAll('Rp ', '')}
+*TOTAL BAYAR : ${_fmt(totalAkhir).replaceAll(' ', '')}*
+--------------------------------
+
+Transfer hanya ke No. Rekening Berikut:
+*Mandiri 1780022255554*
+*BCA 8640679949*
+an. KLINKLIN INDONESIA GROUP
+
+
+
+
+⚠️ *PENTING & HARAP DIBACA :*
+Pembayaran ini SAH jika disertai Invoice Resmi Berupa file PDF.
+Jika Anda melakukan pembayaran tanpa menerima Invoice, maka transaksi dianggap TIDAK ADA / ILEGAL
+
+Silahkan klik Link berikut ini jika ada kendala pembayaran
+klinklin.co.id/aduanpayment''';
+  }
+
+  String _generateTugasMessage(OrderModel o, {String? targetName}) {
+    final branchName = o.customer.area.toUpperCase();
+    final orderId = o.nomorPesanan.isNotEmpty ? o.nomorPesanan : o.id.toString();
+    final customerName = o.customer.name;
+    final address = o.customer.address;
+    
+    String rincian = '';
+    for (int i = 0; i < o.services.length; i++) {
+      final s = o.services[i];
+      rincian += '${i + 1}. ${s.name} : ${s.qty}\n';
+    }
+    if (rincian.isEmpty) rincian = '-';
+
+    final tglRaw = o.services.isNotEmpty ? o.services.first.tanggalPengerjaan : '';
+    final waktu = o.services.isNotEmpty ? o.services.first.waktuPengerjaan : '-';
+
+    final dateFmt = _formatWADate(tglRaw).split('|');
+    final hari = dateFmt[0];
+    final tanggal = dateFmt.length > 1 ? dateFmt[1] : '-';
+    
+    final keterangan = o.customer.notes.isNotEmpty ? o.customer.notes : o.notes.isNotEmpty ? o.notes : '-';
+    
+    String haloNames = '';
+    List<String> cleanerNames = o.cleaners.map((c) => c.name).toList();
+    if (cleanerNames.isEmpty) {
+      haloNames = 'Tim Cleaner';
+    } else if (cleanerNames.length == 1) {
+      haloNames = cleanerNames[0];
+    } else if (cleanerNames.length == 2) {
+      haloNames = '${cleanerNames[0]} dan ${cleanerNames[1]}';
+    } else {
+      haloNames = '${cleanerNames.sublist(0, cleanerNames.length - 1).join(', ')}, dan ${cleanerNames.last}';
+    }
+
+    return '''Halo $haloNames, ada tugas baru untukmu! 
+KLINKLIN $branchName
+--------------------------------
+No. Order : $orderId
+Nama Customer : $customerName
+Alamat : $address
+
+Rincian Pesanan:
+${rincian.trim()}
+
+Hari : $hari
+Waktu : $waktu
+Tanggal : $tanggal
+--------------------------------
+Keterangan Order:
+$keterangan
+
+Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
+  }
+
+  void _showCleanerSelectionModal(BuildContext context, OrderModel o) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Pilih Cleaner',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...o.cleaners.map((c) {
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                    child: Text(
+                      c.name.isNotEmpty ? c.name[0].toUpperCase() : '?',
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                  title: Text(
+                    c.name,
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    c.phone,
+                    style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12),
+                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    if (c.phone.isNotEmpty) {
+                      _launchWA(
+                        context,
+                        c.phone,
+                        template: _generateTugasMessage(o, targetName: c.name),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Nomor HP Cleaner tidak tersedia')),
+                      );
+                    }
+                  },
+                );
+              }),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildSimpleBadge(String label, Color color, Color bg) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -1291,7 +1495,11 @@ class _OrderCard extends StatelessWidget {
                       Expanded(
                         child: _buildWAButton(
                           label: 'Chat Customer',
-                          onTap: () => _launchWA(context, o.customer.phone),
+                          onTap: () => _launchWA(
+                            context,
+                            o.customer.phone,
+                            template: _generateInvoiceMessage(o),
+                          ),
                           isOutlined: true,
                         ),
                       ),
@@ -1301,16 +1509,15 @@ class _OrderCard extends StatelessWidget {
                           child: _buildWAButton(
                             label: 'Chat Cleaner',
                             onTap: () {
-                              final withPhone = o.cleaners.firstWhere(
-                                (c) => c.phone.isNotEmpty,
-                                orElse: () => o.cleaners.first,
-                              );
-                              _launchWA(
-                                context,
-                                withPhone.phone.isNotEmpty
-                                    ? withPhone.phone
-                                    : '',
-                              );
+                              if (o.cleaners.length == 1) {
+                                _launchWA(
+                                  context,
+                                  o.cleaners.first.phone,
+                                  template: _generateTugasMessage(o, targetName: o.cleaners.first.name),
+                                );
+                              } else {
+                                _showCleanerSelectionModal(context, o);
+                              }
                             },
                             isOutlined: false,
                           ),

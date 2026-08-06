@@ -1052,6 +1052,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
     final noteCtrl = TextEditingController();
     final diskonCtrl = TextEditingController();
     bool applyPpn = (_o.ppn ?? _o.pembayaran?.ppn ?? 0) > 0;
+    bool applyPph = (_o.pph ?? _o.pembayaran?.pph ?? 0) > 0;
     File? selectedProof;
     bool isSubmitting = false;
     String? errorMsg;
@@ -1096,10 +1097,12 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
         builder: (ctx, setModal) {
           int diskonPersen = int.tryParse(diskonCtrl.text) ?? 0;
           int ppnPersen = applyPpn ? 11 : 0;
+          int pphPersen = applyPph ? 2 : 0;
           int diskonNominal = (_o.total * diskonPersen / 100).round();
           int setelahDiskon = _o.total - diskonNominal;
           int ppnNominal = (setelahDiskon * ppnPersen / 100).round();
-          int totalAkhir = setelahDiskon + ppnNominal;
+          int pphNominal = (setelahDiskon * pphPersen / 100).round();
+          int totalAkhir = setelahDiskon + ppnNominal - pphNominal;
           return Container(
             decoration: const BoxDecoration(
               color: AppColors.surface,
@@ -1267,60 +1270,120 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: InkWell(
-                          onTap: () {
-                            setModal(() {
-                              applyPpn = !applyPpn;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: applyPpn
-                                    ? AppColors.primary
-                                    : AppColors.border,
-                                width: applyPpn ? 1.5 : 1.0,
+                        child: Column(
+                          children: [
+                            InkWell(
+                              onTap: () {
+                                setModal(() {
+                                  applyPpn = !applyPpn;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: applyPpn
+                                        ? AppColors.primary
+                                        : AppColors.border,
+                                    width: applyPpn ? 1.5 : 1.0,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: Checkbox(
+                                        value: applyPpn,
+                                        onChanged: (val) {
+                                          if (val != null)
+                                            setModal(() {
+                                              applyPpn = val;
+                                            });
+                                        },
+                                        activeColor: AppColors.primary,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'PPN (11%)',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.textDark,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            child: Row(
-                              children: [
-                                SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: Checkbox(
-                                    value: applyPpn,
-                                    onChanged: (val) {
-                                      if (val != null)
-                                        setModal(() {
-                                          applyPpn = val;
-                                        });
-                                    },
-                                    activeColor: AppColors.primary,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
+                            const SizedBox(height: 8),
+                            InkWell(
+                              onTap: () {
+                                setModal(() {
+                                  applyPph = !applyPph;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: applyPph
+                                        ? AppColors.primary
+                                        : AppColors.border,
+                                    width: applyPph ? 1.5 : 1.0,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'PPN (11%)',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.textDark,
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: Checkbox(
+                                        value: applyPph,
+                                        onChanged: (val) {
+                                          if (val != null)
+                                            setModal(() {
+                                              applyPph = val;
+                                            });
+                                        },
+                                        activeColor: AppColors.primary,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'PPh (2%)',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.textDark,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ),
                     ],
@@ -1680,6 +1743,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                 metodePembayaran: apiMethod,
                                 diskonPersen: diskonPersen,
                                 ppn: ppnPersen,
+                                usePph: applyPph,
                                 totalTagihan: _o.total,
                                 totalSetelahDiskon: setelahDiskon,
                                 totalAkhir: totalAkhir,

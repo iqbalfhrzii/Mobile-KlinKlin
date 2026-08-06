@@ -327,6 +327,7 @@ class OrderPayment {
     this.catatanPembayaran,
     this.total,
     this.ppn,
+    this.pph,
     this.diskonPersen,
     this.totalSetelahDiskon,
     this.approvedAt,
@@ -339,6 +340,7 @@ class OrderPayment {
   String? catatanPembayaran;
   int? total;
   int? ppn;
+  int? pph;
   double? diskonPersen;
   int? totalSetelahDiskon;
   DateTime? approvedAt;
@@ -352,6 +354,7 @@ class OrderPayment {
       catatanPembayaran: json['catatan_pembayaran'],
       total: json['total_akhir'] != null ? (double.tryParse(json['total_akhir'].toString())?.toInt()) : (json['total'] != null ? (double.tryParse(json['total'].toString())?.toInt()) : null),
       ppn: json['ppn'] != null ? (double.tryParse(json['ppn'].toString())?.toInt()) : null,
+      pph: json['pph'] != null ? (double.tryParse(json['pph'].toString())?.toInt()) : null,
       diskonPersen: json['diskon_persen'] != null ? double.tryParse(json['diskon_persen'].toString()) : 0.0,
       totalSetelahDiskon: json['total_setelah_diskon'] != null ? (double.tryParse(json['total_setelah_diskon'].toString())?.toInt()) : null,
       approvedAt: json['approved_at'] != null ? DateTime.tryParse(json['approved_at'].toString()) : null,
@@ -630,6 +633,7 @@ class OrderDraft {
     List<OrderCleaner>? cleaners,
     this.notes = '',
     this.applyPpn = false,
+    this.applyPph = false,
     this.tanggalPengerjaan = '',
     this.waktuPengerjaan = '',
   }) : services = services ?? [],
@@ -643,6 +647,7 @@ class OrderDraft {
   String notes;
   String? paymentMethod;
   bool applyPpn;
+  bool applyPph;
   String tanggalPengerjaan;
   String waktuPengerjaan;
 
@@ -663,6 +668,7 @@ class OrderDraft {
       }).toList(),
       if (paymentMethod != null) 'metode_pembayaran': paymentMethod,
       'ppn': applyPpn ? 11 : 0,
+      'pph': applyPph ? 2 : 0,
     };
   }
 

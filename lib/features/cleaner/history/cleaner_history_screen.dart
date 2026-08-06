@@ -18,17 +18,20 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
   String _error = '';
   Map<String, dynamic>? _historyData;
 
-  int _selectedMonth = DateTime.now().month;
-  int _selectedYear = DateTime.now().year;
-
-  static const List<String> _monthNames = [
-    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-  ];
+  late DateTime _startDate;
+  late DateTime _endDate;
 
   @override
   void initState() {
     super.initState();
+    final now = DateTime.now();
+    if (now.day >= 28) {
+      _startDate = DateTime(now.year, now.month, 28);
+      _endDate = DateTime(now.year, now.month + 1, 27);
+    } else {
+      _startDate = DateTime(now.year, now.month - 1, 28);
+      _endDate = DateTime(now.year, now.month, 27);
+    }
     _fetchHistory();
   }
 
@@ -38,10 +41,48 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
       _error = '';
     });
     try {
-      final data = await _service.fetchHistory(month: _selectedMonth, year: _selectedYear);
+      DateTime currentMonth = DateTime(_startDate.year, _startDate.month, 1);
+      final endMonth = DateTime(_endDate.year, _endDate.month, 1);
+
+      List<dynamic> allPesanans = [];
+      num totalBonus = 0;
+
+      while (!currentMonth.isAfter(endMonth)) {
+        final data = await _service.fetchHistory(month: currentMonth.month, year: currentMonth.year);
+        if (data['pesanans'] != null) {
+          allPesanans.addAll(data['pesanans']);
+        }
+        currentMonth = DateTime(currentMonth.year, currentMonth.month + 1, 1);
+      }
+
+      // Filter exactly by _startDate (00:00:00) and _endDate (23:59:59)
+      final startFilter = DateTime(_startDate.year, _startDate.month, _startDate.day);
+      final endFilter = DateTime(_endDate.year, _endDate.month, _endDate.day, 23, 59, 59);
+
+      final filteredPesanans = allPesanans.where((job) {
+        if (job['finished_at'] == null) return false;
+        final finishedAt = DateTime.parse(job['finished_at']).toLocal();
+        return finishedAt.isAfter(startFilter) && finishedAt.isBefore(endFilter);
+      }).toList();
+      
+      // Calculate total bonus from filtered jobs
+      for (var job in filteredPesanans) {
+         totalBonus += _parseNum(job['total_bonus']);
+      }
+      
+      // Sort newest first
+      filteredPesanans.sort((a, b) {
+        final dateA = DateTime.parse(a['finished_at']).toLocal();
+        final dateB = DateTime.parse(b['finished_at']).toLocal();
+        return dateB.compareTo(dateA);
+      });
+
       if (mounted) {
         setState(() {
-          _historyData = data;
+          _historyData = {
+            'total_bonus': totalBonus,
+            'pesanans': filteredPesanans,
+          };
           _isLoading = false;
         });
       }
@@ -151,7 +192,7 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
       child: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          _buildMonthPicker(),
+          _buildDateRangePicker(),
           _buildTotalBonusCard(totalBonus),
           const SizedBox(height: 24),
           Text(
@@ -180,7 +221,7 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
     );
   }
 
-  Widget _buildMonthPicker() {
+  Widget _buildDateRangePicker() {
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -207,95 +248,47 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                '${_monthNames[_selectedMonth - 1]} $_selectedYear',
+                '${DateFormat('dd MMM').format(_startDate)} - ${DateFormat('dd MMM yyyy').format(_endDate)}',
                 style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
               ),
             ],
           ),
           IconButton(
             icon: const Icon(Icons.calendar_month_rounded, color: AppColors.primary),
-            onPressed: _showMonthYearPicker,
+            onPressed: _showDateRangePicker,
           ),
         ],
       ),
     );
   }
 
-  Future<void> _showMonthYearPicker() async {
-    int tempMonth = _selectedMonth;
-    int tempYear = _selectedYear;
-
-    await showDialog(
+  Future<void> _showDateRangePicker() async {
+    final picked = await showDateRangePicker(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              backgroundColor: AppColors.surface,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: Text('Pilih Periode', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 18)),
-              content: Row(
-                children: [
-                  Expanded(
-                    child: DropdownButton<int>(
-                      value: tempMonth,
-                      isExpanded: true,
-                      items: List.generate(12, (index) {
-                        return DropdownMenuItem(
-                          value: index + 1,
-                          child: Text(_monthNames[index], style: GoogleFonts.inter()),
-                        );
-                      }),
-                      onChanged: (val) {
-                        if (val != null) setStateDialog(() => tempMonth = val);
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: DropdownButton<int>(
-                      value: tempYear,
-                      isExpanded: true,
-                      items: List.generate(5, (index) {
-                        int year = DateTime.now().year - 2 + index;
-                        return DropdownMenuItem(
-                          value: year,
-                          child: Text(year.toString(), style: GoogleFonts.inter()),
-                        );
-                      }),
-                      onChanged: (val) {
-                        if (val != null) setStateDialog(() => tempYear = val);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Batal', style: GoogleFonts.inter(color: AppColors.textMuted)),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    setState(() {
-                      _selectedMonth = tempMonth;
-                      _selectedYear = tempYear;
-                    });
-                    _fetchHistory();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: Text('Terapkan', style: GoogleFonts.inter(color: Colors.white)),
-                ),
-              ],
-            );
-          },
+      initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              onSurface: AppColors.textDark,
+            ),
+          ),
+          child: child!,
         );
       },
     );
+
+    if (picked != null) {
+      setState(() {
+        _startDate = picked.start;
+        _endDate = picked.end;
+      });
+      _fetchHistory();
+    }
   }
 
   Widget _buildTotalBonusCard(num totalBonus) {

@@ -381,8 +381,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                         const SizedBox(height: 16),
                         _buildScheduleCard(),
                         const SizedBox(height: 16),
-                        _buildLocationCard(),
-                        const SizedBox(height: 16),
                         _buildLeaveMenu(),
                         const SizedBox(height: 24),
                         _buildHistoryList(),
@@ -397,48 +395,64 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _buildLeaveMenu() {
-    return InkWell(
-      onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaveRequestScreen()));
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaveRequestScreen()));
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFEFF6FF), Color(0xFFDBEAFE)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(Icons.event_available_rounded, color: AppColors.primary, size: 28),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Pengajuan Cuti / Izin', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                      const SizedBox(height: 4),
+                      Text('Ajukan libur atau izin dengan mudah', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 20),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.event_available_rounded, color: AppColors.primary, size: 24),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Pengajuan Cuti / Izin', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                  const SizedBox(height: 2),
-                  Text('Buat pengajuan baru', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-          ],
+          ),
         ),
       ),
     );
@@ -495,35 +509,51 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     } catch (_) {}
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white, 
-        borderRadius: BorderRadius.circular(16), 
-        boxShadow: [AppColors.cardShadow],
+        borderRadius: BorderRadius.circular(20), 
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 15,
+            offset: const Offset(0, 5)
+          )
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.access_time_filled_rounded, color: AppColors.primary, size: 20),
-              const SizedBox(width: 8),
-              Text('Jadwal Absensi', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15)),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12)
+                ),
+                child: const Icon(Icons.access_time_filled_rounded, color: AppColors.primary, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Text('Jadwal Absensi', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textDark)),
+              const Spacer(),
+              _buildRadiusBadge(),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 20),
           Row(
             children: [
               Expanded(
-                child: _buildScheduleItem('Jam Masuk', jamMasuk, Colors.green),
+                child: _buildScheduleItem('Jam Masuk', jamMasuk, Colors.green.shade700, Icons.login_rounded),
               ),
-              Container(width: 1, height: 30, color: Colors.grey.shade200),
+              Container(width: 1, height: 40, color: Colors.grey.shade200),
               Expanded(
-                child: _buildScheduleItem('Toleransi Telat', jamTelat, Colors.red),
+                child: _buildScheduleItem('Toleransi', jamTelat, Colors.red.shade700, Icons.warning_amber_rounded),
               ),
-              Container(width: 1, height: 30, color: Colors.grey.shade200),
+              Container(width: 1, height: 40, color: Colors.grey.shade200),
               Expanded(
-                child: _buildScheduleItem('Jam Pulang', jamPulang, Colors.orange),
+                child: _buildScheduleItem('Jam Pulang', jamPulang, Colors.orange.shade700, Icons.logout_rounded),
               ),
             ],
           ),
@@ -532,137 +562,85 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  Widget _buildScheduleItem(String label, String time, Color color) {
+  Widget _buildScheduleItem(String label, String time, Color color, IconData icon) {
     return Column(
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-        const SizedBox(height: 4),
-        Text(time, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 12, color: AppColors.textMuted),
+            const SizedBox(width: 4),
+            Text(label, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted, fontWeight: FontWeight.w500)),
+          ]
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12)
+          ),
+          child: Text(time, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: color)),
+        )
       ],
     );
   }
 
-  Widget _buildLocationCard() {
-    double? distance;
-    bool isInside = false;
-    
-    if (_currentPosition != null && _status?.branchLat != null && _status?.branchLng != null) {
-      distance = Geolocator.distanceBetween(
-        _currentPosition!.latitude, _currentPosition!.longitude,
-        _status!.branchLat!, _status!.branchLng!
-      );
-      isInside = distance <= (_status?.maxRadiusMeter ?? 50.0);
+  Widget _buildRadiusBadge() {
+    if (_isLocating) {
+      return const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2));
     }
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white, 
-        borderRadius: BorderRadius.circular(16), 
-        boxShadow: [AppColors.cardShadow],
-      ),
-      child: Column(
-        children: [
-          Row(
+    if (_currentPosition == null || _status?.branchLat == null || _status?.branchLng == null) {
+      return InkWell(
+        onTap: _fetchLocation,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(12)),
+          child: Row(
             children: [
-               const Icon(Icons.business, color: AppColors.primary),
-               const SizedBox(width: 8),
-               Expanded(
-                 child: Text(
-                   'Cabang: ${_status?.branchName ?? '-'}', 
-                   style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)
-                 )
-               ),
-               IconButton(
-                 icon: _isLocating 
-                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) 
-                   : const Icon(Icons.refresh, color: AppColors.primary), 
-                 onPressed: _fetchLocation,
-                 tooltip: 'Refresh Lokasi',
-               ),
-            ],
-          ),
-          const Divider(),
-          if (_currentPosition == null && !_isLocating)
-             Padding(
-               padding: const EdgeInsets.symmetric(vertical: 8.0),
-               child: Text('Lokasi belum tersedia. Klik tombol refresh.', style: GoogleFonts.inter(color: AppColors.textMuted)),
-             )
-          else if (_status?.branchLat == null || _status?.branchLng == null)
-             Padding(
-               padding: const EdgeInsets.symmetric(vertical: 8.0),
-               child: Text('Koordinat lokasi cabang belum diatur oleh Admin.', style: GoogleFonts.inter(color: AppColors.textMuted)),
-             )
-          else if (_currentPosition != null)
-             Column(
-               children: [
-                 Row(
-                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                   children: [
-                     Column(
-                       crossAxisAlignment: CrossAxisAlignment.start,
-                       children: [
-                         Text('Jarak ke Kantor', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12)),
-                         const SizedBox(height: 4),
-                         Text('${distance?.toStringAsFixed(1) ?? '-'} meter', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
-                       ]
-                     ),
-                     Container(
-                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                       decoration: BoxDecoration(
-                         color: isInside ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1), 
-                         borderRadius: BorderRadius.circular(20)
-                       ),
-                       child: Text(
-                         isInside ? 'Di Dalam Radius' : 'Di Luar Radius', 
-                         style: GoogleFonts.inter(color: isInside ? Colors.green : Colors.red, fontWeight: FontWeight.bold, fontSize: 12)
-                       ),
-                     ),
-                   ]
-                 ),
-                 const SizedBox(height: 12),
-                 const Divider(height: 1, thickness: 1, color: Colors.black12),
-                 const SizedBox(height: 12),
-                 Row(
-                   children: [
-                     Expanded(
-                       child: Column(
-                         crossAxisAlignment: CrossAxisAlignment.start,
-                         children: [
-                           Text('Koordinat (Lat, Lng)', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 10)),
-                           const SizedBox(height: 2),
-                           Text(
-                             '${_currentPosition!.latitude.toStringAsFixed(6)}, ${_currentPosition!.longitude.toStringAsFixed(6)}',
-                             style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                           ),
-                         ],
-                       ),
-                     ),
-                     Container(width: 1, height: 24, color: Colors.grey.shade300),
-                     const SizedBox(width: 12),
-                     Expanded(
-                       child: Column(
-                         crossAxisAlignment: CrossAxisAlignment.start,
-                         children: [
-                           Text('Akurasi GPS', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 10)),
-                           const SizedBox(height: 2),
-                           Text(
-                             '± ${_currentPosition!.accuracy.toStringAsFixed(1)} meter',
-                             style: GoogleFonts.inter(
-                               fontSize: 12, 
-                               fontWeight: FontWeight.w600, 
-                               color: _currentPosition!.accuracy > 30 ? Colors.red : AppColors.textDark
-                             ),
-                           ),
-                         ],
-                       ),
-                     ),
-                   ],
-                 ),
-               ],
-             )
-        ]
-      )
+              const Icon(Icons.refresh, size: 14, color: AppColors.textMuted),
+              const SizedBox(width: 4),
+              Text('Cek Lokasi', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
+            ]
+          )
+        )
+      );
+    }
+
+    final distance = Geolocator.distanceBetween(
+      _currentPosition!.latitude, _currentPosition!.longitude,
+      _status!.branchLat!, _status!.branchLng!
+    );
+    final isInside = distance <= (_status?.maxRadiusMeter ?? 50.0);
+
+    return InkWell(
+      onTap: _fetchLocation,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isInside ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1), 
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isInside ? Colors.green.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3))
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isInside ? Icons.check_circle_rounded : Icons.cancel_rounded,
+              color: isInside ? Colors.green : Colors.red,
+              size: 14,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              isInside ? 'Di Dalam Radius' : 'Di Luar Radius', 
+              style: GoogleFonts.inter(color: isInside ? Colors.green : Colors.red, fontWeight: FontWeight.bold, fontSize: 10)
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -704,38 +682,73 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }) {
     final formattedTime = _formatTime(time ?? '--:--');
     
-    return ElevatedButton(
-      onPressed: isEnabled ? () => _handleAbsensi(isCheckIn) : null,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        disabledBackgroundColor: Colors.grey.shade200,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: isEnabled ? 4 : 0,
-        shadowColor: color.withValues(alpha: 0.4),
-      ),
-      child: Column(
-        children: [
-          Icon(isCheckIn ? Icons.login_rounded : Icons.logout_rounded, color: isEnabled ? Colors.white : Colors.grey.shade400, size: 28),
-          const SizedBox(height: 8),
-          Text(label, style: GoogleFonts.inter(fontSize: 16, color: isEnabled ? Colors.white : Colors.grey.shade500, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: isEnabled ? Colors.white.withValues(alpha: 0.2) : Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              formattedTime, 
-              style: GoogleFonts.inter(
-                color: isEnabled ? Colors.white : Colors.grey.shade600, 
-                fontWeight: FontWeight.w600,
-                fontSize: 12
-              )
-            ),
+    final gradient = isEnabled 
+      ? LinearGradient(
+          colors: isCheckIn 
+            ? [const Color(0xFF10B981), const Color(0xFF059669)] 
+            : [const Color(0xFFF59E0B), const Color(0xFFD97706)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        )
+      : LinearGradient(
+          colors: [Colors.grey.shade200, Colors.grey.shade300],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+
+    final textColor = isEnabled ? Colors.white : Colors.grey.shade500;
+    
+    return Container(
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: isEnabled ? [
+          BoxShadow(
+            color: color.withValues(alpha: 0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
           )
-        ],
+        ] : [],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isEnabled ? () => _handleAbsensi(isCheckIn) : null,
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
+              children: [
+                Icon(
+                  isCheckIn ? Icons.login_rounded : Icons.logout_rounded, 
+                  color: isEnabled ? Colors.white : Colors.grey.shade400, 
+                  size: 32
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  label, 
+                  style: GoogleFonts.inter(fontSize: 16, color: textColor, fontWeight: FontWeight.w800)
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isEnabled ? Colors.white.withValues(alpha: 0.25) : Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    formattedTime, 
+                    style: GoogleFonts.inter(
+                      fontSize: 13, 
+                      fontWeight: FontWeight.w700, 
+                      color: isEnabled ? Colors.white : Colors.grey.shade400
+                    )
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

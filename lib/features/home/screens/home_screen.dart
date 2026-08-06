@@ -47,7 +47,44 @@ class _HomeScreenState extends State<HomeScreen> {
   String _userRole = 'Customer Service';
   String _userBranch = '-';
   String? _userPhoto;
+  
+  OrderStatus? _omzetStatusFilter;
+  List<OrderModel> _allOrders = [];
+  Map<String, dynamic> _dashboardData = {};
 
+  void _calculateOmzetThisMonth() {
+    int omzetBulan = 0;
+    int countThisMonth = 0;
+    final now = DateTime.now();
+
+    for (var o in _allOrders) {
+      if (o.status == OrderStatus.cancelled || o.status == OrderStatus.draft) {
+        continue;
+      }
+      if (_omzetStatusFilter != null && o.status != _omzetStatusFilter) {
+        continue;
+      }
+
+      bool isThisMonth = o.scheduleDateTime.year == now.year && o.scheduleDateTime.month == now.month;
+      if (isThisMonth) {
+        final int val = o.subtotal > 0 ? o.subtotal : o.total;
+        omzetBulan += val;
+        countThisMonth++;
+      }
+    }
+
+    setState(() {
+      if (_omzetStatusFilter != null) {
+        _omzetThisMonth = omzetBulan;
+        _rataRataOrder = countThisMonth > 0 ? (omzetBulan / countThisMonth).toDouble() : 0;
+      } else {
+        _omzetThisMonth = omzetBulan > 0 ? omzetBulan : (_dashboardData['omzet_bulan_ini'] ?? 0);
+        _rataRataOrder = countThisMonth > 0
+            ? (omzetBulan / countThisMonth).toDouble()
+            : (_dashboardData['rata_rata_order'] ?? 0).toDouble();
+      }
+    });
+  }
   @override
   void initState() {
     super.initState();
@@ -64,10 +101,11 @@ class _HomeScreenState extends State<HomeScreen> {
           .fetchOrders(); // Only fetch for recent orders or we can leave it
 
       if (mounted) {
+        _allOrders = orders;
+        _dashboardData = dbData;
+        
         setState(() {
-          int omzetBulan = 0;
           int omzetHari = 0;
-          int countThisMonth = 0;
           int countToday = 0;
           int waiting = 0;
           int active = 0;
@@ -83,15 +121,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 o.scheduleDateTime.year == now.year &&
                 o.scheduleDateTime.month == now.month &&
                 o.scheduleDateTime.day == now.day;
-            bool isThisMonth =
-                o.scheduleDateTime.year == now.year &&
-                o.scheduleDateTime.month == now.month;
 
             final int val = o.subtotal > 0 ? o.subtotal : o.total;
-            if (isThisMonth) {
-              omzetBulan += val;
-              countThisMonth++;
-            }
             if (isToday) {
               omzetHari += val;
               countToday++;
@@ -104,15 +135,9 @@ class _HomeScreenState extends State<HomeScreen> {
             }
           }
 
-          _omzetThisMonth = omzetBulan > 0
-              ? omzetBulan
-              : (dbData['omzet_bulan_ini'] ?? 0);
           _omzetToday = omzetHari > 0 || orders.isNotEmpty
               ? omzetHari
               : (dbData['omzet_hari_ini'] ?? 0);
-          _rataRataOrder = countThisMonth > 0
-              ? (omzetBulan / countThisMonth).toDouble()
-              : (dbData['rata_rata_order'] ?? 0).toDouble();
           _ordersToday = countToday > 0 || orders.isNotEmpty
               ? countToday
               : (dbData['pesanan_hari_ini'] ?? 0);
@@ -132,6 +157,8 @@ class _HomeScreenState extends State<HomeScreen> {
           _recentOrders = orders.take(3).toList();
           _isLoadingStats = false;
         });
+        
+        _calculateOmzetThisMonth();
       }
     } catch (e) {
       if (mounted) setState(() => _isLoadingStats = false);
@@ -562,38 +589,42 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.4),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.trending_up_rounded,
-                            color: Color(0xFF34D399),
-                            size: 14,
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'OMZET BULAN BERJALAN',
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF34D399),
-                              letterSpacing: 0.5,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.4),
                             ),
                           ),
-                        ],
-                      ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.trending_up_rounded,
+                                color: Color(0xFF34D399),
+                                size: 14,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'OMZET BULAN BERJALAN',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF34D399),
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 10),
                     Text(
@@ -608,37 +639,71 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Rata-rata Order',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        color: Colors.white.withValues(alpha: 0.7),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Rata-rata Order',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            color: Colors.white.withValues(alpha: 0.7),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _formatRupiah(_rataRataOrder.round()),
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    height: 32,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<OrderStatus?>(
+                        value: _omzetStatusFilter,
+                        dropdownColor: AppColors.primary,
+                        icon: const Icon(Icons.arrow_drop_down, color: Colors.white, size: 18),
+                        isDense: true,
+                        style: GoogleFonts.inter(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w600),
+                        items: const [
+                          DropdownMenuItem(value: null, child: Text('Semua Status')),
+                          DropdownMenuItem(value: OrderStatus.completed, child: Text('Selesai')),
+                          DropdownMenuItem(value: OrderStatus.inProgress, child: Text('Proses')),
+                          DropdownMenuItem(value: OrderStatus.assigned, child: Text('Ditugaskan')),
+                          DropdownMenuItem(value: OrderStatus.waitingPaymentApproval, child: Text('Menunggu Bayar')),
+                        ],
+                        onChanged: (val) {
+                          setState(() => _omzetStatusFilter = val);
+                          _calculateOmzetThisMonth();
+                        },
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _formatRupiah(_rataRataOrder.round()),
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           ),
