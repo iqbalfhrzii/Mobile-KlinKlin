@@ -104,23 +104,158 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
   }
 
   void _scanQr() {
-    // Show mock dialog for scanning QR
+    final qrController = TextEditingController();
+    final catatanController = TextEditingController();
+    String selectedKondisi = 'Baik - Berfungsi Normal';
+    final List<String> kondisiOptions = [
+      'Baik - Berfungsi Normal',
+      'Rusak - Perlu Perbaikan',
+      'Lagi di service - Sedang diperbaiki',
+      'Hilang - Tidak Ditemukan',
+      'Baik (Pernah diservice) - Normal bekas servis',
+    ];
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Scan Kode QR', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.qr_code_scanner, size: 100, color: AppColors.primary),
-            const SizedBox(height: 16),
-            Text('Kamera akan terbuka di sini.', style: GoogleFonts.inter()),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Tutup')),
-        ],
-      )
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              backgroundColor: Colors.white,
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Scan Kode QR Item / Alat', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                          InkWell(
+                            onTap: () => Navigator.pop(context),
+                            child: const Icon(Icons.close, color: AppColors.textMuted, size: 20),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Text('Kode QR *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: qrController,
+                        style: GoogleFonts.inter(fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: 'Arahkan scanner ke QR atau ketik manual',
+                          hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13),
+                          prefixIcon: const Icon(Icons.qr_code_scanner, color: AppColors.textMuted, size: 18),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.primary)),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text('Kondisi Item *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppColors.border),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: selectedKondisi,
+                            isExpanded: true,
+                            icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textMuted),
+                            style: GoogleFonts.inter(fontSize: 14, color: AppColors.textDark),
+                            items: kondisiOptions.map((k) {
+                              return DropdownMenuItem<String>(
+                                value: k,
+                                child: Text(k),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) setStateDialog(() => selectedKondisi = val);
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text('Foto Aktual *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), style: BorderStyle.solid),
+                          borderRadius: BorderRadius.circular(12),
+                          color: AppColors.surfaceBlue,
+                        ),
+                        child: Column(
+                          children: [
+                            const Icon(Icons.camera_alt_outlined, color: AppColors.primary, size: 32),
+                            const SizedBox(height: 8),
+                            Text('Klik untuk upload foto aktual barang', style: GoogleFonts.inter(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text('Catatan Tambahan (Opsional)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: catatanController,
+                        style: GoogleFonts.inter(fontSize: 14),
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          hintText: 'Catat detail kerusakan atau posisi barang...',
+                          hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.primary)),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text('Batal', style: GoogleFonts.inter(color: AppColors.textDark, fontWeight: FontWeight.w600)),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () {
+                              if (qrController.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kode QR wajib diisi')));
+                                return;
+                              }
+                              // Mocking API call
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Berhasil merekam item ${qrController.text.trim()}')));
+                              _fetchSession(); // Reload list
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.textDark,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              elevation: 0,
+                            ),
+                            child: Text('Simpan Hasil Scan', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -225,7 +360,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: _buildPeriodeTab('inventaris', 'Bebas', '(Custom)', Icons.edit_calendar_rounded),
+                    child: _buildPeriodeTab('inventaris', 'Sesuai Tanggal', '(Bebas)', Icons.edit_calendar_rounded),
                   ),
                 ],
               ),
@@ -268,7 +403,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Sesi: ${_activePeriode == 'tengah_bulan' ? 'Awal Bulan' : _activePeriode == 'akhir_bulan' ? 'Akhir Bulan' : 'Bebas'}',
+                                  'Sesi: ${_activePeriode == 'tengah_bulan' ? 'Awal Bulan' : _activePeriode == 'akhir_bulan' ? 'Akhir Bulan' : 'Sesuai Tanggal'}',
                                   style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textDark),
                                 ),
                                 const SizedBox(height: 2),
@@ -279,20 +414,64 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
                               ],
                             ),
                             if (_activeSession != null)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: _activeSession!['status'] == 'Selesai' ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  _activeSession!['status'] ?? 'Draft',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: _activeSession!['status'] == 'Selesai' ? Colors.green : Colors.orange,
+                              Row(
+                                children: [
+                                  if (_activeSession!['status'] == 'Draft') ...[
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        // Mock API call to complete session
+                                        showDialog(
+                                          context: context,
+                                          builder: (ctx) => AlertDialog(
+                                            title: Text('Selesaikan Sesi?', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                                            content: Text('Apakah Anda yakin ingin menyelesaikan sesi opname ini? Sesi yang selesai tidak bisa diubah lagi.', style: GoogleFonts.inter()),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(ctx),
+                                                child: Text('Batal', style: GoogleFonts.inter(color: AppColors.textDark)),
+                                              ),
+                                              ElevatedButton(
+                                                onPressed: () {
+                                                  Navigator.pop(ctx);
+                                                  setState(() {
+                                                    _activeSession!['status'] = 'Selesai';
+                                                  });
+                                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sesi berhasil diselesaikan')));
+                                                },
+                                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.textDark),
+                                                child: const Text('Selesaikan', style: TextStyle(color: Colors.white)),
+                                              )
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.textDark,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        minimumSize: Size.zero,
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                      ),
+                                      child: Text('Selesaikan Sesi', style: GoogleFonts.inter(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                                    ),
+                                    const SizedBox(width: 8),
+                                  ],
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: _activeSession!['status'] == 'Selesai' ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      _activeSession!['status'] ?? 'Draft',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: _activeSession!['status'] == 'Selesai' ? Colors.green : Colors.orange,
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                ],
                               )
                           ],
                         ),
@@ -454,12 +633,21 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
   }
   
   Widget _buildBhpItem(dynamic detail) {
+    final isSelesai = _activeSession != null && _activeSession!['status'] == 'Selesai';
+    
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(detail['barang']?['nama_barang'] ?? 'Unknown Item', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(detail['barang']?['nama_barang'] ?? 'Unknown Item', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14)),
+              if (isSelesai)
+                Text('Terkunci', style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
+            ],
+          ),
           const SizedBox(height: 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -477,6 +665,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
   Widget _buildNormalItem(dynamic detail) {
     final itemFisik = detail['item_fisik'] ?? {};
     final barang = itemFisik['barang'] ?? {};
+    final isSelesai = _activeSession != null && _activeSession!['status'] == 'Selesai';
     
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -487,11 +676,19 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(itemFisik['kode_qr'] ?? '-', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(4)),
-                child: Text(detail['kondisi'] ?? '-', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold)),
-              )
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(4)),
+                    child: Text(detail['kondisi'] ?? '-', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold)),
+                  ),
+                  if (isSelesai) ...[
+                    const SizedBox(width: 8),
+                    Text('Terkunci', style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                  ],
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 8),

@@ -21,10 +21,50 @@ class MasterBarangService {
     }
   }
 
+  static Future<bool> addKategori(Map<String, dynamic> data) async {
+    try {
+      final response = await _dio.post('/api/master-barang/kategori', data: data);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return response.data['success'] == true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
   // ==============================
   // Data Barang
   // ==============================
-  static Future<List<dynamic>> getBarang({int? kategoriId}) async {
+
+  static Future<List<dynamic>> getBarang() async {
+    try {
+      final response = await _dio.get('/api/master-barang/barang');
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data['success'] == true) {
+          return data['data'];
+        }
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  static Future<bool> addBarang(Map<String, dynamic> data) async {
+    try {
+      final response = await _dio.post('/api/master-barang/barang', data: data);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return response.data['success'] == true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<List<dynamic>> getBarangFiltered({int? kategoriId}) async {
     try {
       String url = '/api/master-barang/barang';
       if (kategoriId != null) {
@@ -62,6 +102,21 @@ class MasterBarangService {
       return [];
     } catch (e) {
       return [];
+    }
+  }
+
+  static Future<bool> addItemFisik(dynamic formData) async {
+    try {
+      final response = await _dio.post(
+        '/api/master-barang/item-fisik',
+        data: formData,
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return response.data['success'] == true;
+      }
+      return false;
+    } catch (e) {
+      return false;
     }
   }
 }
