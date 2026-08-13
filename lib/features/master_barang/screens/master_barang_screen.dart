@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../services/master_barang_service.dart';
+import '../../../core/widgets/gradient_header.dart';
 
 class MasterBarangScreen extends StatefulWidget {
   const MasterBarangScreen({super.key});
@@ -67,7 +68,7 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
 
   Future<void> _loadItemFisik() async {
     setState(() => _isLoadingItemFisik = true);
-    final items = await MasterBarangService.getItemFisik(cabangId: 1); // Mock cabang 1
+    final items = await MasterBarangService.getItemFisik(); // Fetch all cabangs
     if (_barangs.isEmpty) {
       _barangs = await MasterBarangService.getBarang();
     }
@@ -487,40 +488,50 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        title: Text(
-          'Master Barang & Aset',
-          style: GoogleFonts.inter(
-            color: AppColors.textDark,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textDark, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.textMuted,
-          indicatorColor: AppColors.primary,
-          labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
-          unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.normal, fontSize: 13),
-          tabs: const [
-            Tab(text: 'Kategori'),
-            Tab(text: 'Data Barang'),
-            Tab(text: 'Item Fisik'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildKategoriTab(),
-          _buildBarangTab(),
-          _buildItemFisikTab(),
+          GradientHeader(
+            child: Row(
+              children: [
+                HeaderBackButton(onTap: () => Navigator.pop(context)),
+                const SizedBox(width: 12),
+                Text(
+                  'Master Barang & Aset',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            color: Colors.white,
+            child: TabBar(
+              controller: _tabController,
+              labelColor: AppColors.primary,
+              unselectedLabelColor: AppColors.textMuted,
+              indicatorColor: AppColors.primary,
+              labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
+              unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.normal, fontSize: 13),
+              tabs: const [
+                Tab(text: 'Kategori'),
+                Tab(text: 'Data Barang'),
+                Tab(text: 'Item Fisik'),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildKategoriTab(),
+                _buildBarangTab(),
+                _buildItemFisikTab(),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -878,8 +889,12 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                 child: Text('BARANG', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textMuted)),
               ),
               Expanded(
-                flex: 2,
+                flex: 1,
                 child: Text('KONDISI', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textMuted)),
+              ),
+              Expanded(
+                flex: 1,
+                child: Text('STATUS', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textMuted)),
               ),
             ],
           ),
@@ -932,7 +947,7 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                                 ),
                               ),
                               Expanded(
-                                flex: 2,
+                                flex: 1,
                                 child: Align(
                                   alignment: Alignment.centerLeft,
                                   child: Container(
@@ -949,6 +964,17 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                                         color: isBaik ? Colors.green : Colors.red,
                                       ),
                                     ),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 1,
+                                child: Text(
+                                  item['status_ketersediaan'] ?? '-',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: AppColors.textMuted,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ),

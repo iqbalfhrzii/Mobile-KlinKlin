@@ -166,6 +166,21 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
   }
 
+  String _formatDuration(DateTime start, DateTime end) {
+    final diff = end.difference(start);
+    final hours = diff.inHours;
+    final minutes = diff.inMinutes.remainder(60);
+    final seconds = diff.inSeconds.remainder(60);
+    
+    if (hours > 0) {
+      return '${hours}j ${minutes}m ${seconds}s';
+    } else if (minutes > 0) {
+      return '${minutes}m ${seconds}s';
+    } else {
+      return '${seconds}s';
+    }
+  }
+
   Future<void> _fetchDetail() async {
     setState(() => _isLoading = true);
     try {
@@ -1395,6 +1410,23 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             ),
                           ),
                         ),
+                          if (cleaner.statusPengerjaan == CleanerWorkStatus.finished && cleaner.startedAt != null && cleaner.finishedAt != null) ...[
+                            const SizedBox(width: 8),
+                            Row(
+                              children: [
+                                const Icon(Icons.timer_outlined, size: 14, color: AppColors.primary),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _formatDuration(cleaner.startedAt!, cleaner.finishedAt!),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                       ],
                     ),
                   ],

@@ -277,6 +277,8 @@ class OrderCleaner {
     this.phone = '',
     this.fotosStart = const [],
     this.fotosFinish = const [],
+    this.startedAt,
+    this.finishedAt,
   });
 
   String id;
@@ -291,6 +293,8 @@ class OrderCleaner {
   String phone;
   List<CleanerFoto> fotosStart;
   List<CleanerFoto> fotosFinish;
+  DateTime? startedAt;
+  DateTime? finishedAt;
 
   factory OrderCleaner.fromJson(Map<String, dynamic> json) {
     final cleaner = json['cleaner'] ?? {};
@@ -314,6 +318,8 @@ class OrderCleaner {
       phone: cleaner['no_wa']?.toString() ?? cleaner['no_hp']?.toString() ?? cleaner['phone']?.toString() ?? '',
       fotosStart: (fotosStartData).map((e) => CleanerFoto.fromJson(e)).toList(),
       fotosFinish: (fotosFinishData).map((e) => CleanerFoto.fromJson(e)).toList(),
+      startedAt: json['started_at'] != null ? DateTime.tryParse(json['started_at'].toString()) : null,
+      finishedAt: json['finished_at'] != null ? DateTime.tryParse(json['finished_at'].toString()) : null,
     );
   }
 }

@@ -11,8 +11,8 @@ import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/change_pin_screen.dart';
 import 'edit_profile_screen.dart';
 import 'kpi_screen.dart';
-import '../../master_barang/screens/master_barang_screen.dart';
 import '../../stok_opname/screens/stok_opname_screen.dart';
+import '../../master_barang/screens/master_barang_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -89,16 +89,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         }),
                       ]),
                       const SizedBox(height: 12),
-                      _buildMenuSection('Manajemen', [
-                        _MenuItem(Icons.inventory_2_outlined, 'Master Barang & Aset', onTap: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const MasterBarangScreen()));
-                        }),
-                        _MenuItem(Icons.fact_check_outlined, 'Stok Opname', onTap: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const StokOpnameScreen()));
-                        }),
-                      ]),
-                      const SizedBox(height: 12),
+                      if (_userRole.toLowerCase().contains('cs') || _userRole.toLowerCase().contains('customer service')) ...[
+                        _buildMenuSection('Manajemen CS', [
+                          _MenuItem(Icons.fact_check_outlined, 'Stok Opname', onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const StokOpnameScreen()));
+                          }),
+                        ]),
+                        const SizedBox(height: 12),
+                      ],
+                      if (_userRole.toLowerCase().contains('operasional') || _userRole.toLowerCase().contains('admin')) ...[
+                        _buildMenuSection('Manajemen Operasional', [
+                          _MenuItem(Icons.inventory_2_outlined, 'Master Barang & Aset', onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const MasterBarangScreen()));
+                          }),
+                        ]),
+                        const SizedBox(height: 12),
+                      ],
                     ],
+
                     _buildMenuSection('Akun', [
                       _MenuItem(Icons.lock_outline_rounded, 'Ganti PIN', onTap: () => _changePIN(context)),
                       _MenuItem(Icons.notifications_outlined, 'Notifikasi', onTap: () {}),

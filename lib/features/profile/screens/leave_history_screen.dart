@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../services/leave_service.dart';
 
@@ -38,6 +39,7 @@ class _LeaveHistoryScreenState extends State<LeaveHistoryScreen> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {

@@ -25,7 +25,8 @@ class LeaveService {
     String startDate,
     String endDate,
     String reason,
-    String? photoPath,
+    List<int>? photoBytes,
+    String? photoName,
   ) async {
     try {
       final formData = FormData.fromMap({
@@ -35,10 +36,10 @@ class LeaveService {
         'alasan': reason,
       });
 
-      if (photoPath != null && photoPath.isNotEmpty) {
+      if (photoBytes != null && photoBytes.isNotEmpty && photoName != null) {
         formData.files.add(MapEntry(
           'bukti_foto',
-          await MultipartFile.fromFile(photoPath),
+          MultipartFile.fromBytes(photoBytes, filename: photoName),
         ));
       }
 

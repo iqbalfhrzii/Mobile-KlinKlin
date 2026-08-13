@@ -6,6 +6,7 @@ import 'operasional_kantor_screen.dart';
 import 'operasional_target_omzet_screen.dart';
 
 import '../../profile/screens/profile_screen.dart';
+import '../../master_barang/screens/master_barang_screen.dart';
 
 class OperasionalPengaturanScreen extends StatelessWidget {
   const OperasionalPengaturanScreen({super.key});
@@ -54,6 +55,19 @@ class OperasionalPengaturanScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                _buildMenuCard(
+                  context,
+                  icon: Icons.inventory_2_outlined,
+                  title: 'Master Barang & Aset',
+                  subtitle: 'Kelola kategori, barang, dan generate QR code untuk semua cabang.',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const MasterBarangScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
                 _buildMenuCard(
                   context,
                   icon: Icons.business,

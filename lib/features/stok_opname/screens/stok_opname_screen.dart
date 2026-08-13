@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../services/stok_opname_service.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class StokOpnameScreen extends StatefulWidget {
   const StokOpnameScreen({super.key});
@@ -22,6 +23,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
   bool _isLoading = false;
   
   List<dynamic> _details = [];
+  String _debugError = '';
   
   // Mocks for month names
   final Map<String, String> _bulanNames = {
@@ -33,6 +35,10 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
   @override
   void initState() {
     super.initState();
+    _activePeriode = 'tengah_bulan';
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchSession();
+    });
   }
 
   Future<void> _fetchSession() async {
@@ -42,27 +48,25 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
       _isLoading = true;
       _activeSession = null;
       _details = [];
+      _debugError = '';
     });
 
     try {
-      // Step 1: Find existing session or create a new one (draft)
-      // For this, we first get all sessions for this branch.
-      // Usually, backend should handle "findOrCreate" based on periode_bulan and cabang_id, 
-      // but based on our API, we might need to get sessions and filter manually 
-      // or call startOpname directly. For demo purposes, we will try to start a new one.
-      // If it returns a session, we then fetch its details.
-      
-      final sessions = await StokOpnameService.getSessions(cabangId: 1); // Assuming cabang_id 1
+      final prefs = await SharedPreferences.getInstance();
+      final cabangId = prefs.getInt('user_cabang_id') ?? 1;
+
+      final sessions = await StokOpnameService.getSessions(cabangId: cabangId);
       
       // Look for a session matching the period, month and year
-      final targetPeriode = '$_activePeriode-$_filterBulan-$_filterTahun';
-      var session = sessions.firstWhere((s) => s['periode_bulan'] == targetPeriode, orElse: () => null);
+      final targetPeriode = '$_filterTahun-$_filterBulan';
+      var session = sessions.firstWhere((s) => s['periode_bulan'] == targetPeriode && s['tipe_sesi'] == _activePeriode, orElse: () => null);
       
       if (session == null) {
         // Create new session
         final req = {
-          'cabang_id': 1,
+          'cabang_id': cabangId,
           'periode_bulan': targetPeriode,
+          'tipe_sesi': _activePeriode,
           'tanggal_checklist': DateTime.now().toIso8601String().split('T')[0],
         };
         final newSession = await StokOpnameService.startSession(req);
@@ -76,17 +80,28 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
         final sessionDetails = await StokOpnameService.getSessionDetails(session['id']);
         if (sessionDetails != null) {
           setState(() {
-            _activeSession = sessionDetails;
+            _activeSession = session;
             _details = sessionDetails['details'] ?? [];
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            _debugError = 'getSessionDetails returned null';
+            _isLoading = false;
           });
         }
+      } else {
+        setState(() {
+          _debugError = 'Sessions fetched, but no match found. total sessions: ${sessions.length}';
+          _isLoading = false;
+        });
       }
     } catch (e) {
-      debugPrint('Error fetching session: $e');
-    } finally {
       setState(() {
+        _debugError = 'Error: $e';
         _isLoading = false;
       });
+      debugPrint('Error fetching session: $e');
     }
   }
 
@@ -594,14 +609,27 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
   }
 
   Widget _buildItemsList() {
-    // Filter details based on activeKategori
-    // Wait, the API returns StokOpnameDetails, we'd have to filter based on itemFisik.barang.kategori.kode_kategori
-    // Since this is just a UI reconstruction for now and the real filtering depends on the relations, 
-    // we will just show what we have, or a placeholder if empty.
+    List<dynamic> filtered = _details.where((d) {
+      final itemFisik = d['item_fisik'] ?? d['itemFisik'];
+      final barang = d['barang'] ?? itemFisik?['barang'];
+      final kategori = barang?['kategori']?['nama_kategori']?.toString().toUpperCase() ?? '';
 
-    final items = _details; // In a real scenario, filter `items.where(...)`
-
-    if (items.isEmpty) {
+      if (_activeKategori == 'MSN') {
+        final kode = itemFisik?['kode_qr'] ?? '';
+        return kode.contains('MSN') || kategori.contains('MESIN');
+      } else if (_activeKategori == 'CLA') {
+        final kode = itemFisik?['kode_qr'] ?? '';
+        return kode.contains('CLA') || kategori.contains('CLEANING');
+      } else if (_activeKategori == 'BHP') {
+        return itemFisik == null && d['pembelian_bhp_id'] != null; 
+      } else if (_activeKategori == 'INV') {
+        final kode = itemFisik?['kode_qr'] ?? '';
+        return kode.contains('INV') || kategori.contains('INVENTARIS');
+      }
+      return false;
+    }).toList();
+    
+    if (filtered.isEmpty) {
       return Padding(
         padding: const EdgeInsets.all(32.0),
         child: Column(
@@ -609,6 +637,10 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
             Icon(Icons.inventory_2_outlined, size: 48, color: AppColors.border),
             const SizedBox(height: 16),
             Text('Belum ada data checklist', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13)),
+            const SizedBox(height: 8),
+            Text('Debug: Session= ${_activeSession != null ? 'Found' : 'Null'}, Total API Details= ${_details.length}, Filtered= 0', style: TextStyle(color: Colors.red, fontSize: 10)),
+            if (_debugError.isNotEmpty)
+              Text('Error: $_debugError', style: TextStyle(color: Colors.red, fontSize: 10)),
           ],
         ),
       );
@@ -617,17 +649,14 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: items.length,
+      itemCount: filtered.length,
       separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
       itemBuilder: (context, index) {
-        final detail = items[index];
-        final isBHP = _activeKategori == 'BHP';
-        
-        if (isBHP) {
-           return _buildBhpItem(detail);
-        } else {
-           return _buildNormalItem(detail);
+        final detail = filtered[index];
+        if (_activeKategori == 'BHP') {
+          return _buildBhpItem(detail);
         }
+        return _buildNormalItem(detail);
       },
     );
   }
@@ -635,6 +664,12 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
   Widget _buildBhpItem(dynamic detail) {
     final isSelesai = _activeSession != null && _activeSession!['status'] == 'Selesai';
     
+    // In case pembelianBhp is loaded in the future
+    final pembelianBhp = detail['pembelian_bhp'] ?? detail['pembelianBhp'];
+    final namaBhp = pembelianBhp != null 
+        ? (pembelianBhp['nama_barang'] ?? 'Unknown BHP') 
+        : 'Barang BHP (ID: ${detail["pembelian_bhp_id"]})';
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -643,7 +678,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(detail['barang']?['nama_barang'] ?? 'Unknown Item', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14)),
+              Text(namaBhp, style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14)),
               if (isSelesai)
                 Text('Terkunci', style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
             ],

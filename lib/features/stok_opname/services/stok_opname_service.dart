@@ -5,7 +5,7 @@ class StokOpnameService {
 
   static Future<List<dynamic>> getSessions({int? cabangId}) async {
     try {
-      String url = '/api/stok-opname';
+      String url = '/stok-opname';
       if (cabangId != null) {
         url += '?cabang_id=$cabangId';
       }
@@ -18,13 +18,13 @@ class StokOpnameService {
       }
       return [];
     } catch (e) {
-      return [];
+      throw Exception('getSessions error: $e');
     }
   }
 
   static Future<Map<String, dynamic>?> startSession(Map<String, dynamic> requestData) async {
     try {
-      final response = await _dio.post('/api/stok-opname/start', data: requestData);
+      final response = await _dio.post('/stok-opname/start', data: requestData);
       if (response.statusCode == 200 || response.statusCode == 201) {
         final resData = response.data;
         if (resData['success'] == true) {
@@ -33,13 +33,13 @@ class StokOpnameService {
       }
       return null;
     } catch (e) {
-      return null;
+      throw Exception('startSession error: $e');
     }
   }
 
   static Future<Map<String, dynamic>?> getSessionDetails(int id) async {
     try {
-      final response = await _dio.get('/api/stok-opname/$id');
+      final response = await _dio.get('/stok-opname/$id');
       if (response.statusCode == 200) {
         final resData = response.data;
         if (resData['success'] == true) {
@@ -48,13 +48,13 @@ class StokOpnameService {
       }
       return null;
     } catch (e) {
-      return null;
+      throw Exception('getSessionDetails error: $e');
     }
   }
 
   static Future<Map<String, dynamic>?> scanQr(String kodeQr) async {
     try {
-      final response = await _dio.post('/api/stok-opname/scan-qr', data: {'kode_qr': kodeQr});
+      final response = await _dio.post('/stok-opname/scan-qr', data: {'kode_qr': kodeQr});
       if (response.statusCode == 200) {
         final resData = response.data;
         if (resData['success'] == true) {
@@ -70,7 +70,7 @@ class StokOpnameService {
   static Future<bool> submitItem(dynamic data) async {
     try {
       // Assuming data is FormData for image upload
-      final response = await _dio.post('/api/stok-opname/submit-item', data: data);
+      final response = await _dio.post('/stok-opname/submit-item', data: data);
       if (response.statusCode == 200 || response.statusCode == 201) {
         return response.data['success'] == true;
       }
@@ -82,7 +82,7 @@ class StokOpnameService {
 
   static Future<List<dynamic>> getConsumables() async {
     try {
-      final response = await _dio.get('/api/stok-opname/consumables');
+      final response = await _dio.get('/stok-opname/consumables');
       if (response.statusCode == 200) {
         final resData = response.data;
         if (resData['success'] == true) {
@@ -97,7 +97,7 @@ class StokOpnameService {
 
   static Future<bool> submitConsumable(dynamic data) async {
     try {
-      final response = await _dio.post('/api/stok-opname/submit-consumable', data: data);
+      final response = await _dio.post('/stok-opname/submit-consumable', data: data);
       if (response.statusCode == 200 || response.statusCode == 201) {
         return response.data['success'] == true;
       }

@@ -8,7 +8,7 @@ import 'package:klinklin/app/app.dart';
 void main() {
   testWidgets('Klinklin home page smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const KlinklinApp());
+    await tester.pumpWidget(const KlinklinApp(isLoggedIn: false, userRole: null));
 
     // Verify that the app title is shown.
     expect(find.text('Klinklin'), findsOneWidget);

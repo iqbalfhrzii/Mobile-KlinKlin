@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'dart:typed_data';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
@@ -25,7 +25,8 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
   String _leaveType = 'cuti';
   DateTime? _startDate;
   DateTime? _endDate;
-  File? _photo;
+  Uint8List? _photoBytes;
+  String? _photoName;
   bool _isLoading = false;
   
   int _jatahCuti = 0;
@@ -77,13 +78,16 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
     }
   }
 
+
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
 
     if (pickedFile != null) {
+      final bytes = await pickedFile.readAsBytes();
       setState(() {
-        _photo = File(pickedFile.path);
+        _photoBytes = bytes;
+        _photoName = pickedFile.name;
       });
     }
   }
@@ -107,7 +111,8 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
         startStr,
         endStr,
         _reasonController.text,
-        _photo?.path,
+        _photoBytes,
+        _photoName,
       );
       
       if (mounted) {
@@ -299,6 +304,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                       validator: (val) => val == null || val.isEmpty ? 'Alasan harus diisi' : null,
                     ),
                     
+
                     const SizedBox(height: 20),
                     Text('Bukti Foto (Opsional)', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                     const SizedBox(height: 8),
@@ -312,10 +318,10 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: AppColors.border, style: BorderStyle.solid),
                         ),
-                        child: _photo != null
+                        child: _photoBytes != null
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
-                                child: Image.file(_photo!, fit: BoxFit.cover),
+                                child: Image.memory(_photoBytes!, fit: BoxFit.cover, width: double.infinity),
                               )
                             : Column(
                                 mainAxisAlignment: MainAxisAlignment.center,

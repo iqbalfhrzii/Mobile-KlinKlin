@@ -220,11 +220,43 @@ class AttendanceService {
     }
   }
 
-  Future<List<AttendanceHistoryItem>> getAllAbsensi({String? date, String? month, String? branch}) async {
+
+  Future<Map<String, dynamic>> getDetailBulanan({required int karyawanId, String? month}) async {
+    try {
+      final Map<String, dynamic> query = {};
+      if (month != null && month.isNotEmpty) {
+        if (month.contains('-')) {
+          final parts = month.split('-');
+          if (parts.length >= 2) {
+            final y = int.tryParse(parts[0]);
+            final m = int.tryParse(parts[1]);
+            if (y != null) query['tahun'] = y;
+            if (m != null) query['bulan'] = m;
+          }
+        }
+      }
+
+      final response = await _dio.get(
+        '/absensi/detail-bulanan/$karyawanId',
+        queryParameters: query,
+      );
+      if (response.statusCode == 200) {
+        return response.data['data'] as Map<String, dynamic>;
+      }
+      return {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  Future<List<AttendanceHistoryItem>> getAllAbsensi({String? date, String? month, String? branch, int? karyawanId}) async {
     try {
       final Map<String, dynamic> query = {};
       if (date != null && date.isNotEmpty) {
         query['tanggal'] = date;
+      }
+      if (karyawanId != null) {
+        query['karyawan_id'] = karyawanId;
       }
       if (month != null && month.isNotEmpty) {
         if (month.contains('-')) {
