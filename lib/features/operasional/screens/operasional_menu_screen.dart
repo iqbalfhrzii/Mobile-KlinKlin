@@ -17,8 +17,10 @@ class OperasionalMenuScreen extends StatelessWidget {
         children: [
           GradientHeader(
             padding: const EdgeInsets.fromLTRB(20, 56, 20, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: SizedBox(
+              width: double.infinity,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Menu Operasional',
@@ -37,6 +39,7 @@ class OperasionalMenuScreen extends StatelessWidget {
                   ),
                 ),
               ],
+              ),
             ),
           ),
           Expanded(
@@ -76,7 +79,7 @@ class OperasionalMenuScreen extends StatelessWidget {
           ),
           _MenuItem(
             icon: Icons.science,
-            title: 'Alat & Chemical',
+            title: 'Pengajuan Alat & Chemical',
             onTap: () {},
           ),
           _MenuItem(
@@ -87,7 +90,7 @@ class OperasionalMenuScreen extends StatelessWidget {
         ],
       ),
       _MenuSection(
-        title: 'KPI & Customer Service',
+        title: 'HCS',
         items: [
           _MenuItem(
             icon: Icons.analytics,
@@ -106,11 +109,6 @@ class OperasionalMenuScreen extends StatelessWidget {
               Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalDataChatScreen()));
             },
           ),
-        ],
-      ),
-      _MenuSection(
-        title: 'Dokumen & Penawaran',
-        items: [
           _MenuItem(
             icon: Icons.description,
             title: 'Quotation',
@@ -122,8 +120,28 @@ class OperasionalMenuScreen extends StatelessWidget {
             onTap: () {},
           ),
           _MenuItem(
-            icon: Icons.people,
-            title: 'HCS',
+            icon: Icons.groups,
+            title: 'Rapat Bulanan',
+            onTap: () {},
+          ),
+        ],
+      ),
+      _MenuSection(
+        title: 'HSE',
+        items: [
+          _MenuItem(
+            icon: Icons.warning_amber_rounded,
+            title: 'Laporan Kecelakaan',
+            onTap: () {},
+          ),
+          _MenuItem(
+            icon: Icons.health_and_safety_outlined,
+            title: 'APD & Kesehatan',
+            onTap: () {},
+          ),
+          _MenuItem(
+            icon: Icons.badge_outlined,
+            title: 'Surat Izin Mengemudi',
             onTap: () {},
           ),
         ],
@@ -132,17 +150,17 @@ class OperasionalMenuScreen extends StatelessWidget {
         title: 'Pengaturan',
         items: [
           _MenuItem(
-            icon: Icons.monetization_on,
+            icon: Icons.monetization_on_outlined,
             title: 'Target Omzet',
             onTap: () {},
           ),
           _MenuItem(
-            icon: Icons.category,
+            icon: Icons.category_outlined,
             title: 'Master Barang',
             onTap: () {},
           ),
           _MenuItem(
-            icon: Icons.brush,
+            icon: Icons.brush_outlined,
             title: 'Permintaan Design',
             onTap: () {},
           ),
