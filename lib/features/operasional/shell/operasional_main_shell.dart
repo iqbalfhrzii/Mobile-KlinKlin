@@ -5,7 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../screens/operasional_dashboard_screen.dart';
 import '../screens/operasional_order_list_screen.dart';
 import '../screens/operasional_kpi_main_screen.dart';
-import '../screens/operasional_data_chat_screen.dart';
+import '../screens/operasional_menu_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 
 class OperasionalMainShell extends StatefulWidget {
@@ -34,7 +34,7 @@ class _OperasionalMainShellState extends State<OperasionalMainShell> {
     const OperasionalDashboardScreen(),
     const OperasionalOrderListScreen(),
     const OperasionalKpiMainScreen(),
-    const OperasionalDataChatScreen(),
+    const OperasionalMenuScreen(),
     const ProfileScreen(),
   ];
 
@@ -42,7 +42,7 @@ class _OperasionalMainShellState extends State<OperasionalMainShell> {
     _NavItem(Icons.grid_view_rounded, Icons.grid_view_rounded, 'Omzet'),
     _NavItem(Icons.receipt_long_outlined, Icons.receipt_long_rounded, 'Pesanan'),
     _NavItem(Icons.analytics_outlined, Icons.analytics_rounded, 'KPI'),
-    _NavItem(Icons.chat_outlined, Icons.chat_rounded, 'Data Chat'),
+    _NavItem(Icons.widgets_outlined, Icons.widgets_rounded, 'Menu'),
     _NavItem(Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
   ];
 
