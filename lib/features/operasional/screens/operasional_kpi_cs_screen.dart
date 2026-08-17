@@ -245,143 +245,206 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
   }
 
   Widget _buildSummaryTable() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    'Ringkasan Nilai KPI per Cabang',
-                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                  ),
+    if (_data.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Ringkasan Nilai KPI per Cabang',
+                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.red.shade200),
                 ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.red.shade200),
-                  ),
-                  child: Text(
-                    'Merah = Belum Capai Target',
-                    style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.red.shade700),
-                  ),
+                child: Text(
+                  'Merah = Belum Capai Target',
+                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.red.shade700),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const Divider(height: 1, color: Color(0xFFEEEEEE)),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _data.length,
-            separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFEEEEEE)),
-            itemBuilder: (context, index) {
-              final item = _data[index];
-              final totalNilai = (item['total_nilai_kpi'] as num).toDouble();
-              final isAman = totalNilai >= 100.0;
-              return Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _data.length,
+          itemBuilder: (context, index) {
+            final item = _data[index];
+            final totalNilai = (item['total_nilai_kpi'] as num).toDouble();
+            final isAman = totalNilai >= 100.0;
+            
+            Color statusColor = isAman ? Colors.green : Colors.red;
+            Color statusBgColor = statusColor.withValues(alpha: 0.1);
+            IconData statusIcon = isAman ? Icons.trending_up_rounded : Icons.trending_down_rounded;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: statusColor.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: statusColor.withValues(alpha: 0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Row: Cabang & KPI Badge
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
                         children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: statusBgColor,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(statusIcon, color: statusColor, size: 18),
+                          ),
+                          const SizedBox(width: 10),
                           Text(
-                            item['nama_cabang'].toString(),
-                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Realisasi Omzet', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-                                    const SizedBox(height: 2),
-                                    Text(_formatCurrency(item['realisasi_omzet']), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                                  ],
-                                ),
-                              ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Target KPI', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-                                    const SizedBox(height: 2),
-                                    Text(item['target_nilai_kpi'].toString(), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                                  ],
-                                ),
-                              ),
-                            ],
+                            item['nama_cabang'].toString().toUpperCase(),
+                            style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textDark,
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: isAman ? Colors.green.shade50 : Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: isAman ? Colors.green.shade200 : Colors.red.shade200),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: statusColor,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${totalNilai.toStringAsFixed(1)}%',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('TOTAL', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: isAman ? Colors.green.shade700 : Colors.red.shade700)),
-                          const SizedBox(height: 2),
-                          Text('${totalNilai.toStringAsFixed(1)}%', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: isAman ? Colors.green.shade700 : Colors.red.shade700)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline_rounded, size: 16, color: Colors.blue.shade700),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Nilai Omzet, Closing Rate, Closing Chat dihitung otomatis. Metrik manual diisi lewat tombol "Atur".',
-                    style: GoogleFonts.inter(fontSize: 11, color: Colors.blue.shade800),
+                    ],
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(height: 14),
+                  const Divider(height: 1, color: Color(0xFFEEEEEE)),
+                  const SizedBox(height: 14),
+                  // Body Grid: Realisasi Omzet vs Target KPI
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'REALISASI OMZET',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _formatCurrency(item['realisasi_omzet']),
+                              style: GoogleFonts.inter(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              'TARGET NILAI KPI',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              item['target_nilai_kpi'].toString(),
+                              style: GoogleFonts.inter(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Progress Bar
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: LinearProgressIndicator(
+                      value: (totalNilai / 100).clamp(0.0, 1.0),
+                      backgroundColor: statusColor.withValues(alpha: 0.12),
+                      valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                      minHeight: 8,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(16),
           ),
-        ],
-      ),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline_rounded, size: 16, color: Colors.blue.shade700),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Nilai Omzet, Closing Rate, Closing Chat dihitung otomatis. Metrik manual diisi lewat tombol "Atur" di bawah.',
+                  style: GoogleFonts.inter(fontSize: 11, color: Colors.blue.shade800),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

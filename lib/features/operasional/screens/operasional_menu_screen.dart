@@ -4,6 +4,23 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import 'operasional_data_chat_screen.dart';
 import 'tagihan_bulanan_screen.dart';
+import 'monitoring_stok_opname_screen.dart';
+import 'operasional_ringkasan_barang_screen.dart';
+import 'operasional_approval_pengajuan_screen.dart';
+import 'kantor_klinklin_screen.dart';
+import 'operasional_purchase_order_screen.dart';
+import 'operasional_cashflow_cabang_screen.dart';
+import 'operasional_kpi_cs_screen.dart';
+import 'operasional_quotation_screen.dart';
+import 'operasional_arsip_penawaran_screen.dart';
+import 'operasional_evaluasi_rapat_screen.dart';
+import 'operasional_strategi_rapat_screen.dart';
+import 'operasional_data_kecelakaan_screen.dart';
+import 'operasional_laporan_lapangan_screen.dart';
+import 'operasional_kesehatan_berkala_screen.dart';
+import 'operasional_tanda_terima_apd_screen.dart';
+import 'operasional_layanan_kesehatan_screen.dart';
+import 'operasional_sim_screen.dart';
 // TODO: import screens as they are created
 
 class OperasionalMenuScreen extends StatelessWidget {
@@ -58,7 +75,9 @@ class OperasionalMenuScreen extends StatelessWidget {
           _MenuItem(
             icon: Icons.business,
             title: 'Kantor Klinklin',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const KantorKlinklinScreen()));
+            },
           ),
           _MenuItem(
             icon: Icons.receipt_long,
@@ -70,22 +89,37 @@ class OperasionalMenuScreen extends StatelessWidget {
           _MenuItem(
             icon: Icons.inventory,
             title: 'Stok Opname',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const MonitoringStokOpnameScreen()));
+            },
           ),
           _MenuItem(
             icon: Icons.inventory_2,
             title: 'Ringkasan Barang',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalRingkasanBarangScreen()));
+            },
           ),
           _MenuItem(
             icon: Icons.science,
             title: 'Pengajuan Alat & Chemical',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalApprovalPengajuanScreen()));
+            },
+          ),
+          _MenuItem(
+            icon: Icons.receipt,
+            title: 'Purchase Order',
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalPurchaseOrderScreen()));
+            },
           ),
           _MenuItem(
             icon: Icons.account_balance_wallet,
             title: 'Cashflow Cabang',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalCashflowCabangScreen()));
+            },
           ),
         ],
       ),
@@ -100,7 +134,9 @@ class OperasionalMenuScreen extends StatelessWidget {
           _MenuItem(
             icon: Icons.bar_chart,
             title: 'KPI CS',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalKpiCsScreen()));
+            },
           ),
           _MenuItem(
             icon: Icons.chat,
@@ -110,19 +146,32 @@ class OperasionalMenuScreen extends StatelessWidget {
             },
           ),
           _MenuItem(
-            icon: Icons.description,
+            icon: Icons.description_outlined,
             title: 'Quotation',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalQuotationScreen()));
+            },
           ),
           _MenuItem(
             icon: Icons.archive,
-            title: 'Arsip Nomor',
-            onTap: () {},
+            title: 'Arsip Nomor & Nominal',
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalArsipPenawaranScreen()));
+            },
           ),
           _MenuItem(
             icon: Icons.groups,
-            title: 'Rapat Bulanan',
-            onTap: () {},
+            title: 'Evaluasi Rapat',
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalEvaluasiRapatScreen()));
+            },
+          ),
+          _MenuItem(
+            icon: Icons.timeline,
+            title: 'Strategi Rapat',
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalStrategiRapatScreen()));
+            },
           ),
         ],
       ),
@@ -131,18 +180,45 @@ class OperasionalMenuScreen extends StatelessWidget {
         items: [
           _MenuItem(
             icon: Icons.warning_amber_rounded,
-            title: 'Laporan Kecelakaan',
-            onTap: () {},
+            title: 'Data Kecelakaan',
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalDataKecelakaanScreen()));
+            },
           ),
           _MenuItem(
-            icon: Icons.health_and_safety_outlined,
-            title: 'APD & Kesehatan',
-            onTap: () {},
+            icon: Icons.assignment_outlined,
+            title: 'Laporan Lapangan',
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalLaporanLapanganScreen()));
+            },
+          ),
+          _MenuItem(
+            icon: Icons.monitor_heart_outlined,
+            title: 'Kesehatan Berkala',
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalKesehatanBerkalaScreen()));
+            },
+          ),
+          _MenuItem(
+            icon: Icons.inventory_2_outlined,
+            title: 'Tanda Terima APD & Suplemen',
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalTandaTerimaApdScreen()));
+            },
+          ),
+          _MenuItem(
+            icon: Icons.local_hospital_outlined,
+            title: 'Layanan Kesehatan',
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalLayananKesehatanScreen()));
+            },
           ),
           _MenuItem(
             icon: Icons.badge_outlined,
             title: 'Surat Izin Mengemudi',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalSimScreen()));
+            },
           ),
         ],
       ),

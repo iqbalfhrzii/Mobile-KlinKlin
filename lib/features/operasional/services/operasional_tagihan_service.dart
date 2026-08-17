@@ -63,6 +63,7 @@ class OperasionalTagihanService {
     try {
       // Dio doesn't support Multipart form data via PUT natively with php easily, 
       // so we use POST with an identifier if needed, or just POST to the update endpoint.
+      data['_method'] = 'PUT'; // Laravel spoofing method
       final formData = FormData.fromMap(data);
       final response = await _dio.post(
         '/operasional/tagihan-bulanan/$id',

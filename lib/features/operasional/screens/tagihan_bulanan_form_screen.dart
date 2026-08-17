@@ -164,7 +164,23 @@ class _TagihanBulananFormScreenState extends State<TagihanBulananFormScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  _buildDropdownField(
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildDropdownField(
                     label: 'Cabang',
                     value: _cabangId,
                     items: _cabangs.map((c) => DropdownMenuItem(value: c['id'] as int, child: Text(c['nama_cabang']))).toList(),
@@ -288,7 +304,7 @@ class _TagihanBulananFormScreenState extends State<TagihanBulananFormScreen> {
                   ElevatedButton(
                     onPressed: _isLoading ? null : _save,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF5E5CE6),
+                      backgroundColor: AppColors.primary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
@@ -296,7 +312,10 @@ class _TagihanBulananFormScreenState extends State<TagihanBulananFormScreen> {
                         ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                         : Text('SIMPAN', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 16),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),

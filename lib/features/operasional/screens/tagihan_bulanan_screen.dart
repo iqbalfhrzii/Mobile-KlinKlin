@@ -139,17 +139,29 @@ class _TagihanBulananScreenState extends State<TagihanBulananScreen> {
             _loadData();
           }
         },
-        backgroundColor: const Color(0xFF5E5CE6),
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: AppColors.primary,
+        elevation: 4,
+        child: const Icon(Icons.add, color: Colors.white, size: 28),
       ),
     );
   }
 
   Widget _buildFilterBar() {
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
@@ -170,7 +182,7 @@ class _TagihanBulananScreenState extends State<TagihanBulananScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               Expanded(
                 child: _buildDropdown(
                   hint: 'Semua Status',
@@ -188,10 +200,9 @@ class _TagihanBulananScreenState extends State<TagihanBulananScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           InkWell(
             onTap: () async {
-              // Simpel month picker menggunakan date picker standar
               final picked = await showDatePicker(
                 context: context,
                 initialDate: _selectedPeriode ?? DateTime.now(),
@@ -204,19 +215,25 @@ class _TagihanBulananScreenState extends State<TagihanBulananScreen> {
                 _loadData();
               }
             },
+            borderRadius: BorderRadius.circular(10),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
                 border: Border.all(color: AppColors.border),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
+                color: AppColors.surface,
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.calendar_today, size: 16, color: AppColors.textMuted),
-                  const SizedBox(width: 8),
+                  const Icon(Icons.calendar_today, size: 18, color: AppColors.primary),
+                  const SizedBox(width: 12),
                   Text(
-                    _selectedPeriode != null ? DateFormat('MMMM yyyy').format(_selectedPeriode!) : 'Semua Periode',
-                    style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
+                    _selectedPeriode != null ? DateFormat('MMMM yyyy').format(_selectedPeriode!) : 'Pilih Periode Bulan',
+                    style: GoogleFonts.inter(
+                      fontSize: 14, 
+                      fontWeight: _selectedPeriode != null ? FontWeight.w600 : FontWeight.normal,
+                      color: _selectedPeriode != null ? AppColors.textDark : AppColors.textMuted
+                    ),
                   ),
                   if (_selectedPeriode != null) ...[
                     const Spacer(),
@@ -225,7 +242,11 @@ class _TagihanBulananScreenState extends State<TagihanBulananScreen> {
                         setState(() => _selectedPeriode = null);
                         _loadData();
                       },
-                      child: const Icon(Icons.close, size: 16, color: AppColors.textMuted),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), shape: BoxShape.circle),
+                        child: const Icon(Icons.close, size: 14, color: Colors.red),
+                      ),
                     ),
                   ]
                 ],
@@ -244,18 +265,19 @@ class _TagihanBulananScreenState extends State<TagihanBulananScreen> {
     required Function(dynamic) onChanged,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
+        color: AppColors.surface,
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<dynamic>(
           value: value,
           isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textMuted),
-          hint: Text(hint, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
-          style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
+          icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.primary),
+          hint: Text(hint, style: GoogleFonts.inter(fontSize: 14, color: AppColors.textMuted)),
+          style: GoogleFonts.inter(fontSize: 14, color: AppColors.textDark, fontWeight: FontWeight.w500),
           items: items,
           onChanged: onChanged,
         ),
@@ -265,7 +287,11 @@ class _TagihanBulananScreenState extends State<TagihanBulananScreen> {
 
   Widget _buildTagihanCard(dynamic item) {
     final periodeDate = DateTime.tryParse(item['periode'] ?? '');
-    final periode = periodeDate != null ? DateFormat('MMM yyyy').format(periodeDate) : '-';
+    final periode = periodeDate != null ? DateFormat('MMMM yyyy').format(periodeDate) : '-';
+    
+    final jatuhTempoDate = DateTime.tryParse(item['jatuh_tempo'] ?? '');
+    final jatuhTempo = jatuhTempoDate != null ? DateFormat('dd MMM yyyy').format(jatuhTempoDate) : '-';
+
     final isLunas = item['status_bayar'] == 'Lunas';
     final cabang = item['cabang'] != null ? item['cabang']['nama_cabang'] : '-';
     
@@ -283,95 +309,108 @@ class _TagihanBulananScreenState extends State<TagihanBulananScreen> {
           _loadData();
         }
       },
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          periode,
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        cabang,
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    item['jenis_tagihan']?.toString().toUpperCase() ?? '-',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    nominal,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        periode,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      cabang,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: isLunas ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     item['status_bayar'] ?? '-',
                     style: GoogleFonts.inter(
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
                       color: isLunas ? Colors.green : Colors.orange,
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceBlue,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.receipt_long, color: AppColors.primary),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item['jenis_tagihan']?.toString().toUpperCase() ?? '-',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        nominal,
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 IconButton(
                   onPressed: () async {
                     final confirm = await showDialog<bool>(
@@ -397,12 +436,27 @@ class _TagihanBulananScreenState extends State<TagihanBulananScreen> {
                       }
                     }
                   },
-                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 22),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 )
               ],
             ),
+            if (jatuhTempo != '-') ...[
+              const SizedBox(height: 16),
+              const Divider(color: AppColors.border),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Icon(Icons.event_busy, size: 16, color: Colors.orange),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Jatuh Tempo: $jatuhTempo',
+                    style: GoogleFonts.inter(fontSize: 12, color: Colors.orange, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ]
           ],
         ),
       ),
