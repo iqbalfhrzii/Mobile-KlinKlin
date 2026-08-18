@@ -12,7 +12,7 @@ class OperasionalRingkasanBarangService {
       if (search != null && search.isNotEmpty) params['search'] = search;
 
       final response = await _dio.get(
-        '/api/operasional/ringkasan-barang',
+        '/operasional/ringkasan-barang',
         queryParameters: params,
       );
       return response.data['data'] ?? {};
@@ -31,7 +31,7 @@ class OperasionalRingkasanBarangService {
       if (cabangId != null) params['cabang_id'] = cabangId;
 
       final response = await _dio.get(
-        '/api/operasional/ringkasan-barang/$barangId',
+        '/operasional/ringkasan-barang/$barangId',
         queryParameters: params,
       );
       return response.data['data'] ?? {};
@@ -46,7 +46,7 @@ class OperasionalRingkasanBarangService {
 
   static Future<List<dynamic>> getCabangs() async {
     try {
-      final response = await _dio.get('/api/cabangs');
+      final response = await _dio.get('/cabangs');
       return response.data['data'] as List;
     } catch (e) {
       print('OperasionalRingkasanBarangService.getCabangs Error: $e');

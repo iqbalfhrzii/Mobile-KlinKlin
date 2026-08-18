@@ -7,7 +7,7 @@ class OperasionalStokOpnameService {
   static Future<List<dynamic>> getCabangs() async {
     try {
       final response = await _dio.get('/cabangs');
-      if (response.data['success'] == true) {
+      if (response.data != null && response.data['data'] != null) {
         return response.data['data'] as List<dynamic>;
       }
       return [];
@@ -19,7 +19,7 @@ class OperasionalStokOpnameService {
 
   static Future<List<dynamic>> getSessions({
     int? cabangId,
-    String? periodeBulan,
+    String? periodeBulan, // Format: YYYY-MM
     String? tipeSesi,
   }) async {
     try {
@@ -29,11 +29,11 @@ class OperasionalStokOpnameService {
       if (tipeSesi != null && tipeSesi.isNotEmpty) queryParams['tipe_sesi'] = tipeSesi;
 
       final response = await _dio.get(
-        '/stok-opname', // using public stok-opname API
+        '/stok-opname',
         queryParameters: queryParams,
       );
       
-      if (response.data['success'] == true) {
+      if (response.data != null && response.data['data'] != null) {
         return response.data['data'] as List<dynamic>;
       }
       return [];
@@ -46,7 +46,7 @@ class OperasionalStokOpnameService {
   static Future<Map<String, dynamic>?> getSessionDetails(int id) async {
     try {
       final response = await _dio.get('/stok-opname/$id');
-      if (response.data['success'] == true) {
+      if (response.data != null && response.data['data'] != null) {
         return response.data['data'] as Map<String, dynamic>;
       }
       return null;

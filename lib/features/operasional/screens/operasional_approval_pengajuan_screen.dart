@@ -297,7 +297,6 @@ class _OperasionalApprovalPengajuanScreenState extends State<OperasionalApproval
     }
 
     return Container(
-      color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         color: Colors.white,

@@ -45,7 +45,11 @@ class OperasionalTagihanService {
 
   static Future<void> createTagihan(Map<String, dynamic> data) async {
     try {
-      final formData = FormData.fromMap(data);
+      final Map<String, dynamic> map = Map.from(data);
+      if (map['bukti_bayar'] != null && map['bukti_bayar'] is String && (map['bukti_bayar'] as String).isNotEmpty) {
+        map['bukti_bayar'] = await MultipartFile.fromFile(map['bukti_bayar']);
+      }
+      final formData = FormData.fromMap(map);
       final response = await _dio.post(
         '/operasional/tagihan-bulanan',
         data: formData,
@@ -61,10 +65,12 @@ class OperasionalTagihanService {
 
   static Future<void> updateTagihan(int id, Map<String, dynamic> data) async {
     try {
-      // Dio doesn't support Multipart form data via PUT natively with php easily, 
-      // so we use POST with an identifier if needed, or just POST to the update endpoint.
-      data['_method'] = 'PUT'; // Laravel spoofing method
-      final formData = FormData.fromMap(data);
+      final Map<String, dynamic> map = Map.from(data);
+      map['_method'] = 'PUT'; // Laravel spoofing method
+      if (map['bukti_bayar'] != null && map['bukti_bayar'] is String && (map['bukti_bayar'] as String).isNotEmpty) {
+        map['bukti_bayar'] = await MultipartFile.fromFile(map['bukti_bayar']);
+      }
+      final formData = FormData.fromMap(map);
       final response = await _dio.post(
         '/operasional/tagihan-bulanan/$id',
         data: formData,

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
+import '../../../core/api/api_client.dart';
 import '../services/operasional_stok_opname_service.dart';
 
 class MonitoringStokOpnameScreen extends StatefulWidget {
@@ -12,25 +13,31 @@ class MonitoringStokOpnameScreen extends StatefulWidget {
   State<MonitoringStokOpnameScreen> createState() => _MonitoringStokOpnameScreenState();
 }
 
-class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen> with SingleTickerProviderStateMixin {
+class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
+    with SingleTickerProviderStateMixin {
   bool _isLoading = false;
   List<dynamic> _cabangs = [];
   Map<String, dynamic>? _currentSession;
   List<dynamic> _sessionDetails = [];
 
   int? _selectedCabangId;
-  DateTime? _selectedPeriode;
-  String _selectedTipeSesi = 'tengah_bulan';
+  DateTime _selectedPeriode = DateTime.now();
+  String _selectedTipeSesi = 'tengah_bulan'; // tengah_bulan, akhir_bulan, inventaris
 
   late TabController _tabController;
+
+  final List<Map<String, String>> _categories = [
+    {'code': 'MSN', 'label': 'Mesin Alat (MSN)'},
+    {'code': 'CLA', 'label': 'Cleaning Alat (CLA)'},
+    {'code': 'BHP', 'label': 'Barang Habis Pakai (BHP)'},
+    {'code': 'INV', 'label': 'Inventaris (INV)'},
+  ];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     _loadCabangs();
-    // Default to current month
-    _selectedPeriode = DateTime.now();
   }
 
   @override
@@ -42,10 +49,21 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
   Future<void> _loadCabangs() async {
     try {
       final cabangs = await OperasionalStokOpnameService.getCabangs();
-      setState(() => _cabangs = cabangs);
-      if (cabangs.isNotEmpty) {
-        _selectedCabangId = cabangs.first['id'];
-        _loadData();
+      if (mounted) {
+        setState(() {
+          _cabangs = cabangs;
+          if (cabangs.isNotEmpty) {
+            // Find Surabaya or default to first
+            final sby = cabangs.firstWhere(
+              (c) => (c['nama_cabang'] ?? '').toString().toLowerCase().contains('surabaya'),
+              orElse: () => cabangs.first,
+            );
+            _selectedCabangId = sby['id'];
+          }
+        });
+        if (_selectedCabangId != null) {
+          _loadData();
+        }
       }
     } catch (e) {
       debugPrint('Error loading cabangs: $e');
@@ -54,70 +72,126 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
 
   Future<void> _loadData() async {
     if (_selectedCabangId == null) return;
-    
+
     setState(() => _isLoading = true);
     try {
-      final String? periodeBulan = _selectedPeriode != null 
-          ? DateFormat('MMMM yyyy', 'id').format(_selectedPeriode!) // Assuming 'Agustus 2026' or similar format is saved
-          : null;
+      // Backend expects 'YYYY-MM' format (e.g. '2026-08')
+      final String formattedPeriode = DateFormat('yyyy-MM').format(_selectedPeriode);
 
       final sessions = await OperasionalStokOpnameService.getSessions(
         cabangId: _selectedCabangId,
-        periodeBulan: _selectedPeriode != null ? DateFormat('MMMM yyyy').format(_selectedPeriode!) : null, // Actually let's just format to "Agustus 2026" if that's how it's stored.
+        periodeBulan: formattedPeriode,
         tipeSesi: _selectedTipeSesi,
       );
 
       if (sessions.isNotEmpty) {
         final session = sessions.first;
         final details = await OperasionalStokOpnameService.getSessionDetails(session['id']);
-        setState(() {
-          _currentSession = details;
-          _sessionDetails = details?['details'] ?? [];
-        });
+        if (mounted) {
+          setState(() {
+            _currentSession = details ?? session;
+            _sessionDetails = details?['details'] ?? [];
+          });
+        }
       } else {
-        setState(() {
-          _currentSession = null;
-          _sessionDetails = [];
-        });
+        if (mounted) {
+          setState(() {
+            _currentSession = null;
+            _sessionDetails = [];
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memuat data stok opname: $e'),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  String _getImageUrl(dynamic rawPath) {
+    if (rawPath == null) return '';
+    String p = rawPath.toString().trim().replaceAll(r'\', '/');
+    if (p.isEmpty || p == 'null') return '';
+    if (p.startsWith('http://') || p.startsWith('https://')) return p;
+
+    // Extract baseDomain from ApiClient
+    final baseDomain = ApiClient.baseUrl.replaceAll(RegExp(r'/api/?$'), '');
+
+    if (p.startsWith('/')) p = p.substring(1);
+    if (p.startsWith('public/')) p = p.substring(7);
+    if (p.startsWith('storage/')) return '$baseDomain/$p';
+
+    return '$baseDomain/storage/$p';
+  }
+
+  List<dynamic> _getItemsForCategory(String kategoriKode) {
+    return _sessionDetails.where((detail) {
+      if (kategoriKode == 'BHP') {
+        final kode = detail['barang']?['kategori']?['kode_kategori'] ?? '';
+        final hasBarangId = detail['barang_id'] != null;
+        final hasBhpId = detail['pembelian_bhp_id'] != null;
+        return kode == 'BHP' || hasBarangId || hasBhpId;
+      } else {
+        final kodeItemFisik = detail['item_fisik']?['barang']?['kategori']?['kode_kategori'] ?? '';
+        final kodeBarang = detail['barang']?['kategori']?['kode_kategori'] ?? '';
+        return kodeItemFisik == kategoriKode || kodeBarang == kategoriKode;
+      }
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
+          // Enhanced Gradient Header
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(20, 56, 20, 24),
+            padding: const EdgeInsets.fromLTRB(20, 52, 20, 24),
             child: Row(
               children: [
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                InkWell(
+                  onTap: () => Navigator.pop(context),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                    ),
+                    child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
+                  ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Monitoring Stok Opname',
-                        style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          letterSpacing: -0.3,
+                        ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
-                        'Pantau hasil checklist aset dan bahan habis pakai',
-                        style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.8)),
+                        'Pantau hasil checklist aset & bahan habis pakai',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.white.withValues(alpha: 0.85),
+                        ),
                       ),
                     ],
                   ),
@@ -125,45 +199,74 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
               ],
             ),
           ),
+
+          // Filters: Periode Bulan & Cabang Selector
           _buildFilterBar(),
+
+          // Session Type Tabs: Awal Bulan, Akhir Bulan, Inventaris
           _buildTipeSesiSelector(),
+
+          // Main Content View
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
                 : _currentSession == null
-                    ? Center(
-                        child: Text(
-                          'Tidak ada sesi stok opname untuk filter ini',
-                          style: GoogleFonts.inter(color: AppColors.textMuted),
-                        ),
-                      )
+                    ? _buildEmptyState()
                     : Column(
                         children: [
                           _buildSessionInfoCard(),
-                          TabBar(
-                            controller: _tabController,
-                            isScrollable: true,
-                            labelColor: AppColors.primary,
-                            unselectedLabelColor: AppColors.textMuted,
-                            indicatorColor: AppColors.primary,
-                            labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
-                            unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 13),
-                            tabs: const [
-                              Tab(text: 'Mesin Alat (MSN)'),
-                              Tab(text: 'Cleaning Alat (CLA)'),
-                              Tab(text: 'Barang Habis Pakai (BHP)'),
-                              Tab(text: 'Inventaris (INV)'),
-                            ],
+
+                          // Category Tabs
+                          Container(
+                            color: Colors.white,
+                            child: TabBar(
+                              controller: _tabController,
+                              isScrollable: true,
+                              labelColor: AppColors.primary,
+                              unselectedLabelColor: const Color(0xFF64748B),
+                              indicatorColor: AppColors.primary,
+                              indicatorWeight: 3,
+                              labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13),
+                              unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 13),
+                              tabs: _categories.map((cat) {
+                                final count = _getItemsForCategory(cat['code']!).length;
+                                return Tab(
+                                  child: Row(
+                                    children: [
+                                      Text(cat['label']!),
+                                      if (count > 0) ...[
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primary.withValues(alpha: 0.12),
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          child: Text(
+                                            '$count',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w800,
+                                              color: AppColors.primary,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
                           ),
-                              Expanded(
+                          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+
+                          // Tab Views
+                          Expanded(
                             child: TabBarView(
                               controller: _tabController,
-                              children: [
-                                _buildItemListView('MSN'),
-                                _buildItemListView('CLA'),
-                                _buildItemListView('BHP'),
-                                _buildItemListView('INV'),
-                              ],
+                              children: _categories.map((cat) {
+                                return _buildItemListView(cat['code']!);
+                              }).toList(),
                             ),
                           ),
                         ],
@@ -174,46 +277,52 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
     );
   }
 
+  // --- FILTER BAR: PERIODE & CABANG ---
   Widget _buildFilterBar() {
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
+        border: const Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
       child: Row(
         children: [
+          // Periode Date Picker
           Expanded(
-            flex: 3,
+            flex: 4,
             child: InkWell(
               onTap: () async {
                 final picked = await showDatePicker(
                   context: context,
-                  initialDate: _selectedPeriode ?? DateTime.now(),
+                  initialDate: _selectedPeriode,
                   firstDate: DateTime(2020),
-                  lastDate: DateTime(2030),
-                  helpText: 'Pilih Periode',
+                  lastDate: DateTime(2035),
+                  helpText: 'PILIH BULAN & TAHUN OPNAME',
                 );
                 if (picked != null) {
                   setState(() => _selectedPeriode = picked);
                   _loadData();
                 }
               },
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(10), color: AppColors.surface),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Row(
                   children: [
-                    const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
+                    const Icon(Icons.calendar_month_rounded, size: 16, color: AppColors.primary),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        _selectedPeriode != null ? DateFormat('MMMM yyyy').format(_selectedPeriode!) : 'Pilih Periode',
-                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                        DateFormat('MMMM yyyy').format(_selectedPeriode),
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B)),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -222,22 +331,53 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
+
+          // Cabang Dropdown
           Expanded(
-            flex: 4,
+            flex: 5,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-              decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(10), color: AppColors.surface),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: DropdownButtonHideUnderline(
-                child: DropdownButton<dynamic>(
+                child: DropdownButton<int>(
                   value: _selectedCabangId,
                   isExpanded: true,
-                  icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.primary),
-                  style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, fontWeight: FontWeight.w600),
-                  items: _cabangs.map((c) => DropdownMenuItem(value: c['id'], child: Text(c['nama_cabang']))).toList(),
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary, size: 20),
+                  hint: Row(
+                    children: [
+                      const Icon(Icons.storefront_rounded, size: 16, color: Color(0xFF94A3B8)),
+                      const SizedBox(width: 6),
+                      Text('Pilih Cabang', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8))),
+                    ],
+                  ),
+                  style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF1E293B), fontWeight: FontWeight.w700),
+                  items: _cabangs.map((c) {
+                    return DropdownMenuItem<int>(
+                      value: c['id'] as int,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.storefront_rounded, size: 14, color: AppColors.primary),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              c['nama_cabang'] ?? '-',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                   onChanged: (val) {
-                    setState(() => _selectedCabangId = val as int?);
-                    _loadData();
+                    if (val != null) {
+                      setState(() => _selectedCabangId = val);
+                      _loadData();
+                    }
                   },
                 ),
               ),
@@ -248,6 +388,7 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
     );
   }
 
+  // --- TIPE SESI SELECTOR ---
   Widget _buildTipeSesiSelector() {
     return Container(
       color: Colors.white,
@@ -257,19 +398,40 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Row(
           children: [
-            _buildSesiButton('tengah_bulan', 'Awal Bulan', 'Tgl 15', Icons.event_available),
-            const SizedBox(width: 12),
-            _buildSesiButton('akhir_bulan', 'Akhir Bulan', 'Tgl 30', Icons.event_note),
-            const SizedBox(width: 12),
-            _buildSesiButton('inventaris', 'Sesuai Tanggal', 'Bebas', Icons.assignment),
+            _buildSesiPill(
+              value: 'tengah_bulan',
+              title: 'Opname Awal Bulan',
+              badge: 'Tgl 15',
+              icon: Icons.event_available_rounded,
+            ),
+            const SizedBox(width: 10),
+            _buildSesiPill(
+              value: 'akhir_bulan',
+              title: 'Opname Akhir Bulan',
+              badge: 'Tgl 30',
+              icon: Icons.event_note_rounded,
+            ),
+            const SizedBox(width: 10),
+            _buildSesiPill(
+              value: 'inventaris',
+              title: 'Opname Sesuai Tanggal',
+              badge: 'Bebas',
+              icon: Icons.assignment_turned_in_rounded,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSesiButton(String value, String title, String subtitle, IconData icon) {
+  Widget _buildSesiPill({
+    required String value,
+    required String title,
+    required String badge,
+    required IconData icon,
+  }) {
     final isSelected = _selectedTipeSesi == value;
+
     return InkWell(
       onTap: () {
         setState(() => _selectedTipeSesi = value);
@@ -277,25 +439,51 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
       },
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Colors.white,
+          color: isSelected ? AppColors.primary : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isSelected ? AppColors.primary : AppColors.border),
-          boxShadow: isSelected ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4))] : [],
+          border: Border.all(
+            color: isSelected ? AppColors.primary : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.5 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  )
+                ]
+              : [],
         ),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: isSelected ? Colors.white : AppColors.textMuted),
+            Icon(icon, size: 16, color: isSelected ? Colors.white : const Color(0xFF64748B)),
             const SizedBox(width: 8),
             Text(
               title,
-              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : AppColors.textDark),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                color: isSelected ? Colors.white : const Color(0xFF334155),
+              ),
             ),
-            const SizedBox(width: 4),
-            Text(
-              '($subtitle)',
-              style: GoogleFonts.inter(fontSize: 11, color: isSelected ? Colors.white70 : AppColors.textMuted),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.white.withValues(alpha: 0.2) : const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                badge,
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? Colors.white : const Color(0xFF64748B),
+                ),
+              ),
             ),
           ],
         ),
@@ -303,74 +491,130 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
     );
   }
 
+  // --- SESSION INFO CARD ---
   Widget _buildSessionInfoCard() {
     final status = _currentSession?['status'] ?? 'Draft';
-    final isSelesai = status == 'Selesai';
-    final cabangName = _cabangs.firstWhere((c) => c['id'] == _selectedCabangId, orElse: () => {'nama_cabang': '-'})['nama_cabang'];
-    
-    String sesiName = 'Awal Bulan';
-    if (_selectedTipeSesi == 'akhir_bulan') sesiName = 'Akhir Bulan';
-    if (_selectedTipeSesi == 'inventaris') sesiName = 'Sesuai Tanggal';
+    final isSelesai = status.toString().toLowerCase() == 'selesai';
+    final cabangName = _cabangs.firstWhere(
+      (c) => c['id'] == _selectedCabangId,
+      orElse: () => {'nama_cabang': '-'},
+    )['nama_cabang'];
+
+    String sesiName = 'Awal Bulan (Tgl 15)';
+    if (_selectedTipeSesi == 'akhir_bulan') sesiName = 'Akhir Bulan (Tgl 30)';
+    if (_selectedTipeSesi == 'inventaris') sesiName = 'Sesuai Tanggal (Bebas)';
 
     return Container(
-      margin: const EdgeInsets.all(20),
+      margin: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Sesi: $sesiName', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-              const SizedBox(height: 4),
-              Text('Cabang yang Dipantau: $cabangName', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.fact_check_rounded, color: AppColors.primary, size: 16),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Sesi: $sesiName',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1E293B),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Cabang yang Dipantau: $cabangName',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
           ),
+          const SizedBox(width: 12),
+          // Status Sesi Badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: isSelesai ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: isSelesai ? Colors.green.withValues(alpha: 0.3) : Colors.orange.withValues(alpha: 0.3)),
+              color: isSelesai ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelesai ? const Color(0xFF86EFAC) : const Color(0xFFFCD34D),
+              ),
             ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('STATUS SESI CS', style: GoogleFonts.inter(fontSize: 9, color: AppColors.textMuted, fontWeight: FontWeight.w600)),
+                Text(
+                  'STATUS SESI CS',
+                  style: GoogleFonts.inter(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    color: isSelesai ? const Color(0xFF15803D) : const Color(0xFFB45309),
+                    letterSpacing: 0.5,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(isSelesai ? Icons.check : Icons.circle, size: 12, color: isSelesai ? Colors.green : Colors.orange),
+                    Icon(
+                      isSelesai ? Icons.check_circle_rounded : Icons.access_time_filled_rounded,
+                      size: 13,
+                      color: isSelesai ? const Color(0xFF16A34A) : const Color(0xFFD97706),
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       isSelesai ? 'Telah Diselesaikan' : 'Belum Selesai (Draft)',
-                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: isSelesai ? Colors.green : Colors.orange),
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: isSelesai ? const Color(0xFF15803D) : const Color(0xFFB45309),
+                      ),
                     ),
                   ],
                 ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
   }
 
+  // --- ITEM LIST VIEW PER CATEGORY ---
   Widget _buildItemListView(String kategoriKode) {
-    // Filter details based on category
-    final filtered = _sessionDetails.where((detail) {
-      if (kategoriKode == 'BHP') {
-        final kode = detail['barang']?['kategori']?['kode_kategori'] ?? '';
-        return kode == 'BHP';
-      } else {
-        final kode = detail['item_fisik']?['barang']?['kategori']?['kode_kategori'] ?? '';
-        return kode == kategoriKode;
-      }
-    }).toList();
+    final filtered = _getItemsForCategory(kategoriKode);
 
     if (filtered.isEmpty) {
       return Center(
@@ -379,12 +623,28 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.assignment_outlined, size: 64, color: AppColors.primary.withValues(alpha: 0.3)),
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.assignment_outlined, size: 48, color: AppColors.primary),
+              ),
               const SizedBox(height: 16),
               Text(
-                'Belum ada data checklist untuk kategori ini dari CS pada periode terpilih.',
+                'Belum Ada Checklist $kategoriKode',
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1E293B),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Belum ada data checklist untuk kategori ini dari tim CS pada periode terpilih.',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13, height: 1.5),
+                style: GoogleFonts.inter(color: const Color(0xFF64748B), fontSize: 12, height: 1.5),
               ),
             ],
           ),
@@ -392,102 +652,177 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(20),
-      itemCount: filtered.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final item = filtered[index];
-        final bool isBhp = kategoriKode == 'BHP';
-        return isBhp ? _buildBhpCard(item) : _buildAlatCard(item);
-      },
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      color: AppColors.primary,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(20),
+        itemCount: filtered.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          final item = filtered[index];
+          final bool isBhp = kategoriKode == 'BHP';
+          return isBhp ? _buildBhpCard(item) : _buildAlatCard(item);
+        },
+      ),
     );
   }
 
+  // --- ALAT CARD (MSN, CLA, INV) ---
   Widget _buildAlatCard(dynamic item) {
     final itemFisik = item['item_fisik'] ?? {};
-    final barang = itemFisik['barang'] ?? {};
-    final waktu = item['created_at'] != null ? DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(item['created_at'])) : '-';
+    final barang = itemFisik['barang'] ?? item['barang'] ?? {};
+    final waktu = item['created_at'] != null
+        ? DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(item['created_at']))
+        : '-';
     final kodeQr = itemFisik['kode_qr'] ?? '-';
-    final namaAlat = barang['nama_barang'] ?? '-';
-    final kondisi = item['kondisi'] ?? '-';
-    final fotoUrl = item['foto_path'];
+    final namaAlat = barang['nama_barang'] ?? itemFisik['nama_item'] ?? '-';
+    final kondisi = item['kondisi'] ?? 'Baik';
+
+    final String fotoAktual = _getImageUrl(
+      item['foto_path'] ?? item['foto_item'] ?? item['foto'] ?? item['foto_url'],
+    );
+    final String fotoAwal = _getImageUrl(
+      itemFisik['foto_path'] ?? itemFisik['foto'] ?? barang['foto'] ?? barang['foto_path'],
+    );
+
     final keterangan = item['keterangan'] ?? '-';
 
-    Color kondisiColor = Colors.grey;
-    if (kondisi == 'Baik') kondisiColor = Colors.green;
-    if (kondisi == 'Rusak') kondisiColor = Colors.red;
-    if (kondisi == 'Hilang') kondisiColor = Colors.orange;
+    Color kondisiColor = const Color(0xFF059669);
+    Color kondisiBg = const Color(0xFFDCFCE7);
+    Color kondisiBorder = const Color(0xFF86EFAC);
+
+    if (kondisi.toString().toLowerCase() == 'rusak') {
+      kondisiColor = const Color(0xFFDC2626);
+      kondisiBg = const Color(0xFFFEE2E2);
+      kondisiBorder = const Color(0xFFFCA5A5);
+    } else if (kondisi.toString().toLowerCase() == 'hilang') {
+      kondisiColor = const Color(0xFFD97706);
+      kondisiBg = const Color(0xFFFEF3C7);
+      kondisiBorder = const Color(0xFFFCD34D);
+    }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: fotoUrl != null 
-                ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network('http://erp.klinklin.online/storage/$fotoUrl', fit: BoxFit.cover, errorBuilder: (c, e, s) => const Icon(Icons.broken_image, color: Colors.grey)))
-                : const Icon(Icons.image_not_supported, color: Colors.grey),
+          // Foto Thumbnail Section (Awal & Aktual)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (fotoAwal.isNotEmpty) ...[
+                _buildPhotoThumbnail(
+                  url: fotoAwal,
+                  badge: 'AWAL',
+                  badgeColor: const Color(0xFF64748B),
+                ),
+                const SizedBox(width: 6),
+              ],
+              if (fotoAktual.isNotEmpty) ...[
+                _buildPhotoThumbnail(
+                  url: fotoAktual,
+                  badge: 'AKTUAL',
+                  badgeColor: AppColors.primary,
+                ),
+              ] else if (fotoAwal.isEmpty) ...[
+                _buildEmptyThumbnail(),
+              ],
+            ],
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
+
+          // Details Column
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Top Row: Waktu & Kondisi Badge
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(kodeQr, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w600)),
-                    Text(waktu, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(namaAlat, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.access_time_rounded, size: 12, color: Color(0xFF64748B)),
+                        const SizedBox(width: 4),
+                        Text(
+                          waktu,
+                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: kondisiColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
+                        color: kondisiBg,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: kondisiBorder),
                       ),
                       child: Text(
                         kondisi,
-                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: kondisiColor),
+                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: kondisiColor),
                       ),
                     ),
                   ],
                 ),
-                if (keterangan.toString().isNotEmpty && keterangan != '-') ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(8),
+                const SizedBox(height: 6),
+
+                // Nama Alat
+                Text(
+                  namaAlat,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1E293B),
+                  ),
+                ),
+                const SizedBox(height: 4),
+
+                // Kode QR Badge
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.qr_code_2_rounded, size: 12, color: Color(0xFF475569)),
+                          const SizedBox(width: 4),
+                          Text(
+                            kodeQr,
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF334155),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Keterangan:', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 2),
-                        Text(keterangan, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark, fontStyle: FontStyle.italic)),
-                      ],
-                    ),
+                  ],
+                ),
+
+                if (keterangan != '-' && keterangan.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Catatan: $keterangan',
+                    style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B), fontStyle: FontStyle.italic),
                   ),
                 ],
               ],
@@ -498,46 +833,51 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
     );
   }
 
+  // --- BHP CARD (Bahan Habis Pakai) ---
   Widget _buildBhpCard(dynamic item) {
     final barang = item['barang'] ?? {};
-    final pembelian = item['pembelian_bhp'] ?? {};
-    
-    final tglBeli = pembelian['tanggal_pembelian'] != null 
-        ? DateFormat('dd/MM/yyyy').format(DateTime.parse(pembelian['tanggal_pembelian'])) 
+    final pembelianBhp = item['pembelian_bhp'] ?? {};
+    final waktu = item['created_at'] != null
+        ? DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(item['created_at']))
         : '-';
-    final namaToko = pembelian['nama_toko'] ?? '-';
-    final qtyBeli = pembelian['qty_beli'] != null ? '${pembelian['qty_beli']} pcs' : '-';
-    
-    final kode = barang['kode_barang'] ?? '-';
-    final namaItem = barang['nama_barang'] ?? '-';
-    final merk = barang['merk'] ?? '-';
-    final sisa = item['sisa_akhir'] != null ? '${item['sisa_akhir']} pcs' : 'Belum diinput';
-    final fotoUrl = item['foto_path'];
+    final namaBarang = barang['nama_barang'] ?? pembelianBhp['nama_barang'] ?? '-';
+    final sisaAkhir = item['sisa_akhir'] ?? item['stok_aktual'] ?? '-';
+    final satuan = barang['satuan'] ?? pembelianBhp['satuan'] ?? 'Pcs';
+
+    final String fotoBhp = _getImageUrl(
+      item['foto_path'] ?? item['foto_kuantitas'] ?? item['foto'] ?? item['foto_url'] ?? barang['foto'],
+    );
     final keterangan = item['keterangan'] ?? '-';
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: fotoUrl != null 
-                ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network('http://erp.klinklin.online/storage/$fotoUrl', fit: BoxFit.cover, errorBuilder: (c, e, s) => const Icon(Icons.broken_image, color: Colors.grey)))
-                : const Icon(Icons.image_not_supported, color: Colors.grey),
-          ),
-          const SizedBox(width: 16),
+          // Foto Thumbnail
+          if (fotoBhp.isNotEmpty)
+            _buildPhotoThumbnail(
+              url: fotoBhp,
+              badge: 'FOTO',
+              badgeColor: const Color(0xFF1D4ED8),
+            )
+          else
+            _buildEmptyThumbnail(),
+          const SizedBox(width: 14),
+
+          // Details Column
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -545,69 +885,268 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(kode, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w600)),
-                    Text(tglBeli, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(namaItem, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                const SizedBox(height: 4),
-                Text(merk, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
-                const SizedBox(height: 8),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Tanggal Beli:', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-                          Text(tglBeli, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark, fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Toko / Qty:', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-                          Text('$namaToko ($qtyBeli)', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Text('Sisa Opname: ', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
-                    Text(sisa, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                  ],
-                ),
-                if (keterangan.toString().isNotEmpty && keterangan != '-') ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
                       children: [
-                        Text('Keterangan:', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 2),
-                        Text(keterangan, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark, fontStyle: FontStyle.italic)),
+                        const Icon(Icons.access_time_rounded, size: 12, color: Color(0xFF64748B)),
+                        const SizedBox(width: 4),
+                        Text(
+                          waktu,
+                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF64748B)),
+                        ),
                       ],
                     ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                      ),
+                      child: Text(
+                        'BHP',
+                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF1D4ED8)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+
+                // Nama Barang
+                Text(
+                  namaBarang,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1E293B),
+                  ),
+                ),
+                const SizedBox(height: 4),
+
+                // Sisa Stok Akhir
+                Row(
+                  children: [
+                    Text(
+                      'Sisa Aktual: ',
+                      style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+                    ),
+                    Text(
+                      '$sisaAkhir $satuan',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+
+                if (keterangan != '-' && keterangan.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Catatan: $keterangan',
+                    style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B), fontStyle: FontStyle.italic),
                   ),
                 ],
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPhotoThumbnail({
+    required String url,
+    required String badge,
+    required Color badgeColor,
+  }) {
+    return InkWell(
+      onTap: () => _showFullImage(url),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  url,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.primary,
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    debugPrint('Error loading image ($url): $error');
+                    return Container(
+                      color: const Color(0xFFF1F5F9),
+                      child: const Center(
+                        child: Icon(Icons.broken_image_rounded, color: Color(0xFF94A3B8), size: 24),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            Positioned(
+              top: 4,
+              left: 4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  badge,
+                  style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w800, color: Colors.white),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyThumbnail() {
+    return Container(
+      width: 72,
+      height: 72,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: const Center(
+        child: Icon(Icons.image_not_supported_rounded, color: Color(0xFFCBD5E1), size: 24),
+      ),
+    );
+  }
+
+  void _showFullImage(String url) {
+    if (url.isEmpty) return;
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              panEnabled: true,
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.network(
+                  url,
+                  fit: BoxFit.contain,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    );
+                  },
+                  errorBuilder: (_, __, ___) => Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.broken_image_rounded, color: Colors.grey, size: 48),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Gagal memuat gambar resolusi penuh',
+                          style: GoogleFonts.inter(fontSize: 13, color: Colors.black87),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: InkWell(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    final cabangName = _cabangs.firstWhere(
+      (c) => c['id'] == _selectedCabangId,
+      orElse: () => {'nama_cabang': 'Cabang'},
+    )['nama_cabang'];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 24),
+      child: Center(
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.checklist_rtl_rounded, color: AppColors.primary, size: 48),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Tidak Ada Sesi Stok Opname',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF1E293B),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Belum ada sesi stok opname untuk cabang $cabangName pada periode ${DateFormat('MMMM yyyy').format(_selectedPeriode)}.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B), height: 1.4),
+            ),
+          ],
+        ),
       ),
     );
   }

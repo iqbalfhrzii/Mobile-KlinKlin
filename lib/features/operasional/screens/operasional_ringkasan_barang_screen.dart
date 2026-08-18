@@ -147,7 +147,6 @@ class _OperasionalRingkasanBarangScreenState extends State<OperasionalRingkasanB
 
   Widget _buildFilterBar() {
     return Container(
-      color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         color: Colors.white,

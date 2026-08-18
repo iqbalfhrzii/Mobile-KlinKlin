@@ -21,7 +21,7 @@ class OperasionalApprovalPengajuanService {
       if (endDate != null && endDate.isNotEmpty) params['end_date'] = endDate;
 
       final response = await _dio.get(
-        '/api/operasional/approval-pengajuan',
+        '/operasional/approval-pengajuan',
         queryParameters: params,
       );
       
@@ -46,7 +46,7 @@ class OperasionalApprovalPengajuanService {
   }) async {
     try {
       final response = await _dio.post(
-        '/api/operasional/approval-pengajuan/$id/approve',
+        '/operasional/approval-pengajuan/$id/approve',
         data: {
           'jumlah_disetujui': jumlahDisetujui,
           'catatan_persetujuan': catatanPersetujuan,
@@ -68,7 +68,7 @@ class OperasionalApprovalPengajuanService {
   }) async {
     try {
       final response = await _dio.post(
-        '/api/operasional/approval-pengajuan/$id/reject',
+        '/operasional/approval-pengajuan/$id/reject',
         data: {
           'catatan_persetujuan': catatanPersetujuan,
         },
@@ -85,7 +85,7 @@ class OperasionalApprovalPengajuanService {
 
   static Future<List<dynamic>> getCabangs() async {
     try {
-      final response = await _dio.get('/api/cabangs');
+      final response = await _dio.get('/cabangs');
       if (response.data != null && response.data['data'] != null) {
         return response.data['data'] as List;
       }

@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
-import 'operasional_kantor_screen.dart';
+import 'kantor_klinklin_screen.dart';
 import 'operasional_target_omzet_screen.dart';
 
-import '../../profile/screens/profile_screen.dart';
 import '../../master_barang/screens/master_barang_screen.dart';
 
 class OperasionalPengaturanScreen extends StatelessWidget {
@@ -76,7 +75,7 @@ class OperasionalPengaturanScreen extends StatelessWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const OperasionalKantorScreen()),
+                      MaterialPageRoute(builder: (context) => const KantorKlinklinScreen()),
                     );
                   },
                 ),

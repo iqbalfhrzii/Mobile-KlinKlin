@@ -10,6 +10,7 @@ import 'operasional_approval_pengajuan_screen.dart';
 import 'kantor_klinklin_screen.dart';
 import 'operasional_purchase_order_screen.dart';
 import 'operasional_cashflow_cabang_screen.dart';
+import 'operasional_kpi_main_screen.dart';
 import 'operasional_kpi_cs_screen.dart';
 import 'operasional_quotation_screen.dart';
 import 'operasional_arsip_penawaran_screen.dart';
@@ -21,6 +22,10 @@ import 'operasional_kesehatan_berkala_screen.dart';
 import 'operasional_tanda_terima_apd_screen.dart';
 import 'operasional_layanan_kesehatan_screen.dart';
 import 'operasional_sim_screen.dart';
+import 'operasional_monthly_report_screen.dart';
+import 'operasional_kajian_rd_screen.dart';
+import 'operasional_target_omzet_screen.dart';
+import '../../master_barang/screens/master_barang_screen.dart';
 // TODO: import screens as they are created
 
 class OperasionalMenuScreen extends StatelessWidget {
@@ -129,7 +134,9 @@ class OperasionalMenuScreen extends StatelessWidget {
           _MenuItem(
             icon: Icons.analytics,
             title: 'Report CS',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalKpiMainScreen()));
+            },
           ),
           _MenuItem(
             icon: Icons.bar_chart,
@@ -223,17 +230,40 @@ class OperasionalMenuScreen extends StatelessWidget {
         ],
       ),
       _MenuSection(
+        title: 'R&D',
+        items: [
+          _MenuItem(
+            icon: Icons.insert_drive_file_outlined,
+            title: 'Monthly Report',
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalMonthlyReportScreen()));
+            },
+          ),
+          _MenuItem(
+            icon: Icons.science_outlined,
+            title: 'Kajian R&D',
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalKajianRdScreen()));
+            },
+          ),
+        ],
+      ),
+      _MenuSection(
         title: 'Pengaturan',
         items: [
           _MenuItem(
             icon: Icons.monetization_on_outlined,
             title: 'Target Omzet',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalTargetOmzetScreen()));
+            },
           ),
           _MenuItem(
             icon: Icons.category_outlined,
             title: 'Master Barang',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const MasterBarangScreen()));
+            },
           ),
           _MenuItem(
             icon: Icons.brush_outlined,
