@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
+import '../../../core/api/api_client.dart';
 import '../services/master_barang_service.dart';
 
 class MasterBarangScreen extends StatefulWidget {
@@ -39,6 +42,12 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
   // Multi-select for QR print
   final Set<int> _selectedItemFisikIds = {};
 
+  // User Role & Branch Context
+  int? _userCabangId;
+  String _userCabangName = '';
+  String _userRole = '';
+  bool _isOperasionalOrAdmin = true;
+
   final Color _primaryPurple = const Color(0xFF4F46E5);
   final Color _tealAccent = const Color(0xFF0D9488);
 
@@ -55,7 +64,28 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
   }
 
   Future<void> _loadInitialData() async {
-    _loadCabang();
+    final prefs = await SharedPreferences.getInstance();
+    _userRole = prefs.getString('user_role') ?? '';
+    _userCabangId = prefs.getInt('user_cabang_id');
+    _userCabangName = prefs.getString('user_cabang_name') ?? '';
+
+    final r = _userRole.toLowerCase();
+    _isOperasionalOrAdmin = r.contains('operasional') || r.contains('admin') || r.contains('ceo') || r.contains('superadmin');
+
+    if (!_isOperasionalOrAdmin && _userCabangId != null) {
+      _filterCabangForItemFisik = _userCabangId;
+    }
+
+    await _loadCabang();
+
+    if (_userCabangName.isEmpty && _userCabangId != null && _cabangs.isNotEmpty) {
+      final match = _cabangs.firstWhere((c) => c['id'] == _userCabangId, orElse: () => null);
+      if (match != null) {
+        _userCabangName = match['nama_cabang'] ?? match['nama'] ?? 'Cabang $_userCabangId';
+      }
+    }
+
+    if (mounted) setState(() {});
     _loadDataForCurrentTab();
   }
 
@@ -438,7 +468,9 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
 
   void _showAddItemFisikDialog() {
     int? selectedBarangId;
-    int? selectedCabangId = _cabangs.isNotEmpty ? _cabangs.first['id'] : null;
+    int? selectedCabangId = (!_isOperasionalOrAdmin && _userCabangId != null)
+        ? _userCabangId
+        : (_filterCabangForItemFisik ?? (_cabangs.isNotEmpty ? _cabangs.first['id'] : null));
     int jumlahItem = 1;
     String? selectedPhotoPath;
     bool isSubmitting = false;
@@ -542,34 +574,67 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                     ),
                     const Divider(height: 24),
 
-                    // Cabang Penempatan Dropdown
+                    // Cabang Penempatan Dropdown (Locked for CS, Selectable for Operasional)
                     Text('Cabang Penempatan *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                     const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.border),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<int>(
-                          value: selectedCabangId,
-                          isExpanded: true,
-                          hint: Text('Pilih Cabang', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13)),
-                          icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textMuted),
-                          style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
-                          items: _cabangs.map((c) {
-                            return DropdownMenuItem<int>(
-                              value: c['id'],
-                              child: Text(c['nama_cabang'] ?? c['nama'] ?? 'Cabang ${c['id']}'),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) setStateDialog(() => selectedCabangId = val);
-                          },
+                    if (!_isOperasionalOrAdmin && _userCabangId != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          border: Border.all(color: AppColors.border),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.location_on, size: 16, color: AppColors.primaryMid),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _userCabangName.isNotEmpty ? _userCabangName : 'Cabang $_userCabangId',
+                                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryMid.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                'Cabang Anda',
+                                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppColors.border),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            value: selectedCabangId,
+                            isExpanded: true,
+                            hint: Text('Pilih Cabang', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13)),
+                            icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textMuted),
+                            style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
+                            items: _cabangs.map((c) {
+                              return DropdownMenuItem<int>(
+                                value: c['id'],
+                                child: Text(c['nama_cabang'] ?? c['nama'] ?? 'Cabang ${c['id']}'),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) setStateDialog(() => selectedCabangId = val);
+                            },
+                          ),
                         ),
                       ),
-                    ),
                     const SizedBox(height: 14),
 
                     // Pilih Barang Dropdown
@@ -855,23 +920,225 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                 badgeColor: isTersedia ? Colors.green : Colors.orange,
               ),
               const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.textDark,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: Text('Tutup', style: GoogleFonts.inter(color: AppColors.textDark, fontWeight: FontWeight.bold)),
+                    ),
                   ),
-                  child: Text('Tutup', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
-                ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _printQr([item['id']], singleItem: item);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryMid,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.print_outlined, size: 16, color: Colors.white),
+                      label: Text('Print QR', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _printQr(List<int> ids, {Map<String, dynamic>? singleItem}) async {
+    if (ids.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pilih minimal satu item untuk dicetak!')),
+      );
+      return;
+    }
+
+    final baseUrl = ApiClient.baseUrl.replaceAll('/api', '');
+    final url = '$baseUrl/master-barang/print-qr?ids=${ids.join(',')}';
+
+    if (singleItem != null) {
+      final qrCode = (singleItem['kode_qr'] ?? '').toString();
+      final barangName = (singleItem['barang']?['nama_barang'] ?? 'Barang').toString();
+      final cabangName = (singleItem['cabang']?['nama_cabang'] ?? singleItem['cabang']?['nama'] ?? '').toString();
+      final qrImageUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${Uri.encodeComponent(qrCode)}';
+
+      showDialog(
+        context: context,
+        builder: (ctx) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          backgroundColor: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryMid.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.qr_code_2_rounded, color: AppColors.primaryMid, size: 20),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Cetak QR Code',
+                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close, color: AppColors.textMuted, size: 20),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const Divider(height: 20),
+
+                // QR Sticker Card Preview
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          qrImageUrl,
+                          width: 160,
+                          height: 160,
+                          fit: BoxFit.contain,
+                          loadingBuilder: (ctx, child, progress) {
+                            if (progress == null) return child;
+                            return Container(
+                              width: 160,
+                              height: 160,
+                              color: Colors.grey.shade50,
+                              child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                            );
+                          },
+                          errorBuilder: (_, __, ___) => Container(
+                            width: 160,
+                            height: 160,
+                            color: Colors.grey.shade100,
+                            child: const Center(child: Icon(Icons.broken_image, color: Colors.grey, size: 40)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        qrCode,
+                        style: GoogleFonts.sourceCodePro(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        barangName,
+                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
+                        textAlign: TextAlign.center,
+                      ),
+                      if (cabangName.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          cabangName,
+                          style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade500),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Actions
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: Text('Tutup', style: GoogleFonts.inter(color: AppColors.textDark, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          final uri = Uri.parse(url);
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          } else {
+                            if (ctx.mounted) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                const SnackBar(content: Text('Tidak dapat membuka halaman cetak PDF')),
+                              );
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.print_outlined, size: 16, color: Colors.white),
+                        label: Text('Print PDF', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryMid,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } else {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tidak dapat membuka halaman cetak PDF')),
+          );
+        }
+      }
+    }
   }
 
   Widget _buildDetailRow(String label, String value, {Color? badgeColor}) {
@@ -1439,7 +1706,28 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                 ),
               ),
               const SizedBox(width: 10),
-              if (_cabangs.isNotEmpty)
+              if (!_isOperasionalOrAdmin && _userCabangId != null)
+                Container(
+                  height: 44,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryMid.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.primaryMid.withValues(alpha: 0.25)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.location_on, size: 15, color: AppColors.primaryMid),
+                      const SizedBox(width: 4),
+                      Text(
+                        _userCabangName.isNotEmpty ? _userCabangName : 'Cabang $_userCabangId',
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
+                      ),
+                    ],
+                  ),
+                )
+              else if (_cabangs.isNotEmpty)
                 Container(
                   height: 44,
                   padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -1476,20 +1764,18 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
             children: [
               if (_selectedItemFisikIds.isNotEmpty)
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Mencetak ${_selectedItemFisikIds.length} QR Code terpilih...')),
-                      );
-                    },
-                    icon: const Icon(Icons.print_outlined, size: 16, color: AppColors.textDark),
+                  child: ElevatedButton.icon(
+                    onPressed: () => _printQr(_selectedItemFisikIds.toList()),
+                    icon: const Icon(Icons.print_outlined, size: 16, color: Colors.white),
                     label: Text(
-                      'Print QR (${_selectedItemFisikIds.length})',
-                      style: GoogleFonts.inter(color: AppColors.textDark, fontWeight: FontWeight.bold, fontSize: 12),
+                      'Print QR Terpilih (${_selectedItemFisikIds.length})',
+                      style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                     ),
-                    style: OutlinedButton.styleFrom(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryMid,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       padding: const EdgeInsets.symmetric(vertical: 10),
+                      elevation: 0,
                     ),
                   ),
                 )
@@ -1676,6 +1962,30 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                           ),
                         ),
                         const Spacer(),
+                        InkWell(
+                          onTap: () => _printQr([item['id']], singleItem: item),
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryMid.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: AppColors.primaryMid.withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.print_outlined, size: 13, color: AppColors.primaryMid),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Print QR',
+                                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
                         IconButton(
                           icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
                           onPressed: () => _deleteItemFisik(item['id']),

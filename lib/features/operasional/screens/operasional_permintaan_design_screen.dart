@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -20,8 +21,10 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
   final _searchController = TextEditingController();
 
   List<dynamic> _requests = [];
-  bool _isLoading = false;
+  bool _isLoading = true;
+  String _errorMessage = '';
   String _selectedStatus = 'all';
+  Timer? _debounce;
 
   final Color _primaryThemeColor = AppColors.primaryMid; // KlinKlin Blue
 
@@ -34,11 +37,22 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
   @override
   void dispose() {
     _searchController.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
+  void _onSearchChanged(String val) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      _fetchRequests(page: 1);
+    });
+  }
+
   Future<void> _fetchRequests({int page = 1}) async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
 
     final res = await _service.getPermintaanDesign(
       search: _searchController.text.trim(),
@@ -56,6 +70,10 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
           } else if (data is List) {
             _requests = data;
           }
+        } else {
+          if (res['message'] != null && res['message'].toString().isNotEmpty && res['status'] == false) {
+            _errorMessage = res['message'].toString();
+          }
         }
       });
     }
@@ -65,17 +83,17 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
     switch (status?.toLowerCase()) {
       case 'completed':
       case 'selesai':
-        return Colors.green.shade700;
+        return const Color(0xFF16A34A);
       case 'in_progress':
       case 'dikerjakan':
       case 'proses':
-        return Colors.blue.shade700;
+        return const Color(0xFF2563EB);
       case 'pending':
       case 'menunggu':
-        return Colors.amber.shade900;
+        return const Color(0xFFD97706);
       case 'rejected':
       case 'ditolak':
-        return Colors.red.shade700;
+        return const Color(0xFFDC2626);
       default:
         return Colors.grey.shade700;
     }
@@ -85,17 +103,17 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
     switch (status?.toLowerCase()) {
       case 'completed':
       case 'selesai':
-        return Colors.green.shade50;
+        return const Color(0xFFDCFCE7);
       case 'in_progress':
       case 'dikerjakan':
       case 'proses':
-        return Colors.blue.shade50;
+        return const Color(0xFFDBEAFE);
       case 'pending':
       case 'menunggu':
-        return Colors.amber.shade50;
+        return const Color(0xFFFEF3C7);
       case 'rejected':
       case 'ditolak':
-        return Colors.red.shade50;
+        return const Color(0xFFFEE2E2);
       default:
         return Colors.grey.shade100;
     }
@@ -301,45 +319,29 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
                         ],
                       ),
                       const SizedBox(height: 8),
-                      if ((catatanDesigner == null || catatanDesigner.isEmpty) && (lampiranDesigner == null || lampiranDesigner.isEmpty))
-                        Text('Belum ada respon atau hasil dari Designer.', style: GoogleFonts.inter(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey.shade600))
-                      else ...[
-                        if (catatanDesigner != null && catatanDesigner.isNotEmpty) ...[
-                          Text('Catatan:', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade600)),
-                          const SizedBox(height: 2),
-                          Text(catatanDesigner, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark)),
-                          const SizedBox(height: 8),
-                        ],
-                        if (lampiranDesigner != null && lampiranDesigner.isNotEmpty) ...[
-                          ElevatedButton.icon(
-                            onPressed: () => _openUrl(lampiranDesigner),
-                            icon: const Icon(Icons.download_rounded, size: 16, color: Colors.white),
-                            label: Text('Download Hasil Design', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.teal.shade700,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                              elevation: 0,
-                            ),
+                      Text(
+                        (catatanDesigner != null && catatanDesigner.isNotEmpty) ? catatanDesigner : 'Belum ada catatan dari tim designer.',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontStyle: (catatanDesigner != null && catatanDesigner.isNotEmpty) ? FontStyle.normal : FontStyle.italic,
+                          color: (catatanDesigner != null && catatanDesigner.isNotEmpty) ? AppColors.textDark : Colors.grey.shade600,
+                        ),
+                      ),
+                      if (lampiranDesigner != null && lampiranDesigner.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          onPressed: () => _openUrl(lampiranDesigner),
+                          icon: const Icon(Icons.download_rounded, size: 16, color: Colors.white),
+                          label: Text('Unduh Hasil Design', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF16A34A),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            elevation: 0,
                           ),
-                        ],
+                        ),
                       ],
                     ],
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryMid,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      elevation: 0,
-                    ),
-                    child: Text('Tutup', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -472,12 +474,21 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
                         ),
                         child: TextField(
                           controller: _searchController,
-                          onSubmitted: (_) => _fetchRequests(page: 1),
+                          onChanged: _onSearchChanged,
                           style: GoogleFonts.inter(fontSize: 13),
                           decoration: InputDecoration(
                             hintText: 'Cari judul design...',
                             hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13),
                             prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textMuted),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 16, color: Colors.grey),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      _fetchRequests(page: 1);
+                                    },
+                                  )
+                                : null,
                             border: InputBorder.none,
                             contentPadding: const EdgeInsets.symmetric(vertical: 12),
                           ),
@@ -513,7 +524,7 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
                       const SizedBox(width: 6),
                       _buildStatusFilterChip('in_progress', 'Dikerjakan'),
                       const SizedBox(width: 6),
-                      _buildStatusFilterChip('completed', 'Selesai'),
+                      _buildStatusFilterChip('selesai', 'Selesai'),
                       const SizedBox(width: 6),
                       _buildStatusFilterChip('rejected', 'Ditolak'),
                     ],
@@ -527,199 +538,219 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _requests.isEmpty
-                    ? RefreshIndicator(
-                        onRefresh: () => _fetchRequests(page: 1),
-                        child: ListView(
-                          children: [
-                            const SizedBox(height: 80),
-                            Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.brush_outlined, size: 64, color: Colors.grey.shade300),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'Anda belum pernah membuat permintaan design.',
-                                    style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  ElevatedButton.icon(
-                                    onPressed: () => _openForm(),
-                                    icon: const Icon(Icons.add, size: 16, color: Colors.white),
-                                    label: Text('Buat Permintaan Baru', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white)),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.primaryMid,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                      elevation: 1,
-                                    ),
-                                  ),
-                                ],
+                : _errorMessage.isNotEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.error_outline, size: 40, color: Colors.red),
+                              const SizedBox(height: 8),
+                              Text(_errorMessage, style: GoogleFonts.inter(color: Colors.red, fontSize: 13), textAlign: TextAlign.center),
+                              const SizedBox(height: 12),
+                              ElevatedButton(
+                                onPressed: () => _fetchRequests(page: 1),
+                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryMid),
+                                child: const Text('Coba Lagi', style: TextStyle(color: Colors.white)),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       )
-                    : RefreshIndicator(
-                        onRefresh: () => _fetchRequests(page: 1),
-                        child: ListView.separated(
-                          padding: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 80),
-                          itemCount: _requests.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 10),
-                          itemBuilder: (context, index) {
-                            final item = _requests[index];
-                            final status = item['status']?.toString();
-                            final isPending = status == 'pending';
-                            final hasResponse = (item['catatan_designer'] != null && item['catatan_designer'].toString().isNotEmpty) ||
-                                (item['lampiran_designer'] != null && item['lampiran_designer'].toString().isNotEmpty);
-
-                            String formattedDate = '-';
-                            if (item['created_at'] != null) {
-                              try {
-                                formattedDate = DateFormat('dd MMM yyyy, HH:mm').format(DateTime.parse(item['created_at']));
-                              } catch (_) {
-                                formattedDate = item['created_at'].toString();
-                              }
-                            }
-
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.02),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
+                    : _requests.isEmpty
+                        ? RefreshIndicator(
+                            onRefresh: () => _fetchRequests(page: 1),
+                            child: ListView(
+                              children: [
+                                const SizedBox(height: 80),
+                                Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.brush_outlined, size: 64, color: Colors.grey.shade300),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'Anda belum pernah membuat permintaan design.',
+                                        style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      ElevatedButton.icon(
+                                        onPressed: () => _openForm(),
+                                        icon: const Icon(Icons.add, size: 16, color: Colors.white),
+                                        label: Text('Buat Permintaan Baru', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white)),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppColors.primaryMid,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                          elevation: 1,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(14),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        // Row 1: Title & Status Badge
-                                        Row(
+                                ),
+                              ],
+                            ),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: () => _fetchRequests(page: 1),
+                            child: ListView.separated(
+                              padding: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 80),
+                              itemCount: _requests.length,
+                              separatorBuilder: (_, __) => const SizedBox(height: 10),
+                              itemBuilder: (context, index) {
+                                final item = _requests[index];
+                                final status = item['status']?.toString();
+                                final isPending = status == 'pending' || status == 'menunggu';
+                                final hasResponse = (item['catatan_designer'] != null && item['catatan_designer'].toString().isNotEmpty) ||
+                                    (item['lampiran_designer'] != null && item['lampiran_designer'].toString().isNotEmpty);
+
+                                String formattedDate = '-';
+                                if (item['created_at'] != null) {
+                                  try {
+                                    formattedDate = DateFormat('dd MMM yyyy, HH:mm').format(DateTime.parse(item['created_at']));
+                                  } catch (_) {
+                                    formattedDate = item['created_at'].toString();
+                                  }
+                                }
+
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.02),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.all(14),
+                                        child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Expanded(
-                                              child: Text(
-                                                item['judul'] ?? '-',
-                                                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                              decoration: BoxDecoration(
-                                                color: _getStatusBgColor(status),
-                                                borderRadius: BorderRadius.circular(6),
-                                                border: Border.all(color: _getStatusColor(status).withValues(alpha: 0.3)),
-                                              ),
-                                              child: Text(
-                                                _getStatusLabel(status),
-                                                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: _getStatusColor(status)),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 6),
-
-                                        // Row 2: Date
-                                        Row(
-                                          children: [
-                                            Icon(Icons.calendar_today_outlined, size: 12, color: Colors.grey.shade500),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              formattedDate,
-                                              style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade600),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
-
-                                        // Row 3: Brief preview
-                                        Text(
-                                          item['deskripsi'] ?? '-',
-                                          style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade700, height: 1.3),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-
-                                        if (hasResponse) ...[
-                                          const SizedBox(height: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: Colors.teal.shade50,
-                                              borderRadius: BorderRadius.circular(6),
-                                              border: Border.all(color: Colors.teal.shade200),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
+                                            // Row 1: Title & Status Badge
+                                            Row(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                Icon(Icons.check_circle_outline, size: 12, color: Colors.teal.shade700),
-                                                const SizedBox(width: 4),
-                                                Text('Ada respon dari Designer', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.teal.shade800)),
+                                                Expanded(
+                                                  child: Text(
+                                                    item['judul'] ?? '-',
+                                                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                                    maxLines: 2,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                                  decoration: BoxDecoration(
+                                                    color: _getStatusBgColor(status),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                    border: Border.all(color: _getStatusColor(status).withValues(alpha: 0.3)),
+                                                  ),
+                                                  child: Text(
+                                                    _getStatusLabel(status),
+                                                    style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: _getStatusColor(status)),
+                                                  ),
+                                                ),
                                               ],
                                             ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                  const Divider(height: 1, color: Color(0xFFEEEEEE)),
+                                            const SizedBox(height: 6),
 
-                                  // Footer actions
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        TextButton(
-                                          onPressed: () => _showDetail(item),
-                                          style: TextButton.styleFrom(
-                                            backgroundColor: AppColors.primaryMid,
-                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                            minimumSize: Size.zero,
-                                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                          ),
-                                          child: Text('Lihat Detail', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                                            // Row 2: Date
+                                            Row(
+                                              children: [
+                                                Icon(Icons.calendar_today_outlined, size: 12, color: Colors.grey.shade500),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  formattedDate,
+                                                  style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade600),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 8),
+
+                                            // Row 3: Brief preview
+                                            Text(
+                                              item['deskripsi'] ?? '-',
+                                              style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade700, height: 1.3),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+
+                                            if (hasResponse) ...[
+                                              const SizedBox(height: 8),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.teal.shade50,
+                                                  borderRadius: BorderRadius.circular(6),
+                                                  border: Border.all(color: Colors.teal.shade200),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(Icons.check_circle_outline, size: 12, color: Colors.teal.shade700),
+                                                    const SizedBox(width: 4),
+                                                    Text('Ada respon dari Designer', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.teal.shade800)),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ],
                                         ),
-                                        if (isPending) ...[
-                                          const SizedBox(width: 4),
-                                          IconButton(
-                                            onPressed: () => _openForm(item: item),
-                                            icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.blue),
-                                            padding: const EdgeInsets.all(6),
-                                            constraints: const BoxConstraints(),
-                                          ),
-                                          IconButton(
-                                            onPressed: () => _deleteRequest(item['id']),
-                                            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                                            padding: const EdgeInsets.all(6),
-                                            constraints: const BoxConstraints(),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
+                                      ),
+                                      const Divider(height: 1, color: Color(0xFFEEEEEE)),
+
+                                      // Footer actions
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.end,
+                                          children: [
+                                            TextButton(
+                                              onPressed: () => _showDetail(item),
+                                              style: TextButton.styleFrom(
+                                                backgroundColor: AppColors.primaryMid,
+                                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                                minimumSize: Size.zero,
+                                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                              ),
+                                              child: Text('Lihat Detail', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                                            ),
+                                            if (isPending) ...[
+                                              const SizedBox(width: 4),
+                                              IconButton(
+                                                onPressed: () => _openForm(item: item),
+                                                icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.blue),
+                                                padding: const EdgeInsets.all(6),
+                                                constraints: const BoxConstraints(),
+                                              ),
+                                              IconButton(
+                                                onPressed: () => _deleteRequest(item['id']),
+                                                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                                                padding: const EdgeInsets.all(6),
+                                                constraints: const BoxConstraints(),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
+                                );
+                              },
+                            ),
+                          ),
           ),
         ],
       ),

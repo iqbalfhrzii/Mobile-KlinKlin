@@ -28,6 +28,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
   Map<String, dynamic>? _activeSession;
   bool _isLoading = false;
   List<dynamic> _details = [];
+  List<dynamic> _pembelianBhps = [];
   String? _authToken;
 
   final Map<String, String> _bulanNames = {
@@ -68,11 +69,19 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
       _isLoading = true;
       _activeSession = null;
       _details = [];
+      _pembelianBhps = [];
     });
 
     try {
       final prefs = await SharedPreferences.getInstance();
       final cabangId = prefs.getInt('user_cabang_id') ?? 1;
+
+      // Fetch BHP purchases for this period & branch
+      final bhps = await StokOpnameService.getBhps(
+        bulan: int.tryParse(_filterBulan),
+        tahun: int.tryParse(_filterTahun),
+        cabangId: cabangId,
+      );
 
       final sessions = await StokOpnameService.getSessions(cabangId: cabangId);
 
@@ -101,12 +110,14 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
           setState(() {
             _activeSession = session;
             _details = sessionDetails?['details'] ?? [];
+            _pembelianBhps = bhps;
             _isLoading = false;
           });
         }
       } else {
         if (mounted) {
           setState(() {
+            _pembelianBhps = bhps;
             _isLoading = false;
           });
         }
@@ -227,10 +238,11 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
     String? initialFotoUrl,
     String? initialSisa,
     dynamic detailItem,
+    dynamic bhpItem,
   }) {
     final qrController = TextEditingController(text: initialQr ?? '');
     final catatanController = TextEditingController(text: initialCatatan ?? '');
-    final sisaBhpController = TextEditingController(text: initialSisa ?? '');
+    final sisaBhpController = TextEditingController(text: initialSisa ?? (detailItem?['sisa_akhir']?.toString() ?? ''));
     final picker = ImagePicker();
 
     String selectedKondisi = initialKondisi ?? 'Baik';
@@ -243,8 +255,23 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
     ];
 
     File? selectedFoto;
-    String? currentFotoUrl = initialFotoUrl;
+    String? currentFotoUrl = initialFotoUrl ?? detailItem?['foto_path'];
     Map<String, dynamic>? detectedItem = detailItem?['item_fisik'] ?? detailItem?['itemFisik'];
+    Map<String, dynamic>? activeBhp = bhpItem ?? detailItem?['pembelian_bhp'] ?? detailItem?['pembelianBhp'];
+    
+    // Auto-match activeBhp if initialQr is given and activeBhp is null
+    if (activeBhp == null && initialQr != null && initialQr.isNotEmpty) {
+      final qUpper = initialQr.trim().toUpperCase();
+      final match = _pembelianBhps.firstWhere(
+        (b) => b['kode_pembelian']?.toString().toUpperCase() == qUpper || b['nama_barang']?.toString().toUpperCase() == qUpper,
+        orElse: () => null,
+      );
+      if (match != null) {
+        activeBhp = match;
+      }
+    }
+
+    final bool isBhpMode = _activeKategori == 'BHP' || activeBhp != null;
     bool isSearchingQr = false;
     bool isSubmitting = false;
 
@@ -265,6 +292,21 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
               });
 
               try {
+                // Check if it matches a BHP item first
+                final qUpper = k.toUpperCase();
+                final matchBhp = _pembelianBhps.firstWhere(
+                  (b) => b['kode_pembelian']?.toString().toUpperCase() == qUpper || b['nama_barang']?.toString().toUpperCase() == qUpper,
+                  orElse: () => null,
+                );
+
+                if (matchBhp != null) {
+                  setStateModal(() {
+                    isSearchingQr = false;
+                    activeBhp = matchBhp;
+                  });
+                  return;
+                }
+
                 final item = await StokOpnameService.scanQr(k);
                 setStateModal(() {
                   isSearchingQr = false;
@@ -278,7 +320,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
             }
 
             // Auto lookup initialQr on first load if detectedItem is still null
-            if (initialQr != null && initialQr.isNotEmpty && detectedItem == null && !isSearchingQr) {
+            if (initialQr != null && initialQr.isNotEmpty && detectedItem == null && activeBhp == null && !isSearchingQr) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 lookupQr(initialQr);
               });
@@ -332,16 +374,16 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(
-                                detailItem != null ? Icons.edit_note_rounded : Icons.qr_code_scanner_rounded,
+                                isBhpMode ? Icons.sanitizer_rounded : (detailItem != null ? Icons.edit_note_rounded : Icons.qr_code_scanner_rounded),
                                 color: AppColors.primary,
                                 size: 20,
                               ),
                             ),
                             const SizedBox(width: 10),
                             Text(
-                              detailItem != null
-                                  ? 'Edit Checklist Opname'
-                                  : (_activeKategori == 'BHP' ? 'Input Stok BHP' : 'Scan & Input Item Opname'),
+                              isBhpMode
+                                  ? (detailItem != null ? 'Edit Opname BHP' : 'Input Opname Stok BHP')
+                                  : (detailItem != null ? 'Edit Checklist Opname' : 'Scan & Input Item Opname'),
                               style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
                             ),
                           ],
@@ -360,8 +402,152 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // 1. KODE QR / CARI ITEM
-                          if (_activeKategori != 'BHP') ...[
+                          // 1. BHP ITEM INFO / SELECTOR (IF BHP MODE)
+                          if (isBhpMode) ...[
+                            if (activeBhp != null) ...[
+                              Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF0FDF4),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: const Color(0xFFDCFCE7)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.sanitizer_rounded, color: Color(0xFF16A34A), size: 18),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              'Item Habis Pakai (BHP)',
+                                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF15803D)),
+                                            ),
+                                          ],
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFDCFCE7),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            activeBhp?['kode_pembelian'] ?? '-',
+                                            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF15803D)),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      activeBhp?['nama_barang'] ?? 'BHP Item',
+                                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
+                                    ),
+                                    if (activeBhp?['merk'] != null && activeBhp?['merk'].toString().isNotEmpty == true) ...[
+                                      const SizedBox(height: 2),
+                                      Text('Merk: ${activeBhp?['merk']}', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B))),
+                                    ],
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.storefront_rounded, size: 13, color: Colors.grey.shade600),
+                                        const SizedBox(width: 4),
+                                        Text('Toko: ${activeBhp?['toko_pembelian'] ?? '-'}', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B))),
+                                        const Spacer(),
+                                        Text(
+                                          'Qty Beli: ${activeBhp?['qty_dibeli'] ?? activeBhp?['qty'] ?? 1} ${activeBhp?['satuan'] ?? 'pcs'}',
+                                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF1D4ED8)),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ] else ...[
+                              // Dropdown to pick from _pembelianBhps or scan QR
+                              Text('Pilih Item BHP / Scan QR *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B))),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF8FAFC),
+                                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: DropdownButtonHideUnderline(
+                                        child: DropdownButton<dynamic>(
+                                          value: activeBhp,
+                                          hint: Text('Pilih barang BHP...', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8))),
+                                          isExpanded: true,
+                                          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary),
+                                          items: _pembelianBhps.map((b) {
+                                            return DropdownMenuItem<dynamic>(
+                                              value: b,
+                                              child: Text('${b['nama_barang']} (${b['kode_pembelian'] ?? '-'})', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                                            );
+                                          }).toList(),
+                                          onChanged: (val) {
+                                            setStateModal(() => activeBhp = val);
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  InkWell(
+                                    onTap: () async {
+                                      final String? scanned = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (context) => const QrScannerScreen()),
+                                      );
+                                      if (scanned != null && scanned.isNotEmpty) {
+                                        lookupQr(scanned);
+                                      }
+                                    },
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 20),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+
+                            // Sisa Stok Akhir BHP
+                            Text('Sisa Stok Akhir Bulan (BHP) *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B))),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: sisaBhpController,
+                              keyboardType: TextInputType.number,
+                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
+                              decoration: InputDecoration(
+                                hintText: 'Masukkan jumlah sisa barang (mis. 1)',
+                                hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
+                                prefixIcon: const Icon(Icons.pie_chart_outline_rounded, color: AppColors.primary, size: 20),
+                                filled: true,
+                                fillColor: const Color(0xFFF8FAFC),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ] else ...[
+                            // 1. KODE QR / CARI ITEM FISIK (MSN / CLA / INV)
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -488,27 +674,6 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
                                     if (val != null) setStateModal(() => selectedKondisi = val);
                                   },
                                 ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                          ] else ...[
-                            // Sisa Stok Akhir BHP
-                            Text('Sisa Stok Akhir (BHP) *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B))),
-                            const SizedBox(height: 6),
-                            TextField(
-                              controller: sisaBhpController,
-                              keyboardType: TextInputType.number,
-                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
-                              decoration: InputDecoration(
-                                hintText: 'Masukkan jumlah sisa barang',
-                                hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
-                                prefixIcon: const Icon(Icons.pie_chart_outline_rounded, color: AppColors.primary, size: 20),
-                                filled: true,
-                                fillColor: const Color(0xFFF8FAFC),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -695,12 +860,16 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
                                   return;
                                 }
 
-                                if (_activeKategori != 'BHP') {
+                                if (!isBhpMode) {
                                   if (qrController.text.trim().isEmpty) {
                                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kode QR wajib diisi / discan')));
                                     return;
                                   }
                                 } else {
+                                  if (activeBhp == null && detailItem == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pilih item BHP yang diopname')));
+                                    return;
+                                  }
                                   if (sisaBhpController.text.trim().isEmpty) {
                                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sisa stok BHP wajib diisi')));
                                     return;
@@ -723,7 +892,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
                                     );
                                   }
 
-                                  if (_activeKategori != 'BHP') {
+                                  if (!isBhpMode) {
                                     final itemFisikId = detectedItem?['id'] ?? detailItem?['item_fisik_id'] ?? detailItem?['itemFisik']?['id'];
                                     final formData = dio.FormData.fromMap({
                                       'stok_opname_id': _activeSession!['id'],
@@ -745,16 +914,17 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
                                       _fetchSession();
                                     }
                                   } else {
-                                    final barangId = detailItem?['barang_id'] ?? detailItem?['barang']?['id'] ?? 1;
+                                    final pembelianBhpId = activeBhp?['id'] ?? detailItem?['pembelian_bhp_id'] ?? detailItem?['pembelian_bhp']?['id'] ?? detailItem?['pembelianBhp']?['id'];
                                     final formData = dio.FormData.fromMap({
                                       'stok_opname_id': _activeSession!['id'],
-                                      'barang_id': barangId,
+                                      'pembelian_bhp_id': pembelianBhpId,
+                                      'barang_id': activeBhp?['barang_id'] ?? detailItem?['barang_id'],
                                       'sisa_akhir': double.tryParse(sisaBhpController.text.trim()) ?? 0,
                                       if (fotoMultipart != null) 'foto': fotoMultipart,
                                       'keterangan': catatanController.text.trim(),
                                     });
 
-                                    final res = await StokOpnameService.submitConsumable(formData);
+                                    final res = await StokOpnameService.submitBhpOpname(formData);
                                     if (context.mounted) {
                                       Navigator.pop(context);
                                       ScaffoldMessenger.of(context).showSnackBar(
@@ -963,15 +1133,21 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
       floatingActionButton: (!isSelesai && _activeSession != null)
           ? FloatingActionButton.extended(
               onPressed: () async {
-                if (_activeKategori != 'BHP') {
-                  final String? scannedCode = await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const QrScannerScreen()),
+                final String? scannedCode = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const QrScannerScreen()),
+                );
+                if (scannedCode != null && scannedCode.isNotEmpty) {
+                  final qUpper = scannedCode.trim().toUpperCase();
+                  final matchBhp = _pembelianBhps.firstWhere(
+                    (b) => b['kode_pembelian']?.toString().toUpperCase() == qUpper || b['nama_barang']?.toString().toUpperCase() == qUpper,
+                    orElse: () => null,
                   );
-                  if (scannedCode != null && scannedCode.isNotEmpty) {
-                    _openInputModal(initialQr: scannedCode);
+                  if (matchBhp != null || qUpper.startsWith('BHP')) {
+                    setState(() => _activeKategori = 'BHP');
+                    _openInputModal(bhpItem: matchBhp, initialQr: scannedCode);
                   } else {
-                    _openInputModal();
+                    _openInputModal(initialQr: scannedCode);
                   }
                 } else {
                   _openInputModal();
@@ -981,7 +1157,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
               elevation: 4,
               icon: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 22),
               label: Text(
-                _activeKategori == 'BHP' ? 'Input Stok BHP' : 'Scan QR Item',
+                'Scan QR Item',
                 style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
               ),
             )
@@ -1410,6 +1586,33 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
 
   // --- ITEMS LIST ---
   Widget _buildItemsList(bool isSelesai) {
+    if (_activeKategori == 'BHP') {
+      if (_pembelianBhps.isEmpty && _details.where((d) => d['pembelian_bhp_id'] != null || d['pembelian_bhp'] != null || d['pembelianBhp'] != null).isEmpty) {
+        return _buildEmptyState(
+          title: 'Belum Ada Item BHP',
+          subtitle: 'Belum ada data pembelian barang habis pakai pada periode ${_bulanNames[_filterBulan]} $_filterTahun.',
+        );
+      }
+
+      if (_pembelianBhps.isNotEmpty) {
+        return Column(
+          children: _pembelianBhps.map((bhp) {
+            final matchingDetail = _details.firstWhere(
+              (d) => d['pembelian_bhp_id'] == bhp['id'] || d['pembelian_bhp']?['id'] == bhp['id'] || d['pembelianBhp']?['id'] == bhp['id'],
+              orElse: () => null,
+            );
+            return _buildBhpPurchaseCard(bhp, matchingDetail, isSelesai);
+          }).toList(),
+        );
+      }
+
+      // Fallback to details if _pembelianBhps is somehow empty but details exist
+      final bhpDetails = _details.where((d) => d['pembelian_bhp_id'] != null || d['pembelian_bhp'] != null || d['pembelianBhp'] != null).toList();
+      return Column(
+        children: bhpDetails.map((detail) => _buildBhpCard(detail, isSelesai)).toList(),
+      );
+    }
+
     List<dynamic> filtered = _details.where((d) {
       final itemFisik = d['item_fisik'] ?? d['itemFisik'];
       final barang = d['barang'] ?? itemFisik?['barang'];
@@ -1420,8 +1623,6 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
         return kode.contains('MSN') || kategori.contains('MESIN');
       } else if (_activeKategori == 'CLA') {
         return kode.contains('CLA') || kategori.contains('CLEANING');
-      } else if (_activeKategori == 'BHP') {
-        return itemFisik == null && d['pembelian_bhp_id'] != null;
       } else if (_activeKategori == 'INV') {
         return kode.contains('INV') || kategori.contains('INVENTARIS');
       }
@@ -1429,47 +1630,51 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
     }).toList();
 
     if (filtered.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(36),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.inventory_2_outlined, size: 36, color: AppColors.primary),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'Belum Ada Item Checklist',
-              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Belum ada data checklist untuk kategori ini pada periode terpilih.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
-            ),
-          ],
-        ),
+      return _buildEmptyState(
+        title: 'Belum Ada Item Checklist',
+        subtitle: 'Belum ada data checklist untuk kategori ini pada periode terpilih.',
       );
     }
 
     return Column(
       children: filtered.map((detail) {
-        if (_activeKategori == 'BHP') {
-          return _buildBhpCard(detail, isSelesai);
-        }
         return _buildNormalItemCard(detail, isSelesai);
       }).toList(),
+    );
+  }
+
+  Widget _buildEmptyState({required String title, required String subtitle}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(36),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.inventory_2_outlined, size: 36, color: AppColors.primary),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            title,
+            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -2004,7 +2209,265 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
     );
   }
 
-  // --- ITEM CARD (BHP) - COMPACT & USER FRIENDLY ---
+  String _formatDateOnly(dynamic dateStr) {
+    if (dateStr == null || dateStr.toString().trim().isEmpty) return '-';
+    try {
+      final dt = DateTime.parse(dateStr.toString());
+      return DateFormat('dd/MM/yyyy').format(dt);
+    } catch (_) {
+      return dateStr.toString();
+    }
+  }
+
+  // --- ITEM CARD (BHP FROM PURCHASES) - RICH, MODERN & ACTIONABLE ---
+  Widget _buildBhpPurchaseCard(Map<String, dynamic> bhp, dynamic detail, bool isSelesai) {
+    final String namaBhp = bhp['nama_barang'] ?? 'BHP Item';
+    final String? merk = bhp['merk'];
+    final String kodePembelian = bhp['kode_pembelian'] ?? '-';
+    final String tglPembelian = _formatDateOnly(bhp['tanggal_pembelian']);
+    final String toko = bhp['toko_pembelian'] ?? '-';
+    final dynamic qtyBeli = bhp['qty_dibeli'] ?? bhp['qty'] ?? 1;
+    final String satuan = bhp['satuan'] ?? 'pcs';
+    final bool sudahDiopname = detail != null;
+    final dynamic sisaAkhir = detail?['sisa_akhir'];
+    final String? fotoAktual = detail?['foto_path'];
+    final String? fotoBarang = bhp['foto_barang'] ?? bhp['foto'];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: sudahDiopname ? const Color(0xFFDCFCE7) : const Color(0xFFE2E8F0),
+          width: sudahDiopname ? 1.5 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: sudahDiopname ? const Color(0xFF16A34A).withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () {
+          if (sudahDiopname) {
+            _showDetailModal(detail, isSelesai, isBhp: true);
+          } else if (!isSelesai) {
+            _openInputModal(bhpItem: bhp);
+          }
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Row: Tgl Pembelian + Badge Kode QR Pembelian
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today_rounded, size: 12, color: Color(0xFF64748B)),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Beli: $tglPembelian',
+                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFDBEAFE)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.qr_code_rounded, size: 11, color: Color(0xFF1D4ED8)),
+                        const SizedBox(width: 4),
+                        Text(
+                          kodePembelian,
+                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF1D4ED8)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // Center Row: Photo Thumbnail + Nama & Toko + Qty
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: (fotoAktual != null && fotoAktual.isNotEmpty) || (fotoBarang != null && fotoBarang.isNotEmpty)
+                        ? SizedBox(
+                            width: 50,
+                            height: 50,
+                            child: SmartNetworkImage(
+                              url: _getFileUrl(fotoAktual ?? fotoBarang),
+                              token: _authToken,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                                child: const Icon(Icons.sanitizer_rounded, color: Color(0xFF10B981), size: 24),
+                              ),
+                            ),
+                          )
+                        : Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.sanitizer_rounded, color: Color(0xFF10B981), size: 24),
+                          ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          namaBhp,
+                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (merk != null && merk.toString().isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            'Merk: $merk',
+                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF64748B)),
+                          ),
+                        ],
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.storefront_rounded, size: 12, color: Color(0xFF94A3B8)),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                toko,
+                                style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B)),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Text(
+                              'Beli: $qtyBeli $satuan',
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B)),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1, color: Color(0xFFF1F5F9)),
+              const SizedBox(height: 10),
+
+              // Bottom Row: Opname Status & Action Button
+              if (sudahDiopname) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDCFCE7),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.check_circle_rounded, size: 13, color: Color(0xFF16A34A)),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Sudah Diopname',
+                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF15803D)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          'Sisa: $sisaAkhir $satuan',
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: const Color(0xFF1D4ED8)),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.chevron_right_rounded, size: 16, color: Color(0xFF64748B)),
+                      ],
+                    ),
+                  ],
+                ),
+              ] else ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.info_outline_rounded, size: 13, color: Color(0xFFD97706)),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Belum Diinput',
+                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFFB45309)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!isSelesai)
+                      InkWell(
+                        onTap: () => _openInputModal(bhpItem: bhp),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 14),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Input Opname',
+                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- ITEM CARD (BHP FALLBACK FROM DETAIL) ---
   Widget _buildBhpCard(dynamic detail, bool isSelesai) {
     final pembelianBhp = detail['pembelian_bhp'] ?? detail['pembelianBhp'];
     final namaBhp = pembelianBhp != null ? (pembelianBhp['nama_barang'] ?? 'BHP Item') : 'Barang BHP';
@@ -2028,7 +2491,6 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
-              // Icon Box or Photo Thumbnail
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: fotoPath != null && fotoPath.toString().isNotEmpty
@@ -2053,8 +2515,6 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
                       ),
               ),
               const SizedBox(width: 12),
-
-              // Main Info (Nama BHP + Sisa)
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2082,8 +2542,6 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-
-              // Detail button
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

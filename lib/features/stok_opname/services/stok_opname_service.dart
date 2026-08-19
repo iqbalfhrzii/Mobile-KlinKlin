@@ -13,6 +13,8 @@ class StokOpnameService {
       if (response.statusCode == 200) {
         final data = response.data;
         if (data['success'] == true) {
+          return data['data'] ?? [];
+        } else if (data['data'] is List) {
           return data['data'];
         }
       }
@@ -79,30 +81,37 @@ class StokOpnameService {
     }
   }
 
-  static Future<List<dynamic>> getConsumables() async {
+  static Future<Map<String, dynamic>> submitBhpOpname(dynamic data) async {
     try {
-      final response = await _dio.get('/stok-opname/consumables');
-      if (response.statusCode == 200) {
-        final resData = response.data;
-        if (resData['success'] == true) {
-          return resData['data'];
-        }
-      }
-      return [];
-    } catch (e) {
-      return [];
-    }
-  }
-
-  static Future<Map<String, dynamic>> submitConsumable(dynamic data) async {
-    try {
+      // Endpoint /stok-opname/consumable or direct multipart submit
       final response = await _dio.post('/stok-opname/consumable', data: data);
       if (response.statusCode == 200 || response.statusCode == 201) {
         return {'success': response.data['success'] == true, 'message': response.data['message'] ?? 'Berhasil'};
       }
-      return {'success': false, 'message': response.data['message'] ?? 'Gagal menyimpan BHP'};
+      return {'success': false, 'message': response.data['message'] ?? 'Gagal menyimpan opname BHP'};
     } catch (e) {
       return {'success': false, 'message': 'Terjadi kesalahan: $e'};
+    }
+  }
+
+  static Future<List<dynamic>> getBhps({int? bulan, int? tahun, int? cabangId}) async {
+    try {
+      final Map<String, dynamic> params = {};
+      if (bulan != null) params['bulan'] = bulan;
+      if (tahun != null) params['tahun'] = tahun;
+      if (cabangId != null) params['cabang_id'] = cabangId;
+
+      final response = await _dio.get('/pembelian-bhp', queryParameters: params);
+      if (response.data != null && response.data['data'] != null) {
+        if (response.data['data'] is Map<String, dynamic> && response.data['data']['data'] is List) {
+          return response.data['data']['data'] as List;
+        } else if (response.data['data'] is List) {
+          return response.data['data'] as List;
+        }
+      }
+      return [];
+    } catch (_) {
+      return [];
     }
   }
 }

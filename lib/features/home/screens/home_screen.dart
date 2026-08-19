@@ -6,9 +6,7 @@ import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
 import 'dart:io';
 import 'dart:convert';
-import 'package:provider/provider.dart';
 import '../../orders/screens/order_list_screen.dart';
-import '../../../core/data/mock_data.dart';
 import '../../../core/services/auth_service.dart';
 import '../../orders/screens/create_order_screen.dart';
 import '../../customers/screens/customer_list_screen.dart';
@@ -21,6 +19,12 @@ import 'chat_harian_screen.dart';
 import '../services/dashboard_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../widgets/closing_rate_dashboard.dart';
+import '../../stok_opname/screens/stok_opname_screen.dart';
+import '../../master_barang/screens/master_barang_screen.dart';
+import '../../operasional/screens/operasional_permintaan_design_screen.dart';
+import '../../pengadaan_barang/screens/pengadaan_barang_screen.dart';
+import '../../pembelian_bhp/screens/pembelian_bhp_screen.dart';
+import '../../uang_kas/screens/uang_kas_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -223,7 +227,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           _buildOmzetCard(),
                           const SizedBox(height: 16),
-                          _buildQuickActions(),
+                          _buildCsMenuGrid(),
                           const SizedBox(height: 16),
                           const ClosingRateDashboard(),
                           const SizedBox(height: 16),
@@ -982,168 +986,194 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildQuickActions() {
-    final actions = [
-      _QuickAction(
-        'Absensi',
-        Icons.fingerprint_rounded,
-        Colors.white,
-        const Color(0xFFF59E0B),
+  Widget _buildCsMenuGrid() {
+    final menus = [
+      _MenuGridItem(
+        title: 'Absensi',
+        icon: Icons.fingerprint_rounded,
+        iconColor: const Color(0xFFD97706),
+        bgColor: const Color(0xFFFEF3C7),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AttendanceScreen())),
       ),
-      _QuickAction(
-        'Buat Pesanan',
-        Icons.add_circle_outline_rounded,
-        AppColors.primary,
-        AppColors.surfaceBlue,
+      _MenuGridItem(
+        title: 'Buat Pesanan',
+        icon: Icons.add_circle_outline_rounded,
+        iconColor: AppColors.primary,
+        bgColor: const Color(0xFFEFF6FF),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateOrderScreen())),
       ),
-      _QuickAction(
-        'Kelola Pelanggan',
-        Icons.people_outline_rounded,
-        const Color(0xFF7C3AED),
-        const Color(0xFFEDE9FE),
+      _MenuGridItem(
+        title: 'Pelanggan',
+        icon: Icons.people_alt_outlined,
+        iconColor: const Color(0xFF6366F1),
+        bgColor: const Color(0xFFEEF2FF),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomerListScreen())),
       ),
-      _QuickAction(
-        'Chat Harian',
-        Icons.forum_outlined,
-        const Color(0xFFEC4899),
-        const Color(0xFFFCE7F3),
+      _MenuGridItem(
+        title: 'Chat Harian',
+        icon: Icons.forum_outlined,
+        iconColor: const Color(0xFFEC4899),
+        bgColor: const Color(0xFFFCE7F3),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatHarianScreen())),
       ),
-      _QuickAction(
-        'KPI Karyawan',
-        Icons.analytics_rounded,
-        const Color(0xFFE65100),
-        const Color(0xFFFFF3E0),
+      _MenuGridItem(
+        title: 'Uang Kas',
+        icon: Icons.account_balance_wallet_outlined,
+        iconColor: const Color(0xFF059669),
+        bgColor: const Color(0xFFECFDF5),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UangKasScreen())),
+      ),
+      _MenuGridItem(
+        title: 'Pengajuan Alat',
+        icon: Icons.shopping_bag_outlined,
+        iconColor: const Color(0xFF0284C7),
+        bgColor: const Color(0xFFE0F2FE),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PengadaanBarangScreen())),
+      ),
+      _MenuGridItem(
+        title: 'Beli BHP',
+        icon: Icons.shopping_cart_outlined,
+        iconColor: const Color(0xFF7C3AED),
+        bgColor: const Color(0xFFF3E8FF),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PembelianBhpScreen())),
+      ),
+      _MenuGridItem(
+        title: 'Stok Opname',
+        icon: Icons.fact_check_outlined,
+        iconColor: const Color(0xFF0891B2),
+        bgColor: const Color(0xFFECFEFF),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StokOpnameScreen())),
+      ),
+      _MenuGridItem(
+        title: 'Master Barang',
+        icon: Icons.inventory_2_outlined,
+        iconColor: const Color(0xFF0D9488),
+        bgColor: const Color(0xFFCCFBF1),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MasterBarangScreen())),
+      ),
+      _MenuGridItem(
+        title: 'Minta Desain',
+        icon: Icons.brush_outlined,
+        iconColor: const Color(0xFFE11D48),
+        bgColor: const Color(0xFFFFE4E6),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPermintaanDesignScreen())),
+      ),
+      _MenuGridItem(
+        title: 'KPI CS',
+        icon: Icons.analytics_outlined,
+        iconColor: const Color(0xFFEA580C),
+        bgColor: const Color(0xFFFFEDD5),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KpiScreen())),
       ),
     ];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Aksi Cepat',
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textMuted,
-            letterSpacing: 0.5,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-        ),
-        const SizedBox(height: 10),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          child: Row(
-            children: actions
-                .map(
-                  (a) => GestureDetector(
-                    onTap: () {
-                      if (a.label == 'Buat Pesanan') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const CreateOrderScreen(),
-                          ),
-                        );
-                      } else if (a.label == 'Absensi') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const AttendanceScreen(),
-                          ),
-                        );
-                      } else if (a.label == 'Chat Harian') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ChatHarianScreen(),
-                          ),
-                        );
-                      } else if (a.label == 'Kelola Pelanggan') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const CustomerListScreen(),
-                          ),
-                        );
-                      } else if (a.label == 'KPI Karyawan') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const KpiScreen()),
-                        );
-                      }
-                    },
-                    child: Container(
-                      width: 85,
-                      margin: EdgeInsets.only(
-                        right: a == actions.last ? 0 : 12,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 14,
-                        horizontal: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: a.label == 'Absensi'
-                            ? const LinearGradient(
-                                colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              )
-                            : null,
-                        color: a.label == 'Absensi' ? null : AppColors.surface,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: a.label == 'Absensi'
-                              ? Colors.transparent
-                              : AppColors.border,
-                        ),
-                        boxShadow: [
-                          if (a.label == 'Absensi')
-                            BoxShadow(
-                              color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            )
-                          else
-                            AppColors.cardShadow,
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: a.label == 'Absensi'
-                                  ? Colors.white.withValues(alpha: 0.2)
-                                  : a.bg,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(a.icon, color: a.color, size: 22),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            a.label,
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              fontWeight: a.label == 'Absensi'
-                                  ? FontWeight.bold
-                                  : FontWeight.w600,
-                              color: a.label == 'Absensi'
-                                  ? Colors.white
-                                  : AppColors.textDark,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.grid_view_rounded, size: 16, color: AppColors.primary),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Menu CS',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF1E293B),
                     ),
                   ),
-                )
-                .toList(),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '${menus.length} Menu',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 14),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: menus.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              mainAxisSpacing: 14,
+              crossAxisSpacing: 8,
+              childAspectRatio: 0.76,
+            ),
+            itemBuilder: (context, index) {
+              final item = menus[index];
+              return InkWell(
+                onTap: item.onTap,
+                borderRadius: BorderRadius.circular(14),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: item.bgColor,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: item.iconColor.withValues(alpha: 0.15)),
+                      ),
+                      child: Icon(item.icon, color: item.iconColor, size: 24),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      item.title,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF334155),
+                        height: 1.15,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -1449,9 +1479,18 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _QuickAction {
-  const _QuickAction(this.label, this.icon, this.color, this.bg);
-  final String label;
+class _MenuGridItem {
+  final String title;
   final IconData icon;
-  final Color color, bg;
+  final Color iconColor;
+  final Color bgColor;
+  final VoidCallback onTap;
+
+  const _MenuGridItem({
+    required this.title,
+    required this.icon,
+    required this.iconColor,
+    required this.bgColor,
+    required this.onTap,
+  });
 }

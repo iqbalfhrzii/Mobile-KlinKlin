@@ -7,18 +7,74 @@ class OperasionalQuotationService {
   Future<Map<String, dynamic>> getQuotations({
     String? search,
     String? status,
+    int? cabangId,
     int page = 1,
   }) async {
     try {
       final queryParams = <String, dynamic>{'page': page};
       if (search != null && search.isNotEmpty) queryParams['search'] = search;
       if (status != null && status.isNotEmpty) queryParams['status'] = status;
+      if (cabangId != null) queryParams['cabang_id'] = cabangId;
 
       final response = await _apiClient.get(
         '/operasional/quotation',
         queryParameters: queryParams,
       );
       
+      return response.data;
+    } on DioException catch (e) {
+      return {
+        'status': false,
+        'message': e.response?.data['message'] ?? e.message,
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString(),
+      };
+    }
+  }
+
+  Future<List<dynamic>> getCabangs() async {
+    try {
+      final response = await _apiClient.get('/cabangs');
+      if (response.data is List) {
+        return response.data;
+      } else if (response.data['data'] is List) {
+        return response.data['data'];
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>> approveQuotation(int id, {String? notes}) async {
+    try {
+      final response = await _apiClient.post(
+        '/operasional/quotation/$id/approve',
+        data: {'catatan_persetujuan': notes},
+      );
+      return response.data;
+    } on DioException catch (e) {
+      return {
+        'status': false,
+        'message': e.response?.data['message'] ?? e.message,
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString(),
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> rejectQuotation(int id, {String? notes}) async {
+    try {
+      final response = await _apiClient.post(
+        '/operasional/quotation/$id/reject',
+        data: {'catatan_persetujuan': notes},
+      );
       return response.data;
     } on DioException catch (e) {
       return {

@@ -14,6 +14,11 @@ import 'edit_profile_screen.dart';
 import 'kpi_screen.dart';
 import '../../stok_opname/screens/stok_opname_screen.dart';
 import '../../master_barang/screens/master_barang_screen.dart';
+import '../../operasional/screens/operasional_permintaan_design_screen.dart';
+import '../../operasional/screens/operasional_quotation_screen.dart';
+import '../../pengadaan_barang/screens/pengadaan_barang_screen.dart';
+import '../../pembelian_bhp/screens/pembelian_bhp_screen.dart';
+import '../../uang_kas/screens/uang_kas_screen.dart';
 import '../../cleaner/tukar_libur/screens/tukar_libur_screen.dart';
 import '../../cleaner/tukar_libur/services/tukar_libur_service.dart';
 
@@ -154,16 +159,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 12),
                       if (_userRole.toLowerCase().contains('cs') || _userRole.toLowerCase().contains('customer service')) ...[
                         _buildMenuSection('Manajemen CS', [
+                          _MenuItem(Icons.account_balance_wallet_outlined, 'Uang Kas (Cashflow & Pengajuan)', onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const UangKasScreen()));
+                          }),
+                          _MenuItem(Icons.shopping_bag_outlined, 'Pengajuan Alat & Chemical', onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const PengadaanBarangScreen()));
+                          }),
+                          _MenuItem(Icons.shopping_cart_outlined, 'Pembelian BHP', onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const PembelianBhpScreen()));
+                          }),
+                          _MenuItem(Icons.inventory_2_outlined, 'Master Barang & Aset', onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const MasterBarangScreen()));
+                          }),
                           _MenuItem(Icons.fact_check_outlined, 'Stok Opname', onTap: () {
                             Navigator.push(context, MaterialPageRoute(builder: (_) => const StokOpnameScreen()));
+                          }),
+                          _MenuItem(Icons.brush_outlined, 'Permintaan Design', onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPermintaanDesignScreen()));
                           }),
                         ]),
                         const SizedBox(height: 12),
                       ],
-                      if (_userRole.toLowerCase().contains('operasional') || _userRole.toLowerCase().contains('admin')) ...[
+                      if (_userRole.toLowerCase().contains('operasional') || _userRole.toLowerCase().contains('admin') || _userRole.toLowerCase().contains('ceo')) ...[
                         _buildMenuSection('Manajemen Operasional', [
+                          _MenuItem(Icons.account_balance_wallet_outlined, 'Uang Kas (Cashflow & Pengajuan)', onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const UangKasScreen()));
+                          }),
+                          _MenuItem(Icons.shopping_bag_outlined, 'Pengajuan Alat & Chemical', onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const PengadaanBarangScreen()));
+                          }),
+                          _MenuItem(Icons.shopping_cart_outlined, 'Pembelian BHP', onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const PembelianBhpScreen()));
+                          }),
+                          _MenuItem(Icons.request_quote_outlined, 'Data Penawaran (Quotation)', onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalQuotationScreen()));
+                          }),
                           _MenuItem(Icons.inventory_2_outlined, 'Master Barang & Aset', onTap: () {
                             Navigator.push(context, MaterialPageRoute(builder: (_) => const MasterBarangScreen()));
+                          }),
+                          _MenuItem(Icons.brush_outlined, 'Permintaan Design', onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPermintaanDesignScreen()));
                           }),
                         ]),
                         const SizedBox(height: 12),

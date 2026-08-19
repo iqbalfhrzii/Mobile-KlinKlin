@@ -23,8 +23,10 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
   final _service = OperasionalQuotationService();
   
   bool _isLoading = false;
+  bool _isLoadingCabangs = true;
   
   // Controllers
+  final _noQuotationController = TextEditingController();
   final _tanggalController = TextEditingController();
   final _expDateController = TextEditingController();
   final _namaCustomerController = TextEditingController();
@@ -33,13 +35,17 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
   final _jobLocationController = TextEditingController();
   final _diskonController = TextEditingController(text: '0');
   
+  bool _sameAsCustomerAddress = false;
   bool _alatChemical = true;
   bool _usePpn = true;
   bool _usePph = false;
   
   List<Map<String, dynamic>> _rincian = [];
+  List<dynamic> _cabangs = [];
   
   int? _cabangId;
+  String _userRole = '';
+  bool _isOperasionalOrAdmin = true;
 
   @override
   void initState() {
@@ -49,13 +55,33 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
   
   Future<void> _initData() async {
     final prefs = await SharedPreferences.getInstance();
+    _userRole = prefs.getString('user_role') ?? '';
+    final r = _userRole.toLowerCase();
+    _isOperasionalOrAdmin = r.contains('operasional') || r.contains('admin') || r.contains('ceo') || r.contains('superadmin');
+    
     final userCabangId = prefs.getInt('user_cabang_id');
     if (userCabangId != null) {
       _cabangId = userCabangId;
     }
 
+    try {
+      final cabangs = await _service.getCabangs();
+      if (mounted) {
+        setState(() {
+          _cabangs = cabangs;
+          _isLoadingCabangs = false;
+          if (_cabangId == null && _cabangs.isNotEmpty) {
+            _cabangId = _cabangs.first['id'];
+          }
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingCabangs = false);
+    }
+
     if (widget.initialData != null) {
       final data = widget.initialData;
+      _noQuotationController.text = data['no_quotation'] ?? '';
       _tanggalController.text = data['tanggal']?.toString().split(' ')[0] ?? '';
       _expDateController.text = data['exp_date']?.toString().split(' ')[0] ?? '';
       _namaCustomerController.text = data['nama_customer'] ?? '';
@@ -70,21 +96,21 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
       
       if (data['rincian'] != null) {
         if (data['rincian'] is List) {
-           _rincian = List<Map<String, dynamic>>.from(data['rincian'].map((item) => {
-             'deskripsi': TextEditingController(text: item['deskripsi']),
-             'qty': TextEditingController(text: item['qty'].toString()),
-             'harga': TextEditingController(text: item['harga'].toString()),
-           }));
-        } else if (data['rincian'] is String) {
-          // If stored as JSON string
-          // Parse logic here if needed
+          _rincian = List<Map<String, dynamic>>.from(data['rincian'].map((item) => {
+            'deskripsi': TextEditingController(text: item['deskripsi']?.toString() ?? ''),
+            'qty': TextEditingController(text: (item['qty'] ?? 1).toString()),
+            'harga': TextEditingController(text: (item['harga'] ?? 0).toString()),
+          }));
         }
       }
     } else {
+      _noQuotationController.text = 'Terisi otomatis (Auto Generate)';
       _tanggalController.text = DateFormat('yyyy-MM-dd').format(DateTime.now());
       _expDateController.text = DateFormat('yyyy-MM-dd').format(DateTime.now().add(const Duration(days: 14)));
       _rincian.add(_createEmptyRincian());
     }
+
+    if (mounted) setState(() {});
   }
 
   Map<String, dynamic> _createEmptyRincian() {
@@ -97,6 +123,7 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
 
   @override
   void dispose() {
+    _noQuotationController.dispose();
     _tanggalController.dispose();
     _expDateController.dispose();
     _namaCustomerController.dispose();
@@ -149,18 +176,33 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
   }
 
   Future<void> _save() async {
-    if (_namaCustomerController.text.isEmpty || _tanggalController.text.isEmpty) {
+    if (_namaCustomerController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Harap lengkapi field yang wajib (*)'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Nama Customer wajib diisi!'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    if (_alamatController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Alamat Customer wajib diisi!'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    final validRincian = _rincian.where((e) => e['deskripsi'].text.trim().isNotEmpty).toList();
+    if (validRincian.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Minimal ada 1 rincian layanan/barang yang diisi!'), backgroundColor: Colors.red),
       );
       return;
     }
 
     setState(() => _isLoading = true);
 
-    final rincianList = _rincian.map((e) => {
-      'deskripsi': e['deskripsi'].text,
-      'qty': double.tryParse(e['qty'].text) ?? 0,
+    final rincianList = validRincian.map((e) => {
+      'deskripsi': e['deskripsi'].text.trim(),
+      'qty': double.tryParse(e['qty'].text) ?? 1,
       'harga': double.tryParse(e['harga'].text) ?? 0,
     }).toList();
 
@@ -168,10 +210,10 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
       'tanggal': _tanggalController.text,
       'exp_date': _expDateController.text,
       'cabang_id': _cabangId ?? 1,
-      'nama_customer': _namaCustomerController.text,
-      'no_wa_customer': _noWaController.text,
-      'alamat': _alamatController.text,
-      'job_location': _jobLocationController.text,
+      'nama_customer': _namaCustomerController.text.trim(),
+      'no_wa_customer': _noWaController.text.trim(),
+      'alamat': _alamatController.text.trim(),
+      'job_location': _sameAsCustomerAddress ? _alamatController.text.trim() : _jobLocationController.text.trim(),
       'alat_chemical_klinklin': _alatChemical ? 1 : 0,
       'diskon': double.tryParse(_diskonController.text) ?? 0,
       'ppn': _usePpn ? 11 : 0,
@@ -189,51 +231,19 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
     setState(() => _isLoading = false);
 
     if (res['status'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res['message'] ?? 'Berhasil disimpan'), backgroundColor: Colors.green),
-      );
-      widget.onSave();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res['message'] ?? 'Penawaran berhasil disimpan'), backgroundColor: Colors.green),
+        );
+        widget.onSave();
+      }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res['message'] ?? 'Gagal menyimpan'), backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res['message'] ?? 'Gagal menyimpan penawaran'), backgroundColor: Colors.red),
+        );
+      }
     }
-  }
-
-  Widget _buildTextField(String label, TextEditingController controller, {bool required = false, bool readOnly = false, VoidCallback? onTap, int maxLines = 1, TextInputType? keyboardType}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        RichText(
-          text: TextSpan(
-            text: label,
-            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
-            children: required ? [const TextSpan(text: ' *', style: TextStyle(color: Colors.red))] : [],
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: readOnly && onTap == null ? Colors.grey.shade100 : Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: TextField(
-            controller: controller,
-            readOnly: readOnly,
-            onTap: onTap,
-            maxLines: maxLines,
-            keyboardType: keyboardType,
-            style: GoogleFonts.inter(fontSize: 14),
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            ),
-            onChanged: (_) => setState(() {}),
-          ),
-        ),
-      ],
-    );
   }
 
   @override
@@ -245,10 +255,10 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
       ),
       child: Column(
         children: [
-          // Handle
+          // Drag Handle
           Center(
             child: Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 4),
+              margin: const EdgeInsets.only(top: 12, bottom: 6),
               width: 40,
               height: 4,
               decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
@@ -257,23 +267,30 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
           
           // Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.edit_document, color: AppColors.primary),
-                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryMid.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.request_quote_rounded, color: AppColors.primaryMid, size: 22),
+                    ),
+                    const SizedBox(width: 10),
                     Text(
                       widget.initialData != null ? 'Edit Penawaran' : 'Buat Penawaran Baru',
-                      style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                      style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textDark),
                     ),
                   ],
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Icons.close, color: AppColors.textMuted),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
@@ -289,94 +306,365 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 1. INFORMASI PENAWARAN
                   _buildSectionTitle('INFORMASI PENAWARAN'),
+                  
+                  // No Quotation & Cabang Row
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _buildTextField(
+                          'No Quotation',
+                          _noQuotationController,
+                          required: true,
+                          readOnly: true,
+                          hintText: 'Auto Generate',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            RichText(
+                              text: TextSpan(
+                                text: 'Cabang',
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                                children: const [TextSpan(text: ' *', style: TextStyle(color: Colors.red))],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            if (!_isOperasionalOrAdmin && _cabangId != null && _cabangs.isNotEmpty)
+                              Container(
+                                height: 48,
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: Colors.grey.shade300),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.location_on, size: 14, color: AppColors.primaryMid),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        _cabangs.firstWhere((c) => c['id'] == _cabangId, orElse: () => {'nama_cabang': 'Cabang $_cabangId'})['nama_cabang'] ??
+                                            _cabangs.firstWhere((c) => c['id'] == _cabangId, orElse: () => {'nama': 'Cabang $_cabangId'})['nama'] ??
+                                            'Cabang $_cabangId',
+                                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            else
+                              Container(
+                                height: 48,
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: Colors.grey.shade300),
+                                ),
+                                child: _isLoadingCabangs
+                                    ? const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)))
+                                    : DropdownButtonHideUnderline(
+                                        child: DropdownButton<int>(
+                                          value: _cabangId,
+                                          isExpanded: true,
+                                          icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+                                          style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
+                                          items: _cabangs.map((c) {
+                                            return DropdownMenuItem<int>(
+                                              value: c['id'],
+                                              child: Text(c['nama_cabang'] ?? c['nama'] ?? 'Cabang ${c['id']}'),
+                                            );
+                                          }).toList(),
+                                          onChanged: (val) {
+                                            if (val != null) setState(() => _cabangId = val);
+                                          },
+                                        ),
+                                      ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Tanggal & Exp Date Row
                   Row(
                     children: [
-                      Expanded(child: _buildTextField('Tanggal', _tanggalController, required: true, readOnly: true, onTap: () => _selectDate(_tanggalController))),
-                      const SizedBox(width: 16),
-                      Expanded(child: _buildTextField('Exp Date', _expDateController, required: true, readOnly: true, onTap: () => _selectDate(_expDateController))),
+                      Expanded(
+                        child: _buildTextField(
+                          'Tanggal',
+                          _tanggalController,
+                          required: true,
+                          readOnly: true,
+                          suffixIcon: Icons.calendar_today_outlined,
+                          onTap: () => _selectDate(_tanggalController),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildTextField(
+                          'Exp Date',
+                          _expDateController,
+                          required: true,
+                          readOnly: true,
+                          suffixIcon: Icons.event_busy_outlined,
+                          onTap: () => _selectDate(_expDateController),
+                        ),
+                      ),
                     ],
                   ),
                   
                   const SizedBox(height: 24),
+                  // 2. DATA CUSTOMER
                   _buildSectionTitle('DATA CUSTOMER'),
                   Row(
                     children: [
-                      Expanded(child: _buildTextField('Nama Customer', _namaCustomerController, required: true)),
-                      const SizedBox(width: 16),
-                      Expanded(child: _buildTextField('No WA Customer', _noWaController, keyboardType: TextInputType.phone)),
+                      Expanded(
+                        child: _buildTextField(
+                          'Nama Customer',
+                          _namaCustomerController,
+                          required: true,
+                          hintText: 'Nama Perorangan / PT',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildTextField(
+                          'No WA Customer',
+                          _noWaController,
+                          keyboardType: TextInputType.phone,
+                          hintText: '08xxxxxxxxxx',
+                          suffixIcon: Icons.chat_outlined,
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  _buildTextField('Alamat Customer', _alamatController, required: true, maxLines: 2),
-                  const SizedBox(height: 16),
-                  _buildTextField('Job Location', _jobLocationController, maxLines: 2),
+                  const SizedBox(height: 14),
+                  _buildTextField(
+                    'Alamat Customer',
+                    _alamatController,
+                    required: true,
+                    maxLines: 2,
+                    hintText: 'Alamat lengkap tempat tinggal/kantor customer...',
+                  ),
+                  const SizedBox(height: 14),
+                  
+                  // Job Location with Auto-fill check
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Job Location (Lokasi Pengerjaan)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _sameAsCustomerAddress = !_sameAsCustomerAddress;
+                            if (_sameAsCustomerAddress) {
+                              _jobLocationController.text = _alamatController.text;
+                            }
+                          });
+                        },
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: Checkbox(
+                                value: _sameAsCustomerAddress,
+                                onChanged: (v) {
+                                  setState(() {
+                                    _sameAsCustomerAddress = v ?? false;
+                                    if (_sameAsCustomerAddress) {
+                                      _jobLocationController.text = _alamatController.text;
+                                    }
+                                  });
+                                },
+                                activeColor: AppColors.primaryMid,
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text('Sama dg alamat', style: GoogleFonts.inter(fontSize: 11, color: AppColors.primaryMid, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: _sameAsCustomerAddress ? Colors.grey.shade100 : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: TextField(
+                      controller: _jobLocationController,
+                      maxLines: 2,
+                      readOnly: _sameAsCustomerAddress,
+                      style: GoogleFonts.inter(fontSize: 13),
+                      decoration: const InputDecoration(
+                        hintText: 'Kosongkan bila sama dengan alamat customer...',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      ),
+                    ),
+                  ),
                   
                   const SizedBox(height: 24),
-                  _buildSectionTitle('RINCIAN PENAWARAN'),
+                  // 3. RINCIAN PENAWARAN
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildSectionTitle('RINCIAN PENAWARAN'),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryMid.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '${_rincian.length} Baris',
+                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
+                        ),
+                      ),
+                    ],
+                  ),
                   
-                  // Dynamic list
+                  // Dynamic Items List
                   ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _rincian.length,
                     itemBuilder: (context, index) {
                       final item = _rincian[index];
+                      final qty = double.tryParse(item['qty'].text) ?? 0;
+                      final harga = double.tryParse(item['harga'].text) ?? 0;
+                      final rowTotal = qty * harga;
+
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade200),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2))],
+                          border: Border.all(color: Colors.grey.shade300),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
+                          ],
                         ),
-                        child: Row(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              flex: 3,
-                              child: _buildTextField('Deskripsi', item['deskripsi']),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              flex: 1,
-                              child: _buildTextField('Qty', item['qty'], keyboardType: TextInputType.number),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              flex: 2,
-                              child: _buildTextField('Harga', item['harga'], keyboardType: TextInputType.number),
-                            ),
-                            if (_rincian.length > 1)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 28, left: 4),
-                                child: InkWell(
-                                  onTap: () => setState(() => _rincian.removeAt(index)),
-                                  child: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(4)),
+                                  child: Text('#${index + 1}', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey.shade700)),
                                 ),
-                              ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text('Layanan / Barang', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
+                                ),
+                                if (_rincian.length > 1)
+                                  InkWell(
+                                    onTap: () => setState(() => _rincian.removeAt(index)),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(4)),
+                                      child: const Icon(Icons.delete_outline, color: Colors.red, size: 16),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            _buildSimpleInput(
+                              controller: item['deskripsi'],
+                              hint: 'Contoh: Cuci Kasur King Size, Fogging Disinfektan...',
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Qty', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
+                                      const SizedBox(height: 4),
+                                      _buildSimpleInput(
+                                        controller: item['qty'],
+                                        keyboardType: TextInputType.number,
+                                        hint: '1',
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  flex: 3,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Harga Satuan (Rp)', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
+                                      const SizedBox(height: 4),
+                                      _buildSimpleInput(
+                                        controller: item['harga'],
+                                        keyboardType: TextInputType.number,
+                                        hint: '0',
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  flex: 3,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text('Subtotal', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        _formatCurrency(rowTotal),
+                                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       );
                     },
                   ),
                   
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      onPressed: () => setState(() => _rincian.add(_createEmptyRincian())),
-                      icon: const Icon(Icons.add, size: 16, color: Colors.green),
-                      label: Text('Tambah Baris Rincian', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.green)),
-                      style: TextButton.styleFrom(padding: EdgeInsets.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                  // Add Item Button
+                  OutlinedButton.icon(
+                    onPressed: () => setState(() => _rincian.add(_createEmptyRincian())),
+                    icon: const Icon(Icons.add, size: 16, color: AppColors.primaryMid),
+                    label: Text('Tambah Baris Rincian', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryMid)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.primaryMid),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     ),
                   ),
                   
                   const SizedBox(height: 24),
                   
-                  // Totals Box
+                  // 4. OPSI & PERHITUNGAN BIAYA
+                  _buildSectionTitle('OPSI & PERHITUNGAN BIAYA'),
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: Colors.grey.shade50,
                       borderRadius: BorderRadius.circular(12),
@@ -384,12 +672,50 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
                     ),
                     child: Column(
                       children: [
+                        // Alat Chemical Checkbox
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: Checkbox(
+                                  value: _alatChemical,
+                                  onChanged: (v) => setState(() => _alatChemical = v ?? false),
+                                  activeColor: AppColors.primaryMid,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Alat & Chemical dari Klinklin', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+                                    Text('Bila dicentang, catatan ini tercetak di dokumen', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Diskon Input
+                        _buildTextField('Diskon Tambahan (Rp)', _diskonController, keyboardType: TextInputType.number, hintText: '0'),
+                        const SizedBox(height: 8),
+
+                        // PPN & PPh Checkboxes
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
                               child: Container(
-                                padding: const EdgeInsets.all(12),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(8),
@@ -397,62 +723,37 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
                                 ),
                                 child: Row(
                                   children: [
-                                    SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: Checkbox(
-                                        value: _alatChemical,
-                                        onChanged: (v) => setState(() => _alatChemical = v ?? false),
-                                        activeColor: AppColors.primary,
-                                      ),
+                                    Checkbox(
+                                      value: _usePpn,
+                                      onChanged: (v) => setState(() => _usePpn = v ?? false),
+                                      activeColor: AppColors.primaryMid,
+                                      visualDensity: VisualDensity.compact,
                                     ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text('Alat & Chemical dari Klinklin', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
-                                          Text('Akan tercetak di dokumen', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-                                        ],
-                                      ),
-                                    ),
+                                    Text('PPN (11%)', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
                                   ],
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 8),
                             Expanded(
-                              child: Column(
-                                children: [
-                                  _buildTextField('Diskon Tambahan (Rp)', _diskonController, keyboardType: TextInputType.number),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: CheckboxListTile(
-                                          title: Text('PPN (11%)', style: GoogleFonts.inter(fontSize: 11)),
-                                          value: _usePpn,
-                                          onChanged: (v) => setState(() => _usePpn = v ?? false),
-                                          controlAffinity: ListTileControlAffinity.leading,
-                                          contentPadding: EdgeInsets.zero,
-                                          activeColor: AppColors.primary,
-                                          visualDensity: VisualDensity.compact,
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: CheckboxListTile(
-                                          title: Text('PPh (2%)', style: GoogleFonts.inter(fontSize: 11)),
-                                          value: _usePph,
-                                          onChanged: (v) => setState(() => _usePph = v ?? false),
-                                          controlAffinity: ListTileControlAffinity.leading,
-                                          contentPadding: EdgeInsets.zero,
-                                          activeColor: AppColors.primary,
-                                          visualDensity: VisualDensity.compact,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey.shade300),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Checkbox(
+                                      value: _usePph,
+                                      onChanged: (v) => setState(() => _usePph = v ?? false),
+                                      activeColor: AppColors.primaryMid,
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    Text('PPh (2%)', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
@@ -463,12 +764,37 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
                           child: Divider(),
                         ),
                         
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('GRAND TOTAL', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                            Text(_formatCurrency(_grandTotal), style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                          ],
+                        // Live Summary Table
+                        _buildSummaryRow('Subtotal', _formatCurrency(_subtotal)),
+                        if (double.tryParse(_diskonController.text) != null && double.parse(_diskonController.text) > 0) ...[
+                          const SizedBox(height: 4),
+                          _buildSummaryRow('Diskon', '- ${_formatCurrency(double.parse(_diskonController.text))}', color: Colors.red),
+                        ],
+                        if (_usePpn) ...[
+                          const SizedBox(height: 4),
+                          _buildSummaryRow('PPN (11%)', '+ ${_formatCurrency((_subtotal - (double.tryParse(_diskonController.text) ?? 0)).clamp(0, double.infinity) * 0.11)}'),
+                        ],
+                        if (_usePph) ...[
+                          const SizedBox(height: 4),
+                          _buildSummaryRow('PPh (2%)', '- ${_formatCurrency((_subtotal - (double.tryParse(_diskonController.text) ?? 0)).clamp(0, double.infinity) * 0.02)}', color: Colors.red),
+                        ],
+                        const SizedBox(height: 10),
+
+                        // Highlighted Grand Total Banner
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryMid.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.primaryMid.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('GRAND TOTAL', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.primaryMid)),
+                              Text(_formatCurrency(_grandTotal), style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryMid)),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -493,27 +819,30 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
                   child: OutlinedButton(
                     onPressed: _isLoading ? null : () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                       side: BorderSide(color: Colors.grey.shade300),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     child: Text('Batal', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppColors.textDark)),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
                   flex: 2,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _save,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      backgroundColor: AppColors.primaryMid,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       elevation: 0,
                     ),
                     child: _isLoading
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : Text('Simpan Perubahan', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white)),
+                        ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Text(
+                            widget.initialData != null ? 'Simpan Perubahan' : 'Simpan Penawaran',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
                   ),
                 ),
               ],
@@ -524,15 +853,100 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
     );
   }
 
+  Widget _buildSimpleInput({
+    required TextEditingController controller,
+    String? hint,
+    TextInputType? keyboardType,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        style: GoogleFonts.inter(fontSize: 12),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade400),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        ),
+        onChanged: (_) => setState(() {}),
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(String label, String value, {Color? color}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+        Text(value, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: color ?? AppColors.textDark)),
+      ],
+    );
+  }
+
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller, {
+    bool required = false,
+    bool readOnly = false,
+    VoidCallback? onTap,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+    String? hintText,
+    IconData? suffixIcon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RichText(
+          text: TextSpan(
+            text: label,
+            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
+            children: required ? [const TextSpan(text: ' *', style: TextStyle(color: Colors.red))] : [],
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          decoration: BoxDecoration(
+            color: readOnly && onTap == null ? Colors.grey.shade100 : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: TextField(
+            controller: controller,
+            readOnly: readOnly,
+            onTap: onTap,
+            maxLines: maxLines,
+            keyboardType: keyboardType,
+            style: GoogleFonts.inter(fontSize: 13),
+            decoration: InputDecoration(
+              hintText: hintText,
+              hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 12),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              suffixIcon: suffixIcon != null ? Icon(suffixIcon, size: 18, color: Colors.grey.shade600) : null,
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Text(
         title,
         style: GoogleFonts.inter(
-          fontSize: 13,
+          fontSize: 12,
           fontWeight: FontWeight.bold,
-          color: AppColors.primary,
+          color: AppColors.primaryMid,
           letterSpacing: 0.5,
         ),
       ),

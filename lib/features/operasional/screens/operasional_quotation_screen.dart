@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/services/pdf_quotation_service.dart';
@@ -24,18 +26,25 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
   bool _isLoadingMore = false;
   String _error = '';
   List<dynamic> _quotations = [];
+  List<dynamic> _cabangs = [];
   
   int _currentPage = 1;
   int _lastPage = 1;
-  String _selectedStatus = 'Semua Status';
-  final List<String> _statusOptions = ['Semua Status', 'Pending', 'Disetujui', 'Ditolak'];
+  String _selectedStatus = 'Semua';
+  final List<String> _statusFilters = ['Semua', 'Menunggu', 'Disetujui', 'Ditolak'];
+  
+  int? _selectedCabangId;
+  String _userRole = '';
+  int? _userCabangId;
+  String _userCabangName = '';
+  bool _isOperasionalOrAdmin = true;
 
   final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    _fetchQuotations();
+    _loadUserAndData();
     _scrollController.addListener(_onScroll);
   }
 
@@ -54,6 +63,37 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
     }
   }
 
+  Future<void> _loadUserAndData() async {
+    final prefs = await SharedPreferences.getInstance();
+    _userRole = prefs.getString('user_role') ?? '';
+    _userCabangId = prefs.getInt('user_cabang_id');
+    _userCabangName = prefs.getString('user_cabang_name') ?? '';
+
+    final r = _userRole.toLowerCase();
+    _isOperasionalOrAdmin = r.contains('operasional') || r.contains('admin') || r.contains('ceo') || r.contains('superadmin');
+
+    if (!_isOperasionalOrAdmin && _userCabangId != null) {
+      _selectedCabangId = _userCabangId;
+    }
+
+    try {
+      final cabangs = await _service.getCabangs();
+      if (mounted) {
+        setState(() {
+          _cabangs = cabangs;
+          if (_userCabangName.isEmpty && _userCabangId != null && _cabangs.isNotEmpty) {
+            final match = _cabangs.firstWhere((c) => c['id'] == _userCabangId, orElse: () => null);
+            if (match != null) {
+              _userCabangName = match['nama_cabang'] ?? match['nama'] ?? 'Cabang $_userCabangId';
+            }
+          }
+        });
+      }
+    } catch (_) {}
+
+    _fetchQuotations();
+  }
+
   Future<void> _fetchQuotations({int page = 1, bool append = false}) async {
     if (!append) {
       setState(() {
@@ -67,30 +107,33 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
     try {
       final res = await _service.getQuotations(
         page: page,
-        search: _searchController.text,
-        status: _selectedStatus == 'Semua Status' ? null : _selectedStatus,
+        search: _searchController.text.trim(),
+        status: _selectedStatus == 'Semua' ? null : _selectedStatus,
+        cabangId: _selectedCabangId,
       );
 
       if (res['status'] == true) {
         setState(() {
           if (append) {
-            _quotations.addAll(res['data']['data'] ?? []);
+            _quotations.addAll(res['data']['data'] ?? res['data'] ?? []);
           } else {
-            _quotations = res['data']['data'] ?? [];
+            _quotations = res['data']['data'] ?? res['data'] ?? [];
           }
           _currentPage = res['data']['current_page'] ?? 1;
           _lastPage = res['data']['last_page'] ?? 1;
         });
       } else {
-        setState(() => _error = res['message'] ?? 'Unknown error');
+        setState(() => _error = res['message'] ?? 'Gagal memuat data penawaran');
       }
     } catch (e) {
       setState(() => _error = e.toString().replaceAll('Exception: ', ''));
     } finally {
-      setState(() {
-        _isLoading = false;
-        _isLoadingMore = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isLoadingMore = false;
+        });
+      }
     }
   }
 
@@ -98,15 +141,14 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
     return NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(value);
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'disetujui':
-        return const Color(0xFF16A34A);
-      case 'ditolak':
-        return const Color(0xFFDC2626);
-      case 'pending':
-      default:
-        return const Color(0xFFD97706);
+  Color _getStatusColor(String? status) {
+    final s = (status ?? 'Menunggu').toLowerCase();
+    if (s.contains('setuju') || s == 'disetujui') {
+      return const Color(0xFF16A34A); // Emerald Green
+    } else if (s.contains('tolak') || s == 'ditolak') {
+      return const Color(0xFFDC2626); // Red
+    } else {
+      return const Color(0xFFD97706); // Amber Orange
     }
   }
 
@@ -121,7 +163,69 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal membuat PDF: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Gagal mencetak PDF: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _shareToWhatsApp(dynamic quotation) async {
+    final rawPhone = quotation['no_wa_customer']?.toString() ?? '';
+    String cleanPhone = rawPhone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '62${cleanPhone.substring(1)}';
+    }
+
+    final noQuo = quotation['no_quotation'] ?? '-';
+    final customer = quotation['nama_customer'] ?? 'Pelanggan';
+    final tgl = quotation['tanggal'] != null ? DateFormat('dd/MM/yyyy').format(DateTime.parse(quotation['tanggal'].toString())) : '-';
+    final expDate = quotation['exp_date'] != null ? DateFormat('dd/MM/yyyy').format(DateTime.parse(quotation['exp_date'].toString())) : '-';
+    final grandTotal = _formatCurrency(quotation['grand_total_calc'] ?? quotation['grand_total'] ?? 0);
+
+    List<dynamic> rincianList = [];
+    if (quotation['rincian'] != null) {
+      if (quotation['rincian'] is List) {
+        rincianList = quotation['rincian'];
+      } else if (quotation['rincian'] is String) {
+        try {
+          rincianList = jsonDecode(quotation['rincian']);
+        } catch (_) {}
+      }
+    }
+
+    final buffer = StringBuffer();
+    buffer.writeln('Halo Bapak/Ibu *$customer*,');
+    buffer.writeln('Berikut kami sampaikan rincian *Surat Penawaran Harga (Quotation)* dari *KlinKlin*:');
+    buffer.writeln('');
+    buffer.writeln('📄 *No Quotation*: $noQuo');
+    buffer.writeln('📅 *Tanggal*: $tgl (Exp: $expDate)');
+    buffer.writeln('');
+    buffer.writeln('*Rincian Layanan / Barang*:');
+    for (var i = 0; i < rincianList.length; i++) {
+      final item = rincianList[i];
+      final desc = item['deskripsi'] ?? '-';
+      final qty = item['qty'] ?? 1;
+      final harga = _formatCurrency(num.tryParse(item['harga']?.toString() ?? '0') ?? 0);
+      buffer.writeln('${i + 1}. $desc (${qty}x) - $harga');
+    }
+    buffer.writeln('');
+    buffer.writeln('💰 *GRAND TOTAL*: *$grandTotal*');
+    if (quotation['alat_chemical_klinklin'] == true || quotation['alat_chemical_klinklin'] == 1) {
+      buffer.writeln('✨ *Catatan*: Termasuk Alat & Chemical dari KlinKlin.');
+    }
+    buffer.writeln('');
+    buffer.writeln('Terima kasih telah mempercayakan layanan kebersihan kepada *KlinKlin*.');
+
+    final text = Uri.encodeComponent(buffer.toString());
+    final url = 'https://wa.me/$cleanPhone?text=$text';
+    final uri = Uri.parse(url);
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tidak dapat membuka aplikasi WhatsApp')),
         );
       }
     }
@@ -149,9 +253,8 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
   }
 
   void _showDetailModal(dynamic item) {
-    final statusColor = _getStatusColor(item['status'] ?? 'Pending');
+    final statusColor = _getStatusColor(item['status']);
     
-    // Parse rincian
     List<dynamic> rincianList = [];
     if (item['rincian'] != null) {
       if (item['rincian'] is List) {
@@ -178,13 +281,12 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
       }
     }
 
-    String approvalDate = '-';
-    if (item['updated_at'] != null) {
+    String expStr = '-';
+    if (item['exp_date'] != null) {
       try {
-        final dt = DateTime.parse(item['updated_at'].toString());
-        approvalDate = DateFormat('dd MMM yyyy, HH:mm').format(dt);
+        expStr = DateFormat('dd MMM yyyy').format(DateTime.parse(item['exp_date'].toString()));
       } catch (_) {
-        approvalDate = item['updated_at'].toString();
+        expStr = item['exp_date'].toString();
       }
     }
 
@@ -215,24 +317,40 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFDCFCE7),
+                        color: AppColors.primaryMid.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.description_rounded, color: Color(0xFF16A34A), size: 22),
+                      child: const Icon(Icons.description_rounded, color: AppColors.primaryMid, size: 22),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Review Penawaran: ${item['no_quotation'] ?? '-'}',
-                            style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                          Row(
+                            children: [
+                              Text(
+                                'Detail Penawaran',
+                                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textDark),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  item['status'] ?? 'Menunggu Review',
+                                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Dibuat oleh ${item['pembuat']?['name'] ?? 'Sistem'} pada $tglStr',
-                            style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B)),
+                            item['no_quotation'] ?? '-',
+                            style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
@@ -252,6 +370,47 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // General Info Summary
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Dibuat Oleh', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    item['pembuat']?['name'] ?? item['pembuat']?['nama'] ?? 'Bagus',
+                                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Tanggal & Exp', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '$tglStr (Exp: $expStr)',
+                                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
                       // 1. Card: Informasi Customer
                       _buildSectionContainer(
                         title: 'Informasi Customer',
@@ -260,49 +419,23 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                           children: [
                             _buildInfoItem('Nama Customer', item['nama_customer'] ?? '-'),
                             const SizedBox(height: 10),
-                            _buildInfoItem('No WA', item['no_wa_customer'] ?? '-'),
+                            _buildInfoItem('No WhatsApp', item['no_wa_customer'] ?? '-'),
                             const SizedBox(height: 10),
                             _buildInfoItem('Alamat', item['alamat'] ?? '-'),
                             if (item['job_location'] != null && item['job_location'].toString().isNotEmpty) ...[
                               const SizedBox(height: 10),
-                              _buildInfoItem('Lokasi Pengerjaan', item['job_location'].toString()),
+                              _buildInfoItem('Lokasi Pengerjaan (Job Location)', item['job_location'].toString()),
                             ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // 2. Card: Status Persetujuan
-                      _buildSectionContainer(
-                        title: 'Status Persetujuan',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Status Saat Ini', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B))),
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: statusColor.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                item['status'] ?? 'Pending',
-                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: statusColor),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            _buildInfoItem('Diproses Oleh', '${item['penyetuju']?['name'] ?? '-'} ($approvalDate)'),
                             const SizedBox(height: 10),
-                            _buildInfoItem('Catatan Persetujuan', item['catatan_approval'] ?? 'Tidak ada catatan'),
+                            _buildInfoItem('Cabang', item['cabang']?['nama_cabang'] ?? item['cabang']?['nama'] ?? 'Surabaya'),
                           ],
                         ),
                       ),
                       const SizedBox(height: 16),
 
-                      // 3. Card: Rincian Layanan / Barang
+                      // 2. Card: Rincian Layanan / Barang
                       _buildSectionContainer(
-                        title: 'Rincian Layanan/Barang',
+                        title: 'Rincian Layanan / Barang',
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -351,7 +484,7 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                                 );
                               }),
 
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 14),
 
                             // Totals Breakdown
                             _buildPriceRow('Subtotal', _formatCurrency(subtotal)),
@@ -361,11 +494,11 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                             ],
                             if (ppnNominal > 0) ...[
                               const SizedBox(height: 6),
-                              _buildPriceRow('PPN (11.00%)', _formatCurrency(ppnNominal)),
+                              _buildPriceRow('PPN (11.00%)', '+ ${_formatCurrency(ppnNominal)}'),
                             ],
                             if (pphNominal > 0) ...[
                               const SizedBox(height: 6),
-                              _buildPriceRow('PPh', '- ${_formatCurrency(pphNominal)}', color: Colors.red),
+                              _buildPriceRow('PPh (2.00%)', '- ${_formatCurrency(pphNominal)}', color: Colors.red),
                             ],
 
                             const SizedBox(height: 12),
@@ -374,26 +507,26 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFECFDF5),
+                                color: AppColors.primaryMid.withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFFA7F3D0)),
+                                border: Border.all(color: AppColors.primaryMid.withValues(alpha: 0.3)),
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     'GRAND TOTAL',
-                                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: const Color(0xFF065F46), letterSpacing: 0.5),
+                                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.primaryMid, letterSpacing: 0.5),
                                   ),
                                   Text(
                                     _formatCurrency(grandTotal),
-                                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: const Color(0xFF059669)),
+                                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.primaryMid),
                                   ),
                                 ],
                               ),
                             ),
 
-                            // Alat & Chemical Info Banner
+                            // Alat & Chemical Banner
                             if (hasAlatChemical) ...[
                               const SizedBox(height: 12),
                               Container(
@@ -405,11 +538,11 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF16A34A)),
+                                    const Icon(Icons.check_circle_outline, size: 16, color: Color(0xFF16A34A)),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        'Terdapat Alat & Chemical dari Klinklin',
+                                        'Termasuk Alat & Chemical dari KlinKlin',
                                         style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF15803D)),
                                       ),
                                     ),
@@ -441,41 +574,38 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                     OutlinedButton(
                       onPressed: () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         side: const BorderSide(color: Color(0xFFCBD5E1)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       child: Text('Tutup', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF475569))),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _downloadOrPrintInvoice(item),
-                        icon: const Icon(Icons.download_rounded, size: 16),
-                        label: const Text('Download Invoice'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF047857),
-                          foregroundColor: Colors.white,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _shareToWhatsApp(item),
+                        icon: const Icon(Icons.chat_outlined, size: 16, color: Color(0xFF16A34A)),
+                        label: Text('Kirim WA', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF16A34A))),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFF86EFAC)),
+                          backgroundColor: const Color(0xFFF0FDF4),
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          elevation: 0,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          textStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _openForm(item);
-                      },
-                      icon: const Icon(Icons.edit_rounded, size: 16, color: Color(0xFF2563EB)),
-                      label: Text('Edit Data', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF2563EB))),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        side: const BorderSide(color: Color(0xFFBFDBFE)),
-                        backgroundColor: const Color(0xFFEFF6FF),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _downloadOrPrintInvoice(item),
+                        icon: const Icon(Icons.print_outlined, size: 16, color: Colors.white),
+                        label: Text('Cetak PDF', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryMid,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
                       ),
                     ),
                   ],
@@ -501,7 +631,7 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
         children: [
           Text(
             title,
-            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.textDark),
           ),
           const Divider(color: Color(0xFFF1F5F9), height: 16),
           child,
@@ -514,9 +644,9 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B))),
+        Text(label, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
         const SizedBox(height: 2),
-        Text(value, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF1E293B))),
+        Text(value, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
       ],
     );
   }
@@ -525,13 +655,13 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+        Text(label, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
         Text(
           value,
           style: GoogleFonts.inter(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: color ?? const Color(0xFF1E293B),
+            color: color ?? AppColors.textDark,
           ),
         ),
       ],
@@ -542,13 +672,15 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus Quotation'),
-        content: const Text('Apakah Anda yakin ingin menghapus quotation ini?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Hapus Penawaran?', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: Text('Penawaran (Quotation) ini akan dihapus secara permanen dari sistem.', style: GoogleFonts.inter(fontSize: 13)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context, true), 
-            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, elevation: 0),
+            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -557,26 +689,19 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
     if (confirm != true) return;
     if (!mounted) return;
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
-
     final res = await _service.deleteQuotation(id);
-    if (mounted) Navigator.pop(context);
 
     if (res['status'] == true) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Quotation berhasil dihapus'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('Penawaran berhasil dihapus'), backgroundColor: Colors.green),
         );
       }
       _fetchQuotations(page: 1);
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(res['message'] ?? 'Gagal menghapus'), backgroundColor: Colors.red),
+          SnackBar(content: Text(res['message'] ?? 'Gagal menghapus penawaran'), backgroundColor: Colors.red),
         );
       }
     }
@@ -584,244 +709,441 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Calculate stats
+    final totalCount = _quotations.length;
+    final waitingCount = _quotations.where((q) => (q['status'] ?? '').toString().toLowerCase().contains('menunggu') || (q['status'] ?? '').toString().toLowerCase() == 'pending').length;
+    final approvedCount = _quotations.where((q) => (q['status'] ?? '').toString().toLowerCase().contains('setuju')).length;
+
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
+          // Gradient Header
           GradientHeader(
             child: Row(
               children: [
-                InkWell(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
-                  ),
-                ),
-                const SizedBox(width: 16),
+                HeaderBackButton(onTap: () => Navigator.pop(context)),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Approval Penawaran',
-                        style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                        'Data Penawaran',
+                        style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
-                        'Tinjau dan setujui penawaran (Quotation)',
-                        style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.8)),
+                        'Kelola & buat penawaran untuk customer',
+                        style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.85)),
                       ),
                     ],
                   ),
                 ),
+                IconButton(
+                  onPressed: () => _fetchQuotations(page: 1),
+                  icon: const Icon(Icons.refresh, color: Colors.white),
+                  tooltip: 'Refresh',
+                ),
               ],
             ),
           ),
           
+          // Search Bar & Branch Indicator
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Column(
               children: [
-                Expanded(
-                  flex: 3,
-                  child: Container(
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      style: GoogleFonts.inter(fontSize: 13),
-                      decoration: InputDecoration(
-                        hintText: 'Cari No atau Customer...',
-                        hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 13),
-                        prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          style: GoogleFonts.inter(fontSize: 13),
+                          decoration: InputDecoration(
+                            hintText: 'Cari No Quotation / Customer...',
+                            hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 12),
+                            prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 16, color: Colors.grey),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      _fetchQuotations(page: 1);
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                          onSubmitted: (_) => _fetchQuotations(page: 1),
+                        ),
                       ),
-                      onSubmitted: (_) => _fetchQuotations(page: 1),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+
+                    // Branch Indicator for CS or Selector for Operasional
+                    if (!_isOperasionalOrAdmin && _userCabangId != null)
+                      Container(
+                        height: 42,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryMid.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.primaryMid.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.location_on, size: 14, color: AppColors.primaryMid),
+                            const SizedBox(width: 4),
+                            Text(
+                              _userCabangName.isNotEmpty ? _userCabangName : 'Cabang $_userCabangId',
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
+                            ),
+                          ],
+                        ),
+                      )
+                    else if (_cabangs.isNotEmpty)
+                      Container(
+                        height: 42,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<int?>(
+                            value: _selectedCabangId,
+                            hint: Text('Semua Cabang', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark)),
+                            icon: const Icon(Icons.location_on_outlined, size: 16, color: AppColors.textMuted),
+                            items: [
+                              const DropdownMenuItem<int?>(value: null, child: Text('Semua Cabang')),
+                              ..._cabangs.map((c) => DropdownMenuItem<int?>(
+                                    value: c['id'],
+                                    child: Text(c['nama_cabang'] ?? c['nama'] ?? 'Cabang ${c['id']}'),
+                                  )),
+                            ],
+                            onChanged: (val) {
+                              setState(() => _selectedCabangId = val);
+                              _fetchQuotations(page: 1);
+                            },
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: Container(
-                    height: 40,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedStatus,
-                        isExpanded: true,
-                        icon: const Icon(Icons.keyboard_arrow_down, size: 16),
-                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                        items: _statusOptions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() => _selectedStatus = val);
+                const SizedBox(height: 10),
+
+                // Status Filter Chips
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _statusFilters.map((s) {
+                      final isSelected = _selectedStatus == s;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(s),
+                          selected: isSelected,
+                          selectedColor: AppColors.primaryMid,
+                          backgroundColor: Colors.grey.shade100,
+                          labelStyle: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            color: isSelected ? Colors.white : AppColors.textDark,
+                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          onSelected: (_) {
+                            setState(() => _selectedStatus = s);
                             _fetchQuotations(page: 1);
-                          }
-                        },
-                      ),
-                    ),
+                          },
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ),
               ],
             ),
           ),
+
+          // Mini Stats Summary
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+            child: Row(
+              children: [
+                _buildMiniStat('Total', '$totalCount', AppColors.textDark, Colors.grey.shade100),
+                const SizedBox(width: 8),
+                _buildMiniStat('Menunggu', '$waitingCount', const Color(0xFFD97706), const Color(0xFFFEF3C7)),
+                const SizedBox(width: 8),
+                _buildMiniStat('Disetujui', '$approvedCount', const Color(0xFF16A34A), const Color(0xFFDCFCE7)),
+              ],
+            ),
+          ),
           
+          // Quotation List
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _error.isNotEmpty
-                    ? Center(child: Text(_error, style: const TextStyle(color: Colors.red)))
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.error_outline, size: 40, color: Colors.red),
+                              const SizedBox(height: 8),
+                              Text(_error, style: GoogleFonts.inter(color: Colors.red, fontSize: 13), textAlign: TextAlign.center),
+                              const SizedBox(height: 12),
+                              ElevatedButton(
+                                onPressed: () => _fetchQuotations(page: 1),
+                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryMid),
+                                child: const Text('Coba Lagi', style: TextStyle(color: Colors.white)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
                     : _buildList(),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openForm(),
-        backgroundColor: AppColors.primary,
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: AppColors.primaryMid,
+        elevation: 3,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: Text(
+          'Buat Penawaran',
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMiniStat(String label, String count, Color textColor, Color bgColor) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: textColor)),
+            Text(count, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: textColor)),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildList() {
     if (_quotations.isEmpty) {
-      return const Center(child: Text('Tidak ada quotation'));
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryMid.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.request_quote_outlined, size: 48, color: AppColors.primaryMid),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Belum Ada Data Penawaran',
+                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Tekan tombol "+ Buat Penawaran" untuk membuat quotation baru.',
+                style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-      itemCount: _quotations.length + (_isLoadingMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == _quotations.length) {
-          return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
-        }
+    return RefreshIndicator(
+      onRefresh: () => _fetchQuotations(page: 1),
+      color: AppColors.primaryMid,
+      child: ListView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+        itemCount: _quotations.length + (_isLoadingMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == _quotations.length) {
+            return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
+          }
 
-        final item = _quotations[index];
-        final statusColor = _getStatusColor(item['status'] ?? 'Pending');
+          final item = _quotations[index];
+          final statusColor = _getStatusColor(item['status']);
+          final customer = item['nama_customer'] ?? '-';
+          final noQuo = item['no_quotation'] ?? '-';
+          final cabang = item['cabang']?['nama_cabang'] ?? item['cabang']?['nama'] ?? 'Surabaya';
+          final grandTotal = item['grand_total_calc'] ?? item['grand_total'] ?? 0;
 
-        return InkWell(
-          onTap: () => _showDetailModal(item),
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 16),
+          String tglStr = '-';
+          if (item['tanggal'] != null) {
+            try {
+              tglStr = DateFormat('dd MMM yyyy').format(DateTime.parse(item['tanggal'].toString()));
+            } catch (_) {
+              tglStr = item['tanggal'].toString();
+            }
+          }
+
+          String expStr = '-';
+          if (item['exp_date'] != null) {
+            try {
+              expStr = DateFormat('dd MMM yyyy').format(DateTime.parse(item['exp_date'].toString()));
+            } catch (_) {
+              expStr = item['exp_date'].toString();
+            }
+          }
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(color: Colors.grey.shade200),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Header
+                // Header Card
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    color: Colors.grey.shade50,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                    border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      const Icon(Icons.request_quote_rounded, size: 16, color: AppColors.primaryMid),
+                      const SizedBox(width: 6),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item['no_quotation'] ?? '-',
-                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              item['tanggal'] != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(item['tanggal'])) : '-',
-                              style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
-                            ),
-                          ],
+                        child: Text(
+                          noQuo,
+                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: statusColor,
-                          borderRadius: BorderRadius.circular(20),
+                          color: statusColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          item['status'] ?? 'Pending',
-                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                          item['status'] ?? 'Menunggu',
+                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor),
                         ),
                       ),
                     ],
                   ),
                 ),
                 
-                // Body
+                // Body Card
                 Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Dibuat Oleh', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                            const SizedBox(height: 2),
-                            Text(
-                              item['pembuat']?['name'] ?? 'Sistem',
-                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                      // Customer & Phone
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Customer', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
+                                const SizedBox(height: 2),
+                                Text(
+                                  customer,
+                                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                ),
+                                if (item['no_wa_customer'] != null && item['no_wa_customer'].toString().isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.chat_bubble_outline, size: 11, color: Color(0xFF16A34A)),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        item['no_wa_customer'].toString(),
+                                        style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF16A34A), fontWeight: FontWeight.w600),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ],
                             ),
-                            Text(
-                              item['cabang']?['nama_cabang'] ?? item['cabang']?['nama'] ?? '-',
-                              style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
-                            ),
-                          ],
-                        ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text('Total Penawaran', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
+                              const SizedBox(height: 2),
+                              Text(
+                                _formatCurrency(grandTotal),
+                                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Customer', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                            const SizedBox(height: 2),
-                            Text(
-                              item['nama_customer'] ?? '-',
-                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                            ),
-                          ],
+                      const SizedBox(height: 10),
+
+                      // Location & Dates info
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Total Nominal', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                            const SizedBox(height: 2),
-                            Text(
-                              _formatCurrency(item['grand_total_calc'] ?? 0),
-                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
+                            Row(
+                              children: [
+                                const Icon(Icons.location_on_outlined, size: 13, color: AppColors.textMuted),
+                                const SizedBox(width: 4),
+                                Text(cabang, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark, fontWeight: FontWeight.w500)),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                const Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.textMuted),
+                                const SizedBox(width: 4),
+                                Text('$tglStr (Exp: $expStr)', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                              ],
                             ),
                           ],
                         ),
@@ -832,63 +1154,94 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                 
                 const Divider(height: 1, color: Color(0xFFEEEEEE)),
                 
-                // Actions
+                // Action Buttons Bar
                 Padding(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      TextButton.icon(
-                        onPressed: () => _showDetailModal(item),
-                        icon: const Icon(Icons.remove_red_eye_outlined, size: 16, color: Color(0xFF0284C7)),
-                        label: Text('Detail', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF0284C7))),
-                        style: TextButton.styleFrom(
+                      InkWell(
+                        onTap: () => _showDetailModal(item),
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryMid.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.remove_red_eye_outlined, size: 14, color: AppColors.primaryMid),
+                              const SizedBox(width: 4),
+                              Text('Detail', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryMid)),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      TextButton.icon(
-                        onPressed: () => _downloadOrPrintInvoice(item),
-                        icon: const Icon(Icons.download_rounded, size: 16, color: Color(0xFF16A34A)),
-                        label: Text('Invoice', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF16A34A))),
-                        style: TextButton.styleFrom(
+                      const SizedBox(width: 6),
+                      InkWell(
+                        onTap: () => _downloadOrPrintInvoice(item),
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.print_outlined, size: 14, color: Colors.blue),
+                              const SizedBox(width: 4),
+                              Text('Cetak PDF', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      TextButton.icon(
+                      const SizedBox(width: 6),
+                      InkWell(
+                        onTap: () => _shareToWhatsApp(item),
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDCFCE7),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.chat_outlined, size: 14, color: Color(0xFF16A34A)),
+                              const SizedBox(width: 4),
+                              Text('Kirim WA', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF15803D))),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.orange),
                         onPressed: () => _openForm(item),
-                        icon: const Icon(Icons.edit_document, size: 16, color: Colors.orange),
-                        label: Text('Edit', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.orange)),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(),
+                        tooltip: 'Edit',
                       ),
-                      const SizedBox(width: 4),
-                      TextButton.icon(
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
                         onPressed: () => _deleteQuotation(item['id']),
-                        icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
-                        label: Text('Hapus', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.red)),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(),
+                        tooltip: 'Hapus',
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
