@@ -15,7 +15,7 @@ class OperasionalLaporanLapanganService {
       if (cabangId != null && cabangId != 'all') queryParams['cabang_id'] = cabangId;
 
       final response = await _apiClient.get(
-        '/operasional/laporan-lapangan',
+        '/operasional/lapangan',
         queryParameters: queryParams,
       );
       
@@ -35,7 +35,7 @@ class OperasionalLaporanLapanganService {
 
   Future<Map<String, dynamic>> getLaporanLapanganDetail(int id) async {
     try {
-      final response = await _apiClient.get('/operasional/laporan-lapangan/$id');
+      final response = await _apiClient.get('/operasional/lapangan/$id');
       return response.data;
     } on DioException catch (e) {
       return {
@@ -64,7 +64,7 @@ class OperasionalLaporanLapanganService {
       }
 
       final response = await _apiClient.post(
-        '/operasional/laporan-lapangan', 
+        '/operasional/lapangan', 
         data: formData,
       );
       return response.data;
@@ -96,7 +96,7 @@ class OperasionalLaporanLapanganService {
       }
 
       final response = await _apiClient.post(
-        '/operasional/laporan-lapangan/$id', 
+        '/operasional/lapangan/$id', 
         data: formData,
       );
       return response.data;
@@ -115,7 +115,7 @@ class OperasionalLaporanLapanganService {
 
   Future<Map<String, dynamic>> deleteLaporanLapangan(int id) async {
     try {
-      final response = await _apiClient.delete('/operasional/laporan-lapangan/$id');
+      final response = await _apiClient.delete('/operasional/lapangan/$id');
       return response.data;
     } on DioException catch (e) {
       return {

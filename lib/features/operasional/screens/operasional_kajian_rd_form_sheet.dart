@@ -154,6 +154,8 @@ class _OperasionalKajianRdFormSheetState extends State<OperasionalKajianRdFormSh
 
     setState(() => _isLoading = false);
 
+    if (!mounted) return;
+
     if (res['status'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(res['message'] ?? 'Berhasil disimpan'), backgroundColor: Colors.green),
@@ -326,7 +328,7 @@ class _OperasionalKajianRdFormSheetState extends State<OperasionalKajianRdFormSh
                                         hint: Text('-- Kajian Terpusat/Global --', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade400)),
                                         items: [
                                           const DropdownMenuItem(value: null, child: Text('-- Kajian Terpusat/Global --')),
-                                          ...widget.cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama'] ?? ''))),
+                                          ...widget.cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama_cabang'] ?? c['nama'] ?? ''))),
                                         ],
                                         onChanged: (val) {
                                           setState(() {

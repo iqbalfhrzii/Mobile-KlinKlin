@@ -1,9 +1,15 @@
+import 'dart:io';
+import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../core/theme/app_colors.dart';
-import '../services/stok_opname_service.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/gradient_header.dart';
+import '../../../core/api/api_client.dart';
+import '../services/stok_opname_service.dart';
 
 class StokOpnameScreen extends StatefulWidget {
   const StokOpnameScreen({super.key});
@@ -15,40 +21,53 @@ class StokOpnameScreen extends StatefulWidget {
 class _StokOpnameScreenState extends State<StokOpnameScreen> {
   String _filterBulan = DateFormat('MM').format(DateTime.now());
   String _filterTahun = DateFormat('yyyy').format(DateTime.now());
-  
-  String _activePeriode = ''; // 'tengah_bulan', 'akhir_bulan', 'inventaris'
+
+  String _activePeriode = 'tengah_bulan'; // 'tengah_bulan', 'akhir_bulan', 'inventaris'
   String _activeKategori = 'MSN'; // MSN, CLA, BHP, INV
-  
+
   Map<String, dynamic>? _activeSession;
   bool _isLoading = false;
-  
   List<dynamic> _details = [];
-  String _debugError = '';
-  
-  // Mocks for month names
+  String? _authToken;
+
   final Map<String, String> _bulanNames = {
-    '01': 'Januari', '02': 'Februari', '03': 'Maret', '04': 'April',
-    '05': 'Mei', '06': 'Juni', '07': 'Juli', '08': 'Agustus',
-    '09': 'September', '10': 'Oktober', '11': 'November', '12': 'Desember'
+    '01': 'Januari',
+    '02': 'Februari',
+    '03': 'Maret',
+    '04': 'April',
+    '05': 'Mei',
+    '06': 'Juni',
+    '07': 'Juli',
+    '08': 'Agustus',
+    '09': 'September',
+    '10': 'Oktober',
+    '11': 'November',
+    '12': 'Desember'
   };
 
   @override
   void initState() {
     super.initState();
-    _activePeriode = 'tengah_bulan';
+    _loadAuthToken();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchSession();
     });
   }
 
+  Future<void> _loadAuthToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _authToken = prefs.getString('auth_token');
+    } catch (_) {}
+  }
+
   Future<void> _fetchSession() async {
     if (_activePeriode.isEmpty) return;
-    
+
     setState(() {
       _isLoading = true;
       _activeSession = null;
       _details = [];
-      _debugError = '';
     });
 
     try {
@@ -56,13 +75,14 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
       final cabangId = prefs.getInt('user_cabang_id') ?? 1;
 
       final sessions = await StokOpnameService.getSessions(cabangId: cabangId);
-      
-      // Look for a session matching the period, month and year
+
       final targetPeriode = '$_filterTahun-$_filterBulan';
-      var session = sessions.firstWhere((s) => s['periode_bulan'] == targetPeriode && s['tipe_sesi'] == _activePeriode, orElse: () => null);
-      
+      var session = sessions.firstWhere(
+        (s) => s['periode_bulan'] == targetPeriode && s['tipe_sesi'] == _activePeriode,
+        orElse: () => null,
+      );
+
       if (session == null) {
-        // Create new session
         final req = {
           'cabang_id': cabangId,
           'periode_bulan': targetPeriode,
@@ -76,31 +96,27 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
       }
 
       if (session != null) {
-        // Fetch full details
         final sessionDetails = await StokOpnameService.getSessionDetails(session['id']);
-        if (sessionDetails != null) {
+        if (mounted) {
           setState(() {
             _activeSession = session;
-            _details = sessionDetails['details'] ?? [];
-            _isLoading = false;
-          });
-        } else {
-          setState(() {
-            _debugError = 'getSessionDetails returned null';
+            _details = sessionDetails?['details'] ?? [];
             _isLoading = false;
           });
         }
       } else {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         setState(() {
-          _debugError = 'Sessions fetched, but no match found. total sessions: ${sessions.length}';
           _isLoading = false;
         });
       }
-    } catch (e) {
-      setState(() {
-        _debugError = 'Error: $e';
-        _isLoading = false;
-      });
       debugPrint('Error fetching session: $e');
     }
   }
@@ -118,154 +134,668 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
     });
   }
 
-  void _scanQr() {
-    final qrController = TextEditingController();
-    final catatanController = TextEditingController();
-    String selectedKondisi = 'Baik - Berfungsi Normal';
-    final List<String> kondisiOptions = [
-      'Baik - Berfungsi Normal',
-      'Rusak - Perlu Perbaikan',
-      'Lagi di service - Sedang diperbaiki',
-      'Hilang - Tidak Ditemukan',
-      'Baik (Pernah diservice) - Normal bekas servis',
-    ];
+  String _formatDateTime(dynamic dateStr) {
+    if (dateStr == null || dateStr.toString().trim().isEmpty) return '-';
+    try {
+      final dt = DateTime.parse(dateStr.toString());
+      return DateFormat('dd/MM/yyyy HH:mm').format(dt);
+    } catch (_) {
+      return dateStr.toString();
+    }
+  }
+
+  String _getFileUrl(dynamic rawPath) {
+    if (rawPath == null) return '';
+    String p = rawPath.toString().trim().replaceAll(r'\', '/');
+    if (p.isEmpty || p == 'null') return '';
+    if (p.startsWith('http://') || p.startsWith('https://')) return p;
+
+    final baseDomain = ApiClient.baseUrl.replaceAll(RegExp(r'/api/?$'), '');
+    while (p.startsWith('/')) {
+      p = p.substring(1);
+    }
+    if (p.startsWith('public/')) {
+      p = p.substring(7);
+    }
+    if (p.startsWith('storage/')) {
+      return '$baseDomain/$p';
+    }
+    return '$baseDomain/storage/$p';
+  }
+
+  void _showImageZoom(String path, String title) {
+    final fullUrl = _getFileUrl(path);
+    if (fullUrl.isEmpty) return;
 
     showDialog(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              backgroundColor: Colors.white,
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Scan Kode QR Item / Alat', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                          InkWell(
-                            onTap: () => Navigator.pop(context),
-                            child: const Icon(Icons.close, color: AppColors.textMuted, size: 20),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Text('Kode QR *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: qrController,
-                        style: GoogleFonts.inter(fontSize: 14),
-                        decoration: InputDecoration(
-                          hintText: 'Arahkan scanner ke QR atau ketik manual',
-                          hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13),
-                          prefixIcon: const Icon(Icons.qr_code_scanner, color: AppColors.textMuted, size: 18),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.primary)),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text('Kondisi Item *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: AppColors.border),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: selectedKondisi,
-                            isExpanded: true,
-                            icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textMuted),
-                            style: GoogleFonts.inter(fontSize: 14, color: AppColors.textDark),
-                            items: kondisiOptions.map((k) {
-                              return DropdownMenuItem<String>(
-                                value: k,
-                                child: Text(k),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) setStateDialog(() => selectedKondisi = val);
-                            },
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text('Foto Aktual *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                      const SizedBox(height: 8),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), style: BorderStyle.solid),
-                          borderRadius: BorderRadius.circular(12),
-                          color: AppColors.surfaceBlue,
-                        ),
-                        child: Column(
-                          children: [
-                            const Icon(Icons.camera_alt_outlined, color: AppColors.primary, size: 32),
-                            const SizedBox(height: 8),
-                            Text('Klik untuk upload foto aktual barang', style: GoogleFonts.inter(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text('Catatan Tambahan (Opsional)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: catatanController,
-                        style: GoogleFonts.inter(fontSize: 14),
-                        maxLines: 3,
-                        decoration: InputDecoration(
-                          hintText: 'Catat detail kerusakan atau posisi barang...',
-                          hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.primary)),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: Text('Batal', style: GoogleFonts.inter(color: AppColors.textDark, fontWeight: FontWeight.w600)),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: () {
-                              if (qrController.text.trim().isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kode QR wajib diisi')));
-                                return;
-                              }
-                              // Mocking API call
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Berhasil merekam item ${qrController.text.trim()}')));
-                              _fetchSession(); // Reload list
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.textDark,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              elevation: 0,
-                            ),
-                            child: Text('Simpan Hasil Scan', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                          ),
-                        ],
-                      ),
-                    ],
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(14),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: SmartNetworkImage(
+                  url: fullUrl,
+                  token: _authToken,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Container(
+                    padding: const EdgeInsets.all(24),
+                    color: Colors.white,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.broken_image_rounded, color: Colors.grey, size: 48),
+                        const SizedBox(height: 12),
+                        Text('Gagal memuat foto', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                      ],
+                    ),
                   ),
                 ),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: InkWell(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.65),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close_rounded, color: Colors.white, size: 22),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openInputModal({
+    String? initialQr,
+    String? initialKondisi,
+    String? initialCatatan,
+    String? initialFotoUrl,
+    String? initialSisa,
+    dynamic detailItem,
+  }) {
+    final qrController = TextEditingController(text: initialQr ?? '');
+    final catatanController = TextEditingController(text: initialCatatan ?? '');
+    final sisaBhpController = TextEditingController(text: initialSisa ?? '');
+    final picker = ImagePicker();
+
+    String selectedKondisi = initialKondisi ?? 'Baik';
+    final List<String> kondisiOptions = [
+      'Baik',
+      'Rusak',
+      'Hilang',
+      'Lagi di service',
+      'Baik (Pernah diservice)',
+    ];
+
+    File? selectedFoto;
+    String? currentFotoUrl = initialFotoUrl;
+    Map<String, dynamic>? detectedItem = detailItem?['item_fisik'] ?? detailItem?['itemFisik'];
+    bool isSearchingQr = false;
+    bool isSubmitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setStateModal) {
+            Future<void> lookupQr(String kode) async {
+              final k = kode.trim();
+              if (k.isEmpty) return;
+
+              setStateModal(() {
+                isSearchingQr = true;
+                detectedItem = null;
+              });
+
+              try {
+                final item = await StokOpnameService.scanQr(k);
+                setStateModal(() {
+                  isSearchingQr = false;
+                  detectedItem = item;
+                });
+              } catch (_) {
+                setStateModal(() {
+                  isSearchingQr = false;
+                });
+              }
+            }
+
+            // Auto lookup initialQr on first load if detectedItem is still null
+            if (initialQr != null && initialQr.isNotEmpty && detectedItem == null && !isSearchingQr) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                lookupQr(initialQr);
+              });
+            }
+
+            Future<void> pickImage(ImageSource source) async {
+              try {
+                final picked = await picker.pickImage(source: source, imageQuality: 80);
+                if (picked != null) {
+                  setStateModal(() {
+                    selectedFoto = File(picked.path);
+                    currentFotoUrl = null;
+                  });
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Gagal mengambil foto: $e'), backgroundColor: Colors.red),
+                  );
+                }
+              }
+            }
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.9,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 12, bottom: 8),
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(3)),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                detailItem != null ? Icons.edit_note_rounded : Icons.qr_code_scanner_rounded,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              detailItem != null
+                                  ? 'Edit Checklist Opname'
+                                  : (_activeKategori == 'BHP' ? 'Input Stok BHP' : 'Scan & Input Item Opname'),
+                              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 1. KODE QR / CARI ITEM
+                          if (_activeKategori != 'BHP') ...[
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Kode QR / Aset *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B))),
+                                if (isSearchingQr)
+                                  const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: qrController,
+                                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+                                    onChanged: (val) {
+                                      if (val.length >= 4) {
+                                        lookupQr(val);
+                                      }
+                                    },
+                                    decoration: InputDecoration(
+                                      hintText: 'mis. MSN/SBY/0826/A/001',
+                                      hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
+                                      prefixIcon: const Icon(Icons.qr_code_rounded, color: AppColors.primary, size: 20),
+                                      filled: true,
+                                      fillColor: const Color(0xFFF8FAFC),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                InkWell(
+                                  onTap: () async {
+                                    final String? scanned = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => const QrScannerScreen()),
+                                    );
+                                    if (scanned != null && scanned.isNotEmpty) {
+                                      qrController.text = scanned;
+                                      lookupQr(scanned);
+                                    }
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 18),
+                                        const SizedBox(width: 6),
+                                        Text('Scan', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            // Info Deteksi Barang
+                            if (detectedItem != null) ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF0FDF4),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFFDCFCE7)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 18),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            detectedItem!['barang']?['nama_barang'] ?? 'Barang Terdaftar',
+                                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: const Color(0xFF15803D)),
+                                          ),
+                                          Text(
+                                            'Kategori: ${detectedItem!['barang']?['kategori']?['nama_kategori'] ?? '-'}',
+                                            style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF16A34A)),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 16),
+
+                            // 2. KONDISI ITEM FISIK
+                            Text('Kondisi Item Fisik *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B))),
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: selectedKondisi,
+                                  isExpanded: true,
+                                  icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary),
+                                  style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF1E293B), fontWeight: FontWeight.w600),
+                                  items: kondisiOptions.map((k) {
+                                    return DropdownMenuItem(value: k, child: Text(k));
+                                  }).toList(),
+                                  onChanged: (val) {
+                                    if (val != null) setStateModal(() => selectedKondisi = val);
+                                  },
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ] else ...[
+                            // Sisa Stok Akhir BHP
+                            Text('Sisa Stok Akhir (BHP) *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B))),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: sisaBhpController,
+                              keyboardType: TextInputType.number,
+                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
+                              decoration: InputDecoration(
+                                hintText: 'Masukkan jumlah sisa barang',
+                                hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
+                                prefixIcon: const Icon(Icons.pie_chart_outline_rounded, color: AppColors.primary, size: 20),
+                                filled: true,
+                                fillColor: const Color(0xFFF8FAFC),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+
+                          // 3. UPLOAD / AMBIL FOTO AKTUAL
+                          Text('Foto Aktual Barang *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B))),
+                          const SizedBox(height: 6),
+                          if (selectedFoto == null && (currentFotoUrl == null || currentFotoUrl!.isEmpty)) ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: () => pickImage(ImageSource.camera),
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFEFF6FF),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          const Icon(Icons.camera_alt_rounded, color: Color(0xFF1D4ED8), size: 26),
+                                          const SizedBox(height: 6),
+                                          Text('Buka Kamera', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: const Color(0xFF1D4ED8))),
+                                          Text('Ambil foto langsung', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF3B82F6))),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: () => pickImage(ImageSource.gallery),
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF8FAFC),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          const Icon(Icons.photo_library_rounded, color: Color(0xFF64748B), size: 26),
+                                          const SizedBox(height: 6),
+                                          Text('Pilih Galeri', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B))),
+                                          Text('Upload foto HP', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF94A3B8))),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ] else if (selectedFoto != null) ...[
+                            Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: Stack(
+                                children: [
+                                  Image.file(
+                                    selectedFoto!,
+                                    height: 160,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  ),
+                                  Positioned(
+                                    top: 8,
+                                    right: 8,
+                                    child: Row(
+                                      children: [
+                                        InkWell(
+                                          onTap: () => pickImage(ImageSource.camera),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), shape: BoxShape.circle),
+                                            child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 16),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        InkWell(
+                                          onTap: () => setStateModal(() => selectedFoto = null),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.8), shape: BoxShape.circle),
+                                            child: const Icon(Icons.close_rounded, color: Colors.white, size: 16),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ] else if (currentFotoUrl != null && currentFotoUrl!.isNotEmpty) ...[
+                            Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: Stack(
+                                children: [
+                                  SizedBox(
+                                    height: 160,
+                                    width: double.infinity,
+                                    child: SmartNetworkImage(
+                                      url: _getFileUrl(currentFotoUrl),
+                                      token: _authToken,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 8,
+                                    right: 8,
+                                    child: Row(
+                                      children: [
+                                        ElevatedButton.icon(
+                                          onPressed: () => pickImage(ImageSource.camera),
+                                          icon: const Icon(Icons.camera_alt_rounded, size: 14),
+                                          label: const Text('Ganti Foto'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppColors.primary,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                            textStyle: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 16),
+
+                          // 4. CATATAN TAMBAHAN
+                          Text('Catatan Tambahan (Opsional)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B))),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: catatanController,
+                            maxLines: 3,
+                            style: GoogleFonts.inter(fontSize: 13),
+                            decoration: InputDecoration(
+                              hintText: 'Tuliskan catatan kondisi atau posisi item...',
+                              hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
+                              filled: true,
+                              fillColor: const Color(0xFFF8FAFC),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
+                              contentPadding: const EdgeInsets.all(12),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: const Border(top: BorderSide(color: Color(0xFFF1F5F9))),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -3))],
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                if (_activeSession == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sesi opname belum aktif')));
+                                  return;
+                                }
+
+                                if (_activeKategori != 'BHP') {
+                                  if (qrController.text.trim().isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kode QR wajib diisi / discan')));
+                                    return;
+                                  }
+                                } else {
+                                  if (sisaBhpController.text.trim().isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sisa stok BHP wajib diisi')));
+                                    return;
+                                  }
+                                }
+
+                                if (selectedFoto == null && (currentFotoUrl == null || currentFotoUrl!.isEmpty)) {
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Foto aktual barang wajib diambil/diupload')));
+                                  return;
+                                }
+
+                                setStateModal(() => isSubmitting = true);
+
+                                try {
+                                  dio.MultipartFile? fotoMultipart;
+                                  if (selectedFoto != null) {
+                                    fotoMultipart = await dio.MultipartFile.fromFile(
+                                      selectedFoto!.path,
+                                      filename: 'opname_${DateTime.now().millisecondsSinceEpoch}.jpg',
+                                    );
+                                  }
+
+                                  if (_activeKategori != 'BHP') {
+                                    final itemFisikId = detectedItem?['id'] ?? detailItem?['item_fisik_id'] ?? detailItem?['itemFisik']?['id'];
+                                    final formData = dio.FormData.fromMap({
+                                      'stok_opname_id': _activeSession!['id'],
+                                      'item_fisik_id': itemFisikId ?? 1,
+                                      'kondisi': selectedKondisi.split(' - ')[0],
+                                      if (fotoMultipart != null) 'foto': fotoMultipart,
+                                      'keterangan': catatanController.text.trim(),
+                                    });
+
+                                    final res = await StokOpnameService.submitItem(formData);
+                                    if (context.mounted) {
+                                      Navigator.pop(context);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(res['message'] ?? 'Berhasil merekam item'),
+                                          backgroundColor: res['success'] == true ? const Color(0xFF16A34A) : Colors.red,
+                                        ),
+                                      );
+                                      _fetchSession();
+                                    }
+                                  } else {
+                                    final barangId = detailItem?['barang_id'] ?? detailItem?['barang']?['id'] ?? 1;
+                                    final formData = dio.FormData.fromMap({
+                                      'stok_opname_id': _activeSession!['id'],
+                                      'barang_id': barangId,
+                                      'sisa_akhir': double.tryParse(sisaBhpController.text.trim()) ?? 0,
+                                      if (fotoMultipart != null) 'foto': fotoMultipart,
+                                      'keterangan': catatanController.text.trim(),
+                                    });
+
+                                    final res = await StokOpnameService.submitConsumable(formData);
+                                    if (context.mounted) {
+                                      Navigator.pop(context);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(res['message'] ?? 'Berhasil merekam BHP'),
+                                          backgroundColor: res['success'] == true ? const Color(0xFF16A34A) : Colors.red,
+                                        ),
+                                      );
+                                      _fetchSession();
+                                    }
+                                  }
+                                } catch (e) {
+                                  setStateModal(() => isSubmitting = false);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Terjadi kesalahan: $e'), backgroundColor: Colors.red),
+                                    );
+                                  }
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
+                        child: isSubmitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : Text(
+                                detailItem != null ? 'Perbarui Checklist' : 'Simpan Checklist',
+                                style: GoogleFonts.inter(fontWeight: FontWeight.w800),
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             );
           },
@@ -274,464 +804,1590 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // Generate years for dropdown (2024 to current)
-    final currentYear = DateTime.now().year;
-    final years = List.generate(currentYear - 2024 + 1, (index) => (2024 + index).toString()).reversed.toList();
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        title: Text(
-          'Stok Opname',
-          style: GoogleFonts.inter(
-            color: AppColors.textDark,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+  void _confirmSelesaikanSesi() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text('Selesaikan Sesi Opname?', style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
+        content: Text(
+          'Apakah Anda yakin ingin menyelesaikan sesi opname ini? Setelah diselesaikan, data checklist akan terkunci.',
+          style: GoogleFonts.inter(color: const Color(0xFF475569)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Batal', style: GoogleFonts.inter(color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
           ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textDark, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Filters
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() {
+                if (_activeSession != null) {
+                  _activeSession!['status'] = 'Selesai';
+                }
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Sesi opname berhasil diselesaikan'),
+                  backgroundColor: Color(0xFF16A34A),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Bulan', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
-                          DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: _filterBulan,
-                              isDense: true,
-                              isExpanded: true,
-                              items: _bulanNames.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold)))).toList(),
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setState(() => _filterBulan = val);
-                                  _fetchSession();
-                                }
-                              },
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
-                    Container(height: 30, width: 1, color: AppColors.border, margin: const EdgeInsets.symmetric(horizontal: 12)),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Tahun', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
-                          DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: _filterTahun,
-                              isDense: true,
-                              isExpanded: true,
-                              items: years.map((y) => DropdownMenuItem(value: y, child: Text(y, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold)))).toList(),
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setState(() => _filterTahun = val);
-                                  _fetchSession();
-                                }
-                              },
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Period Tabs
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildPeriodeTab('tengah_bulan', 'Awal Bulan', '(Tgl 15)', Icons.event_available_rounded),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildPeriodeTab('akhir_bulan', 'Akhir Bulan', '(Tgl 30)', Icons.event_busy_rounded),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildPeriodeTab('inventaris', 'Sesuai Tanggal', '(Bebas)', Icons.edit_calendar_rounded),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 24),
-
-              // Content Area
-              if (_activePeriode.isEmpty)
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 40),
-                    child: Text('Pilih periode opname di atas.', style: GoogleFonts.inter(color: AppColors.textMuted)),
-                  ),
-                )
-              else if (_isLoading)
-                const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator()))
-              else
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.border),
-                    boxShadow: [AppColors.cardShadow],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Session Header
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[50],
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                          border: const Border(bottom: BorderSide(color: AppColors.border)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Sesi: ${_activePeriode == 'tengah_bulan' ? 'Awal Bulan' : _activePeriode == 'akhir_bulan' ? 'Akhir Bulan' : 'Sesuai Tanggal'}',
-                                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textDark),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Bulan ${_bulanNames[_filterBulan]} $_filterTahun',
-                                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
-                                ),
-                              ],
-                            ),
-                            if (_activeSession != null)
-                              Row(
-                                children: [
-                                  if (_activeSession!['status'] == 'Draft') ...[
-                                    ElevatedButton(
-                                      onPressed: () {
-                                        // Mock API call to complete session
-                                        showDialog(
-                                          context: context,
-                                          builder: (ctx) => AlertDialog(
-                                            title: Text('Selesaikan Sesi?', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                                            content: Text('Apakah Anda yakin ingin menyelesaikan sesi opname ini? Sesi yang selesai tidak bisa diubah lagi.', style: GoogleFonts.inter()),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.pop(ctx),
-                                                child: Text('Batal', style: GoogleFonts.inter(color: AppColors.textDark)),
-                                              ),
-                                              ElevatedButton(
-                                                onPressed: () {
-                                                  Navigator.pop(ctx);
-                                                  setState(() {
-                                                    _activeSession!['status'] = 'Selesai';
-                                                  });
-                                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sesi berhasil diselesaikan')));
-                                                },
-                                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.textDark),
-                                                child: const Text('Selesaikan', style: TextStyle(color: Colors.white)),
-                                              )
-                                            ],
-                                          ),
-                                        );
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.textDark,
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                        minimumSize: Size.zero,
-                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                                      ),
-                                      child: Text('Selesaikan Sesi', style: GoogleFonts.inter(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                                    ),
-                                    const SizedBox(width: 8),
-                                  ],
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: _activeSession!['status'] == 'Selesai' ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      _activeSession!['status'] ?? 'Draft',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: _activeSession!['status'] == 'Selesai' ? Colors.green : Colors.orange,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                          ],
-                        ),
-                      ),
-                      
-                      // Kategori Sub-tabs (Scrollable horizontally for mobile)
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            _buildKategoriTab('MSN', 'Mesin (MSN)'),
-                            _buildKategoriTab('CLA', 'Cleaning (CLA)'),
-                            _buildKategoriTab('BHP', 'Habis Pakai (BHP)'),
-                            _buildKategoriTab('INV', 'Inventaris (INV)'),
-                          ],
-                        ),
-                      ),
-                      const Divider(height: 1, color: AppColors.border),
-
-                      // List Items
-                      _buildItemsList(),
-                      
-                      // Scan Button Footer
-                      if (_activeSession != null && _activeSession!['status'] == 'Draft')
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: ElevatedButton.icon(
-                            onPressed: _scanQr,
-                            icon: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 20),
-                            label: Text(
-                              _activeKategori == 'BHP' ? 'Input Kuantitas BHP' : 'Scan Kode QR Item',
-                              style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              elevation: 0,
-                            ),
-                          ),
-                        )
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPeriodeTab(String value, String title, String subtitle, IconData icon) {
-    final isActive = _activePeriode == value;
-    return InkWell(
-      onTap: () => _setPeriode(value),
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-        decoration: BoxDecoration(
-          color: isActive ? AppColors.primary : Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isActive ? AppColors.primary : AppColors.border,
-            width: 1,
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isActive ? Colors.white : AppColors.textMuted,
-              size: 20,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF16A34A),
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            const SizedBox(height: 6),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                fontSize: 10,
-                color: isActive ? Colors.white : AppColors.textDark,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                fontSize: 9,
-                color: isActive ? Colors.white.withValues(alpha: 0.8) : AppColors.textMuted,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildKategoriTab(String code, String label) {
-    final isActive = _activeKategori == code;
-    return InkWell(
-      onTap: () => _setKategori(code),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-        decoration: BoxDecoration(
-          color: isActive ? AppColors.primary.withValues(alpha: 0.05) : Colors.transparent,
-          border: Border(bottom: BorderSide(color: isActive ? AppColors.primary : Colors.transparent, width: 2)),
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            color: isActive ? AppColors.primary : AppColors.textMuted,
+            child: Text('Selesaikan', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildItemsList() {
-    List<dynamic> filtered = _details.where((d) {
-      final itemFisik = d['item_fisik'] ?? d['itemFisik'];
-      final barang = d['barang'] ?? itemFisik?['barang'];
-      final kategori = barang?['kategori']?['nama_kategori']?.toString().toUpperCase() ?? '';
-
-      if (_activeKategori == 'MSN') {
-        final kode = itemFisik?['kode_qr'] ?? '';
-        return kode.contains('MSN') || kategori.contains('MESIN');
-      } else if (_activeKategori == 'CLA') {
-        final kode = itemFisik?['kode_qr'] ?? '';
-        return kode.contains('CLA') || kategori.contains('CLEANING');
-      } else if (_activeKategori == 'BHP') {
-        return itemFisik == null && d['pembelian_bhp_id'] != null; 
-      } else if (_activeKategori == 'INV') {
-        final kode = itemFisik?['kode_qr'] ?? '';
-        return kode.contains('INV') || kategori.contains('INVENTARIS');
-      }
-      return false;
-    }).toList();
-    
-    if (filtered.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          children: [
-            Icon(Icons.inventory_2_outlined, size: 48, color: AppColors.border),
-            const SizedBox(height: 16),
-            Text('Belum ada data checklist', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13)),
-            const SizedBox(height: 8),
-            Text('Debug: Session= ${_activeSession != null ? 'Found' : 'Null'}, Total API Details= ${_details.length}, Filtered= 0', style: TextStyle(color: Colors.red, fontSize: 10)),
-            if (_debugError.isNotEmpty)
-              Text('Error: $_debugError', style: TextStyle(color: Colors.red, fontSize: 10)),
-          ],
-        ),
-      );
-    }
-
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: filtered.length,
-      separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
-      itemBuilder: (context, index) {
-        final detail = filtered[index];
-        if (_activeKategori == 'BHP') {
-          return _buildBhpItem(detail);
-        }
-        return _buildNormalItem(detail);
-      },
-    );
-  }
-  
-  Widget _buildBhpItem(dynamic detail) {
-    final isSelesai = _activeSession != null && _activeSession!['status'] == 'Selesai';
-    
-    // In case pembelianBhp is loaded in the future
-    final pembelianBhp = detail['pembelian_bhp'] ?? detail['pembelianBhp'];
-    final namaBhp = pembelianBhp != null 
-        ? (pembelianBhp['nama_barang'] ?? 'Unknown BHP') 
-        : 'Barang BHP (ID: ${detail["pembelian_bhp_id"]})';
-
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(namaBhp, style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14)),
-              if (isSelesai)
-                Text('Terkunci', style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Sisa Akhir: ${detail['sisa_akhir'] ?? '-'}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark, fontWeight: FontWeight.bold)),
-              if (detail['foto_path'] != null)
-                const Icon(Icons.image, size: 16, color: AppColors.primary),
-            ],
-          )
         ],
       ),
     );
   }
 
-  Widget _buildNormalItem(dynamic detail) {
-    final itemFisik = detail['item_fisik'] ?? {};
-    final barang = itemFisik['barang'] ?? {};
-    final isSelesai = _activeSession != null && _activeSession!['status'] == 'Selesai';
-    
-    return Padding(
+  // --- STATS CALCULATIONS ---
+  int get _countBaik {
+    int count = 0;
+    for (final d in _details) {
+      final kondisi = d['kondisi']?.toString().toLowerCase() ?? '';
+      if (kondisi.contains('baik')) count++;
+    }
+    return count;
+  }
+
+  int get _countRusak {
+    int count = 0;
+    for (final d in _details) {
+      final kondisi = d['kondisi']?.toString().toLowerCase() ?? '';
+      if (kondisi.contains('rusak') || kondisi.contains('hilang') || kondisi.contains('service')) count++;
+    }
+    return count;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentYear = DateTime.now().year;
+    final years = List.generate(currentYear - 2024 + 1, (index) => (2024 + index).toString()).reversed.toList();
+    final bool isSelesai = _activeSession != null && _activeSession!['status'] == 'Selesai';
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: Column(
+        children: [
+          // Enhanced Gradient Header
+          GradientHeader(
+            padding: const EdgeInsets.fromLTRB(20, 52, 20, 18),
+            child: Row(
+              children: [
+                InkWell(
+                  onTap: () => Navigator.pop(context),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                    ),
+                    child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Stok Opname Cabang',
+                        style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Pengecekan fisik aset & stok cabang',
+                        style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.85)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Scrollable Body
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _fetchSession,
+              color: AppColors.primary,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Filter Bulan & Tahun
+                    _buildMonthYearSelector(years),
+                    const SizedBox(height: 14),
+
+                    // Periode Tabs (Awal Bulan, Akhir Bulan, Bebas)
+                    _buildPeriodeSelector(),
+                    const SizedBox(height: 14),
+
+                    // Active Session Summary & Stats Banner
+                    if (_activeSession != null) ...[
+                      _buildSessionSummaryCard(isSelesai),
+                      const SizedBox(height: 14),
+                    ],
+
+                    // Level 2 Category Tabs (Mesin, Cleaning, BHP, Inventaris)
+                    _buildCategoryPills(),
+                    const SizedBox(height: 12),
+
+                    // Items List Section
+                    if (_isLoading)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(40.0),
+                          child: CircularProgressIndicator(color: AppColors.primary),
+                        ),
+                      )
+                    else
+                      _buildItemsList(isSelesai),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: (!isSelesai && _activeSession != null)
+          ? FloatingActionButton.extended(
+              onPressed: () async {
+                if (_activeKategori != 'BHP') {
+                  final String? scannedCode = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const QrScannerScreen()),
+                  );
+                  if (scannedCode != null && scannedCode.isNotEmpty) {
+                    _openInputModal(initialQr: scannedCode);
+                  } else {
+                    _openInputModal();
+                  }
+                } else {
+                  _openInputModal();
+                }
+              },
+              backgroundColor: AppColors.primary,
+              elevation: 4,
+              icon: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 22),
+              label: Text(
+                _activeKategori == 'BHP' ? 'Input Stok BHP' : 'Scan QR Item',
+                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
+              ),
+            )
+          : null,
+    );
+  }
+
+  // --- MONTH & YEAR SELECTOR ---
+  Widget _buildMonthYearSelector(List<String> years) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 3)),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Bulan
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('BULAN OPNAME', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 0.5)),
+                const SizedBox(height: 2),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _filterBulan,
+                    isDense: true,
+                    isExpanded: true,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary, size: 18),
+                    items: _bulanNames.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B))))).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() => _filterBulan = val);
+                        _fetchSession();
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(height: 32, width: 1, color: const Color(0xFFE2E8F0), margin: const EdgeInsets.symmetric(horizontal: 12)),
+          // Tahun
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('TAHUN', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 0.5)),
+                const SizedBox(height: 2),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _filterTahun,
+                    isDense: true,
+                    isExpanded: true,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary, size: 18),
+                    items: years.map((y) => DropdownMenuItem(value: y, child: Text(y, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B))))).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() => _filterTahun = val);
+                        _fetchSession();
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- PERIODE SELECTOR CARDS (AWAL BULAN & AKHIR BULAN) ---
+  Widget _buildPeriodeSelector() {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildPeriodeCard(
+            value: 'tengah_bulan',
+            title: 'Opname Awal Bulan',
+            subtitle: 'Tgl 15',
+            icon: Icons.event_available_rounded,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _buildPeriodeCard(
+            value: 'akhir_bulan',
+            title: 'Opname Akhir Bulan',
+            subtitle: 'Tgl 30',
+            icon: Icons.event_busy_rounded,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPeriodeCard({required String value, required String title, required String subtitle, required IconData icon}) {
+    final bool isActive = _activePeriode == value;
+
+    return InkWell(
+      onTap: () => _setPeriode(value),
+      borderRadius: BorderRadius.circular(14),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.primary : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isActive ? AppColors.primary : const Color(0xFFE2E8F0),
+            width: isActive ? 1.5 : 1,
+          ),
+          boxShadow: isActive
+              ? [
+                  BoxShadow(color: AppColors.primary.withValues(alpha: 0.25), blurRadius: 8, offset: const Offset(0, 4)),
+                ]
+              : [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
+                ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: isActive ? Colors.white : const Color(0xFF64748B), size: 20),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
+                    color: isActive ? Colors.white : const Color(0xFF1E293B),
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: isActive ? Colors.white.withValues(alpha: 0.85) : const Color(0xFF94A3B8),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- SESSION SUMMARY & STATS CARD ---
+  Widget _buildSessionSummaryCard(bool isSelesai) {
+    final statusText = _activeSession?['status'] ?? 'Draft';
+    final periodeName = _activePeriode == 'tengah_bulan' ? 'Awal Bulan' : 'Akhir Bulan';
+
+    return Container(
       padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header Row
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(itemFisik['kode_qr'] ?? '-', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Sesi: $periodeName',
+                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Checklist ${_bulanNames[_filterBulan]} $_filterTahun',
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF64748B)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(4)),
-                    child: Text(detail['kondisi'] ?? '-', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold)),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isSelesai ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      statusText,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: isSelesai ? const Color(0xFF15803D) : const Color(0xFFB45309),
+                      ),
+                    ),
                   ),
-                  if (isSelesai) ...[
-                    const SizedBox(width: 8),
-                    Text('Terkunci', style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                  if (!isSelesai) ...[
+                    const SizedBox(width: 6),
+                    InkWell(
+                      onTap: _confirmSelesaikanSesi,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Selesaikan',
+                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+                        ),
+                      ),
+                    ),
                   ],
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(barang['nama_barang'] ?? 'Unknown Item', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14)),
-          if (detail['keterangan'] != null && detail['keterangan'].toString().isNotEmpty) ...[
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          const SizedBox(height: 12),
+
+          // Mini Stats (Total Item, Baik, Rusak/Hilang)
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.inventory_2_rounded, size: 14, color: AppColors.primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Total: ${_details.length}',
+                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFDCFCE7)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle_rounded, size: 14, color: Color(0xFF16A34A)),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Baik: $_countBaik',
+                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF15803D)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFFEE2E2)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline_rounded, size: 14, color: Color(0xFFDC2626)),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Rusak: $_countRusak',
+                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFFB91C1C)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- CATEGORY PILLS (2x2 GRID - NO HORIZONTAL SCROLL) ---
+  Widget _buildCategoryPills() {
+    final categories = [
+      {'code': 'MSN', 'label': 'Mesin Alat', 'sub': 'MSN', 'icon': Icons.precision_manufacturing_rounded},
+      {'code': 'CLA', 'label': 'Cleaning Alat', 'sub': 'CLA', 'icon': Icons.cleaning_services_rounded},
+      {'code': 'BHP', 'label': 'Habis Pakai', 'sub': 'BHP', 'icon': Icons.sanitizer_rounded},
+      {'code': 'INV', 'label': 'Inventaris', 'sub': 'INV', 'icon': Icons.chair_rounded},
+    ];
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(child: _buildCategoryItem(categories[0])),
+            const SizedBox(width: 8),
+            Expanded(child: _buildCategoryItem(categories[1])),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(child: _buildCategoryItem(categories[2])),
+            const SizedBox(width: 8),
+            Expanded(child: _buildCategoryItem(categories[3])),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryItem(Map<String, dynamic> cat) {
+    final isSelected = _activeKategori == cat['code'];
+    final IconData icon = cat['icon'] as IconData;
+
+    return InkWell(
+      onTap: () => _setKategori(cat['code'] as String),
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.5 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.2),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.white.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                size: 16,
+                color: isSelected ? Colors.white : AppColors.primary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    cat['label'] as String,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
+                      color: isSelected ? Colors.white : const Color(0xFF1E293B),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    cat['sub'] as String,
+                    style: GoogleFonts.inter(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected ? Colors.white.withValues(alpha: 0.8) : const Color(0xFF94A3B8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- ITEMS LIST ---
+  Widget _buildItemsList(bool isSelesai) {
+    List<dynamic> filtered = _details.where((d) {
+      final itemFisik = d['item_fisik'] ?? d['itemFisik'];
+      final barang = d['barang'] ?? itemFisik?['barang'];
+      final kategori = barang?['kategori']?['nama_kategori']?.toString().toUpperCase() ?? '';
+      final kode = itemFisik?['kode_qr']?.toString().toUpperCase() ?? '';
+
+      if (_activeKategori == 'MSN') {
+        return kode.contains('MSN') || kategori.contains('MESIN');
+      } else if (_activeKategori == 'CLA') {
+        return kode.contains('CLA') || kategori.contains('CLEANING');
+      } else if (_activeKategori == 'BHP') {
+        return itemFisik == null && d['pembelian_bhp_id'] != null;
+      } else if (_activeKategori == 'INV') {
+        return kode.contains('INV') || kategori.contains('INVENTARIS');
+      }
+      return false;
+    }).toList();
+
+    if (filtered.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(36),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.inventory_2_outlined, size: 36, color: AppColors.primary),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Belum Ada Item Checklist',
+              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
+            ),
             const SizedBox(height: 4),
-            Text(detail['keterangan'], style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
-          ]
+            Text(
+              'Belum ada data checklist untuk kategori ini pada periode terpilih.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: filtered.map((detail) {
+        if (_activeKategori == 'BHP') {
+          return _buildBhpCard(detail, isSelesai);
+        }
+        return _buildNormalItemCard(detail, isSelesai);
+      }).toList(),
+    );
+  }
+
+  // --- DETAIL MODAL SHEET ---
+  void _showDetailModal(dynamic detail, bool isSelesai, {bool isBhp = false}) {
+    final itemFisik = detail['item_fisik'] ?? detail['itemFisik'] ?? {};
+    final barang = itemFisik['barang'] ?? detail['barang'] ?? {};
+    final pembelianBhp = detail['pembelian_bhp'] ?? detail['pembelianBhp'];
+
+    final String namaBarang = isBhp
+        ? (pembelianBhp != null ? (pembelianBhp['nama_barang'] ?? 'BHP Item') : 'Barang BHP')
+        : (barang['nama_barang'] ?? 'Alat / Item');
+
+    final String kodeQr = isBhp ? (pembelianBhp?['kode_pembelian'] ?? '-') : (itemFisik['kode_qr'] ?? '-');
+    final String kondisi = detail['kondisi']?.toString() ?? (isBhp ? 'BHP' : 'Baik');
+    final String sisaAkhir = detail['sisa_akhir']?.toString() ?? '-';
+    final String? fotoPath = detail['foto_path'];
+    final String? fotoAwal = isBhp ? null : (itemFisik['foto_path'] ?? itemFisik['foto_awal'] ?? itemFisik['foto'] ?? barang['foto'] ?? barang['foto_path']);
+    final String? keterangan = detail['keterangan'];
+    final String waktu = _formatDateTime(detail['created_at'] ?? detail['updated_at']);
+
+    Color kondisiColor = const Color(0xFF16A34A);
+    Color kondisiBg = const Color(0xFFDCFCE7);
+
+    if (kondisi.toLowerCase().contains('rusak') || kondisi.toLowerCase().contains('hilang')) {
+      kondisiColor = const Color(0xFFDC2626);
+      kondisiBg = const Color(0xFFFEE2E2);
+    } else if (kondisi.toLowerCase().contains('service')) {
+      kondisiColor = const Color(0xFFD97706);
+      kondisiBg = const Color(0xFFFEF3C7);
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Handle bar
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 44,
+                    height: 5,
+                    decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(3)),
+                  ),
+                ),
+
+                // Modal Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          isBhp ? Icons.sanitizer_rounded : Icons.inventory_2_rounded,
+                          color: AppColors.primary,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              namaBarang,
+                              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              isBhp ? 'Barang Habis Pakai' : 'Pengecekan Fisik Alat & Aset',
+                              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+
+                // Modal Body Information Grid
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Grid 2 Columns
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _buildDetailTile(
+                              label: isBhp ? 'KODE PEMBELIAN' : 'KODE QR / ASET',
+                              value: kodeQr,
+                              icon: Icons.qr_code_rounded,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: isBhp
+                                ? _buildDetailTile(
+                                    label: 'SISA STOK AKHIR',
+                                    value: sisaAkhir,
+                                    icon: Icons.pie_chart_outline_rounded,
+                                    valueColor: const Color(0xFF1D4ED8),
+                                  )
+                                : Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF8FAFC),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('KONDISI ITEM', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 0.5)),
+                                        const SizedBox(height: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: kondisiBg,
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            kondisi,
+                                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: kondisiColor),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Waktu Checklist & Status Sesi
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildDetailTile(
+                              label: 'WAKTU CHECKLIST',
+                              value: waktu,
+                              icon: Icons.access_time_rounded,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildDetailTile(
+                              label: 'STATUS SESI',
+                              value: isSelesai ? 'Terkunci (Selesai)' : 'Draft (Bisa diedit)',
+                              icon: isSelesai ? Icons.lock_rounded : Icons.edit_note_rounded,
+                              valueColor: isSelesai ? const Color(0xFF15803D) : const Color(0xFFD97706),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Catatan
+                      if (keterangan != null && keterangan.toString().trim().isNotEmpty && keterangan != '-') ...[
+                        const SizedBox(height: 14),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('CATATAN KETERANGAN', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 0.5)),
+                              const SizedBox(height: 4),
+                              Text(
+                                keterangan.toString(),
+                                style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1E293B), fontStyle: FontStyle.italic),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // Foto Previews Section with ACTUAL SmartNetworkImage
+                      if ((fotoAwal != null && fotoAwal.isNotEmpty) || (fotoPath != null && fotoPath.isNotEmpty)) ...[
+                        const SizedBox(height: 18),
+                        Text('FOTO BUKTI / AKTUAL', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B), letterSpacing: 0.5)),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            if (fotoAwal != null && fotoAwal.isNotEmpty)
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => _showImageZoom(fotoAwal, 'Foto Awal $namaBarang'),
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF8FAFC),
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        SizedBox(
+                                          height: 130,
+                                          child: SmartNetworkImage(
+                                            url: _getFileUrl(fotoAwal),
+                                            token: _authToken,
+                                            fit: BoxFit.cover,
+                                            placeholder: const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)),
+                                            errorBuilder: (_, __, ___) => Container(
+                                              color: const Color(0xFFF1F5F9),
+                                              child: const Center(child: Icon(Icons.image_outlined, color: Color(0xFF94A3B8), size: 32)),
+                                            ),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text('Foto Master Awal', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B))),
+                                              const Icon(Icons.fullscreen_rounded, size: 16, color: Color(0xFF64748B)),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            if (fotoAwal != null && fotoAwal.isNotEmpty && fotoPath != null && fotoPath.isNotEmpty)
+                              const SizedBox(width: 10),
+                            if (fotoPath != null && fotoPath.isNotEmpty)
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => _showImageZoom(fotoPath, 'Foto Aktual $namaBarang'),
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEFF6FF),
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        SizedBox(
+                                          height: 130,
+                                          child: SmartNetworkImage(
+                                            url: _getFileUrl(fotoPath),
+                                            token: _authToken,
+                                            fit: BoxFit.cover,
+                                            placeholder: const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)),
+                                            errorBuilder: (_, __, ___) => Container(
+                                              color: const Color(0xFFEFF6FF),
+                                              child: const Center(child: Icon(Icons.broken_image_rounded, color: Color(0xFF93C5FD), size: 32)),
+                                            ),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text('Foto Aktual Opname', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF1D4ED8))),
+                                              const Icon(Icons.fullscreen_rounded, size: 16, color: Color(0xFF1D4ED8)),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+
+                      const SizedBox(height: 20),
+                      if (!isSelesai) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 1,
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: Color(0xFFE2E8F0)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(vertical: 13),
+                                ),
+                                child: Text('Tutup', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: const Color(0xFF64748B))),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              flex: 2,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.pop(ctx);
+                                  _openInputModal(
+                                    initialQr: kodeQr != '-' ? kodeQr : null,
+                                    initialKondisi: kondisi,
+                                    initialCatatan: (keterangan != null && keterangan != '-') ? keterangan : '',
+                                    initialFotoUrl: fotoPath,
+                                    initialSisa: isBhp ? sisaAkhir : null,
+                                    detailItem: detail,
+                                  );
+                                },
+                                icon: const Icon(Icons.edit_note_rounded, color: Colors.white, size: 20),
+                                label: Text('Edit Checklist', style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: Colors.white)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(vertical: 13),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ] else ...[
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Color(0xFFE2E8F0)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: Text('Tutup', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: const Color(0xFF64748B))),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailTile({required String label, required String value, required IconData icon, Color? valueColor}) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 12, color: const Color(0xFF64748B)),
+              const SizedBox(width: 4),
+              Text(label, style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 0.5)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: valueColor ?? const Color(0xFF1E293B)),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- ITEM CARD (MESIN / CLA / INV) - COMPACT & USER FRIENDLY ---
+  Widget _buildNormalItemCard(dynamic detail, bool isSelesai) {
+    final itemFisik = detail['item_fisik'] ?? detail['itemFisik'] ?? {};
+    final barang = itemFisik['barang'] ?? detail['barang'] ?? {};
+    final kodeQr = itemFisik['kode_qr'] ?? '-';
+    final namaBarang = barang['nama_barang'] ?? 'Alat / Item';
+    final kondisi = detail['kondisi']?.toString() ?? 'Baik';
+    final fotoPath = detail['foto_path'];
+
+    Color kondisiColor = const Color(0xFF16A34A);
+    Color kondisiBg = const Color(0xFFDCFCE7);
+
+    if (kondisi.toLowerCase().contains('rusak') || kondisi.toLowerCase().contains('hilang')) {
+      kondisiColor = const Color(0xFFDC2626);
+      kondisiBg = const Color(0xFFFEE2E2);
+    } else if (kondisi.toLowerCase().contains('service')) {
+      kondisiColor = const Color(0xFFD97706);
+      kondisiBg = const Color(0xFFFEF3C7);
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: InkWell(
+        onTap: () => _showDetailModal(detail, isSelesai),
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              // Icon Box or Photo Thumbnail
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: fotoPath != null && fotoPath.toString().isNotEmpty
+                    ? SizedBox(
+                        width: 42,
+                        height: 42,
+                        child: SmartNetworkImage(
+                          url: _getFileUrl(fotoPath),
+                          token: _authToken,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            child: const Icon(Icons.precision_manufacturing_rounded, color: AppColors.primary, size: 20),
+                          ),
+                        ),
+                      )
+                    : Container(
+                        width: 42,
+                        height: 42,
+                        color: AppColors.primary.withValues(alpha: 0.08),
+                        child: const Icon(Icons.precision_manufacturing_rounded, color: AppColors.primary, size: 20),
+                      ),
+              ),
+              const SizedBox(width: 12),
+
+              // Main Info (Nama Barang + QR Code)
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      namaBarang,
+                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            kodeQr,
+                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF1D4ED8)),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (fotoPath != null && fotoPath.toString().isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          const Icon(Icons.camera_alt_rounded, size: 12, color: Color(0xFF3B82F6)),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Kondisi Badge & Arrow
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: kondisiBg,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      kondisi,
+                      style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: kondisiColor),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Detail', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
+                      const SizedBox(width: 2),
+                      const Icon(Icons.chevron_right_rounded, size: 14, color: Color(0xFF64748B)),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- ITEM CARD (BHP) - COMPACT & USER FRIENDLY ---
+  Widget _buildBhpCard(dynamic detail, bool isSelesai) {
+    final pembelianBhp = detail['pembelian_bhp'] ?? detail['pembelianBhp'];
+    final namaBhp = pembelianBhp != null ? (pembelianBhp['nama_barang'] ?? 'BHP Item') : 'Barang BHP';
+    final sisa = detail['sisa_akhir'] ?? '-';
+    final fotoPath = detail['foto_path'];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: InkWell(
+        onTap: () => _showDetailModal(detail, isSelesai, isBhp: true),
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              // Icon Box or Photo Thumbnail
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: fotoPath != null && fotoPath.toString().isNotEmpty
+                    ? SizedBox(
+                        width: 42,
+                        height: 42,
+                        child: SmartNetworkImage(
+                          url: _getFileUrl(fotoPath),
+                          token: _authToken,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                            child: const Icon(Icons.sanitizer_rounded, color: Color(0xFF10B981), size: 20),
+                          ),
+                        ),
+                      )
+                    : Container(
+                        width: 42,
+                        height: 42,
+                        color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                        child: const Icon(Icons.sanitizer_rounded, color: Color(0xFF10B981), size: 20),
+                      ),
+              ),
+              const SizedBox(width: 12),
+
+              // Main Info (Nama BHP + Sisa)
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      namaBhp,
+                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text(
+                          'Sisa: $sisa',
+                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF1D4ED8)),
+                        ),
+                        if (fotoPath != null && fotoPath.toString().isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          const Icon(Icons.camera_alt_rounded, size: 12, color: Color(0xFF3B82F6)),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Detail button
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Detail', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
+                  const SizedBox(width: 2),
+                  const Icon(Icons.chevron_right_rounded, size: 14, color: Color(0xFF64748B)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------
+// SMART NETWORK IMAGE WITH AUTO HTTP/HTTPS FALLBACK
+// ---------------------------------------------------------
+class SmartNetworkImage extends StatefulWidget {
+  final String url;
+  final BoxFit fit;
+  final String? token;
+  final Widget? placeholder;
+  final Widget Function(BuildContext, Object, StackTrace?)? errorBuilder;
+
+  const SmartNetworkImage({
+    super.key,
+    required this.url,
+    this.fit = BoxFit.cover,
+    this.token,
+    this.placeholder,
+    this.errorBuilder,
+  });
+
+  @override
+  State<SmartNetworkImage> createState() => _SmartNetworkImageState();
+}
+
+class _SmartNetworkImageState extends State<SmartNetworkImage> {
+  late String _activeUrl;
+  bool _triedFallback = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeUrl = widget.url;
+  }
+
+  @override
+  void didUpdateWidget(covariant SmartNetworkImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) {
+      _activeUrl = widget.url;
+      _triedFallback = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_activeUrl.isEmpty) {
+      return widget.errorBuilder?.call(context, 'Empty URL', null) ??
+          const Center(child: Icon(Icons.image_not_supported_rounded, color: Color(0xFF94A3B8), size: 20));
+    }
+
+    final headers = widget.token != null && widget.token!.isNotEmpty
+        ? {
+            'Authorization': 'Bearer ${widget.token}',
+            'Accept': 'image/*,*/*',
+          }
+        : const {'Accept': 'image/*,*/*'};
+
+    return Image.network(
+      _activeUrl,
+      fit: widget.fit,
+      headers: headers,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return widget.placeholder ??
+            Center(
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.primary,
+                  value: loadingProgress.expectedTotalBytes != null
+                      ? loadingProgress.cumulativeBytesLoaded /
+                          loadingProgress.expectedTotalBytes!
+                      : null,
+                ),
+              ),
+            );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        debugPrint('Image load error on $_activeUrl: $error');
+        if (!_triedFallback) {
+          _triedFallback = true;
+          if (_activeUrl.startsWith('http://')) {
+            final fallback = _activeUrl.replaceFirst('http://', 'https://');
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) setState(() => _activeUrl = fallback);
+            });
+            return const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary));
+          } else if (_activeUrl.startsWith('https://')) {
+            final fallback = _activeUrl.replaceFirst('https://', 'http://');
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) setState(() => _activeUrl = fallback);
+            });
+            return const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary));
+          }
+        }
+        return widget.errorBuilder?.call(context, error, stackTrace) ??
+            const Center(child: Icon(Icons.broken_image_rounded, color: Color(0xFF94A3B8), size: 20));
+      },
+    );
+  }
+}
+
+// --- LIVE CAMERA QR SCANNER SCREEN ---
+class QrScannerScreen extends StatefulWidget {
+  const QrScannerScreen({super.key});
+
+  @override
+  State<QrScannerScreen> createState() => _QrScannerScreenState();
+}
+
+class _QrScannerScreenState extends State<QrScannerScreen> {
+  final MobileScannerController _scannerController = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+    facing: CameraFacing.back,
+    torchEnabled: false,
+  );
+  bool _hasScanned = false;
+
+  @override
+  void dispose() {
+    _scannerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          MobileScanner(
+            controller: _scannerController,
+            errorBuilder: (context, error, child) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.camera_alt_outlined, color: Colors.amber, size: 48),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Kamera Perlu Izin / Restart Aplikasi',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Karena paket scanner baru ditambahkan, silakan restart (Re-run) aplikasi Anda agar library native kamera terpasang sempurna.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(color: Colors.white70, fontSize: 12),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: const Text('Kembali & Input Manual'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+            onDetect: (capture) {
+              if (_hasScanned) return;
+              final List<Barcode> barcodes = capture.barcodes;
+              for (final barcode in barcodes) {
+                final String? rawValue = barcode.rawValue;
+                if (rawValue != null && rawValue.trim().isNotEmpty) {
+                  _hasScanned = true;
+                  Navigator.pop(context, rawValue.trim());
+                  break;
+                }
+              }
+            },
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                        ),
+                      ),
+                      Text(
+                        'Pindai QR Code Item',
+                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          onPressed: () => _scannerController.toggleTorch(),
+                          icon: const Icon(Icons.flash_on_rounded, color: Colors.white, size: 20),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                // Viewfinder Target Frame
+                Center(
+                  child: Container(
+                    width: 260,
+                    height: 260,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.primary, width: 3),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(21),
+                              color: Colors.white.withValues(alpha: 0.05),
+                            ),
+                          ),
+                        ),
+                        Center(
+                          child: Container(
+                            width: 230,
+                            height: 2,
+                            color: AppColors.primary.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Arahkan kamera ke kode QR barang',
+                        style: GoogleFonts.inter(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  child: TextButton.icon(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.keyboard_rounded, color: Colors.white70),
+                    label: Text(
+                      'Input Manual Saja',
+                      style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

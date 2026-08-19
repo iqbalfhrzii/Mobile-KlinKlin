@@ -54,7 +54,7 @@ class StokOpnameService {
 
   static Future<Map<String, dynamic>?> scanQr(String kodeQr) async {
     try {
-      final response = await _dio.post('/stok-opname/scan-qr', data: {'kode_qr': kodeQr});
+      final response = await _dio.post('/stok-opname/scan', data: {'kode_qr': kodeQr});
       if (response.statusCode == 200) {
         final resData = response.data;
         if (resData['success'] == true) {
@@ -67,16 +67,15 @@ class StokOpnameService {
     }
   }
 
-  static Future<bool> submitItem(dynamic data) async {
+  static Future<Map<String, dynamic>> submitItem(dynamic data) async {
     try {
-      // Assuming data is FormData for image upload
-      final response = await _dio.post('/stok-opname/submit-item', data: data);
+      final response = await _dio.post('/stok-opname/item', data: data);
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return response.data['success'] == true;
+        return {'success': response.data['success'] == true, 'message': response.data['message'] ?? 'Berhasil'};
       }
-      return false;
+      return {'success': false, 'message': response.data['message'] ?? 'Gagal menyimpan item'};
     } catch (e) {
-      return false;
+      return {'success': false, 'message': 'Terjadi kesalahan: $e'};
     }
   }
 
@@ -95,15 +94,15 @@ class StokOpnameService {
     }
   }
 
-  static Future<bool> submitConsumable(dynamic data) async {
+  static Future<Map<String, dynamic>> submitConsumable(dynamic data) async {
     try {
-      final response = await _dio.post('/stok-opname/submit-consumable', data: data);
+      final response = await _dio.post('/stok-opname/consumable', data: data);
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return response.data['success'] == true;
+        return {'success': response.data['success'] == true, 'message': response.data['message'] ?? 'Berhasil'};
       }
-      return false;
+      return {'success': false, 'message': response.data['message'] ?? 'Gagal menyimpan BHP'};
     } catch (e) {
-      return false;
+      return {'success': false, 'message': 'Terjadi kesalahan: $e'};
     }
   }
 }

@@ -49,7 +49,7 @@ class _OperasionalArsipPenawaranScreenState extends State<OperasionalArsipPenawa
   Future<void> _fetchCabang() async {
     try {
       final res = await ApiClient.instance.get('/operasional/cabangs');
-      if (res.data['status'] == true) {
+      if (res.data != null && res.data['data'] != null) {
         setState(() {
           _cabangList = res.data['data'] ?? [];
         });
@@ -210,7 +210,10 @@ class _OperasionalArsipPenawaranScreenState extends State<OperasionalArsipPenawa
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(color: Colors.green.shade100, borderRadius: BorderRadius.circular(4)),
-                          child: Text(arsip['cabang']?['nama'] ?? '-', style: GoogleFonts.inter(fontSize: 12, color: Colors.green.shade800)),
+                          child: Text(
+                            arsip['cabang']?['nama_cabang'] ?? arsip['cabang']?['nama'] ?? '-',
+                            style: GoogleFonts.inter(fontSize: 12, color: Colors.green.shade800, fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ],
                     ),
@@ -248,7 +251,7 @@ class _OperasionalArsipPenawaranScreenState extends State<OperasionalArsipPenawa
                       children: [
                         Text('NOMINAL', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
                         const SizedBox(height: 4),
-                        Text(_formatCurrency(arsip['nominal']), style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                        Text(_formatCurrency(arsip['nominal']), style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)),
                       ],
                     ),
                   ),
@@ -261,44 +264,71 @@ class _OperasionalArsipPenawaranScreenState extends State<OperasionalArsipPenawa
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
+                decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey.shade200)),
                 child: Text(
-                  (arsip['keterangan'] == null || arsip['keterangan'].toString().trim().isEmpty) ? 'Tidak ada keterangan.' : arsip['keterangan'],
+                  arsip['keterangan'] != null && arsip['keterangan'].toString().isNotEmpty ? arsip['keterangan'] : 'Tidak ada keterangan.',
                   style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
                 ),
               ),
               
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      child: Text('Tutup', style: GoogleFonts.inter(color: AppColors.textDark)),
+              if (arsip['file_path'] != null) ...[
+                const SizedBox(height: 16),
+                Text('FILE BUKTI / DOKUMEN', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
+                const SizedBox(height: 4),
+                InkWell(
+                  onTap: () {
+                    // Open file if needed
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue.shade200),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.attach_file, size: 16, color: Colors.blue),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            arsip['file_path'].toString().split('/').last,
+                            style: GoogleFonts.inter(fontSize: 12, color: Colors.blue.shade800, fontWeight: FontWeight.w500),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _openForm(arsip);
-                      },
-                      icon: const Icon(Icons.edit, size: 16, color: Colors.white),
-                      label: Text('Edit Data', style: GoogleFonts.inter(color: Colors.white)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
+                ),
+              ],
+              
+              const SizedBox(height: 24),
+              
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    ),
+                    child: Text('Tutup', style: GoogleFonts.inter(color: AppColors.textMuted)),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _openForm(arsip);
+                    },
+                    icon: const Icon(Icons.edit, size: 16, color: Colors.white),
+                    label: Text('Edit Data', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     ),
                   ),
                 ],
@@ -315,7 +345,7 @@ class _OperasionalArsipPenawaranScreenState extends State<OperasionalArsipPenawa
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Hapus Arsip'),
-        content: const Text('Apakah Anda yakin ingin menghapus arsip ini?'),
+        content: const Text('Apakah Anda yakin ingin menghapus arsip penawaran ini?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
           TextButton(
@@ -327,6 +357,7 @@ class _OperasionalArsipPenawaranScreenState extends State<OperasionalArsipPenawa
     );
 
     if (confirm != true) return;
+    if (!mounted) return;
 
     showDialog(
       context: context,
@@ -441,7 +472,10 @@ class _OperasionalArsipPenawaranScreenState extends State<OperasionalArsipPenawa
                         style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
                         items: [
                           const DropdownMenuItem(value: 'all', child: Text('Semua Cabang')),
-                          ..._cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama'] ?? ''))),
+                          ..._cabangList.map((c) => DropdownMenuItem(
+                                value: c['id'].toString(),
+                                child: Text(c['nama_cabang'] ?? c['nama'] ?? ''),
+                              )),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -477,7 +511,7 @@ class _OperasionalArsipPenawaranScreenState extends State<OperasionalArsipPenawa
 
   Widget _buildList() {
     if (_arsipList.isEmpty) {
-      return const Center(child: Text('Tidak ada arsip ditemukan'));
+      return const Center(child: Text('Tidak ada arsip penawaran'));
     }
 
     return ListView.builder(
@@ -492,7 +526,7 @@ class _OperasionalArsipPenawaranScreenState extends State<OperasionalArsipPenawa
         final item = _arsipList[index];
 
         return Container(
-          margin: const EdgeInsets.only(bottom: 12),
+          margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -552,7 +586,7 @@ class _OperasionalArsipPenawaranScreenState extends State<OperasionalArsipPenawa
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(4)),
                             child: Text(
-                              item['cabang']?['nama'] ?? '-',
+                              item['cabang']?['nama_cabang'] ?? item['cabang']?['nama'] ?? '-',
                               style: GoogleFonts.inter(fontSize: 10, color: Colors.green.shade700, fontWeight: FontWeight.bold),
                             ),
                           ),

@@ -6,9 +6,12 @@ import '../../../core/widgets/gradient_header.dart';
 import '../services/operasional_service.dart';
 import 'operasional_kpi_cs_edit_sheet.dart';
 
+import 'operasional_kpi_main_screen.dart';
+
 class OperasionalKpiCsScreen extends StatefulWidget {
   final bool hideHeader;
-  const OperasionalKpiCsScreen({super.key, this.hideHeader = false});
+  final VoidCallback? onSwitchToReportCs;
+  const OperasionalKpiCsScreen({super.key, this.hideHeader = false, this.onSwitchToReportCs});
 
   @override
   State<OperasionalKpiCsScreen> createState() => _OperasionalKpiCsScreenState();
@@ -108,6 +111,19 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
             GradientHeader(
               child: Row(
                 children: [
+                  InkWell(
+                    onTap: () => Navigator.pop(context),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -136,11 +152,43 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
             ),
           
           // Filter section
-          Padding(
-            padding: const EdgeInsets.all(16),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
+                if (!widget.hideHeader) ...[
+                  InkWell(
+                    onTap: () {
+                      if (widget.onSwitchToReportCs != null) {
+                        widget.onSwitchToReportCs!();
+                      } else {
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalKpiMainScreen(initialIndex: 0)));
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.analytics_rounded, size: 15, color: AppColors.primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Report CS',
+                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 _buildDropdown(
                   items: List.generate(12, (index) => index + 1),
                   value: _selectedBulan,
@@ -153,7 +201,7 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
                   },
                   prefix: 'BULAN',
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 _buildDropdown(
                   items: List.generate(10, (index) => 2020 + index),
                   value: _selectedTahun,
@@ -239,7 +287,7 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
       children: [
         _buildSummaryTable(),
         const SizedBox(height: 24),
-        ..._data.map((item) => _buildDetailedCard(item)).toList(),
+        ..._data.map((item) => _buildDetailedCard(item)),
       ],
     );
   }
@@ -255,10 +303,15 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Ringkasan Nilai KPI per Cabang',
-                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+              Expanded(
+                child: Text(
+                  'Ringkasan Nilai KPI per Cabang',
+                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(

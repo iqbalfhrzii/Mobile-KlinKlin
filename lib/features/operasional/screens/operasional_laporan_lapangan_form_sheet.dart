@@ -138,6 +138,8 @@ class _OperasionalLaporanLapanganFormSheetState extends State<OperasionalLaporan
 
     setState(() => _isLoading = false);
 
+    if (!mounted) return;
+
     if (res['status'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(res['message'] ?? 'Berhasil disimpan'), backgroundColor: Colors.green),
@@ -278,7 +280,7 @@ class _OperasionalLaporanLapanganFormSheetState extends State<OperasionalLaporan
                                   value: _selectedCabangId,
                                   isExpanded: true,
                                   hint: Text('Pilih Cabang', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade400)),
-                                  items: widget.cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama'] ?? ''))).toList(),
+                                  items: widget.cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama_cabang'] ?? c['nama'] ?? ''))).toList(),
                                   onChanged: (val) {
                                     setState(() {
                                       _selectedCabangId = val;
@@ -333,6 +335,7 @@ class _OperasionalLaporanLapanganFormSheetState extends State<OperasionalLaporan
                                   hint: Text('Pilih Tingkat', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade400)),
                                   items: const [
                                     DropdownMenuItem(value: 'Rendah', child: Text('Rendah')),
+                                    DropdownMenuItem(value: 'Sedang', child: Text('Sedang')),
                                     DropdownMenuItem(value: 'Menengah', child: Text('Menengah')),
                                     DropdownMenuItem(value: 'Tinggi', child: Text('Tinggi')),
                                     DropdownMenuItem(value: 'Kritis', child: Text('Kritis')),
@@ -367,6 +370,9 @@ class _OperasionalLaporanLapanganFormSheetState extends State<OperasionalLaporan
                                   isExpanded: true,
                                   hint: Text('Pilih Status', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade400)),
                                   items: const [
+                                    DropdownMenuItem(value: 'Open', child: Text('Open')),
+                                    DropdownMenuItem(value: 'On Progress', child: Text('On Progress')),
+                                    DropdownMenuItem(value: 'Closed', child: Text('Closed')),
                                     DropdownMenuItem(value: 'Baru', child: Text('Baru')),
                                     DropdownMenuItem(value: 'Proses', child: Text('Proses')),
                                     DropdownMenuItem(value: 'Tertunda', child: Text('Tertunda')),

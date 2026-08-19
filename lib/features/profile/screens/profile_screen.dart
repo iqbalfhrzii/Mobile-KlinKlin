@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/api/api_client.dart';
 import 'dart:io';
 import 'dart:convert';
 import '../../auth/screens/login_screen.dart';
@@ -13,6 +14,8 @@ import 'edit_profile_screen.dart';
 import 'kpi_screen.dart';
 import '../../stok_opname/screens/stok_opname_screen.dart';
 import '../../master_barang/screens/master_barang_screen.dart';
+import '../../cleaner/tukar_libur/screens/tukar_libur_screen.dart';
+import '../../cleaner/tukar_libur/services/tukar_libur_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -23,11 +26,15 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   String _userName = 'Memuat...';
-  String _userRole = 'Customer Service';
+  String _userRole = 'Cleaner';
   String _userBranch = '-';
   String _userEmail = 'memuat...';
   String _userId = 'KLK-CS-0...';
   String? _userPhoto;
+
+  // Jadwal Libur Cleaner State
+  List<dynamic> _jadwalLiburs = [];
+  bool _isLoadingLibur = false;
 
   @override
   void initState() {
@@ -38,8 +45,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadProfile() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _userName = prefs.getString('user_name') ?? 'CS';
-      _userRole = prefs.getString('user_role') ?? 'Customer Service';
+      _userName = prefs.getString('user_name') ?? 'Pengguna';
+      _userRole = prefs.getString('user_role') ?? 'Cleaner';
       _userBranch = prefs.getString('user_branch') ?? '-';
       _userEmail = prefs.getString('user_email') ?? '';
       _userId = prefs.getString('user_id') ?? '-';
@@ -61,12 +68,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (_) {
       // Ignore if fetch fails
     }
+
+    if (_isCleanerRole()) {
+      _loadJadwalLibur();
+    }
+  }
+
+  bool _isCleanerRole() {
+    return _userRole.toLowerCase().contains('cleaner');
+  }
+
+  Future<void> _loadJadwalLibur() async {
+    setState(() => _isLoadingLibur = true);
+    try {
+      final data = await TukarLiburService.getRekanKerja();
+      if (mounted) {
+        setState(() {
+          _jadwalLiburs = data['libur_saya'] ?? [];
+          _isLoadingLibur = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingLibur = false);
+    }
+  }
+
+  String _formatIndoDate(String? rawDate) {
+    if (rawDate == null || rawDate.isEmpty) return '-';
+    try {
+      final dt = DateTime.parse(rawDate);
+      final days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      final months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+        'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+      ];
+      final dayName = days[dt.weekday % 7];
+      final monthName = months[dt.month - 1];
+      return '$dayName, ${dt.day} $monthName ${dt.year}';
+    } catch (_) {
+      return rawDate;
+    }
+  }
+
+  String _getCurrentMonthName() {
+    final months = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    final now = DateTime.now();
+    return '${months[now.month - 1]} ${now.year}';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
           _buildHeader(),
@@ -77,12 +133,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               backgroundColor: AppColors.surface,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
                 child: Column(
                   children: [
                     _buildInfoCard(),
-                    const SizedBox(height: 12),
-                    if (!_userRole.toLowerCase().contains('cleaner')) ...[
+                    const SizedBox(height: 14),
+
+                    // Section Khusus Cleaner: Informasi Jadwal Libur
+                    if (_isCleanerRole()) ...[
+                      _buildJadwalLiburCard(),
+                      const SizedBox(height: 14),
+                    ],
+
+                    if (!_isCleanerRole()) ...[
                       _buildMenuSection('Karyawan', [
                         _MenuItem(Icons.analytics_rounded, 'KPI & Evaluasi Kinerja', onTap: () {
                           Navigator.push(context, MaterialPageRoute(builder: (_) => const KpiScreen()));
@@ -118,7 +181,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _MenuItem(Icons.help_outline_rounded, 'Bantuan', onTap: () {}),
                       _MenuItem(Icons.privacy_tip_outlined, 'Kebijakan Privasi', onTap: () {}),
                     ]),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
                     _buildLogout(context),
                   ],
                 ),
@@ -152,38 +215,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               _buildAvatar(),
               const SizedBox(height: 12),
-          Text(_userName, style: GoogleFonts.inter(
-            fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white,
-          )),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(20),
+              Text(
+                _userName,
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: -0.2,
                 ),
-                child: Text(_userRole, style: GoogleFonts.inter(
-                  fontSize: 11, color: Colors.white.withValues(alpha: 0.85),
-                )),
               ),
-              if (_userBranch != '-') ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(20),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                    ),
+                    child: Text(
+                      _userRole,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
-                  child: Text('📍 $_userBranch', style: GoogleFonts.inter(
-                    fontSize: 11, color: Colors.white.withValues(alpha: 0.85),
-                  )),
-                ),
-              ],
-            ],
-          ),
+                  if (_userBranch != '-' && _userBranch.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.location_on_rounded, size: 12, color: Colors.white),
+                          const SizedBox(width: 4),
+                          Text(
+                            _userBranch,
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
         ],
@@ -193,70 +281,324 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildAvatar() {
     if (_userPhoto == null || _userPhoto!.isEmpty) {
-      return InitialsAvatar(name: _userName, size: 72, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35));
+      return InitialsAvatar(
+        name: _userName,
+        size: 76,
+        backgroundColor: Colors.white.withValues(alpha: 0.2),
+        textColor: Colors.white,
+        borderColor: Colors.white.withValues(alpha: 0.35),
+      );
     }
-    
+
     if (_userPhoto!.startsWith('data:image')) {
       try {
         final base64Str = _userPhoto!.split(',').last;
-        return ClipOval(child: Image.memory(base64Decode(base64Str), width: 72, height: 72, fit: BoxFit.cover));
+        return ClipOval(child: Image.memory(base64Decode(base64Str), width: 76, height: 76, fit: BoxFit.cover));
       } catch (_) {
-        return InitialsAvatar(name: _userName, size: 72, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35));
+        return InitialsAvatar(name: _userName, size: 76, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35));
       }
     }
-    
+
     if (_userPhoto!.startsWith('http')) {
-      return ClipOval(child: Image.network(_userPhoto!, width: 72, height: 72, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 72, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35))));
+      return ClipOval(
+        child: Image.network(
+          _userPhoto!,
+          width: 76,
+          height: 76,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 76, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35)),
+        ),
+      );
     }
-    
+
     if (_userPhoto!.startsWith('/')) {
-      return ClipOval(child: Image.file(File(_userPhoto!), width: 72, height: 72, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 72, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35))));
+      return ClipOval(
+        child: Image.file(
+          File(_userPhoto!),
+          width: 76,
+          height: 76,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 76, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35)),
+        ),
+      );
     }
-    
-    return ClipOval(child: Image.network('http://192.168.1.242:8000/storage/$_userPhoto', width: 72, height: 72, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 72, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35))));
+
+    final baseDomain = ApiClient.baseUrl.replaceAll(RegExp(r'/api/?$'), '');
+    final url = '$baseDomain/storage/$_userPhoto';
+    return ClipOval(
+      child: Image.network(
+        url,
+        width: 76,
+        height: 76,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 76, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35)),
+      ),
+    );
   }
 
   Widget _buildInfoCard() {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [AppColors.cardShadow],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          _infoRow('ID Karyawan', _userId),
-          const Divider(height: 16, color: AppColors.border),
+          _infoRow('ID Karyawan', _userId, isHighlight: true),
+          const Divider(height: 20, color: Color(0xFFF1F5F9)),
           _infoRow('Email', _userEmail),
-          const Divider(height: 16, color: AppColors.border),
-          _infoRow('Status', 'Aktif'),
+          const Divider(height: 20, color: Color(0xFFF1F5F9)),
+          _infoRow('Status', 'Aktif', badgeColor: const Color(0xFF16A34A), badgeBg: const Color(0xFFDCFCE7)),
         ],
       ),
     );
   }
 
-  Widget _infoRow(String label, String value) {
+  Widget _infoRow(String label, String value, {bool isHighlight = false, Color? badgeColor, Color? badgeBg}) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Expanded(child: Text(label, style: GoogleFonts.inter(
-          fontSize: 12, color: AppColors.textMuted,
-        ))),
-        Text(value, style: GoogleFonts.inter(
-          fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark,
-        )),
+        Text(
+          label,
+          style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
+        ),
+        if (badgeColor != null && badgeBg != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(
+              color: badgeBg,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              value,
+              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: badgeColor),
+            ),
+          )
+        else
+          Text(
+            value,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: isHighlight ? FontWeight.w800 : FontWeight.w600,
+              color: const Color(0xFF1E293B),
+            ),
+          ),
       ],
+    );
+  }
+
+  // --- DEDICATED JADWAL LIBUR CARD UNTUK CLEANER ---
+  Widget _buildJadwalLiburCard() {
+    final currentMonth = _getCurrentMonthName();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Card
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.event_available_rounded, color: AppColors.primary, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Jadwal Libur Saya',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF1E293B),
+                        ),
+                      ),
+                      Text(
+                        currentMonth,
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              InkWell(
+                onTap: () async {
+                  await Navigator.push(context, MaterialPageRoute(builder: (_) => const TukarLiburScreen()));
+                  _loadJadwalLibur();
+                },
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.swap_horiz_rounded, size: 14, color: AppColors.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Tukar Libur',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          const SizedBox(height: 12),
+
+          // List Hari Libur
+          if (_isLoadingLibur)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                ),
+              ),
+            )
+          else if (_jadwalLiburs.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF94A3B8)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Belum ada jadwal libur bulan ini.',
+                      style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Column(
+              children: _jadwalLiburs.asMap().entries.map((entry) {
+                final idx = entry.key;
+                final libur = entry.value;
+                final tanggalStr = libur['tanggal']?.toString() ?? '';
+                final isSwapped = libur['is_swapped'] == true || libur['is_swapped'] == 1;
+                final formattedDate = _formatIndoDate(tanggalStr);
+
+                return Container(
+                  margin: EdgeInsets.only(bottom: idx == _jadwalLiburs.length - 1 ? 0 : 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.calendar_today_rounded, size: 14, color: Color(0xFF2563EB)),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          formattedDate,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1E293B),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: isSwapped ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          isSwapped ? 'Hasil Tukar' : 'Libur Rutin',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: isSwapped ? const Color(0xFFB45309) : const Color(0xFF15803D),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+        ],
+      ),
     );
   }
 
   Widget _buildMenuSection(String title, List<_MenuItem> items) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [AppColors.cardShadow],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: items.asMap().entries.map((e) {
@@ -266,13 +608,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               InkWell(
                 onTap: item.onTap,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(7),
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceBlue,
                           borderRadius: BorderRadius.circular(10),
@@ -280,20 +622,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Icon(item.icon, size: 16, color: AppColors.primary),
                       ),
                       const SizedBox(width: 12),
-                      Expanded(child: Text(item.label, style: GoogleFonts.inter(
-                        fontSize: 14, color: AppColors.textDark,
-                      ))),
+                      Expanded(
+                        child: Text(
+                          item.label,
+                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF1E293B)),
+                        ),
+                      ),
                       if (item.trailing != null)
-                        Text(item.trailing!, style: GoogleFonts.inter(
-                          fontSize: 12, color: AppColors.textMuted,
-                        )),
+                        Text(
+                          item.trailing!,
+                          style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
+                        ),
                       if (item.onTap != null)
-                        const Icon(Icons.chevron_right, size: 18, color: AppColors.textMuted),
+                        const Icon(Icons.chevron_right_rounded, size: 20, color: Color(0xFF94A3B8)),
                     ],
                   ),
                 ),
               ),
-              if (!isLast) const Divider(height: 0, indent: 54, color: AppColors.border),
+              if (!isLast) const Divider(height: 0, indent: 56, color: Color(0xFFF1F5F9)),
             ],
           );
         }).toList(),
@@ -307,9 +653,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: OutlinedButton.icon(
         onPressed: () => _confirmLogout(context),
         icon: const Icon(Icons.logout_rounded, color: AppColors.error, size: 18),
-        label: Text('Keluar', style: GoogleFonts.inter(
-          fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.error,
-        )),
+        label: Text(
+          'Keluar',
+          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.error),
+        ),
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -329,29 +676,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Konfirmasi Keluar', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-        content: Text('Apakah kamu yakin ingin keluar?', style: GoogleFonts.inter()),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text('Konfirmasi Keluar', style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
+        content: Text('Apakah kamu yakin ingin keluar dari akun ini?', style: GoogleFonts.inter(color: const Color(0xFF475569))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Batal', style: GoogleFonts.inter(color: AppColors.textMuted)),
+            child: Text('Batal', style: GoogleFonts.inter(color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
             onPressed: () async {
-              // Menampilkan loading indikator
               showDialog(
                 context: context,
                 barrierDismissible: false,
                 builder: (_) => const Center(child: CircularProgressIndicator()),
               );
-              
+
               await AuthService.logout();
-              
+
               if (context.mounted) {
-                // Tutup loading
                 Navigator.pop(context);
-                // Navigasi ke halaman login
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -361,9 +705,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
+              elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: Text('Keluar', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
+            child: Text('Keluar', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
           ),
         ],
       ),

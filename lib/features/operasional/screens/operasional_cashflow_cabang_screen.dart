@@ -1,27 +1,15 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/gradient_header.dart';
+import '../../../core/api/api_client.dart';
 import '../services/operasional_cashflow_cabang_service.dart';
-
-class CurrencyInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
-    if (newValue.selection.baseOffset == 0) {
-      return newValue;
-    }
-    double value = double.parse(newValue.text.replaceAll(RegExp(r'[^0-9]'), ''));
-    final formatter = NumberFormat.currency(
-        locale: 'id', symbol: 'Rp ', decimalDigits: 0);
-    String newText = formatter.format(value);
-    return newValue.copyWith(
-        text: newText,
-        selection: TextSelection.collapsed(offset: newText.length));
-  }
-}
 
 class OperasionalCashflowCabangScreen extends StatefulWidget {
   const OperasionalCashflowCabangScreen({super.key});
@@ -35,47 +23,70 @@ class _OperasionalCashflowCabangScreenState extends State<OperasionalCashflowCab
   List<dynamic> _cashflows = [];
   List<dynamic> _cabangList = [];
   bool _isLoading = false;
-  
+  String? _authToken;
+  Timer? _debounce;
+
   int? _selectedCabangId;
   String _selectedArus = 'Semua Arus';
-  
   final List<String> _arusOptions = ['Semua Arus', 'Masuk', 'Keluar'];
 
   @override
   void initState() {
     super.initState();
+    _loadAuthToken();
     _fetchCabangList();
     _fetchData();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadAuthToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _authToken = prefs.getString('auth_token');
+    } catch (_) {}
   }
 
   Future<void> _fetchCabangList() async {
     try {
       final response = await OperasionalCashflowCabangService.getCabangs();
-      if (response['success'] == true) {
+      if (response['success'] == true && mounted) {
         setState(() {
           _cabangList = response['data'] ?? [];
         });
       }
     } catch (e) {
-      print('Error fetching cabang: $e');
+      debugPrint('Error fetching cabang: $e');
     }
+  }
+
+  void _onSearchChanged(String value) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      _fetchData();
+    });
   }
 
   Future<void> _fetchData() async {
     setState(() => _isLoading = true);
     try {
       final response = await OperasionalCashflowCabangService.getCashflow(
-        search: _searchController.text,
+        search: _searchController.text.trim(),
         cabangId: _selectedCabangId,
-        arus: _selectedArus,
+        arus: _selectedArus == 'Semua Arus' ? null : _selectedArus,
       );
-      if (response['success'] == true) {
+      if (response['success'] == true && mounted) {
         setState(() {
           _cashflows = response['data'] ?? [];
         });
       }
     } catch (e) {
-      print('Error fetching cashflow: $e');
+      debugPrint('Error fetching cashflow: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Gagal memuat data cashflow')),
@@ -89,47 +100,50 @@ class _OperasionalCashflowCabangScreenState extends State<OperasionalCashflowCab
   }
 
   Future<void> _deleteCashflow(int id) async {
-    bool confirm = await showDialog(
+    final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus Data'),
-        content: const Text('Yakin ingin menghapus data cashflow ini?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Hapus Data Cashflow', style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
+        content: Text('Apakah kamu yakin ingin menghapus data cashflow ini?', style: GoogleFonts.inter(color: const Color(0xFF475569))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
+            child: Text('Batal', style: GoogleFonts.inter(color: const Color(0xFF64748B))),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Hapus'),
+            child: Text('Hapus', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
-    ) ?? false;
+    );
 
-    if (!confirm) return;
+    if (confirm != true) return;
 
     setState(() => _isLoading = true);
     try {
       final response = await OperasionalCashflowCabangService.deleteCashflow(id);
-      if (response['success'] == true) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Data berhasil dihapus')),
-          );
-        }
+      if (response['success'] == true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Data cashflow berhasil dihapus'),
+            backgroundColor: Color(0xFF16A34A),
+          ),
+        );
         _fetchData();
       }
     } catch (e) {
-      print('Error deleting cashflow: $e');
+      debugPrint('Error deleting cashflow: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Gagal menghapus data')),
         );
-      }
-    } finally {
-      if (mounted) {
         setState(() => _isLoading = false);
       }
     }
@@ -162,391 +176,978 @@ class _OperasionalCashflowCabangScreenState extends State<OperasionalCashflowCab
   }
 
   String _formatDate(String? date) {
-    if (date == null) return '-';
+    if (date == null || date.isEmpty) return '-';
     try {
       DateTime dt = DateTime.parse(date);
-      return DateFormat('dd MMM yyyy').format(dt);
+      final days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      final months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+        'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+      ];
+      final dayName = days[dt.weekday % 7];
+      final monthName = months[dt.month - 1];
+      return '$dayName, ${dt.day} $monthName ${dt.year}';
     } catch (e) {
       return date;
     }
   }
 
-  Widget _buildFilterChip(String label, bool isSelected, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF005B9F) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF005B9F) : Colors.grey.shade300,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: const Color(0xFF005B9F).withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  )
-                ]
-              : null,
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.inter(
-            color: isSelected ? Colors.white : Colors.grey.shade700,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-            fontSize: 13,
-          ),
-        ),
+  String _getFileUrl(dynamic rawPath) {
+    if (rawPath == null) return '';
+    String p = rawPath.toString().trim().replaceAll(r'\', '/');
+    if (p.isEmpty || p == 'null') return '';
+    if (p.startsWith('http://') || p.startsWith('https://')) return p;
+
+    final baseDomain = ApiClient.baseUrl.replaceAll(RegExp(r'/api/?$'), '');
+    while (p.startsWith('/')) {
+      p = p.substring(1);
+    }
+    if (p.startsWith('public/')) {
+      p = p.substring(7);
+    }
+    if (p.startsWith('storage/')) {
+      return '$baseDomain/$p';
+    }
+    return '$baseDomain/storage/$p';
+  }
+
+  bool _isImageFile(String path) {
+    final lower = path.toLowerCase();
+    return lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.png') ||
+        lower.endsWith('.webp') ||
+        lower.endsWith('.gif');
+  }
+
+  void _viewBuktiInApp(String path, String title) {
+    final fullUrl = _getFileUrl(path);
+    if (fullUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lampiran bukti tidak valid.')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => _CashflowFileViewerDialog(
+        url: fullUrl,
+        title: title,
+        authToken: _authToken,
+        isImage: _isImageFile(fullUrl),
       ),
     );
   }
 
+  // --- STATS SUMMARY CALCULATIONS ---
+  double get _totalMasuk {
+    double total = 0;
+    for (final item in _cashflows) {
+      final arus = item['arus']?.toString() ?? '';
+      if (arus.contains('Masuk')) {
+        total += double.tryParse(item['nominal']?.toString() ?? '0') ?? 0;
+      }
+    }
+    return total;
+  }
+
+  double get _totalKeluar {
+    double total = 0;
+    for (final item in _cashflows) {
+      final arus = item['arus']?.toString() ?? '';
+      if (arus.contains('Keluar')) {
+        total += double.tryParse(item['nominal']?.toString() ?? '0') ?? 0;
+      }
+    }
+    return total;
+  }
+
+  double get _saldoBersih => _totalMasuk - _totalKeluar;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        title: Text(
-          'Data Cashflow Cabang',
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: const Color(0xFF005B9F),
-        elevation: 0,
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
+      backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
-          // Header Background with Search and Filter
-          Container(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-            decoration: const BoxDecoration(
-              color: Color(0xFF005B9F),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(24),
-                bottomRight: Radius.circular(24),
-              ),
-            ),
-            child: Column(
+          // Elegant Gradient Header
+          GradientHeader(
+            padding: const EdgeInsets.fromLTRB(20, 52, 20, 18),
+            child: Row(
               children: [
-                // Search Bar
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (value) => _fetchData(),
-                    decoration: InputDecoration(
-                      hintText: 'Cari keterangan atau kategori...',
-                      hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 14),
-                      border: InputBorder.none,
-                      icon: const Icon(Icons.search, color: Color(0xFF005B9F)),
+                InkWell(
+                  onTap: () => Navigator.pop(context),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                     ),
+                    child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
                   ),
                 ),
-                const SizedBox(height: 16),
-                // Filters
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Filter Cabang
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white.withOpacity(0.3)),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<int?>(
-                            value: _selectedCabangId,
-                            hint: Text('Semua Cabang', style: GoogleFonts.inter(color: Colors.white, fontSize: 13)),
-                            icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 18),
-                            dropdownColor: const Color(0xFF005B9F),
-                            style: GoogleFonts.inter(color: Colors.white, fontSize: 13),
-                            items: [
-                              const DropdownMenuItem<int?>(
-                                value: null,
-                                child: Text('Semua Cabang'),
-                              ),
-                              ..._cabangList.map((cabang) {
-                                return DropdownMenuItem<int?>(
-                                  value: cabang['id'],
-                                  child: Text(cabang['nama_cabang']),
-                                );
-                              }),
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedCabangId = value;
-                              });
-                              _fetchData();
-                            },
-                          ),
-                        ),
+                      Text(
+                        'Data Cashflow Cabang',
+                        style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Kelola pemasukan dan pengeluaran kas cabang',
+                        style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.85)),
                       ),
                     ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Filter Arus (Masuk / Keluar)
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _arusOptions.map((arus) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: _buildFilterChip(
-                          arus,
-                          _selectedArus == arus,
-                          () {
-                            setState(() {
-                              _selectedArus = arus;
-                            });
-                            _fetchData();
-                          },
-                        ),
-                      );
-                    }).toList(),
                   ),
                 ),
               ],
             ),
           ),
-          
+
+          // Search and Filters Bar
+          _buildFilterBar(),
+
+          // List Body with Stats Card
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _cashflows.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                : RefreshIndicator(
+                    onRefresh: _fetchData,
+                    color: AppColors.primary,
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 90),
+                      children: [
+                        // Summary Stats Overview
+                        _buildSummaryStatsCard(),
+                        const SizedBox(height: 14),
+
+                        // Section Heading
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Icon(Icons.money_off, size: 64, color: Colors.grey.shade300),
-                            const SizedBox(height: 16),
                             Text(
-                              'Tidak ada data cashflow',
-                              style: GoogleFonts.inter(
-                                color: Colors.grey.shade500,
-                                fontSize: 16,
-                              ),
+                              'Riwayat Transaksi',
+                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
+                            ),
+                            Text(
+                              '${_cashflows.length} Transaksi',
+                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
                             ),
                           ],
                         ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: _fetchData,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _cashflows.length,
-                          itemBuilder: (context, index) {
-                            final item = _cashflows[index];
-                            final isMasuk = item['arus'] == 'Masuk' || item['arus']?.toString().contains('Masuk') == true;
+                        const SizedBox(height: 10),
 
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.04),
-                                    blurRadius: 15,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Material(
-                                color: Colors.transparent,
-                                borderRadius: BorderRadius.circular(16),
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(16),
-                                  onTap: () {
-                                    // Buka opsi edit/hapus
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        // Top Row: Arus and Date
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: isMasuk
-                                                    ? Colors.green.withOpacity(0.1)
-                                                    : Colors.red.withOpacity(0.1),
-                                                borderRadius: BorderRadius.circular(12),
-                                              ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Icon(
-                                                    isMasuk ? Icons.arrow_downward : Icons.arrow_upward,
-                                                    size: 14,
-                                                    color: isMasuk ? Colors.green : Colors.red,
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    isMasuk ? 'Masuk' : 'Keluar',
-                                                    style: GoogleFonts.inter(
-                                                      color: isMasuk ? Colors.green : Colors.red,
-                                                      fontSize: 12,
-                                                      fontWeight: FontWeight.w600,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            Text(
-                                              _formatDate(item['tanggal']),
-                                              style: GoogleFonts.inter(
-                                                color: Colors.grey.shade500,
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 12),
-                                        // Nominal
-                                        Text(
-                                          _formatCurrency(item['nominal']),
-                                          style: GoogleFonts.inter(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.bold,
-                                            color: const Color(0xFF2D3142),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        // Category and Method
-                                        Row(
-                                          children: [
-                                            Icon(Icons.category_outlined, size: 14, color: Colors.grey.shade500),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              item['kategori_kas'] ?? '-',
-                                              style: GoogleFonts.inter(
-                                                color: Colors.grey.shade700,
-                                                fontSize: 13,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 16),
-                                            Icon(Icons.payment_outlined, size: 14, color: Colors.grey.shade500),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              item['metode'] ?? '-',
-                                              style: GoogleFonts.inter(
-                                                color: Colors.grey.shade700,
-                                                fontSize: 13,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 12),
-                                        // Description
-                                        if (item['keterangan'] != null && item['keterangan'].toString().isNotEmpty) ...[
-                                          Text(
-                                            item['keterangan'],
-                                            style: GoogleFonts.inter(
-                                              color: Colors.grey.shade600,
-                                              fontSize: 13,
-                                            ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 12),
-                                        ],
-                                        const Divider(),
-                                        // Bottom row: Cabang and Actions
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                const Icon(Icons.location_on, size: 14, color: Color(0xFF005B9F)),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  item['cabang']?['nama_cabang'] ?? 'Unknown',
-                                                  style: GoogleFonts.inter(
-                                                    color: const Color(0xFF005B9F),
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            Row(
-                                              children: [
-                                                if (item['bukti'] != null)
-                                                  IconButton(
-                                                    icon: const Icon(Icons.attach_file, color: Colors.grey, size: 20),
-                                                    onPressed: () {
-                                                      // Opsi buka bukti
-                                                    },
-                                                    padding: EdgeInsets.zero,
-                                                    constraints: const BoxConstraints(),
-                                                  ),
-                                                const SizedBox(width: 12),
-                                                IconButton(
-                                                  icon: const Icon(Icons.edit_outlined, color: Colors.orange, size: 20),
-                                                  onPressed: () => _showFormBottomSheet(data: item),
-                                                  padding: EdgeInsets.zero,
-                                                  constraints: const BoxConstraints(),
-                                                ),
-                                                const SizedBox(width: 12),
-                                                IconButton(
-                                                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                                                  onPressed: () => _deleteCashflow(item['id']),
-                                                  padding: EdgeInsets.zero,
-                                                  constraints: const BoxConstraints(),
-                                                ),
-                                              ],
-                                            )
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
+                        // List of Cashflows
+                        if (_cashflows.isEmpty)
+                          _buildEmptyState()
+                        else
+                          ..._cashflows.map((item) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _buildCashflowCard(item),
+                              )),
+                      ],
+                    ),
+                  ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showFormBottomSheet(),
-        backgroundColor: const Color(0xFF005B9F),
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: Text('Tambah Data', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
+        backgroundColor: AppColors.primary,
+        elevation: 4,
+        icon: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
+        label: Text(
+          'Tambah Data',
+          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  // --- FILTER BAR ---
+  Widget _buildFilterBar() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: Column(
+        children: [
+          // Search Input
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.search_rounded, size: 20, color: Color(0xFF64748B)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: _onSearchChanged,
+                    style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1E293B), fontWeight: FontWeight.w500),
+                    decoration: InputDecoration(
+                      hintText: 'Cari keterangan, kategori, metode...',
+                      hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                    ),
+                  ),
+                ),
+                if (_searchController.text.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.clear_rounded, size: 16, color: Color(0xFF64748B)),
+                    onPressed: () {
+                      _searchController.clear();
+                      _fetchData();
+                    },
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Horizontal Filter Chips (Cabang Dropdown + Arus Chips)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                // Cabang Dropdown Chip
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int?>(
+                      value: _selectedCabangId,
+                      isDense: true,
+                      hint: Text('Semua Cabang', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                      icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary, size: 18),
+                      style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF1E293B), fontWeight: FontWeight.w600),
+                      items: [
+                        DropdownMenuItem<int?>(value: null, child: Text('Semua Cabang', style: GoogleFonts.inter(fontWeight: FontWeight.normal))),
+                        ..._cabangList.map((cabang) {
+                          return DropdownMenuItem<int?>(
+                            value: cabang['id'],
+                            child: Text(cabang['nama_cabang'] ?? '-'),
+                          );
+                        }),
+                      ],
+                      onChanged: (value) {
+                        setState(() => _selectedCabangId = value);
+                        _fetchData();
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // Arus Filter Chips
+                ..._arusOptions.map((arus) {
+                  final isSelected = _selectedArus == arus;
+                  Color activeColor = AppColors.primary;
+                  if (arus == 'Masuk') activeColor = const Color(0xFF16A34A);
+                  if (arus == 'Keluar') activeColor = const Color(0xFFDC2626);
+
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: InkWell(
+                      onTap: () {
+                        setState(() => _selectedArus = arus);
+                        _fetchData();
+                      },
+                      borderRadius: BorderRadius.circular(20),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: isSelected ? activeColor : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isSelected ? activeColor : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        child: Text(
+                          arus,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                            color: isSelected ? Colors.white : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- SUMMARY STATS OVERVIEW CARD ---
+  Widget _buildSummaryStatsCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary, size: 16),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Ringkasan Kas',
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
+                  ),
+                ],
+              ),
+              Text(
+                'Saldo: ${_formatCurrency(_saldoBersih)}',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: _saldoBersih >= 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              // Total Masuk
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFDCFCE7)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.arrow_downward_rounded, size: 14, color: Color(0xFF16A34A)),
+                          const SizedBox(width: 4),
+                          Text('Kas Masuk', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF15803D))),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _formatCurrency(_totalMasuk),
+                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF16A34A)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              // Total Keluar
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFEE2E2)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.arrow_upward_rounded, size: 14, color: Color(0xFFDC2626)),
+                          const SizedBox(width: 4),
+                          Text('Kas Keluar', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFFB91C1C))),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _formatCurrency(_totalKeluar),
+                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFFDC2626)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- CASHFLOW ITEM CARD ---
+  Widget _buildCashflowCard(Map<String, dynamic> item) {
+    final isMasuk = item['arus'] == 'Masuk' || item['arus']?.toString().contains('Masuk') == true;
+    final nominal = _formatCurrency(item['nominal']);
+    final tanggal = _formatDate(item['tanggal']);
+    final cabangName = item['cabang']?['nama_cabang'] ?? '-';
+    final kategori = item['kategori_kas'] ?? '-';
+    final metode = item['metode'] ?? '-';
+    final keterangan = item['keterangan'] ?? '';
+    final buktiPath = item['bukti'];
+    final bool hasBukti = buktiPath != null && buktiPath.toString().trim().isNotEmpty && buktiPath.toString() != 'null';
+
+    final Color themeColor = isMasuk ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
+    final Color themeBg = isMasuk ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 3)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Row: Arus Badge & Date
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: themeBg,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isMasuk ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                            size: 14,
+                            color: themeColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            isMasuk ? 'Kas Masuk' : 'Kas Keluar',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: themeColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      tanggal,
+                      style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Big Nominal
+                Text(
+                  '${isMasuk ? "+" : "-"} $nominal',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: themeColor,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Category & Payment Method Pills
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.category_outlined, size: 12, color: Color(0xFF64748B)),
+                          const SizedBox(width: 4),
+                          Text(
+                            kategori,
+                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF334155)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (metode != '-' && metode.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.payment_rounded, size: 12, color: Color(0xFF64748B)),
+                            const SizedBox(width: 4),
+                            Text(
+                              metode,
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF334155)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+
+                // Keterangan note if exists
+                if (keterangan.toString().trim().isNotEmpty && keterangan != '-') ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFF1F5F9)),
+                    ),
+                    child: Text(
+                      'Ket: "$keterangan"',
+                      style: GoogleFonts.inter(fontSize: 11, fontStyle: FontStyle.italic, color: const Color(0xFF64748B)),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+
+          // Bottom Actions Row: Cabang & Buttons
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Cabang Badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.location_on_rounded, size: 12, color: Color(0xFF1D4ED8)),
+                      const SizedBox(width: 4),
+                      Text(
+                        cabangName,
+                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF1D4ED8)),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Actions
+                Row(
+                  children: [
+                    // IN-APP BUKTI VIEWER
+                    if (hasBukti) ...[
+                      InkWell(
+                        onTap: () => _viewBuktiInApp(buktiPath, '$kategori ($nominal)'),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFBFDBFE)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.image_rounded, color: Color(0xFF1D4ED8), size: 13),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Bukti',
+                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF1D4ED8)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+
+                    // Edit
+                    InkWell(
+                      onTap: () => _showFormBottomSheet(data: item),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.edit_rounded, color: Color(0xFFD97706), size: 16),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+
+                    // Delete
+                    InkWell(
+                      onTap: () => _deleteCashflow(item['id']),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEE2E2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.delete_outline_rounded, color: Color(0xFFDC2626), size: 16),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(36.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.account_balance_wallet_outlined, size: 48, color: AppColors.primary),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Tidak Ada Data Cashflow',
+              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Belum ada transaksi kas yang sesuai dengan filter pencarian.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(color: const Color(0xFF64748B), fontSize: 13, height: 1.4),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
+// ---------------------------------------------------------
+// IN-APP CASHFLOW BUKTI VIEWER DIALOG
+// ---------------------------------------------------------
+class _CashflowFileViewerDialog extends StatelessWidget {
+  final String url;
+  final String title;
+  final String? authToken;
+  final bool isImage;
+
+  const _CashflowFileViewerDialog({
+    required this.url,
+    required this.title,
+    this.authToken,
+    required this.isImage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(14),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (isImage)
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Center(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: SmartNetworkImage(
+                    url: url,
+                    token: authToken,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.broken_image_rounded, color: Colors.grey, size: 48),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Gagal memuat bukti cashflow',
+                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
+                          ),
+                          const SizedBox(height: 6),
+                          SelectableText(
+                            url,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B)),
+                          ),
+                          const SizedBox(height: 14),
+                          TextButton.icon(
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(text: url));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('URL berhasil disalin')),
+                              );
+                            },
+                            icon: const Icon(Icons.copy_rounded, size: 16),
+                            label: const Text('Salin URL'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFEFF6FF),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.description_rounded, size: 48, color: Color(0xFF1D4ED8)),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Bukti Transaksi Cashflow',
+                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 16),
+                  SelectableText(
+                    url,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: url));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('URL bukti berhasil disalin')),
+                      );
+                    },
+                    icon: const Icon(Icons.copy_rounded, size: 16),
+                    label: const Text('Salin URL Bukti'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // Close Button on Top Right
+          Positioned(
+            top: 10,
+            right: 10,
+            child: InkWell(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.65),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close_rounded, color: Colors.white, size: 22),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------
+// SMART NETWORK IMAGE
+// ---------------------------------------------------------
+class SmartNetworkImage extends StatefulWidget {
+  final String url;
+  final BoxFit fit;
+  final String? token;
+  final Widget? placeholder;
+  final Widget Function(BuildContext, Object, StackTrace?)? errorBuilder;
+
+  const SmartNetworkImage({
+    super.key,
+    required this.url,
+    this.fit = BoxFit.cover,
+    this.token,
+    this.placeholder,
+    this.errorBuilder,
+  });
+
+  @override
+  State<SmartNetworkImage> createState() => _SmartNetworkImageState();
+}
+
+class _SmartNetworkImageState extends State<SmartNetworkImage> {
+  late String _activeUrl;
+  bool _triedFallback = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeUrl = widget.url;
+  }
+
+  @override
+  void didUpdateWidget(covariant SmartNetworkImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) {
+      _activeUrl = widget.url;
+      _triedFallback = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_activeUrl.isEmpty) {
+      return widget.errorBuilder?.call(context, 'Empty URL', null) ??
+          const Center(child: Icon(Icons.image_not_supported_rounded, color: Color(0xFF94A3B8), size: 20));
+    }
+
+    final headers = widget.token != null && widget.token!.isNotEmpty
+        ? {
+            'Authorization': 'Bearer ${widget.token}',
+            'Accept': 'image/*,*/*',
+          }
+        : const {'Accept': 'image/*,*/*'};
+
+    return Image.network(
+      _activeUrl,
+      fit: widget.fit,
+      headers: headers,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return widget.placeholder ??
+            Center(
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.primary,
+                  value: loadingProgress.expectedTotalBytes != null
+                      ? loadingProgress.cumulativeBytesLoaded /
+                          loadingProgress.expectedTotalBytes!
+                      : null,
+                ),
+              ),
+            );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        debugPrint('Image load error on $_activeUrl: $error');
+        if (!_triedFallback) {
+          _triedFallback = true;
+          if (_activeUrl.startsWith('http://')) {
+            final fallback = _activeUrl.replaceFirst('http://', 'https://');
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) setState(() => _activeUrl = fallback);
+            });
+            return const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary));
+          } else if (_activeUrl.startsWith('https://')) {
+            final fallback = _activeUrl.replaceFirst('https://', 'http://');
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) setState(() => _activeUrl = fallback);
+            });
+            return const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary));
+          }
+        }
+        return widget.errorBuilder?.call(context, error, stackTrace) ??
+            const Center(child: Icon(Icons.broken_image_rounded, color: Color(0xFF94A3B8), size: 20));
+      },
+    );
+  }
+}
+
+// ---------------------------------------------------------
+// MODERN BOTTOM SHEET FORM (CREATE / EDIT)
+// ---------------------------------------------------------
 class _FormCashflowBottomSheet extends StatefulWidget {
   final Map<String, dynamic>? data;
   final List<dynamic> cabangList;
@@ -573,12 +1174,9 @@ class _FormCashflowBottomSheetState extends State<_FormCashflowBottomSheet> {
   final TextEditingController _keteranganController = TextEditingController();
 
   int? _selectedCabangId;
-  String? _selectedArus;
-  
+  String _selectedArus = 'Masuk';
   File? _selectedFile;
   String? _fileName;
-
-  final List<String> _arusOptions = ['Masuk', 'Keluar'];
 
   @override
   void initState() {
@@ -586,38 +1184,50 @@ class _FormCashflowBottomSheetState extends State<_FormCashflowBottomSheet> {
     if (widget.data != null) {
       _tanggalController.text = widget.data!['tanggal'] ?? '';
       _selectedCabangId = widget.data!['cabang_id'];
-      
+
       String arusData = widget.data!['arus'] ?? '';
-      if (arusData.contains('Masuk')) _selectedArus = 'Masuk';
-      else if (arusData.contains('Keluar')) _selectedArus = 'Keluar';
-      
+      if (arusData.contains('Keluar')) {
+        _selectedArus = 'Keluar';
+      } else {
+        _selectedArus = 'Masuk';
+      }
+
       _kategoriController.text = widget.data!['kategori_kas'] ?? '';
-      
+
       double nom = double.tryParse(widget.data!['nominal']?.toString() ?? '0') ?? 0;
       final format = NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0);
       _nominalController.text = format.format(nom);
-      
+
       _metodeController.text = widget.data!['metode'] ?? '';
       _keteranganController.text = widget.data!['keterangan'] ?? '';
-      
+
       if (widget.data!['bukti'] != null) {
         _fileName = widget.data!['bukti'].toString().split('/').last;
       }
     } else {
       _tanggalController.text = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      if (widget.cabangList.isNotEmpty) {
+        _selectedCabangId = widget.cabangList.first['id'];
+      }
     }
   }
 
+  @override
+  void dispose() {
+    _tanggalController.dispose();
+    _kategoriController.dispose();
+    _nominalController.dispose();
+    _metodeController.dispose();
+    _keteranganController.dispose();
+    super.dispose();
+  }
+
   Future<void> _selectDate(BuildContext context) async {
-    DateTime? initialDate;
+    DateTime initialDate = DateTime.now();
     if (_tanggalController.text.isNotEmpty) {
       try {
         initialDate = DateTime.parse(_tanggalController.text);
-      } catch (e) {
-        initialDate = DateTime.now();
-      }
-    } else {
-      initialDate = DateTime.now();
+      } catch (_) {}
     }
 
     final DateTime? picked = await showDatePicker(
@@ -625,18 +1235,6 @@ class _FormCashflowBottomSheetState extends State<_FormCashflowBottomSheet> {
       initialDate: initialDate,
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF005B9F),
-              onPrimary: Colors.white,
-              onSurface: Colors.black,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
     if (picked != null) {
       setState(() {
@@ -659,36 +1257,29 @@ class _FormCashflowBottomSheetState extends State<_FormCashflowBottomSheet> {
         });
       }
     } catch (e) {
-      print('Error picking file: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal memilih file')),
-      );
+      debugPrint('Error picking file: $e');
     }
   }
 
   Future<void> _saveData() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     if (_selectedCabangId == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cabang harus dipilih')));
-      return;
-    }
-    if (_selectedArus == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Arus kas harus dipilih')));
       return;
     }
 
     setState(() => _isSaving = true);
     try {
-      // Clean nominal
-      String nominalStr = _nominalController.text.replaceAll(RegExp(r'[^0-9]'), '');
+      String nominalClean = _nominalController.text.replaceAll(RegExp(r'[^0-9]'), '');
+      if (nominalClean.isEmpty) nominalClean = '0';
 
       final data = {
         'tanggal': _tanggalController.text,
         'cabang_id': _selectedCabangId.toString(),
         'arus': _selectedArus,
         'kategori_kas': _kategoriController.text,
-        'nominal': nominalStr,
+        'nominal': nominalClean,
         'metode': _metodeController.text,
         'keterangan': _keteranganController.text,
       };
@@ -696,12 +1287,12 @@ class _FormCashflowBottomSheetState extends State<_FormCashflowBottomSheet> {
       if (widget.data == null) {
         await OperasionalCashflowCabangService.createCashflow(data, file: _selectedFile);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Data berhasil ditambahkan')));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Data cashflow berhasil ditambahkan')));
         }
       } else {
         await OperasionalCashflowCabangService.updateCashflow(widget.data!['id'], data, file: _selectedFile);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Data berhasil diperbarui')));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Data cashflow berhasil diperbarui')));
         }
       }
 
@@ -710,7 +1301,7 @@ class _FormCashflowBottomSheetState extends State<_FormCashflowBottomSheet> {
         widget.onSaved();
       }
     } catch (e) {
-      print('Error saving cashflow: $e');
+      debugPrint('Error saving cashflow: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Gagal menyimpan data')),
@@ -723,387 +1314,355 @@ class _FormCashflowBottomSheetState extends State<_FormCashflowBottomSheet> {
     }
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    IconData? icon,
-    TextInputType keyboardType = TextInputType.text,
-    List<TextInputFormatter>? inputFormatters,
-    int maxLines = 1,
-    bool readOnly = false,
-    VoidCallback? onTap,
-    String? Function(String?)? validator,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        RichText(
-          text: TextSpan(
-            text: label,
-            style: GoogleFonts.inter(
-              color: const Color(0xFF2D3142),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-            children: [
-              if (validator != null)
-                TextSpan(
-                  text: ' *',
-                  style: GoogleFonts.inter(color: Colors.red),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          inputFormatters: inputFormatters,
-          maxLines: maxLines,
-          readOnly: readOnly,
-          onTap: onTap,
-          validator: validator,
-          style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF2D3142)),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 14),
-            prefixIcon: icon != null ? Icon(icon, color: Colors.grey.shade500) : null,
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: maxLines > 1 ? 16 : 12),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF005B9F), width: 1.5),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.red, width: 1.5),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
+      height: MediaQuery.of(context).size.height * 0.9,
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF005B9F).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.money, color: Color(0xFF005B9F), size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      widget.data == null ? 'Tambah Cashflow' : 'Edit Cashflow',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF2D3142),
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 44,
+              height: 5,
+              decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(3)),
             ),
-            
-            // Form
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTextField(
-                        controller: _tanggalController,
-                        label: 'Tanggal',
-                        hint: 'Pilih Tanggal',
-                        icon: Icons.calendar_today_outlined,
-                        readOnly: true,
-                        onTap: () => _selectDate(context),
-                        validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null,
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      const SizedBox(height: 16),
-                      
-                      // Cabang
-                      RichText(
-                        text: TextSpan(
-                          text: 'Cabang',
-                          style: GoogleFonts.inter(
-                            color: const Color(0xFF2D3142),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          children: [
-                            TextSpan(text: ' *', style: GoogleFonts.inter(color: Colors.red)),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      DropdownButtonFormField<int>(
-                        value: _selectedCabangId,
-                        hint: Text('Pilih Cabang', style: GoogleFonts.inter(color: Colors.grey.shade400)),
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        ),
-                        items: widget.cabangList.map<DropdownMenuItem<int>>((cabang) {
-                          return DropdownMenuItem<int>(
-                            value: cabang['id'],
-                            child: Text(cabang['nama_cabang']),
-                          );
-                        }).toList(),
-                        onChanged: (value) => setState(() => _selectedCabangId = value),
-                        validator: (v) => v == null ? 'Wajib diisi' : null,
-                      ),
-                      const SizedBox(height: 16),
+                      child: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary, size: 20),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      widget.data == null ? 'Tambah Cashflow Cabang' : 'Edit Cashflow Cabang',
+                      style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Section Title
+                    Text('TRANSAKSI', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 0.5)),
+                    const Divider(color: Color(0xFFF1F5F9)),
+                    const SizedBox(height: 12),
 
-                      // Arus Kas
-                      RichText(
-                        text: TextSpan(
-                          text: 'Arus Kas',
-                          style: GoogleFonts.inter(
-                            color: const Color(0xFF2D3142),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          children: [
-                            TextSpan(text: ' *', style: GoogleFonts.inter(color: Colors.red)),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        value: _selectedArus,
-                        hint: Text('Masuk (Pemasukan) / Keluar (Pengeluaran)', style: GoogleFonts.inter(color: Colors.grey.shade400)),
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        ),
-                        items: _arusOptions.map<DropdownMenuItem<String>>((arus) {
-                          return DropdownMenuItem<String>(
-                            value: arus,
-                            child: Text(arus == 'Masuk' ? 'Masuk (Pemasukan)' : 'Keluar (Pengeluaran)'),
-                          );
-                        }).toList(),
-                        onChanged: (value) => setState(() => _selectedArus = value),
-                        validator: (v) => v == null ? 'Wajib diisi' : null,
-                      ),
-                      const SizedBox(height: 16),
-
-                      _buildTextField(
-                        controller: _nominalController,
-                        label: 'Nominal',
-                        hint: 'Rp 0',
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [CurrencyInputFormatter()],
-                        validator: (v) {
-                          if (v == null || v.isEmpty) return 'Wajib diisi';
-                          if (v == 'Rp 0') return 'Nominal tidak boleh 0';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      _buildTextField(
-                        controller: _kategoriController,
-                        label: 'Kategori Kas',
-                        hint: 'mis. Biaya Operasional',
-                      ),
-                      const SizedBox(height: 16),
-
-                      _buildTextField(
-                        controller: _metodeController,
-                        label: 'Metode Pembayaran',
-                        hint: 'mis. Cash, Transfer Bank',
-                      ),
-                      const SizedBox(height: 16),
-
-                      _buildTextField(
-                        controller: _keteranganController,
-                        label: 'Keterangan',
-                        hint: 'Tambahkan catatan jika diperlukan...',
-                        maxLines: 3,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Bukti File
-                      Text(
-                        'Bukti',
-                        style: GoogleFonts.inter(
-                          color: const Color(0xFF2D3142),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      InkWell(
-                        onTap: _pickFile,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(12),
-                            color: Colors.white,
-                          ),
-                          child: Row(
+                    // 1. Tanggal & Cabang
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE8F1F8),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  'Choose File',
-                                  style: GoogleFonts.inter(
-                                    color: const Color(0xFF005B9F),
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 12,
+                              Text('Tanggal *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF1E293B))),
+                              const SizedBox(height: 6),
+                              InkWell(
+                                onTap: () => _selectDate(context),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF8FAFC),
+                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  _fileName ?? 'No file chosen',
-                                  style: GoogleFonts.inter(
-                                    color: _fileName != null ? const Color(0xFF2D3142) : Colors.grey.shade500,
-                                    fontSize: 13,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        _tanggalController.text.isNotEmpty ? _tanggalController.text : 'Pilih Tanggal',
+                                        style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1E293B), fontWeight: FontWeight.w600),
+                                      ),
+                                      const Icon(Icons.calendar_today_rounded, size: 16, color: Color(0xFF64748B)),
+                                    ],
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      if (_fileName != null && _selectedFile == null)
-                        Text(
-                          'File saat ini: $_fileName',
-                          style: GoogleFonts.inter(fontSize: 12, color: Colors.blue),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Cabang *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF1E293B))),
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<int>(
+                                    value: _selectedCabangId,
+                                    isExpanded: true,
+                                    hint: Text('Pilih Cabang', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8))),
+                                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary),
+                                    style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1E293B)),
+                                    items: widget.cabangList.map((c) {
+                                      return DropdownMenuItem<int>(
+                                        value: c['id'],
+                                        child: Text(c['nama_cabang'] ?? '-'),
+                                      );
+                                    }).toList(),
+                                    onChanged: (val) {
+                                      if (val != null) setState(() => _selectedCabangId = val);
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      
-                      const SizedBox(height: 32),
-                    ],
-                  ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 2. Arus Dropdown & Kategori Kas
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Arus *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF1E293B))),
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: _selectedArus,
+                                    isExpanded: true,
+                                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary),
+                                    style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1E293B), fontWeight: FontWeight.w600),
+                                    items: const [
+                                      DropdownMenuItem(value: 'Masuk', child: Text('Masuk (Pemasukan Kas)')),
+                                      DropdownMenuItem(value: 'Keluar', child: Text('Keluar (Pengeluaran Kas)')),
+                                    ],
+                                    onChanged: (val) {
+                                      if (val != null) setState(() => _selectedArus = val);
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildFormInput(
+                            label: 'Kategori Kas',
+                            controller: _kategoriController,
+                            hint: 'mis. Biaya Operasional',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 3. Nominal & Metode
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildFormInput(
+                            label: 'Nominal *',
+                            controller: _nominalController,
+                            hint: 'Rp',
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [CurrencyInputFormatter()],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildFormInput(
+                            label: 'Metode',
+                            controller: _metodeController,
+                            hint: 'mis. Cash, Transfer Bank',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 4. Keterangan
+                    _buildFormInput(
+                      label: 'Keterangan',
+                      controller: _keteranganController,
+                      hint: 'Tambahkan catatan jika diperlukan...',
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 5. Bukti
+                    Text('Bukti', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF1E293B))),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _pickFile,
+                          icon: const Icon(Icons.attach_file_rounded, size: 16),
+                          label: const Text('Pilih Berkas'),
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _fileName != null ? _fileName! : (widget.data?['bukti'] != null ? 'Bukti tersimpan' : 'Belum ada berkas'),
+                            style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 40),
+                  ],
                 ),
               ),
             ),
-            
-            // Action Buttons
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    offset: const Offset(0, -4),
-                    blurRadius: 10,
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        side: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      child: Text(
-                        'Batal',
-                        style: GoogleFonts.inter(
-                          color: Colors.grey.shade700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isSaving ? null : _saveData,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF005B9F),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
-                      ),
-                      child: _isSaving
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                            )
-                          : Text(
-                              'Simpan Data',
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                    ),
-                  ),
-                ],
-              ),
+          ),
+
+          // Bottom Submit Actions
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: const Border(top: BorderSide(color: Color(0xFFF1F5F9))),
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -3))],
             ),
-          ],
-        ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _isSaving ? null : () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text('Batal', style: GoogleFonts.inter(color: const Color(0xFF334155), fontWeight: FontWeight.w700)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isSaving ? null : _saveData,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: _isSaving
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Text('Simpan Data', style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  Widget _buildFormInput({
+    required String label,
+    required TextEditingController controller,
+    required String hint,
+    int maxLines = 1,
+    TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
+    bool isRequired = label.contains('*');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF1E293B))),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: controller,
+          maxLines: maxLines,
+          keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
+          validator: isRequired ? (val) => val == null || val.trim().isEmpty ? 'Wajib diisi' : null : null,
+          style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1E293B), fontWeight: FontWeight.w600),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8), fontWeight: FontWeight.normal),
+            filled: true,
+            fillColor: const Color(0xFFF8FAFC),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.primary)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            isDense: true,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------
+// CURRENCY INPUT FORMATTER
+// ---------------------------------------------------------
+class CurrencyInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.selection.baseOffset == 0) {
+      return newValue;
+    }
+    String cleanStr = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanStr.isEmpty) cleanStr = '0';
+    double value = double.parse(cleanStr);
+    final formatter = NumberFormat.currency(
+        locale: 'id', symbol: 'Rp ', decimalDigits: 0);
+    String newText = formatter.format(value);
+    return newValue.copyWith(
+        text: newText,
+        selection: TextSelection.collapsed(offset: newText.length));
   }
 }

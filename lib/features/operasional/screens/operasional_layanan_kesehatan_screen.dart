@@ -52,7 +52,7 @@ class _OperasionalLayananKesehatanScreenState extends State<OperasionalLayananKe
   Future<void> _fetchCabang() async {
     try {
       final res = await ApiClient.instance.get('/operasional/cabangs');
-      if (res.data['status'] == true) {
+      if (res.data != null && res.data['data'] != null) {
         setState(() {
           _cabangList = res.data['data'] ?? [];
         });
@@ -200,7 +200,7 @@ class _OperasionalLayananKesehatanScreenState extends State<OperasionalLayananKe
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'di Cabang ${data['cabang']?['nama'] ?? '-'}',
+                      'di Cabang ${data['cabang']?['nama_cabang'] ?? data['cabang']?['nama'] ?? '-'}',
                       style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
                     ),
                   ],
@@ -466,7 +466,7 @@ class _OperasionalLayananKesehatanScreenState extends State<OperasionalLayananKe
                         style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
                         items: [
                           const DropdownMenuItem(value: 'all', child: Text('Semua Cabang')),
-                          ..._cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama'] ?? ''))),
+                          ..._cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama_cabang'] ?? c['nama'] ?? ''))),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -546,7 +546,7 @@ class _OperasionalLayananKesehatanScreenState extends State<OperasionalLayananKe
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            item['cabang']?['nama'] ?? '-',
+                            item['cabang']?['nama_cabang'] ?? item['cabang']?['nama'] ?? '-',
                             style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,

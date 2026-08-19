@@ -11,7 +11,6 @@ import 'kantor_klinklin_screen.dart';
 import 'operasional_purchase_order_screen.dart';
 import 'operasional_cashflow_cabang_screen.dart';
 import 'operasional_kpi_main_screen.dart';
-import 'operasional_kpi_cs_screen.dart';
 import 'operasional_quotation_screen.dart';
 import 'operasional_arsip_penawaran_screen.dart';
 import 'operasional_evaluasi_rapat_screen.dart';
@@ -25,6 +24,7 @@ import 'operasional_sim_screen.dart';
 import 'operasional_monthly_report_screen.dart';
 import 'operasional_kajian_rd_screen.dart';
 import 'operasional_target_omzet_screen.dart';
+import 'operasional_permintaan_design_screen.dart';
 import '../../master_barang/screens/master_barang_screen.dart';
 // TODO: import screens as they are created
 
@@ -135,14 +135,14 @@ class OperasionalMenuScreen extends StatelessWidget {
             icon: Icons.analytics,
             title: 'Report CS',
             onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalKpiMainScreen()));
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalKpiMainScreen(initialIndex: 0)));
             },
           ),
           _MenuItem(
             icon: Icons.bar_chart,
             title: 'KPI CS',
             onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalKpiCsScreen()));
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalKpiMainScreen(initialIndex: 1)));
             },
           ),
           _MenuItem(
@@ -268,7 +268,9 @@ class OperasionalMenuScreen extends StatelessWidget {
           _MenuItem(
             icon: Icons.brush_outlined,
             title: 'Permintaan Design',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalPermintaanDesignScreen()));
+            },
           ),
         ],
       ),

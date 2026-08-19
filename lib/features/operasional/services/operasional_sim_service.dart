@@ -15,7 +15,7 @@ class OperasionalSimService {
       if (cabangId != null && cabangId != 'all') queryParams['cabang_id'] = cabangId;
 
       final response = await _apiClient.get(
-        '/operasional/surat-izin-mengemudi',
+        '/operasional/sim',
         queryParameters: queryParams,
       );
       
@@ -47,7 +47,7 @@ class OperasionalSimService {
       }
 
       final response = await _apiClient.post(
-        '/operasional/surat-izin-mengemudi', 
+        '/operasional/sim', 
         data: formData,
       );
       return response.data;
@@ -79,7 +79,7 @@ class OperasionalSimService {
       }
 
       final response = await _apiClient.post(
-        '/operasional/surat-izin-mengemudi/$id', 
+        '/operasional/sim/$id', 
         data: formData,
       );
       return response.data;
@@ -98,7 +98,7 @@ class OperasionalSimService {
 
   Future<Map<String, dynamic>> deleteSimData(int id) async {
     try {
-      final response = await _apiClient.delete('/operasional/surat-izin-mengemudi/$id');
+      final response = await _apiClient.delete('/operasional/sim/$id');
       return response.data;
     } on DioException catch (e) {
       return {

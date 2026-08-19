@@ -15,7 +15,7 @@ class OperasionalTandaTerimaApdService {
       if (cabangId != null && cabangId != 'all') queryParams['cabang_id'] = cabangId;
 
       final response = await _apiClient.get(
-        '/operasional/tanda-terima-apd',
+        '/operasional/apd',
         queryParameters: queryParams,
       );
       
@@ -47,7 +47,7 @@ class OperasionalTandaTerimaApdService {
       }
 
       final response = await _apiClient.post(
-        '/operasional/tanda-terima-apd', 
+        '/operasional/apd', 
         data: formData,
       );
       return response.data;
@@ -79,7 +79,7 @@ class OperasionalTandaTerimaApdService {
       }
 
       final response = await _apiClient.post(
-        '/operasional/tanda-terima-apd/$id', 
+        '/operasional/apd/$id', 
         data: formData,
       );
       return response.data;
@@ -98,7 +98,7 @@ class OperasionalTandaTerimaApdService {
 
   Future<Map<String, dynamic>> deleteTandaTerimaApd(int id) async {
     try {
-      final response = await _apiClient.delete('/operasional/tanda-terima-apd/$id');
+      final response = await _apiClient.delete('/operasional/apd/$id');
       return response.data;
     } on DioException catch (e) {
       return {

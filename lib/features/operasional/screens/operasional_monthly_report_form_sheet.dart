@@ -146,6 +146,8 @@ class _OperasionalMonthlyReportFormSheetState extends State<OperasionalMonthlyRe
 
     setState(() => _isLoading = false);
 
+    if (!mounted) return;
+
     if (res['status'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(res['message'] ?? 'Berhasil disimpan'), backgroundColor: Colors.green),
@@ -289,7 +291,7 @@ class _OperasionalMonthlyReportFormSheetState extends State<OperasionalMonthlyRe
                                   hint: Text('-- Laporan Terpusat/Global --', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade400)),
                                   items: [
                                     const DropdownMenuItem(value: null, child: Text('-- Laporan Terpusat/Global --')),
-                                    ...widget.cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama'] ?? ''))),
+                                    ...widget.cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama_cabang'] ?? c['nama'] ?? ''))),
                                   ],
                                   onChanged: (val) {
                                     setState(() {

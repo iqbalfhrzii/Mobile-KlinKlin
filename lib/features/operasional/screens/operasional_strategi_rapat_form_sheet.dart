@@ -283,7 +283,7 @@ class _OperasionalStrategiRapatFormSheetState extends State<OperasionalStrategiR
                             value: _selectedCabangId,
                             isExpanded: true,
                             hint: Text('Pilih Cabang', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade400)),
-                            items: widget.cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama'] ?? ''))).toList(),
+                            items: widget.cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama_cabang'] ?? c['nama'] ?? ''))).toList(),
                             onChanged: (val) {
                               setState(() => _selectedCabangId = val);
                             },

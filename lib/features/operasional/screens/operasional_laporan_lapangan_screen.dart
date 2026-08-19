@@ -49,7 +49,7 @@ class _OperasionalLaporanLapanganScreenState extends State<OperasionalLaporanLap
   Future<void> _fetchCabang() async {
     try {
       final res = await ApiClient.instance.get('/operasional/cabangs');
-      if (res.data['status'] == true) {
+      if (res.data != null && res.data['data'] != null) {
         setState(() {
           _cabangList = res.data['data'] ?? [];
         });
@@ -132,7 +132,8 @@ class _OperasionalLaporanLapanganScreenState extends State<OperasionalLaporanLap
   Color _getRisikoColor(String? tingkat) {
     switch (tingkat?.toLowerCase()) {
       case 'rendah': return Colors.green;
-      case 'menengah': return Colors.orange;
+      case 'sedang':
+      case 'menengah': return Colors.amber.shade800;
       case 'tinggi': return Colors.red;
       case 'kritis': return Colors.deepPurple;
       default: return Colors.grey;
@@ -141,9 +142,12 @@ class _OperasionalLaporanLapanganScreenState extends State<OperasionalLaporanLap
 
   Color _getStatusColor(String? status) {
     switch (status?.toLowerCase()) {
-      case 'selesai': return Colors.green;
-      case 'proses': return Colors.blue;
-      case 'tertunda': return Colors.orange;
+      case 'selesai':
+      case 'closed': return Colors.green;
+      case 'proses':
+      case 'on progress': return Colors.blue;
+      case 'tertunda':
+      case 'open': return Colors.orange;
       case 'baru': return Colors.purple;
       default: return Colors.grey;
     }
@@ -207,7 +211,7 @@ class _OperasionalLaporanLapanganScreenState extends State<OperasionalLaporanLap
                         children: [
                           Text('CABANG', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
                           const SizedBox(height: 4),
-                          Text(data['cabang']?['nama'] ?? '-', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                          Text(data['cabang']?['nama_cabang'] ?? data['cabang']?['nama'] ?? '-', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                         ],
                       ),
                     ),
@@ -253,31 +257,41 @@ class _OperasionalLaporanLapanganScreenState extends State<OperasionalLaporanLap
                         children: [
                           Text('TINGKAT RISIKO & STATUS', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
                           const SizedBox(height: 4),
-                          Row(
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: _getRisikoColor(data['tingkat_risiko']).withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  data['tingkat_risiko'] ?? 'N/A',
-                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: _getRisikoColor(data['tingkat_risiko'])),
+                                  'Risiko: ${data['tingkat_risiko'] != null && data['tingkat_risiko'].toString().trim().isNotEmpty ? data['tingkat_risiko'] : 'N/A'}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: _getRisikoColor(data['tingkat_risiko']),
+                                  ),
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: _getStatusColor(data['status_temuan']).withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(10),
+                              if (data['status_temuan'] != null && data['status_temuan'].toString().trim().isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: _getStatusColor(data['status_temuan']).withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    'Status: ${data['status_temuan']}',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: _getStatusColor(data['status_temuan']),
+                                    ),
+                                  ),
                                 ),
-                                child: Text(
-                                  data['status_temuan'] ?? 'N/A',
-                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: _getStatusColor(data['status_temuan'])),
-                                ),
-                              ),
                             ],
                           ),
                         ],
@@ -378,6 +392,7 @@ class _OperasionalLaporanLapanganScreenState extends State<OperasionalLaporanLap
     );
 
     if (confirm != true) return;
+    if (!mounted) return;
 
     showDialog(
       context: context,
@@ -492,7 +507,7 @@ class _OperasionalLaporanLapanganScreenState extends State<OperasionalLaporanLap
                         style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
                         items: [
                           const DropdownMenuItem(value: 'all', child: Text('Semua Cabang')),
-                          ..._cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama'] ?? ''))),
+                          ..._cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama_cabang'] ?? c['nama'] ?? ''))),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -570,7 +585,7 @@ class _OperasionalLaporanLapanganScreenState extends State<OperasionalLaporanLap
                             style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark),
                           ),
                           Text(
-                            item['cabang']?['nama'] ?? '-',
+                            item['cabang']?['nama_cabang'] ?? item['cabang']?['nama'] ?? '-',
                             style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -623,25 +638,43 @@ class _OperasionalLaporanLapanganScreenState extends State<OperasionalLaporanLap
                         children: [
                           Text('RISIKO & STATUS', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
                           const SizedBox(height: 4),
-                          Row(
+                          Wrap(
+                            spacing: 4,
+                            runSpacing: 4,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                decoration: BoxDecoration(color: _getRisikoColor(item['tingkat_risiko']).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: _getRisikoColor(item['tingkat_risiko']).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
                                 child: Text(
-                                  item['tingkat_risiko']?.isNotEmpty == true ? item['tingkat_risiko'].substring(0, 1).toUpperCase() : 'N',
-                                  style: GoogleFonts.inter(fontSize: 10, color: _getRisikoColor(item['tingkat_risiko']), fontWeight: FontWeight.bold),
+                                  item['tingkat_risiko'] != null && item['tingkat_risiko'].toString().trim().isNotEmpty
+                                      ? item['tingkat_risiko']
+                                      : 'N/A',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    color: _getRisikoColor(item['tingkat_risiko']),
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
-                              const SizedBox(width: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                decoration: BoxDecoration(color: _getStatusColor(item['status_temuan']).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
-                                child: Text(
-                                  item['status_temuan']?.isNotEmpty == true ? item['status_temuan'].substring(0, 1).toUpperCase() : 'N',
-                                  style: GoogleFonts.inter(fontSize: 10, color: _getStatusColor(item['status_temuan']), fontWeight: FontWeight.bold),
+                              if (item['status_temuan'] != null && item['status_temuan'].toString().trim().isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: _getStatusColor(item['status_temuan']).withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    item['status_temuan'],
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      color: _getStatusColor(item['status_temuan']),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
-                              ),
                             ],
                           ),
                         ],

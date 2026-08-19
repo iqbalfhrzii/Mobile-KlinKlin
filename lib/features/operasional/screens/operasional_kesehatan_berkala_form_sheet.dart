@@ -173,6 +173,8 @@ class _OperasionalKesehatanBerkalaFormSheetState extends State<OperasionalKeseha
 
     setState(() => _isLoading = false);
 
+    if (!mounted) return;
+
     if (res['status'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(res['message'] ?? 'Berhasil disimpan'), backgroundColor: Colors.green),
@@ -313,7 +315,7 @@ class _OperasionalKesehatanBerkalaFormSheetState extends State<OperasionalKeseha
                                   value: _selectedCabangId,
                                   isExpanded: true,
                                   hint: Text('Pilih Cabang', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade400)),
-                                  items: widget.cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama'] ?? ''))).toList(),
+                                  items: widget.cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama_cabang'] ?? c['nama'] ?? ''))).toList(),
                                   onChanged: (val) {
                                     setState(() {
                                       _selectedCabangId = val;
@@ -415,6 +417,9 @@ class _OperasionalKesehatanBerkalaFormSheetState extends State<OperasionalKeseha
                             hint: Text('Pilih Hasil', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade400)),
                             items: const [
                               DropdownMenuItem(value: 'Sehat', child: Text('Sehat')),
+                              DropdownMenuItem(value: 'Sehat dengan Catatan', child: Text('Sehat dengan Catatan')),
+                              DropdownMenuItem(value: 'Perlu Tindak Lanjut', child: Text('Perlu Tindak Lanjut')),
+                              DropdownMenuItem(value: 'Tidak Layak Kerja', child: Text('Tidak Layak Kerja')),
                               DropdownMenuItem(value: 'Kurang Sehat', child: Text('Kurang Sehat')),
                               DropdownMenuItem(value: 'Tidak Sehat', child: Text('Tidak Sehat')),
                               DropdownMenuItem(value: 'N/A', child: Text('N/A')),

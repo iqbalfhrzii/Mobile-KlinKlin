@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import 'kantor_klinklin_screen.dart';
 import 'operasional_target_omzet_screen.dart';
+import 'operasional_permintaan_design_screen.dart';
 
 import '../../master_barang/screens/master_barang_screen.dart';
 
@@ -89,6 +90,19 @@ class OperasionalPengaturanScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => const OperasionalTargetOmzetScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                _buildMenuCard(
+                  context,
+                  icon: Icons.brush_outlined,
+                  title: 'Permintaan Design',
+                  subtitle: 'Ajukan dan pantau status permintaan design Anda.',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const OperasionalPermintaanDesignScreen()),
                     );
                   },
                 ),

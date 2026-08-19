@@ -52,7 +52,7 @@ class _OperasionalMonthlyReportScreenState extends State<OperasionalMonthlyRepor
   Future<void> _fetchCabang() async {
     try {
       final res = await ApiClient.instance.get('/operasional/cabangs');
-      if (res.data['status'] == true) {
+      if (res.data != null && res.data['data'] != null) {
         setState(() {
           _cabangList = res.data['data'] ?? [];
         });
@@ -183,22 +183,34 @@ class _OperasionalMonthlyReportScreenState extends State<OperasionalMonthlyRepor
                 const SizedBox(height: 12),
                 
                 Container(
+                  width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: Colors.grey.shade200),
                   ),
-                  child: Row(
+                  child: Wrap(
+                    spacing: 12,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Icon(Icons.business_outlined, size: 14, color: Colors.grey.shade600),
-                      const SizedBox(width: 4),
-                      Text('Cabang: ${data['cabang']?['nama'] ?? 'Global'}', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade700)),
-                      const SizedBox(width: 12),
-                      Icon(Icons.person_outline, size: 14, color: Colors.grey.shade600),
-                      const SizedBox(width: 4),
-                      Text('PIC: ${data['pic'] ?? '-'}', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade700)),
-                      const Spacer(),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.business_outlined, size: 14, color: Colors.grey.shade600),
+                          const SizedBox(width: 4),
+                          Text('Cabang: ${data['cabang']?['nama_cabang'] ?? data['cabang']?['nama'] ?? 'Global'}', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade700)),
+                        ],
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.person_outline, size: 14, color: Colors.grey.shade600),
+                          const SizedBox(width: 4),
+                          Text('PIC: ${data['pic'] ?? '-'}', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade700)),
+                        ],
+                      ),
                       _buildStatusBadge(data['status_laporan'] ?? 'Draft'),
                     ],
                   ),
@@ -206,62 +218,44 @@ class _OperasionalMonthlyReportScreenState extends State<OperasionalMonthlyRepor
                 
                 const SizedBox(height: 16),
                 
-                // Grid layout for 4 sections
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _buildDetailCard(
-                        title: 'Ringkasan',
-                        icon: Icons.notes,
-                        iconColor: _indigoColor,
-                        bgColor: _indigoColor.withValues(alpha: 0.05),
-                        borderColor: _indigoColor.withValues(alpha: 0.1),
-                        content: data['ringkasan'],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildDetailCard(
-                        title: 'Kendala',
-                        icon: Icons.warning_amber_rounded,
-                        iconColor: Colors.red,
-                        bgColor: Colors.red.shade50,
-                        borderColor: Colors.red.shade100,
-                        content: data['kendala'],
-                        emptyMessage: 'Tidak ada kendala yang dilaporkan.',
-                      ),
-                    ),
-                  ],
+                // Stacked layout for 4 sections to avoid phone width overflow
+                _buildDetailCard(
+                  title: 'Ringkasan',
+                  icon: Icons.notes,
+                  iconColor: _indigoColor,
+                  bgColor: _indigoColor.withValues(alpha: 0.05),
+                  borderColor: _indigoColor.withValues(alpha: 0.1),
+                  content: data['ringkasan'],
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _buildDetailCard(
-                        title: 'Capaian',
-                        icon: Icons.emoji_events_outlined,
-                        iconColor: Colors.green,
-                        bgColor: Colors.green.shade50,
-                        borderColor: Colors.green.shade100,
-                        content: data['capaian'],
-                        emptyMessage: 'Belum ada data capaian.',
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildDetailCard(
-                        title: 'Rencana Bulan Depan',
-                        icon: Icons.trending_up_outlined,
-                        iconColor: Colors.blue,
-                        bgColor: Colors.blue.shade50,
-                        borderColor: Colors.blue.shade100,
-                        content: data['rencana_bulan_depan'],
-                        emptyMessage: 'Belum ada rencana tindak lanjut.',
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 10),
+                _buildDetailCard(
+                  title: 'Kendala',
+                  icon: Icons.warning_amber_rounded,
+                  iconColor: Colors.red,
+                  bgColor: Colors.red.shade50,
+                  borderColor: Colors.red.shade100,
+                  content: data['kendala'],
+                  emptyMessage: 'Tidak ada kendala yang dilaporkan.',
+                ),
+                const SizedBox(height: 10),
+                _buildDetailCard(
+                  title: 'Capaian',
+                  icon: Icons.emoji_events_outlined,
+                  iconColor: Colors.green,
+                  bgColor: Colors.green.shade50,
+                  borderColor: Colors.green.shade100,
+                  content: data['capaian'],
+                  emptyMessage: 'Belum ada data capaian.',
+                ),
+                const SizedBox(height: 10),
+                _buildDetailCard(
+                  title: 'Rencana Bulan Depan',
+                  icon: Icons.trending_up_outlined,
+                  iconColor: Colors.blue,
+                  bgColor: Colors.blue.shade50,
+                  borderColor: Colors.blue.shade100,
+                  content: data['rencana_bulan_depan'],
+                  emptyMessage: 'Belum ada rencana tindak lanjut.',
                 ),
                 
                 if (data['file_laporan'] != null && data['file_laporan'].toString().isNotEmpty) ...[
@@ -393,6 +387,7 @@ class _OperasionalMonthlyReportScreenState extends State<OperasionalMonthlyRepor
     );
 
     if (confirm != true) return;
+    if (!mounted) return;
 
     showDialog(
       context: context,
@@ -507,7 +502,7 @@ class _OperasionalMonthlyReportScreenState extends State<OperasionalMonthlyRepor
                         style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
                         items: [
                           const DropdownMenuItem(value: 'all', child: Text('Semua Cabang (Pusat/Global)')),
-                          ..._cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama'] ?? ''))),
+                          ..._cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama_cabang'] ?? c['nama'] ?? ''))),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -571,77 +566,76 @@ class _OperasionalMonthlyReportScreenState extends State<OperasionalMonthlyRepor
             children: [
               Padding(
                 padding: const EdgeInsets.all(16),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('PERIODE & LAPORAN', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-                          const SizedBox(height: 2),
-                          Text(
-                            item['periode'] != null ? DateFormat('MMMM yyyy').format(DateTime.parse(item['periode'])) : '-',
-                            style: GoogleFonts.inter(fontSize: 10, color: _indigoColor, fontWeight: FontWeight.bold),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item['periode'] != null ? DateFormat('MMMM yyyy').format(DateTime.parse(item['periode'])) : '-',
+                                style: GoogleFonts.inter(fontSize: 11, color: _indigoColor, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                item['judul'] ?? '-',
+                                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            item['judul'] ?? '-',
-                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildStatusBadge(item['status_laporan'] ?? 'Draft'),
+                      ],
                     ),
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('CABANG & PIC', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-                          const SizedBox(height: 2),
-                          Text(
-                            item['cabang']?['nama'] ?? 'Global',
-                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                    const SizedBox(height: 12),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 1,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('CABANG & PIC', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
+                              const SizedBox(height: 2),
+                              Text(
+                                item['cabang']?['nama_cabang'] ?? item['cabang']?['nama'] ?? 'Global',
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                'PIC: ${item['pic'] ?? '-'}',
+                                style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                          Text(
-                            'PIC: ${item['pic'] ?? '-'}',
-                            style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 1,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('RINGKASAN', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
+                              const SizedBox(height: 2),
+                              Text(
+                                (item['ringkasan'] == null || item['ringkasan'].toString().trim().isEmpty) ? '-' : item['ringkasan'],
+                                style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('RINGKASAN', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-                          const SizedBox(height: 4),
-                          Text(
-                            (item['ringkasan']?.isEmpty ?? true) ? '-' : item['ringkasan'],
-                            style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      flex: 1,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('STATUS', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-                          const SizedBox(height: 4),
-                          _buildStatusBadge(item['status_laporan'] ?? 'Draft'),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

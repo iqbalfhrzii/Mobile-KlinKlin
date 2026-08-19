@@ -52,7 +52,7 @@ class _OperasionalKajianRdScreenState extends State<OperasionalKajianRdScreen> {
   Future<void> _fetchCabang() async {
     try {
       final res = await ApiClient.instance.get('/operasional/cabangs');
-      if (res.data['status'] == true) {
+      if (res.data != null && res.data['data'] != null) {
         setState(() {
           _cabangList = res.data['data'] ?? [];
         });
@@ -187,7 +187,7 @@ class _OperasionalKajianRdScreenState extends State<OperasionalKajianRdScreen> {
                   runSpacing: 8,
                   children: [
                     _buildIconLabel(Icons.category_outlined, 'Kategori: ${data['kategori'] ?? '-'}'),
-                    _buildIconLabel(Icons.business_outlined, 'Cabang: ${data['cabang']?['nama'] ?? 'Pusat'}'),
+                    _buildIconLabel(Icons.business_outlined, 'Cabang: ${data['cabang']?['nama_cabang'] ?? data['cabang']?['nama'] ?? 'Pusat'}'),
                     _buildIconLabel(Icons.person_outline, 'PIC: ${data['pic'] ?? '-'}'),
                     _buildStatusBadge(data['status_kajian'] ?? 'Sedang Dikaji'),
                   ],
@@ -195,34 +195,25 @@ class _OperasionalKajianRdScreenState extends State<OperasionalKajianRdScreen> {
                 
                 const SizedBox(height: 16),
                 
-                // Grid layout for sections
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _buildDetailCard(
-                        title: 'Latar Belakang',
-                        icon: Icons.lightbulb_outline,
-                        iconColor: Colors.orange.shade700,
-                        bgColor: Colors.white,
-                        borderColor: Colors.grey.shade200,
-                        content: data['latar_belakang'],
-                        emptyMessage: 'Tidak ada latar belakang yang dicatat.',
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildDetailCard(
-                        title: 'Metode Kajian',
-                        icon: Icons.architecture,
-                        iconColor: Colors.blue.shade700,
-                        bgColor: Colors.white,
-                        borderColor: Colors.grey.shade200,
-                        content: data['metode'],
-                        emptyMessage: 'Metode tidak dideskripsikan secara spesifik.',
-                      ),
-                    ),
-                  ],
+                // Stacked layout for sections to avoid phone width overflow
+                _buildDetailCard(
+                  title: 'Latar Belakang',
+                  icon: Icons.lightbulb_outline,
+                  iconColor: Colors.orange.shade700,
+                  bgColor: Colors.white,
+                  borderColor: Colors.grey.shade200,
+                  content: data['latar_belakang'],
+                  emptyMessage: 'Tidak ada latar belakang yang dicatat.',
+                ),
+                const SizedBox(height: 10),
+                _buildDetailCard(
+                  title: 'Metode Kajian',
+                  icon: Icons.architecture,
+                  iconColor: Colors.blue.shade700,
+                  bgColor: Colors.white,
+                  borderColor: Colors.grey.shade200,
+                  content: data['metode'],
+                  emptyMessage: 'Metode tidak dideskripsikan secara spesifik.',
                 ),
                 const SizedBox(height: 12),
                 _buildDetailCard(
@@ -415,6 +406,7 @@ class _OperasionalKajianRdScreenState extends State<OperasionalKajianRdScreen> {
     );
 
     if (confirm != true) return;
+    if (!mounted) return;
 
     showDialog(
       context: context,
@@ -529,7 +521,7 @@ class _OperasionalKajianRdScreenState extends State<OperasionalKajianRdScreen> {
                         style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
                         items: [
                           const DropdownMenuItem(value: 'all', child: Text('Semua Cabang')),
-                          ..._cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama'] ?? ''))),
+                          ..._cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama_cabang'] ?? c['nama'] ?? ''))),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -593,79 +585,78 @@ class _OperasionalKajianRdScreenState extends State<OperasionalKajianRdScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.all(16),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('TANGGAL & JUDUL', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-                          const SizedBox(height: 2),
-                          Text(
-                            item['tanggal'] != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(item['tanggal'])) : '-',
-                            style: GoogleFonts.inter(fontSize: 10, color: _indigoColor, fontWeight: FontWeight.bold),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item['tanggal'] != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(item['tanggal'])) : '-',
+                                style: GoogleFonts.inter(fontSize: 11, color: _indigoColor, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                item['judul'] ?? '-',
+                                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            item['judul'] ?? '-',
-                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildStatusBadge(item['status_kajian'] ?? 'Sedang Dikaji'),
+                      ],
                     ),
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('KATEGORI & PIC', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-                          const SizedBox(height: 4),
-                          _buildKategoriBadge(item['kategori'] ?? ''),
-                          const SizedBox(height: 4),
-                          Text(
-                            'PIC: ${item['pic'] ?? '-'}',
-                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                    const SizedBox(height: 12),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 1,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('KATEGORI & PIC', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
+                              const SizedBox(height: 4),
+                              _buildKategoriBadge(item['kategori'] ?? ''),
+                              const SizedBox(height: 4),
+                              Text(
+                                'PIC: ${item['pic'] ?? '-'}',
+                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                item['cabang']?['nama_cabang'] ?? item['cabang']?['nama'] ?? 'Pusat',
+                                style: GoogleFonts.inter(fontSize: 10, color: Colors.grey.shade600),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                          Text(
-                            item['cabang']?['nama'] ?? 'Pusat',
-                            style: GoogleFonts.inter(fontSize: 10, color: Colors.grey.shade600),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 1,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('HASIL KAJIAN', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
+                              const SizedBox(height: 4),
+                              Text(
+                                (item['hasil_kajian'] == null || item['hasil_kajian'].toString().trim().isEmpty) ? '-' : item['hasil_kajian'],
+                                style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('HASIL KAJIAN', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-                          const SizedBox(height: 4),
-                          Text(
-                            (item['hasil_kajian']?.isEmpty ?? true) ? '-' : item['hasil_kajian'],
-                            style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      flex: 1,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('STATUS', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-                          const SizedBox(height: 4),
-                          _buildStatusBadge(item['status_kajian'] ?? 'Sedang Dikaji'),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

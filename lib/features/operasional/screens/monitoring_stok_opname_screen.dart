@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/api/api_client.dart';
@@ -19,6 +21,7 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
   List<dynamic> _cabangs = [];
   Map<String, dynamic>? _currentSession;
   List<dynamic> _sessionDetails = [];
+  String? _authToken;
 
   int? _selectedCabangId;
   DateTime _selectedPeriode = DateTime.now();
@@ -37,13 +40,21 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    _loadCabangs();
+    _loadAuthTokenAndCabangs();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadAuthTokenAndCabangs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _authToken = prefs.getString('auth_token');
+    } catch (_) {}
+    _loadCabangs();
   }
 
   Future<void> _loadCabangs() async {
@@ -125,9 +136,15 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
     // Extract baseDomain from ApiClient
     final baseDomain = ApiClient.baseUrl.replaceAll(RegExp(r'/api/?$'), '');
 
-    if (p.startsWith('/')) p = p.substring(1);
-    if (p.startsWith('public/')) p = p.substring(7);
-    if (p.startsWith('storage/')) return '$baseDomain/$p';
+    while (p.startsWith('/')) {
+      p = p.substring(1);
+    }
+    if (p.startsWith('public/')) {
+      p = p.substring(7);
+    }
+    if (p.startsWith('storage/')) {
+      return '$baseDomain/$p';
+    }
 
     return '$baseDomain/storage/$p';
   }
@@ -976,35 +993,10 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
             Positioned.fill(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  url,
+                child: SmartNetworkImage(
+                  url: url,
+                  token: _authToken,
                   fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Center(
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.primary,
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
-                              : null,
-                        ),
-                      ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    debugPrint('Error loading image ($url): $error');
-                    return Container(
-                      color: const Color(0xFFF1F5F9),
-                      child: const Center(
-                        child: Icon(Icons.broken_image_rounded, color: Color(0xFF94A3B8), size: 24),
-                      ),
-                    );
-                  },
                 ),
               ),
             ),
@@ -1060,16 +1052,11 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
               maxScale: 4.0,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Image.network(
-                  url,
+                child: SmartNetworkImage(
+                  url: url,
+                  token: _authToken,
                   fit: BoxFit.contain,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return const Center(
-                      child: CircularProgressIndicator(color: Colors.white),
-                    );
-                  },
-                  errorBuilder: (_, __, ___) => Container(
+                  errorBuilder: (context, error, stackTrace) => Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -1081,8 +1068,30 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
                         const Icon(Icons.broken_image_rounded, color: Colors.grey, size: 48),
                         const SizedBox(height: 12),
                         Text(
-                          'Gagal memuat gambar resolusi penuh',
-                          style: GoogleFonts.inter(fontSize: 13, color: Colors.black87),
+                          'Gagal memuat gambar',
+                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B)),
+                        ),
+                        const SizedBox(height: 6),
+                        SelectableText(
+                          url,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B)),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TextButton.icon(
+                              onPressed: () {
+                                Clipboard.setData(ClipboardData(text: url));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('URL berhasil disalin')),
+                                );
+                              },
+                              icon: const Icon(Icons.copy_rounded, size: 16),
+                              label: const Text('Salin URL'),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -1148,6 +1157,107 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
           ],
         ),
       ),
+    );
+  }
+}
+
+// --- SMART NETWORK IMAGE WITH AUTO HTTP/HTTPS FALLBACK & AUTH HEADERS ---
+class SmartNetworkImage extends StatefulWidget {
+  final String url;
+  final BoxFit fit;
+  final String? token;
+  final Widget? placeholder;
+  final Widget Function(BuildContext, Object, StackTrace?)? errorBuilder;
+
+  const SmartNetworkImage({
+    super.key,
+    required this.url,
+    this.fit = BoxFit.cover,
+    this.token,
+    this.placeholder,
+    this.errorBuilder,
+  });
+
+  @override
+  State<SmartNetworkImage> createState() => _SmartNetworkImageState();
+}
+
+class _SmartNetworkImageState extends State<SmartNetworkImage> {
+  late String _activeUrl;
+  bool _triedFallback = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeUrl = widget.url;
+  }
+
+  @override
+  void didUpdateWidget(covariant SmartNetworkImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) {
+      _activeUrl = widget.url;
+      _triedFallback = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_activeUrl.isEmpty) {
+      return widget.errorBuilder?.call(context, 'Empty URL', null) ??
+          const Center(child: Icon(Icons.image_not_supported_rounded, color: Color(0xFF94A3B8), size: 24));
+    }
+
+    final headers = widget.token != null && widget.token!.isNotEmpty
+        ? {
+            'Authorization': 'Bearer ${widget.token}',
+            'Accept': 'image/*,*/*',
+          }
+        : const {'Accept': 'image/*,*/*'};
+
+    return Image.network(
+      _activeUrl,
+      fit: widget.fit,
+      headers: headers,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return widget.placeholder ??
+            Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.primary,
+                  value: loadingProgress.expectedTotalBytes != null
+                      ? loadingProgress.cumulativeBytesLoaded /
+                          loadingProgress.expectedTotalBytes!
+                      : null,
+                ),
+              ),
+            );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        debugPrint('Image load error on $_activeUrl: $error');
+        if (!_triedFallback) {
+          _triedFallback = true;
+          if (_activeUrl.startsWith('http://')) {
+            final fallback = _activeUrl.replaceFirst('http://', 'https://');
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) setState(() => _activeUrl = fallback);
+            });
+            return const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary));
+          } else if (_activeUrl.startsWith('https://')) {
+            final fallback = _activeUrl.replaceFirst('https://', 'http://');
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) setState(() => _activeUrl = fallback);
+            });
+            return const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary));
+          }
+        }
+        return widget.errorBuilder?.call(context, error, stackTrace) ??
+            const Center(child: Icon(Icons.broken_image_rounded, color: Color(0xFF94A3B8), size: 24));
+      },
     );
   }
 }

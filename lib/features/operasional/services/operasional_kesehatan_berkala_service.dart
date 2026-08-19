@@ -15,7 +15,7 @@ class OperasionalKesehatanBerkalaService {
       if (cabangId != null && cabangId != 'all') queryParams['cabang_id'] = cabangId;
 
       final response = await _apiClient.get(
-        '/operasional/data-kesehatan-berkala',
+        '/operasional/kesehatan-berkala',
         queryParameters: queryParams,
       );
       
@@ -47,7 +47,7 @@ class OperasionalKesehatanBerkalaService {
       }
 
       final response = await _apiClient.post(
-        '/operasional/data-kesehatan-berkala', 
+        '/operasional/kesehatan-berkala', 
         data: formData,
       );
       return response.data;
@@ -79,7 +79,7 @@ class OperasionalKesehatanBerkalaService {
       }
 
       final response = await _apiClient.post(
-        '/operasional/data-kesehatan-berkala/$id', 
+        '/operasional/kesehatan-berkala/$id', 
         data: formData,
       );
       return response.data;
@@ -98,7 +98,7 @@ class OperasionalKesehatanBerkalaService {
 
   Future<Map<String, dynamic>> deleteDataKesehatanBerkala(int id) async {
     try {
-      final response = await _apiClient.delete('/operasional/data-kesehatan-berkala/$id');
+      final response = await _apiClient.delete('/operasional/kesehatan-berkala/$id');
       return response.data;
     } on DioException catch (e) {
       return {

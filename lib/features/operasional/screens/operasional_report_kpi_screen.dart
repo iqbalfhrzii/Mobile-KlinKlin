@@ -1,14 +1,15 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../services/operasional_service.dart';
-import 'operasional_kpi_cs_screen.dart'; // We use this for "Ringkasan Nilai KPI per Cabang" tab
 
 class OperasionalReportKpiScreen extends StatefulWidget {
   final bool hideHeader;
-  const OperasionalReportKpiScreen({super.key, this.hideHeader = false});
+  final VoidCallback? onSwitchToKpiCs;
+  const OperasionalReportKpiScreen({super.key, this.hideHeader = false, this.onSwitchToKpiCs});
 
   @override
   State<OperasionalReportKpiScreen> createState() => _OperasionalReportKpiScreenState();
@@ -28,6 +29,21 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
   DateTime? _customStartDate;
   DateTime? _customEndDate;
 
+  // --- STATE FOR SEMUA ORDER TAB ---
+  bool _isLoadingOrders = false;
+  String _ordersError = '';
+  List<dynamic> _ordersList = [];
+  List<dynamic> _cabangs = [];
+  final TextEditingController _orderSearchController = TextEditingController();
+  Timer? _orderDebounce;
+
+  int? _selectedOrderCabangId;
+  String? _selectedOrderStatus;
+  String _selectedOrderPeriode = 'Semua';
+  final List<String> _orderPeriodeFilters = ['Semua', 'Kemarin', 'Hari Ini', 'Besok', 'Rentang Waktu'];
+  DateTime? _orderCustomStartDate;
+  DateTime? _orderCustomEndDate;
+
   @override
   void initState() {
     super.initState();
@@ -35,15 +51,120 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         setState(() {});
+        if (_tabController.index == 1 && _ordersList.isEmpty) {
+          _fetchOrders();
+        }
       }
     });
     _fetchKpiData();
+    _fetchCabangs();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _orderSearchController.dispose();
+    _orderDebounce?.cancel();
     super.dispose();
+  }
+
+  Future<void> _fetchCabangs() async {
+    try {
+      final res = await _service.getCabangs();
+      if (mounted) {
+        setState(() {
+          _cabangs = res['data'] ?? [];
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _fetchOrders() async {
+    setState(() {
+      _isLoadingOrders = true;
+      _ordersError = '';
+    });
+
+    try {
+      String? start;
+      String? end;
+      String? periodeParam;
+
+      if (_selectedOrderPeriode == 'Hari Ini') {
+        periodeParam = 'hari_ini';
+      } else if (_selectedOrderPeriode == 'Kemarin') {
+        periodeParam = 'kemarin';
+      } else if (_selectedOrderPeriode == 'Besok') {
+        periodeParam = 'besok';
+      } else if (_selectedOrderPeriode == 'Rentang Waktu') {
+        if (_orderCustomStartDate != null) {
+          start = DateFormat('yyyy-MM-dd').format(_orderCustomStartDate!);
+        }
+        if (_orderCustomEndDate != null) {
+          end = DateFormat('yyyy-MM-dd').format(_orderCustomEndDate!);
+        }
+      }
+
+      final res = await _service.getSemuaOrder(
+        search: _orderSearchController.text.trim(),
+        cabangId: _selectedOrderCabangId,
+        status: _selectedOrderStatus,
+        periode: periodeParam,
+        startDate: start,
+        endDate: end,
+      );
+
+      if (mounted) {
+        final list = res['data'];
+        if (list is List) {
+          setState(() => _ordersList = list);
+        } else if (list is Map && list['data'] is List) {
+          setState(() => _ordersList = list['data']);
+        } else {
+          setState(() => _ordersList = []);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _ordersError = e.toString().replaceAll('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingOrders = false);
+      }
+    }
+  }
+
+  void _onOrderSearchChanged(String val) {
+    if (_orderDebounce?.isActive ?? false) _orderDebounce!.cancel();
+    _orderDebounce = Timer(const Duration(milliseconds: 400), () {
+      _fetchOrders();
+    });
+  }
+
+  void _onOrderPeriodeChanged(String filter) async {
+    if (filter == 'Rentang Waktu') {
+      final picked = await showDateRangePicker(
+        context: context,
+        firstDate: DateTime(2020),
+        lastDate: DateTime(2030),
+      );
+      if (picked != null) {
+        setState(() {
+          _selectedOrderPeriode = filter;
+          _orderCustomStartDate = picked.start;
+          _orderCustomEndDate = picked.end;
+        });
+        _fetchOrders();
+      }
+    } else {
+      setState(() {
+        _selectedOrderPeriode = filter;
+        _orderCustomStartDate = null;
+        _orderCustomEndDate = null;
+      });
+      _fetchOrders();
+    }
   }
 
   Future<void> _fetchKpiData() async {
@@ -123,34 +244,47 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
         children: [
           if (!widget.hideHeader)
             GradientHeader(
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Report KPI',
-                        style: GoogleFonts.inter(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+              child: Row(
+                children: [
+                  InkWell(
+                    onTap: () => Navigator.pop(context),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Laporan pencapaian target omzet',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.8),
-                        ),
-                      ),
-                    ],
+                      child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Report KPI',
+                          style: GoogleFonts.inter(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Laporan pencapaian target omzet & daftar transaksi',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Colors.white.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
           
           Container(
             color: Colors.white,
@@ -158,11 +292,11 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
             child: Row(
               children: [
                 Expanded(
-                  child: _buildFastButton(0, 'KPI Omzet Cabang', Icons.storefront_rounded),
+                  child: _buildFastButton(0, 'KPI Omzet per Cabang', Icons.storefront_rounded),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _buildFastButton(1, 'Ringkasan Nilai KPI', Icons.assessment_rounded),
+                  child: _buildFastButton(1, 'Semua Order', Icons.receipt_long_rounded),
                 ),
               ],
             ),
@@ -173,7 +307,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
               controller: _tabController,
               children: [
                 _buildKpiTab(),
-                const OperasionalKpiCsScreen(hideHeader: true),
+                _buildSemuaOrderTab(),
               ],
             ),
           ),
@@ -594,6 +728,383 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
           ],
         ),
       ],
+    );
+  }
+
+  // --- TAB 2: SEMUA ORDER ---
+  Widget _buildSemuaOrderTab() {
+    return RefreshIndicator(
+      onRefresh: _fetchOrders,
+      color: AppColors.primary,
+      child: Column(
+        children: [
+          // Filter Bar
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Search Field
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.search_rounded, size: 20, color: Color(0xFF64748B)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: _orderSearchController,
+                          onChanged: _onOrderSearchChanged,
+                          style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1E293B), fontWeight: FontWeight.w500),
+                          decoration: InputDecoration(
+                            hintText: 'Cari customer, ID, atau cleaner...',
+                            hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                          ),
+                        ),
+                      ),
+                      if (_orderSearchController.text.isNotEmpty)
+                        IconButton(
+                          icon: const Icon(Icons.clear_rounded, size: 16, color: Color(0xFF64748B)),
+                          onPressed: () {
+                            _orderSearchController.clear();
+                            _fetchOrders();
+                          },
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Cabang & Status Order Dropdowns
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            value: _selectedOrderCabangId,
+                            isExpanded: true,
+                            hint: Text('Semua Cabang', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary, size: 20),
+                            style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF1E293B), fontWeight: FontWeight.w600),
+                            items: [
+                              DropdownMenuItem<int>(value: null, child: Text('Semua Cabang', style: GoogleFonts.inter(fontWeight: FontWeight.normal))),
+                              ..._cabangs.map((c) => DropdownMenuItem<int>(value: c['id'], child: Text(c['nama_cabang'] ?? '-'))),
+                            ],
+                            onChanged: (val) {
+                              setState(() => _selectedOrderCabangId = val);
+                              _fetchOrders();
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedOrderStatus,
+                            isExpanded: true,
+                            hint: Text('Semua Status', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary, size: 20),
+                            style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF1E293B), fontWeight: FontWeight.w600),
+                            items: const [
+                              DropdownMenuItem(value: null, child: Text('Semua Status')),
+                              DropdownMenuItem(value: 'process', child: Text('Process')),
+                              DropdownMenuItem(value: 'done', child: Text('Done')),
+                              DropdownMenuItem(value: 'pending', child: Text('Pending')),
+                              DropdownMenuItem(value: 'cancelled', child: Text('Cancelled')),
+                              DropdownMenuItem(value: 'draft', child: Text('Draft')),
+                            ],
+                            onChanged: (val) {
+                              setState(() => _selectedOrderStatus = val);
+                              _fetchOrders();
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Periode Chips
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _orderPeriodeFilters.map((f) {
+                      final isSelected = _selectedOrderPeriode == f;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: InkWell(
+                          onTap: () => _onOrderPeriodeChanged(f),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              f == 'Rentang Waktu' && _orderCustomStartDate != null && isSelected
+                                  ? '${DateFormat('dd MMM').format(_orderCustomStartDate!)} - ${DateFormat('dd MMM').format(_orderCustomEndDate!)}'
+                                  : f,
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                color: isSelected ? Colors.white : const Color(0xFF475569),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+
+          // Orders List
+          Expanded(
+            child: _isLoadingOrders
+                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                : _ordersError.isNotEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.error_outline_rounded, color: Colors.red, size: 36),
+                              const SizedBox(height: 10),
+                              Text(_ordersError, textAlign: TextAlign.center, style: GoogleFonts.inter(color: Colors.red, fontSize: 13)),
+                              const SizedBox(height: 12),
+                              ElevatedButton(
+                                onPressed: _fetchOrders,
+                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                                child: const Text('Coba Lagi'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : _ordersList.isEmpty
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.08), shape: BoxShape.circle),
+                                    child: const Icon(Icons.receipt_long_rounded, size: 40, color: AppColors.primary),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Text(
+                                    'Tidak Ada Data Order',
+                                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Tidak ditemukan pesanan yang sesuai dengan filter.',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _ordersList.length,
+                            separatorBuilder: (context, index) => const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final item = _ordersList[index] as Map<String, dynamic>;
+                              return _buildOrderCard(item);
+                            },
+                          ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderCard(Map<String, dynamic> item) {
+    final String idOrder = item['id_order'] ?? (item['id'] != null ? '#${item['id']}' : '-');
+    final String cabangName = item['cabang']?['nama_cabang'] ?? '-';
+    final String customerName = item['pelanggan']?['nama_pelanggan'] ?? item['nama_customer'] ?? '-';
+    
+    // Status
+    final String status = item['status_order_utama'] ?? item['status_pesanan'] ?? 'Pending';
+    Color statusColor = const Color(0xFF64748B);
+    Color statusBg = const Color(0xFFF1F5F9);
+
+    final statusLower = status.toLowerCase();
+    if (statusLower == 'process' || statusLower.contains('progress')) {
+      statusColor = const Color(0xFF0284C7);
+      statusBg = const Color(0xFFE0F2FE);
+    } else if (statusLower == 'done' || statusLower.contains('selesai')) {
+      statusColor = const Color(0xFF16A34A);
+      statusBg = const Color(0xFFDCFCE7);
+    } else if (statusLower == 'cancelled' || statusLower.contains('batal')) {
+      statusColor = const Color(0xFFDC2626);
+      statusBg = const Color(0xFFFEE2E2);
+    } else if (statusLower == 'pending') {
+      statusColor = const Color(0xFFD97706);
+      statusBg = const Color(0xFFFEF3C7);
+    }
+
+    // Tanggal
+    String tanggalStr = '-';
+    if (item['tanggal_input'] != null) {
+      try {
+        tanggalStr = DateFormat('dd MMM yyyy').format(DateTime.parse(item['tanggal_input']));
+      } catch (_) {}
+    } else if (item['created_at'] != null) {
+      try {
+        tanggalStr = DateFormat('dd MMM yyyy').format(DateTime.parse(item['created_at']));
+      } catch (_) {}
+    }
+
+    // Total
+    final num totalHarga = num.tryParse(item['subtotal']?.toString() ?? item['total_harga']?.toString() ?? item['total']?.toString() ?? '0') ?? 0;
+    final String formattedTotal = _formatCurrency(totalHarga);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: ID Order & Status Badge
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                idOrder,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF1D4ED8),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusBg,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  status.toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          const SizedBox(height: 10),
+
+          // Row 1: Cabang & Tanggal Pengerjaan
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.location_on_rounded, size: 14, color: Color(0xFF64748B)),
+                  const SizedBox(width: 4),
+                  Text(
+                    cabangName,
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF334155)),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  const Icon(Icons.calendar_today_rounded, size: 13, color: Color(0xFF64748B)),
+                  const SizedBox(width: 4),
+                  Text(
+                    tanggalStr,
+                    style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Row 2: Customer & Total
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    const Icon(Icons.person_rounded, size: 14, color: Color(0xFF64748B)),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        customerName,
+                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B)),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                formattedTotal,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

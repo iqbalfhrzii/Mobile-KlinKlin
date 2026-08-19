@@ -52,7 +52,7 @@ class _OperasionalKesehatanBerkalaScreenState extends State<OperasionalKesehatan
   Future<void> _fetchCabang() async {
     try {
       final res = await ApiClient.instance.get('/operasional/cabangs');
-      if (res.data['status'] == true) {
+      if (res.data != null && res.data['data'] != null) {
         setState(() {
           _cabangList = res.data['data'] ?? [];
         });
@@ -132,6 +132,40 @@ class _OperasionalKesehatanBerkalaScreenState extends State<OperasionalKesehatan
     );
   }
 
+  Color _getHasilColor(String? hasil) {
+    switch (hasil?.toLowerCase()) {
+      case 'sehat':
+        return Colors.green.shade800;
+      case 'sehat dengan catatan':
+        return Colors.blue.shade800;
+      case 'perlu tindak lanjut':
+      case 'kurang sehat':
+        return Colors.amber.shade900;
+      case 'tidak layak kerja':
+      case 'tidak sehat':
+        return Colors.red.shade800;
+      default:
+        return Colors.grey.shade800;
+    }
+  }
+
+  Color _getHasilBgColor(String? hasil) {
+    switch (hasil?.toLowerCase()) {
+      case 'sehat':
+        return Colors.green.shade50;
+      case 'sehat dengan catatan':
+        return Colors.blue.shade50;
+      case 'perlu tindak lanjut':
+      case 'kurang sehat':
+        return Colors.amber.shade50;
+      case 'tidak layak kerja':
+      case 'tidak sehat':
+        return Colors.red.shade50;
+      default:
+        return Colors.grey.shade100;
+    }
+  }
+
   void _showDetail(dynamic data) {
     showDialog(
       context: context,
@@ -190,7 +224,7 @@ class _OperasionalKesehatanBerkalaScreenState extends State<OperasionalKesehatan
                         children: [
                           Text('CABANG', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
                           const SizedBox(height: 4),
-                          Text(data['cabang']?['nama'] ?? '-', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                          Text(data['cabang']?['nama_cabang'] ?? data['cabang']?['nama'] ?? '-', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                         ],
                       ),
                     ),
@@ -235,7 +269,12 @@ class _OperasionalKesehatanBerkalaScreenState extends State<OperasionalKesehatan
                         children: [
                           Text('TEMPAT PERIKSA', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
                           const SizedBox(height: 4),
-                          Text(data['tempat_periksa'] ?? '-', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark)),
+                          Text(
+                            data['tempat_periksa'] != null && data['tempat_periksa'].toString().trim().isNotEmpty
+                                ? data['tempat_periksa']
+                                : '-',
+                            style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
+                          ),
                         ],
                       ),
                     ),
@@ -246,14 +285,18 @@ class _OperasionalKesehatanBerkalaScreenState extends State<OperasionalKesehatan
                           Text('HASIL', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
                           const SizedBox(height: 4),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(10),
+                              color: _getHasilBgColor(data['hasil']),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              data['hasil'] ?? 'N/A',
-                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                              data['hasil'] != null && data['hasil'].toString().trim().isNotEmpty ? data['hasil'] : 'N/A',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: _getHasilColor(data['hasil']),
+                              ),
                             ),
                           ),
                         ],
@@ -342,6 +385,7 @@ class _OperasionalKesehatanBerkalaScreenState extends State<OperasionalKesehatan
     );
 
     if (confirm != true) return;
+    if (!mounted) return;
 
     showDialog(
       context: context,
@@ -456,7 +500,7 @@ class _OperasionalKesehatanBerkalaScreenState extends State<OperasionalKesehatan
                         style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
                         items: [
                           const DropdownMenuItem(value: 'all', child: Text('Semua Cabang')),
-                          ..._cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama'] ?? ''))),
+                          ..._cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama_cabang'] ?? c['nama'] ?? ''))),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -534,7 +578,7 @@ class _OperasionalKesehatanBerkalaScreenState extends State<OperasionalKesehatan
                             style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark),
                           ),
                           Text(
-                            item['cabang']?['nama'] ?? '-',
+                            item['cabang']?['nama_cabang'] ?? item['cabang']?['nama'] ?? '-',
                             style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -589,10 +633,17 @@ class _OperasionalKesehatanBerkalaScreenState extends State<OperasionalKesehatan
                           const SizedBox(height: 4),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(4)),
+                            decoration: BoxDecoration(
+                              color: _getHasilBgColor(item['hasil']),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
                             child: Text(
-                              item['hasil']?.isNotEmpty == true ? item['hasil'] : 'N/A',
-                              style: GoogleFonts.inter(fontSize: 10, color: AppColors.textDark, fontWeight: FontWeight.bold),
+                              item['hasil'] != null && item['hasil'].toString().trim().isNotEmpty ? item['hasil'] : 'N/A',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                color: _getHasilColor(item['hasil']),
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ],

@@ -52,7 +52,7 @@ class _OperasionalSimScreenState extends State<OperasionalSimScreen> {
   Future<void> _fetchCabang() async {
     try {
       final res = await ApiClient.instance.get('/operasional/cabangs');
-      if (res.data['status'] == true) {
+      if (res.data != null && res.data['data'] != null) {
         setState(() {
           _cabangList = res.data['data'] ?? [];
         });
@@ -200,7 +200,7 @@ class _OperasionalSimScreenState extends State<OperasionalSimScreen> {
                               children: [
                                 Text('CABANG', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
                                 const SizedBox(height: 4),
-                                Text(data['cabang']?['nama'] ?? '-', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                                Text(data['cabang']?['nama_cabang'] ?? data['cabang']?['nama'] ?? '-', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                               ],
                             ),
                           ),
@@ -517,7 +517,7 @@ class _OperasionalSimScreenState extends State<OperasionalSimScreen> {
                         style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
                         items: [
                           const DropdownMenuItem(value: 'all', child: Text('Semua Cabang')),
-                          ..._cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama'] ?? ''))),
+                          ..._cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama_cabang'] ?? c['nama'] ?? ''))),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -610,7 +610,7 @@ class _OperasionalSimScreenState extends State<OperasionalSimScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            '${item['jabatan'] ?? ''} • ${item['cabang']?['nama'] ?? '-'}',
+                            '${item['jabatan'] ?? ''} • ${item['cabang']?['nama_cabang'] ?? item['cabang']?['nama'] ?? '-'}',
                             style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,

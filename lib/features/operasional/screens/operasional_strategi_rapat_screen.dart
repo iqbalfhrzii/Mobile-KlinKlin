@@ -49,7 +49,7 @@ class _OperasionalStrategiRapatScreenState extends State<OperasionalStrategiRapa
   Future<void> _fetchCabang() async {
     try {
       final res = await ApiClient.instance.get('/operasional/cabangs');
-      if (res.data['status'] == true) {
+      if (res.data != null && res.data['data'] != null) {
         setState(() {
           _cabangList = res.data['data'] ?? [];
         });
@@ -209,7 +209,7 @@ class _OperasionalStrategiRapatScreenState extends State<OperasionalStrategiRapa
                         children: [
                           Text('CABANG', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
                           const SizedBox(height: 4),
-                          Text(strategi['cabang']?['nama'] ?? '-', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                          Text(strategi['cabang']?['nama_cabang'] ?? strategi['cabang']?['nama'] ?? '-', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                         ],
                       ),
                     ),
@@ -440,7 +440,7 @@ class _OperasionalStrategiRapatScreenState extends State<OperasionalStrategiRapa
                         style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
                         items: [
                           const DropdownMenuItem(value: 'all', child: Text('Semua Cabang')),
-                          ..._cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama'] ?? ''))),
+                          ..._cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama_cabang'] ?? c['nama'] ?? ''))),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -551,7 +551,7 @@ class _OperasionalStrategiRapatScreenState extends State<OperasionalStrategiRapa
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(4)),
                             child: Text(
-                              item['cabang']?['nama'] ?? '-',
+                              item['cabang']?['nama_cabang'] ?? item['cabang']?['nama'] ?? '-',
                               style: GoogleFonts.inter(fontSize: 10, color: Colors.blue.shade700, fontWeight: FontWeight.bold),
                             ),
                           ),

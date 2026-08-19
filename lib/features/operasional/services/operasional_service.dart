@@ -129,4 +129,32 @@ class OperasionalService {
       throw Exception('Tidak dapat terhubung ke server');
     }
   }
+
+  Future<Map<String, dynamic>> getSemuaOrder({
+    String? search,
+    int? cabangId,
+    String? status,
+    String? periode,
+    String? startDate,
+    String? endDate,
+    int page = 1,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{'page': page};
+      if (search != null && search.isNotEmpty) queryParams['search'] = search;
+      if (cabangId != null) queryParams['cabang_id'] = cabangId;
+      if (status != null && status.isNotEmpty) queryParams['status_order_utama'] = status;
+      if (startDate != null && startDate.isNotEmpty) queryParams['start_date'] = startDate;
+      if (endDate != null && endDate.isNotEmpty) queryParams['end_date'] = endDate;
+      if (periode != null && periode.isNotEmpty) queryParams['periode'] = periode;
+
+      final response = await _dio.get('/pesanan', queryParameters: queryParams);
+      return response.data;
+    } on DioException catch (e) {
+      if (e.response != null && e.response?.data != null) {
+        throw Exception(e.response?.data['message'] ?? 'Gagal mengambil data order');
+      }
+      throw Exception('Tidak dapat terhubung ke server');
+    }
+  }
 }
