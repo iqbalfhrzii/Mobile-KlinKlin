@@ -100,19 +100,7 @@ class _KantorKlinklinScreenState extends State<KantorKlinklinScreen> {
               children: [
                 Row(
                   children: [
-                    InkWell(
-                      onTap: () => Navigator.pop(context),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                        ),
-                        child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
-                      ),
-                    ),
+                    const AppBackButton(),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
@@ -129,33 +117,10 @@ class _KantorKlinklinScreenState extends State<KantorKlinklinScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Kelola data alamat, aset & masa sewa kantor cabang',
+                            'Kelola data alamat dan riwayat sewa kantor untuk setiap cabang',
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               color: Colors.white.withValues(alpha: 0.85),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.business_rounded, color: Colors.white, size: 14),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${_cabangs.length} Cabang',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
                             ),
                           ),
                         ],
@@ -262,9 +227,9 @@ class _KantorKlinklinScreenState extends State<KantorKlinklinScreen> {
         },
         backgroundColor: AppColors.primary,
         elevation: 4,
-        icon: const Icon(Icons.add_business_rounded, color: Colors.white, size: 22),
+        icon: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
         label: Text(
-          'Kelola Kantor',
+          'Tambah Riwayat',
           style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w600,
@@ -589,6 +554,27 @@ class _KantorKlinklinScreenState extends State<KantorKlinklinScreen> {
                             ),
                           ),
                           const SizedBox(height: 3),
+                          if (item['pic_nama'] != null && item['pic_nama'].toString().trim().isNotEmpty) ...[
+                            Row(
+                              children: [
+                                const Icon(Icons.person_outline_rounded, size: 13, color: Color(0xFF64748B)),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    'PIC: ${item['pic_nama']}',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF475569),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                          ],
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -756,45 +742,75 @@ class _KantorKlinklinScreenState extends State<KantorKlinklinScreen> {
                 const Divider(color: Color(0xFFF1F5F9), height: 1),
                 const SizedBox(height: 10),
 
-                // Bottom Meta: Phone & Quick Actions
+                // Bottom Meta: Phone & Action Buttons (Riwayat + Edit)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          const Icon(Icons.phone_in_talk_rounded, size: 14, color: Color(0xFF64748B)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              noTelp.isNotEmpty ? noTelp : 'No. Telp belum diatur',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: noTelp.isNotEmpty ? const Color(0xFF334155) : const Color(0xFF94A3B8),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.phone_in_talk_rounded, size: 14, color: Color(0xFF64748B)),
+                        OutlinedButton.icon(
+                          onPressed: () => _showRiwayatSheet(item),
+                          icon: const Icon(Icons.history_rounded, size: 14, color: AppColors.primary),
+                          label: Text(
+                            'Riwayat',
+                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primary),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
                         const SizedBox(width: 6),
-                        Text(
-                          noTelp.isNotEmpty ? noTelp : 'No. Telp belum diatur',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: noTelp.isNotEmpty ? const Color(0xFF334155) : const Color(0xFF94A3B8),
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => KantorKlinklinFormScreen(cabang: item, allCabangs: _cabangs),
+                              ),
+                            );
+                            if (result == true) _loadData();
+                          },
+                          icon: const Icon(Icons.edit_rounded, size: 14, color: Colors.white),
+                          label: Text(
+                            'Edit',
+                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                         ),
                       ],
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => KantorKlinklinFormScreen(cabang: item, allCabangs: _cabangs),
-                          ),
-                        );
-                        if (result == true) _loadData();
-                      },
-                      icon: const Icon(Icons.edit_rounded, size: 14, color: Colors.white),
-                      label: Text(
-                        'Edit Kantor',
-                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
                     ),
                   ],
                 ),
@@ -802,6 +818,20 @@ class _KantorKlinklinScreenState extends State<KantorKlinklinScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  // --- RIWAYAT SEWA KANTOR BOTTOM SHEET ---
+  void _showRiwayatSheet(dynamic cabang) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _RiwayatSewaKantorSheet(
+        cabang: cabang,
+        allCabangs: _cabangs,
+        onRefreshParent: _loadData,
       ),
     );
   }
@@ -1029,6 +1059,420 @@ class _KantorKlinklinScreenState extends State<KantorKlinklinScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RIWAYAT SEWA KANTOR SHEET (Parity with Web Modal)
+// ─────────────────────────────────────────────────────────────────────────────
+class _RiwayatSewaKantorSheet extends StatefulWidget {
+  final dynamic cabang;
+  final List<dynamic> allCabangs;
+  final VoidCallback onRefreshParent;
+
+  const _RiwayatSewaKantorSheet({
+    required this.cabang,
+    required this.allCabangs,
+    required this.onRefreshParent,
+  });
+
+  @override
+  State<_RiwayatSewaKantorSheet> createState() => _RiwayatSewaKantorSheetState();
+}
+
+class _RiwayatSewaKantorSheetState extends State<_RiwayatSewaKantorSheet> {
+  bool _isLoading = true;
+  List<dynamic> _riwayatList = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchHistory();
+  }
+
+  Future<void> _fetchHistory() async {
+    setState(() => _isLoading = true);
+    try {
+      final cabangId = widget.cabang['id'] as int;
+      final data = await OperasionalKantorService.fetchRiwayatKantor(cabangId);
+      if (mounted) {
+        setState(() {
+          _riwayatList = data;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final namaCabang = widget.cabang['nama_cabang'] ?? '-';
+
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Drag Handle
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 16, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Riwayat Sewa Kantor: $namaCabang',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1E293B),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Daftar catatan riwayat status aset dan sewa cabang',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
+                  splashRadius: 20,
+                ),
+              ],
+            ),
+          ),
+
+          // Button + Tambah Riwayat Baru
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => KantorKlinklinFormScreen(
+                        cabang: widget.cabang,
+                        allCabangs: widget.allCabangs,
+                      ),
+                    ),
+                  );
+                  if (result == true) {
+                    _fetchHistory();
+                    widget.onRefreshParent();
+                  }
+                },
+                icon: const Icon(Icons.add_circle_outline_rounded, size: 18, color: Colors.white),
+                label: Text(
+                  '+ Tambah Riwayat Baru',
+                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0284C7),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 8),
+          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+
+          // History List Content
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _riwayatList.isEmpty
+                    ? _buildFallbackCurrentState()
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(20),
+                        itemCount: _riwayatList.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 14),
+                        itemBuilder: (context, index) {
+                          final item = _riwayatList[index];
+                          return _buildRiwayatCard(item, isFirst: index == 0);
+                        },
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFallbackCurrentState() {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        _buildRiwayatCard(widget.cabang, isFirst: true, isCurrentActive: true),
+      ],
+    );
+  }
+
+  Widget _buildRiwayatCard(dynamic item, {bool isFirst = false, bool isCurrentActive = false}) {
+    final status = (item['status_kantor'] ?? 'Aset').toString();
+    final isAset = status.toLowerCase() == 'aset';
+
+    final isActive = isCurrentActive || item['is_active'] == true || (item['is_active'] == 1) || isFirst;
+
+    final createdAtStr = item['created_at']?.toString();
+    String formattedDate = '-';
+    if (createdAtStr != null && createdAtStr.isNotEmpty) {
+      final parsedDate = DateTime.tryParse(createdAtStr);
+      if (parsedDate != null) {
+        formattedDate = DateFormat('dd MMM yyyy').format(parsedDate);
+      }
+    }
+
+    final formatter = NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0);
+    final rawHarga = item['harga_sewa'];
+    final hargaSewa = (rawHarga != null && rawHarga.toString().isNotEmpty && rawHarga.toString() != '0')
+        ? formatter.format(double.tryParse(rawHarga.toString()) ?? 0)
+        : '-';
+
+    final awalSewaDate = item['awal_sewa'] != null ? DateTime.tryParse(item['awal_sewa'].toString()) : null;
+    final akhirSewaDate = item['akhir_sewa'] != null ? DateTime.tryParse(item['akhir_sewa'].toString()) : null;
+
+    final awalSewaStr = awalSewaDate != null ? DateFormat('dd/MM/yyyy').format(awalSewaDate) : '-';
+    final akhirSewaStr = akhirSewaDate != null ? DateFormat('dd/MM/yyyy').format(akhirSewaDate) : '-';
+    final masaSewa = isAset ? '- s/d -' : '$awalSewaStr s/d $akhirSewaStr';
+
+    final picNama = (item['pic_nama'] != null && item['pic_nama'].toString().trim().isNotEmpty)
+        ? item['pic_nama'].toString()
+        : '-';
+
+    final noTelp = (item['no_telp'] != null && item['no_telp'].toString().trim().isNotEmpty)
+        ? item['no_telp'].toString()
+        : '-';
+
+    final alamat = (item['alamat'] != null && item['alamat'].toString().trim().isNotEmpty)
+        ? item['alamat'].toString()
+        : '-';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isActive ? const Color(0xFF86EFAC) : const Color(0xFFE2E8F0),
+          width: isActive ? 1.5 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top Row: Date, Status, Active Checkmark, Edit
+            Row(
+              children: [
+                const Icon(Icons.event_note_rounded, size: 16, color: Color(0xFF64748B)),
+                const SizedBox(width: 6),
+                Text(
+                  formattedDate,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF334155),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // Status Badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isAset ? const Color(0xFFDCFCE7) : const Color(0xFFEDE9FE),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isAset ? const Color(0xFF86EFAC) : const Color(0xFFC4B5FD),
+                    ),
+                  ),
+                  child: Text(
+                    isAset ? 'Aset' : 'Sewa',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: isAset ? const Color(0xFF15803D) : const Color(0xFF6D28D9),
+                    ),
+                  ),
+                ),
+
+                const Spacer(),
+
+                // Active checkmark badge
+                if (isActive) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF10B981)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF059669)),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Aktif',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF059669),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+
+                // Edit Button
+                InkWell(
+                  onTap: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => KantorKlinklinFormScreen(
+                          cabang: item,
+                          allCabangs: widget.allCabangs,
+                        ),
+                      ),
+                    );
+                    if (result == true) {
+                      _fetchHistory();
+                      widget.onRefreshParent();
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.edit_rounded, size: 14, color: Color(0xFF475569)),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            const SizedBox(height: 10),
+
+            // Grid Details
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _buildRiwayatRow('NAMA PIC', picNama, Icons.person_outline_rounded),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildRiwayatRow('NO TELP', noTelp, Icons.phone_outlined),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _buildRiwayatRow('ALAMAT', alamat, Icons.location_on_outlined),
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _buildRiwayatRow('HARGA SEWA', hargaSewa, Icons.payments_outlined),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildRiwayatRow('MASA SEWA', masaSewa, Icons.date_range_rounded),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRiwayatRow(String label, String value, IconData icon) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 13, color: const Color(0xFF94A3B8)),
+        const SizedBox(width: 5),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF94A3B8),
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                value,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1E293B),
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

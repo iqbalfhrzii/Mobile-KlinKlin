@@ -12,6 +12,17 @@ class PengadaanBarangDetailSheet extends StatelessWidget {
     required this.item,
   });
 
+  String _getUrgensiLabel(String? urgensi) {
+    final u = (urgensi ?? 'low').toLowerCase();
+    if (u.contains('darurat') || u.contains('high') || u.contains('tinggi')) {
+      return 'Tinggi';
+    } else if (u.contains('medium') || u.contains('sedang')) {
+      return 'Sedang';
+    } else {
+      return 'Rendah';
+    }
+  }
+
   Color _getUrgensiColor(String? urgensi) {
     final u = (urgensi ?? 'low').toLowerCase();
     if (u.contains('darurat') || u.contains('high') || u.contains('tinggi')) {
@@ -325,7 +336,7 @@ class PengadaanBarangDetailSheet extends StatelessWidget {
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
-                                      'URGENSI: ${urgensi.toUpperCase()}',
+                                      'URGENSI: ${_getUrgensiLabel(urgensi).toUpperCase()}',
                                       style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: urgensiColor),
                                       textAlign: TextAlign.center,
                                       overflow: TextOverflow.ellipsis,

@@ -66,6 +66,8 @@ class CashFlowMenuScreen extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
       child: Row(
         children: [
+          const AppBackButton(),
+          const SizedBox(width: 14),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

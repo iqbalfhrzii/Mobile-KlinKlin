@@ -136,6 +136,17 @@ class _PengadaanBarangScreenState extends State<PengadaanBarangScreen> {
     }
   }
 
+  String _getUrgensiLabel(String? urgensi) {
+    final u = (urgensi ?? 'low').toLowerCase();
+    if (u.contains('darurat') || u.contains('high') || u.contains('tinggi')) {
+      return 'Tinggi';
+    } else if (u.contains('medium') || u.contains('sedang')) {
+      return 'Sedang';
+    } else {
+      return 'Rendah';
+    }
+  }
+
   Color _getUrgensiColor(String? urgensi) {
     final u = (urgensi ?? 'low').toLowerCase();
     if (u.contains('darurat') || u.contains('high') || u.contains('tinggi')) {
@@ -705,7 +716,7 @@ class _PengadaanBarangScreenState extends State<PengadaanBarangScreen> {
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  urgensi,
+                                  _getUrgensiLabel(urgensi),
                                   style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: urgensiColor),
                                 ),
                               ),

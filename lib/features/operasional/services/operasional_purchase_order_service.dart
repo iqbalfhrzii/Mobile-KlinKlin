@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http_parser/http_parser.dart';
 import '../../../core/api/api_client.dart';
 import 'dart:io';
@@ -11,17 +12,29 @@ class OperasionalPurchaseOrderService {
     String? search,
     int? cabangId,
     String? status,
+    String? tipePo,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     try {
       final Map<String, dynamic> queryParams = {
         'page': page,
-        'per_page': 20,
+        'per_page': 50,
       };
 
       if (search != null && search.isNotEmpty) queryParams['search'] = search;
       if (cabangId != null) queryParams['cabang_id'] = cabangId;
       if (status != null && status.isNotEmpty && status != 'Semua Status') {
         queryParams['status'] = status;
+      }
+      if (tipePo != null && tipePo.isNotEmpty && tipePo != 'all') {
+        queryParams['tipe_po'] = tipePo;
+      }
+      if (startDate != null) {
+        queryParams['start_date'] = startDate.toIso8601String().split('T').first;
+      }
+      if (endDate != null) {
+        queryParams['end_date'] = endDate.toIso8601String().split('T').first;
       }
 
       final response = await _dio.get(
@@ -31,7 +44,7 @@ class OperasionalPurchaseOrderService {
 
       return response.data;
     } catch (e) {
-      print('Error OperasionalPurchaseOrderService.getPurchaseOrders: $e');
+      debugPrint('Error OperasionalPurchaseOrderService.getPurchaseOrders: $e');
       rethrow;
     }
   }
@@ -45,9 +58,13 @@ class OperasionalPurchaseOrderService {
         String ext = fileName.split('.').last.toLowerCase();
         String contentType = 'application/octet-stream';
         
-        if (ext == 'jpg' || ext == 'jpeg') contentType = 'image/jpeg';
-        else if (ext == 'png') contentType = 'image/png';
-        else if (ext == 'pdf') contentType = 'application/pdf';
+        if (ext == 'jpg' || ext == 'jpeg') {
+          contentType = 'image/jpeg';
+        } else if (ext == 'png') {
+          contentType = 'image/png';
+        } else if (ext == 'pdf') {
+          contentType = 'application/pdf';
+        }
 
         formData.files.add(
           MapEntry(
@@ -68,7 +85,7 @@ class OperasionalPurchaseOrderService {
 
       return response.data;
     } catch (e) {
-      print('Error OperasionalPurchaseOrderService.createPurchaseOrder: $e');
+      debugPrint('Error OperasionalPurchaseOrderService.createPurchaseOrder: $e');
       rethrow;
     }
   }
@@ -82,9 +99,13 @@ class OperasionalPurchaseOrderService {
         String ext = fileName.split('.').last.toLowerCase();
         String contentType = 'application/octet-stream';
         
-        if (ext == 'jpg' || ext == 'jpeg') contentType = 'image/jpeg';
-        else if (ext == 'png') contentType = 'image/png';
-        else if (ext == 'pdf') contentType = 'application/pdf';
+        if (ext == 'jpg' || ext == 'jpeg') {
+          contentType = 'image/jpeg';
+        } else if (ext == 'png') {
+          contentType = 'image/png';
+        } else if (ext == 'pdf') {
+          contentType = 'application/pdf';
+        }
 
         formData.files.add(
           MapEntry(
@@ -98,7 +119,6 @@ class OperasionalPurchaseOrderService {
         );
       }
 
-      // We use POST to allow laravel multipart file upload with method spoofing in query params or we can use POST directly since our route accepts POST for updates.
       final response = await _dio.post(
         '/operasional/purchase-orders/$id',
         data: formData,
@@ -106,7 +126,7 @@ class OperasionalPurchaseOrderService {
 
       return response.data;
     } catch (e) {
-      print('Error OperasionalPurchaseOrderService.updatePurchaseOrder: $e');
+      debugPrint('Error OperasionalPurchaseOrderService.updatePurchaseOrder: $e');
       rethrow;
     }
   }
@@ -116,7 +136,7 @@ class OperasionalPurchaseOrderService {
       final response = await _dio.delete('/operasional/purchase-orders/$id');
       return response.data;
     } catch (e) {
-      print('Error OperasionalPurchaseOrderService.deletePurchaseOrder: $e');
+      debugPrint('Error OperasionalPurchaseOrderService.deletePurchaseOrder: $e');
       rethrow;
     }
   }

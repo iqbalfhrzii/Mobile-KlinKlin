@@ -361,11 +361,8 @@ class _PelangganListScreenState extends State<PelangganListScreen> {
             padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
             child: Row(
               children: [
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
-                ),
-                const SizedBox(width: 16),
+                const AppBackButton(),
+                const SizedBox(width: 14),
                 Text(
                   'Daftar Pelanggan',
                   style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),

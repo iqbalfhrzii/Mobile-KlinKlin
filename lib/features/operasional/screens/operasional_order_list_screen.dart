@@ -5,8 +5,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/data/order_model.dart';
 import '../../../core/widgets/badges.dart';
-import '../../../core/widgets/whatsapp_icon.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../orders/services/order_service.dart';
 import '../../orders/screens/order_detail_screen.dart';
 
@@ -147,10 +145,6 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
     }
   }
 
-  String _formatCurrency(num value) {
-    return NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(value);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -161,6 +155,8 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
             GradientHeader(
               child: Row(
                 children: [
+                  const AppBackButton(),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

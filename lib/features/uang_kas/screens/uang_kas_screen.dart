@@ -408,21 +408,24 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Uang Kas Cabang',
-                          style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Kelola arus kas & pengajuan dana ke Finance',
-                          style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.85)),
-                        ),
-                      ],
+                    const AppBackButton(),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Uang Kas Cabang',
+                            style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Kelola arus kas & pengajuan dana ke Finance',
+                            style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.85)),
+                          ),
+                        ],
+                      ),
                     ),
                     IconButton(
                       onPressed: () {

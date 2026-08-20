@@ -290,19 +290,7 @@ class _TagihanBulananFormScreenState extends State<TagihanBulananFormScreen> {
             padding: const EdgeInsets.fromLTRB(20, 52, 20, 24),
             child: Row(
               children: [
-                InkWell(
-                  onTap: () => Navigator.pop(context),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                    ),
-                    child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
-                  ),
-                ),
+                const AppBackButton(),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(

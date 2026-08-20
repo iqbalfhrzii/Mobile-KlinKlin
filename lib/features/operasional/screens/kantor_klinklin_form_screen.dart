@@ -20,6 +20,7 @@ class _KantorKlinklinFormScreenState extends State<KantorKlinklinFormScreen> {
   bool _isLoading = false;
 
   final _cabangNameCtrl = TextEditingController();
+  final _picNamaCtrl = TextEditingController();
   final _alamatCtrl = TextEditingController();
   final _noTelpCtrl = TextEditingController();
   final _hargaSewaCtrl = TextEditingController();
@@ -38,6 +39,7 @@ class _KantorKlinklinFormScreenState extends State<KantorKlinklinFormScreen> {
   @override
   void dispose() {
     _cabangNameCtrl.dispose();
+    _picNamaCtrl.dispose();
     _alamatCtrl.dispose();
     _noTelpCtrl.dispose();
     _hargaSewaCtrl.dispose();
@@ -49,6 +51,7 @@ class _KantorKlinklinFormScreenState extends State<KantorKlinklinFormScreen> {
     if (c != null) {
       _selectedCabangId = c['id'];
       _cabangNameCtrl.text = c['nama_cabang'] ?? '';
+      _picNamaCtrl.text = c['pic_nama'] ?? '';
       _alamatCtrl.text = c['alamat'] ?? '';
       _noTelpCtrl.text = c['no_telp'] ?? '';
 
@@ -64,6 +67,7 @@ class _KantorKlinklinFormScreenState extends State<KantorKlinklinFormScreen> {
       final first = widget.allCabangs!.first;
       _selectedCabangId = first['id'];
       _cabangNameCtrl.text = first['nama_cabang'] ?? '';
+      _picNamaCtrl.text = first['pic_nama'] ?? '';
       _alamatCtrl.text = first['alamat'] ?? '';
       _noTelpCtrl.text = first['no_telp'] ?? '';
       _statusKantor = first['status_kantor'] ?? 'Aset';
@@ -86,6 +90,7 @@ class _KantorKlinklinFormScreenState extends State<KantorKlinklinFormScreen> {
       );
       if (selectedCabangData != null) {
         _cabangNameCtrl.text = selectedCabangData['nama_cabang'] ?? '';
+        _picNamaCtrl.text = selectedCabangData['pic_nama'] ?? '';
         _alamatCtrl.text = selectedCabangData['alamat'] ?? '';
         _noTelpCtrl.text = selectedCabangData['no_telp'] ?? '';
         _statusKantor = selectedCabangData['status_kantor'] ?? 'Aset';
@@ -157,6 +162,7 @@ class _KantorKlinklinFormScreenState extends State<KantorKlinklinFormScreen> {
       final cleanHarga = _hargaSewaCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
 
       final data = <String, dynamic>{
+        'pic_nama': _picNamaCtrl.text.trim().isNotEmpty ? _picNamaCtrl.text.trim() : null,
         'alamat': _alamatCtrl.text,
         'no_telp': _noTelpCtrl.text,
         'status_kantor': _statusKantor,
@@ -215,26 +221,14 @@ class _KantorKlinklinFormScreenState extends State<KantorKlinklinFormScreen> {
             padding: const EdgeInsets.fromLTRB(20, 52, 20, 24),
             child: Row(
               children: [
-                InkWell(
-                  onTap: () => Navigator.pop(context),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                    ),
-                    child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
-                  ),
-                ),
+                const AppBackButton(),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isEdit ? 'Edit Kantor Cabang' : 'Kelola Kantor Cabang',
+                        isEdit ? 'Edit Kantor Klinklin' : 'Tambah Riwayat Kantor Klinklin',
                         style: GoogleFonts.inter(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
@@ -244,7 +238,7 @@ class _KantorKlinklinFormScreenState extends State<KantorKlinklinFormScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Atur data alamat, status kepemilikan & masa sewa kantor',
+                        'Kelola data alamat dan riwayat sewa kantor untuk setiap cabang',
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           color: Colors.white.withValues(alpha: 0.85),
@@ -266,12 +260,12 @@ class _KantorKlinklinFormScreenState extends State<KantorKlinklinFormScreen> {
                 children: [
                   // SECTION 1: Identitas Cabang
                   _buildSectionCard(
-                    title: 'Cabang & Kontak',
+                    title: 'Cabang & Penanggung Jawab',
                     icon: Icons.storefront_rounded,
                     children: [
                       if (widget.allCabangs != null && widget.allCabangs!.isNotEmpty && !isEdit)
                         _buildDropdownField(
-                          label: 'Pilih Cabang',
+                          label: 'Pilih Cabang *',
                           value: _selectedCabangId,
                           icon: Icons.business_rounded,
                           hint: 'Pilih Cabang',
@@ -330,6 +324,15 @@ class _KantorKlinklinFormScreenState extends State<KantorKlinklinFormScreen> {
                             ],
                           ),
                         ),
+
+                      const SizedBox(height: 16),
+
+                      _buildTextField(
+                        label: 'Nama PIC',
+                        controller: _picNamaCtrl,
+                        icon: Icons.person_outline_rounded,
+                        hint: 'Masukkan nama penanggung jawab',
+                      ),
 
                       const SizedBox(height: 16),
 

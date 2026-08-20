@@ -68,25 +68,46 @@ class GradientHeader extends StatelessWidget {
   }
 }
 
-/// Back button bulat untuk header
-class HeaderBackButton extends StatelessWidget {
-  const HeaderBackButton({super.key, required this.onTap});
-  final VoidCallback onTap;
+/// Back button standar untuk header across all screens
+class AppBackButton extends StatelessWidget {
+  const AppBackButton({super.key, this.onTap, this.color = Colors.white});
+  final VoidCallback? onTap;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.15),
-          shape: BoxShape.circle,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap ?? () => Navigator.pop(context),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color == Colors.white
+                ? Colors.white.withValues(alpha: 0.15)
+                : color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            Icons.arrow_back_rounded,
+            color: color,
+            size: 20,
+          ),
         ),
-        child: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 16),
       ),
     );
+  }
+}
+
+/// Back button bulat/squircle untuk header (Alias to AppBackButton)
+class HeaderBackButton extends StatelessWidget {
+  const HeaderBackButton({super.key, this.onTap});
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBackButton(onTap: onTap);
   }
 }
 

@@ -19,27 +19,54 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
     with SingleTickerProviderStateMixin {
   bool _isLoading = false;
   List<dynamic> _cabangs = [];
+  List<dynamic> _allMonthSessions = [];
   Map<String, dynamic>? _currentSession;
   List<dynamic> _sessionDetails = [];
   String? _authToken;
 
   int? _selectedCabangId;
   DateTime _selectedPeriode = DateTime.now();
-  String _selectedTipeSesi = 'tengah_bulan'; // tengah_bulan, akhir_bulan, inventaris
+  String _selectedTipeSesi = 'tengah_bulan'; // tengah_bulan, akhir_bulan
+  int _selectedCategoryIndex = 0;
 
   late TabController _tabController;
 
-  final List<Map<String, String>> _categories = [
-    {'code': 'MSN', 'label': 'Mesin Alat (MSN)'},
-    {'code': 'CLA', 'label': 'Cleaning Alat (CLA)'},
-    {'code': 'BHP', 'label': 'Barang Habis Pakai (BHP)'},
-    {'code': 'INV', 'label': 'Inventaris (INV)'},
+  final List<Map<String, dynamic>> _categories = [
+    {
+      'code': 'MSN',
+      'label': 'Mesin Alat',
+      'icon': Icons.precision_manufacturing_rounded,
+    },
+    {
+      'code': 'CLA',
+      'label': 'Cleaning Alat',
+      'icon': Icons.cleaning_services_rounded,
+    },
+    {
+      'code': 'BHP',
+      'label': 'Barang Habis Pakai',
+      'icon': Icons.inventory_2_rounded,
+    },
+    {
+      'code': 'INV',
+      'label': 'Inventaris',
+      'icon': Icons.home_repair_service_rounded,
+    },
   ];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging || _tabController.index != _selectedCategoryIndex) {
+        if (mounted) {
+          setState(() {
+            _selectedCategoryIndex = _tabController.index;
+          });
+        }
+      }
+    });
     _loadAuthTokenAndCabangs();
   }
 
@@ -86,21 +113,27 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
 
     setState(() => _isLoading = true);
     try {
-      // Backend expects 'YYYY-MM' format (e.g. '2026-08')
       final String formattedPeriode = DateFormat('yyyy-MM').format(_selectedPeriode);
 
+      // Get all sessions for this branch & month
       final sessions = await OperasionalStokOpnameService.getSessions(
         cabangId: _selectedCabangId,
         periodeBulan: formattedPeriode,
-        tipeSesi: _selectedTipeSesi,
       );
 
-      if (sessions.isNotEmpty) {
-        final session = sessions.first;
-        final details = await OperasionalStokOpnameService.getSessionDetails(session['id']);
+      _allMonthSessions = sessions;
+
+      // Find session matching currently active tab
+      final matchingSession = sessions.firstWhere(
+        (s) => s['tipe_sesi'] == _selectedTipeSesi,
+        orElse: () => null,
+      );
+
+      if (matchingSession != null) {
+        final details = await OperasionalStokOpnameService.getSessionDetails(matchingSession['id']);
         if (mounted) {
           setState(() {
-            _currentSession = details ?? session;
+            _currentSession = details ?? matchingSession;
             _sessionDetails = details?['details'] ?? [];
           });
         }
@@ -125,6 +158,22 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Map<String, dynamic> _getSessionStatus(String tipeSesi) {
+    final s = _allMonthSessions.firstWhere(
+      (session) => session['tipe_sesi'] == tipeSesi,
+      orElse: () => null,
+    );
+    if (s == null) {
+      return {'label': 'Belum Ada', 'isSelesai': false, 'exists': false};
+    }
+    final isSelesai = (s['status'] ?? '').toString().toLowerCase() == 'selesai';
+    return {
+      'label': isSelesai ? 'Selesai' : 'Belum Selesai',
+      'isSelesai': isSelesai,
+      'exists': true,
+    };
   }
 
   String _getImageUrl(dynamic rawPath) {
@@ -175,19 +224,7 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
             padding: const EdgeInsets.fromLTRB(20, 52, 20, 24),
             child: Row(
               children: [
-                InkWell(
-                  onTap: () => Navigator.pop(context),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                    ),
-                    child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
-                  ),
-                ),
+                const AppBackButton(),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -220,7 +257,7 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
           // Filters: Periode Bulan & Cabang Selector
           _buildFilterBar(),
 
-          // Session Type Tabs: Awal Bulan, Akhir Bulan, Inventaris
+          // Session Type Tabs: Awal Bulan vs Akhir Bulan (Segmented Control)
           _buildTipeSesiSelector(),
 
           // Main Content View
@@ -231,51 +268,8 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
                     ? _buildEmptyState()
                     : Column(
                         children: [
-                          _buildSessionInfoCard(),
-
-                          // Category Tabs
-                          Container(
-                            color: Colors.white,
-                            child: TabBar(
-                              controller: _tabController,
-                              isScrollable: true,
-                              labelColor: AppColors.primary,
-                              unselectedLabelColor: const Color(0xFF64748B),
-                              indicatorColor: AppColors.primary,
-                              indicatorWeight: 3,
-                              labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13),
-                              unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 13),
-                              tabs: _categories.map((cat) {
-                                final count = _getItemsForCategory(cat['code']!).length;
-                                return Tab(
-                                  child: Row(
-                                    children: [
-                                      Text(cat['label']!),
-                                      if (count > 0) ...[
-                                        const SizedBox(width: 6),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.primary.withValues(alpha: 0.12),
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                          child: Text(
-                                            '$count',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w800,
-                                              color: AppColors.primary,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                          // Modern Elevated Category Chips
+                          _buildModernCategorySelector(),
 
                           // Tab Views
                           Expanded(
@@ -294,16 +288,105 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
     );
   }
 
+  // --- MODERN CATEGORY FILTER (Responsive 4-Column Single Label) ---
+  Widget _buildModernCategorySelector() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 2, 20, 10),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: List.generate(_categories.length, (index) {
+            final cat = _categories[index];
+            final count = _getItemsForCategory(cat['code']!).length;
+            final isSelected = _selectedCategoryIndex == index;
+
+            return Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: InkWell(
+                  onTap: () {
+                    setState(() => _selectedCategoryIndex = index);
+                    _tabController.animateTo(index);
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeInOut,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      gradient: isSelected
+                          ? const LinearGradient(
+                              colors: [Color(0xFF1E40AF), Color(0xFF3B82F6)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
+                      color: isSelected ? null : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: const Color(0xFF2563EB).withValues(alpha: 0.25),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : [],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          cat['code'] as String,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
+                            color: isSelected ? Colors.white : const Color(0xFF334155),
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? Colors.white
+                                : (count > 0 ? AppColors.primary.withValues(alpha: 0.12) : const Color(0xFFE2E8F0)),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '$count',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : (count > 0 ? AppColors.primary : const Color(0xFF64748B)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+  }
+
   // --- FILTER BAR: PERIODE & CABANG ---
   Widget _buildFilterBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: const BoxDecoration(
         color: Colors.white,
-        border: const Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
-        ],
       ),
       child: Row(
         children: [
@@ -334,12 +417,12 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.calendar_month_rounded, size: 16, color: AppColors.primary),
+                    const Icon(Icons.calendar_month_rounded, size: 16, color: Color(0xFF64748B)),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         DateFormat('MMMM yyyy').format(_selectedPeriode),
-                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B)),
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF1E293B)),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -354,7 +437,7 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
           Expanded(
             flex: 5,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
               decoration: BoxDecoration(
                 color: const Color(0xFFF8FAFC),
                 border: Border.all(color: const Color(0xFFE2E8F0)),
@@ -364,29 +447,20 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
                 child: DropdownButton<int>(
                   value: _selectedCabangId,
                   isExpanded: true,
-                  icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary, size: 20),
-                  hint: Row(
-                    children: [
-                      const Icon(Icons.storefront_rounded, size: 16, color: Color(0xFF94A3B8)),
-                      const SizedBox(width: 6),
-                      Text('Pilih Cabang', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8))),
-                    ],
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B), size: 18),
+                  hint: Text(
+                    'Pilih Cabang',
+                    style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8)),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF1E293B), fontWeight: FontWeight.w700),
+                  style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF1E293B), fontWeight: FontWeight.w600),
                   items: _cabangs.map((c) {
                     return DropdownMenuItem<int>(
                       value: c['id'] as int,
-                      child: Row(
-                        children: [
-                          const Icon(Icons.storefront_rounded, size: 14, color: AppColors.primary),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              c['nama_cabang'] ?? '-',
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        c['nama_cabang'] ?? '-',
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF1E293B), fontWeight: FontWeight.w600),
                       ),
                     );
                   }).toList(),
@@ -405,35 +479,39 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
     );
   }
 
-  // --- TIPE SESI SELECTOR ---
+  // --- TIPE SESI SELECTOR (With Status Badges: Selesai / Belum) ---
   Widget _buildTipeSesiSelector() {
+    final statusAwal = _getSessionStatus('tengah_bulan');
+    final statusAkhir = _getSessionStatus('akhir_bulan');
+
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.fromLTRB(20, 2, 20, 10),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
         child: Row(
           children: [
-            _buildSesiPill(
-              value: 'tengah_bulan',
-              title: 'Opname Awal Bulan',
-              badge: 'Tgl 15',
-              icon: Icons.event_available_rounded,
+            Expanded(
+              child: _buildSesiSegment(
+                value: 'tengah_bulan',
+                title: 'Awal Bulan',
+                status: statusAwal,
+                icon: Icons.event_available_rounded,
+              ),
             ),
-            const SizedBox(width: 10),
-            _buildSesiPill(
-              value: 'akhir_bulan',
-              title: 'Opname Akhir Bulan',
-              badge: 'Tgl 30',
-              icon: Icons.event_note_rounded,
-            ),
-            const SizedBox(width: 10),
-            _buildSesiPill(
-              value: 'inventaris',
-              title: 'Opname Sesuai Tanggal',
-              badge: 'Bebas',
-              icon: Icons.assignment_turned_in_rounded,
+            const SizedBox(width: 4),
+            Expanded(
+              child: _buildSesiSegment(
+                value: 'akhir_bulan',
+                title: 'Akhir Bulan',
+                status: statusAkhir,
+                icon: Icons.event_note_rounded,
+              ),
             ),
           ],
         ),
@@ -441,65 +519,107 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
     );
   }
 
-  Widget _buildSesiPill({
+  Widget _buildSesiSegment({
     required String value,
     required String title,
-    required String badge,
+    required Map<String, dynamic> status,
     required IconData icon,
   }) {
     final isSelected = _selectedTipeSesi == value;
+    final bool isSelesai = status['isSelesai'] == true;
+    final bool exists = status['exists'] == true;
+    final String statusLabel = status['label'] as String;
 
     return InkWell(
       onTap: () {
-        setState(() => _selectedTipeSesi = value);
-        _loadData();
+        if (_selectedTipeSesi != value) {
+          setState(() => _selectedTipeSesi = value);
+          _loadData();
+        }
       },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      borderRadius: BorderRadius.circular(10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : const Color(0xFFE2E8F0),
-            width: isSelected ? 1.5 : 1,
-          ),
+          gradient: isSelected
+              ? const LinearGradient(
+                  colors: [Color(0xFF1E40AF), Color(0xFF3B82F6)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isSelected ? null : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.25),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
+                    color: const Color(0xFF2563EB).withValues(alpha: 0.25),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
                   )
                 ]
               : [],
         ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: isSelected ? Colors.white : const Color(0xFF64748B)),
-            const SizedBox(width: 8),
-            Text(
-              title,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                color: isSelected ? Colors.white : const Color(0xFF334155),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 15,
+                  color: isSelected ? Colors.white : const Color(0xFF475569),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
+                    color: isSelected ? Colors.white : const Color(0xFF334155),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 6),
+            const SizedBox(height: 3),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.white.withValues(alpha: 0.2) : const Color(0xFFE2E8F0),
+                color: isSelected
+                    ? (isSelesai
+                        ? const Color(0xFFDCFCE7)
+                        : (exists ? const Color(0xFFFEF3C7) : Colors.white.withValues(alpha: 0.2)))
+                    : (isSelesai
+                        ? const Color(0xFFDCFCE7)
+                        : (exists ? const Color(0xFFFEF3C7) : const Color(0xFFE2E8F0))),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: Text(
-                badge,
-                style: GoogleFonts.inter(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: isSelected ? Colors.white : const Color(0xFF64748B),
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isSelesai
+                        ? Icons.check_circle_rounded
+                        : (exists ? Icons.access_time_filled_rounded : Icons.remove_circle_outline_rounded),
+                    size: 10,
+                    color: isSelesai
+                        ? const Color(0xFF15803D)
+                        : (exists ? const Color(0xFFB45309) : const Color(0xFF64748B)),
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    statusLabel,
+                    style: GoogleFonts.inter(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w700,
+                      color: isSelesai
+                          ? const Color(0xFF15803D)
+                          : (exists ? const Color(0xFFB45309) : const Color(0xFF64748B)),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -508,130 +628,41 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
     );
   }
 
-  // --- SESSION INFO CARD ---
-  Widget _buildSessionInfoCard() {
-    final status = _currentSession?['status'] ?? 'Draft';
-    final isSelesai = status.toString().toLowerCase() == 'selesai';
-    final cabangName = _cabangs.firstWhere(
-      (c) => c['id'] == _selectedCabangId,
-      orElse: () => {'nama_cabang': '-'},
-    )['nama_cabang'];
+  String _getCategoryFullName(String code) {
+    switch (code) {
+      case 'MSN':
+        return 'Mesin Alat (MSN)';
+      case 'CLA':
+        return 'Cleaning Alat (CLA)';
+      case 'BHP':
+        return 'Barang Habis Pakai (BHP)';
+      case 'INV':
+        return 'Inventaris (INV)';
+      default:
+        return code;
+    }
+  }
 
-    String sesiName = 'Awal Bulan (Tgl 15)';
-    if (_selectedTipeSesi == 'akhir_bulan') sesiName = 'Akhir Bulan (Tgl 30)';
-    if (_selectedTipeSesi == 'inventaris') sesiName = 'Sesuai Tanggal (Bebas)';
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.fact_check_rounded, color: AppColors.primary, size: 16),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Sesi: $sesiName',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF1E293B),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Cabang yang Dipantau: $cabangName',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF64748B),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Status Sesi Badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: isSelesai ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isSelesai ? const Color(0xFF86EFAC) : const Color(0xFFFCD34D),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'STATUS SESI CS',
-                  style: GoogleFonts.inter(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    color: isSelesai ? const Color(0xFF15803D) : const Color(0xFFB45309),
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      isSelesai ? Icons.check_circle_rounded : Icons.access_time_filled_rounded,
-                      size: 13,
-                      color: isSelesai ? const Color(0xFF16A34A) : const Color(0xFFD97706),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      isSelesai ? 'Telah Diselesaikan' : 'Belum Selesai (Draft)',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: isSelesai ? const Color(0xFF15803D) : const Color(0xFFB45309),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+  IconData _getCategoryIcon(String code) {
+    switch (code) {
+      case 'MSN':
+        return Icons.precision_manufacturing_rounded;
+      case 'CLA':
+        return Icons.cleaning_services_rounded;
+      case 'BHP':
+        return Icons.inventory_2_rounded;
+      case 'INV':
+        return Icons.home_repair_service_rounded;
+      default:
+        return Icons.category_rounded;
+    }
   }
 
   // --- ITEM LIST VIEW PER CATEGORY ---
   Widget _buildItemListView(String kategoriKode) {
     final filtered = _getItemsForCategory(kategoriKode);
+    final fullName = _getCategoryFullName(kategoriKode);
+    final catIcon = _getCategoryIcon(kategoriKode);
 
     if (filtered.isEmpty) {
       return Center(
@@ -646,11 +677,12 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
                   color: AppColors.primary.withValues(alpha: 0.08),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.assignment_outlined, size: 48, color: AppColors.primary),
+                child: Icon(catIcon, size: 48, color: AppColors.primary),
               ),
               const SizedBox(height: 16),
               Text(
-                'Belum Ada Checklist $kategoriKode',
+                'Belum Ada Checklist $fullName',
+                textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
@@ -659,7 +691,7 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
               ),
               const SizedBox(height: 6),
               Text(
-                'Belum ada data checklist untuk kategori ini dari tim CS pada periode terpilih.',
+                'Belum ada data checklist untuk kategori $fullName dari tim CS pada periode terpilih.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(color: const Color(0xFF64748B), fontSize: 12, height: 1.5),
               ),
@@ -673,11 +705,44 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
       onRefresh: _loadData,
       color: AppColors.primary,
       child: ListView.separated(
-        padding: const EdgeInsets.all(20),
-        itemCount: filtered.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        itemCount: filtered.length + 1,
+        separatorBuilder: (_, index) => index == 0 ? const SizedBox(height: 8) : const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          final item = filtered[index];
+          if (index == 0) {
+            // Category Full Name Header
+            return Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 2),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(catIcon, size: 16, color: AppColors.primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        fullName,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1E293B),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    '${filtered.length} Data',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+          final item = filtered[index - 1];
           final bool isBhp = kategoriKode == 'BHP';
           return isBhp ? _buildBhpCard(item) : _buildAlatCard(item);
         },
@@ -694,7 +759,7 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
         : '-';
     final kodeQr = itemFisik['kode_qr'] ?? '-';
     final namaAlat = barang['nama_barang'] ?? itemFisik['nama_item'] ?? '-';
-    final kondisi = item['kondisi'] ?? 'Baik';
+    final kondisi = (item['kondisi'] ?? 'Baik').toString();
 
     final String fotoAktual = _getImageUrl(
       item['foto_path'] ?? item['foto_item'] ?? item['foto'] ?? item['foto_url'],
@@ -709,143 +774,176 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
     Color kondisiBg = const Color(0xFFDCFCE7);
     Color kondisiBorder = const Color(0xFF86EFAC);
 
-    if (kondisi.toString().toLowerCase() == 'rusak') {
+    if (kondisi.toLowerCase() == 'rusak') {
       kondisiColor = const Color(0xFFDC2626);
       kondisiBg = const Color(0xFFFEE2E2);
       kondisiBorder = const Color(0xFFFCA5A5);
-    } else if (kondisi.toString().toLowerCase() == 'hilang') {
+    } else if (kondisi.toLowerCase() == 'hilang') {
       kondisiColor = const Color(0xFFD97706);
       kondisiBg = const Color(0xFFFEF3C7);
       kondisiBorder = const Color(0xFFFCD34D);
     }
 
     return Container(
-      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Foto Thumbnail Section (Awal & Aktual)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (fotoAwal.isNotEmpty) ...[
-                _buildPhotoThumbnail(
-                  url: fotoAwal,
-                  badge: 'AWAL',
-                  badgeColor: const Color(0xFF64748B),
-                ),
-                const SizedBox(width: 6),
-              ],
-              if (fotoAktual.isNotEmpty) ...[
-                _buildPhotoThumbnail(
-                  url: fotoAktual,
-                  badge: 'AKTUAL',
-                  badgeColor: AppColors.primary,
-                ),
-              ] else if (fotoAwal.isEmpty) ...[
-                _buildEmptyThumbnail(),
-              ],
-            ],
-          ),
-          const SizedBox(width: 14),
-
-          // Details Column
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top Row: QR Code & Kondisi Badge
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Top Row: Waktu & Kondisi Badge
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.access_time_rounded, size: 12, color: Color(0xFF64748B)),
-                        const SizedBox(width: 4),
-                        Text(
-                          waktu,
-                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF64748B)),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.qr_code_2_rounded, size: 14, color: Color(0xFF475569)),
+                      const SizedBox(width: 5),
+                      Text(
+                        kodeQr,
+                        style: GoogleFonts.firaCode(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF334155),
                         ),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: kondisiBg,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: kondisiBorder),
                       ),
-                      child: Text(
-                        kondisi,
-                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: kondisiColor),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-
-                // Nama Alat
-                Text(
-                  namaAlat,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1E293B),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-
-                // Kode QR Badge
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.qr_code_2_rounded, size: 12, color: Color(0xFF475569)),
-                          const SizedBox(width: 4),
-                          Text(
-                            kodeQr,
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF334155),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                if (keterangan != '-' && keterangan.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    'Catatan: $keterangan',
-                    style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B), fontStyle: FontStyle.italic),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: kondisiBg,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: kondisiBorder),
                   ),
-                ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(color: kondisiColor, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        kondisi.toUpperCase(),
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: kondisiColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
-          ),
-        ],
+
+            const SizedBox(height: 10),
+
+            // Item Name & Time
+            Text(
+              namaAlat,
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF1E293B),
+              ),
+            ),
+            const SizedBox(height: 3),
+            Row(
+              children: [
+                const Icon(Icons.access_time_rounded, size: 13, color: Color(0xFF64748B)),
+                const SizedBox(width: 4),
+                Text(
+                  waktu,
+                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF64748B)),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // Photos Row (Aktual & Awal side-by-side)
+            Row(
+              children: [
+                if (fotoAktual.isNotEmpty) ...[
+                  Expanded(
+                    child: _buildPhotoThumbnailBox(
+                      url: fotoAktual,
+                      title: 'Foto Aktual',
+                      badge: 'AKTUAL',
+                      badgeColor: AppColors.primary,
+                    ),
+                  ),
+                ],
+                if (fotoAktual.isNotEmpty && fotoAwal.isNotEmpty)
+                  const SizedBox(width: 10),
+                if (fotoAwal.isNotEmpty) ...[
+                  Expanded(
+                    child: _buildPhotoThumbnailBox(
+                      url: fotoAwal,
+                      title: 'Foto Master',
+                      badge: 'AWAL',
+                      badgeColor: const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+                if (fotoAktual.isEmpty && fotoAwal.isEmpty)
+                  Expanded(
+                    child: _buildEmptyPhotoBox(),
+                  ),
+              ],
+            ),
+
+            // Catatan
+            if (keterangan != '-' && keterangan.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.comment_outlined, size: 13, color: Color(0xFF64748B)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Catatan: $keterangan',
+                        style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF475569)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -867,113 +965,128 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
     final keterangan = item['keterangan'] ?? '-';
 
     return Container(
-      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Foto Thumbnail
-          if (fotoBhp.isNotEmpty)
-            _buildPhotoThumbnail(
-              url: fotoBhp,
-              badge: 'FOTO',
-              badgeColor: const Color(0xFF1D4ED8),
-            )
-          else
-            _buildEmptyThumbnail(),
-          const SizedBox(width: 14),
-
-          // Details Column
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top Row: Category tag & Sisa Aktual Highlight
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.access_time_rounded, size: 12, color: Color(0xFF64748B)),
-                        const SizedBox(width: 4),
-                        Text(
-                          waktu,
-                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF64748B)),
-                        ),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFBFDBFE)),
-                      ),
-                      child: Text(
-                        'BHP',
-                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF1D4ED8)),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-
-                // Nama Barang
-                Text(
-                  namaBarang,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1E293B),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                  ),
+                  child: Text(
+                    'BARANG HABIS PAKAI (BHP)',
+                    style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF1D4ED8)),
                   ),
                 ),
-                const SizedBox(height: 4),
-
-                // Sisa Stok Akhir
-                Row(
-                  children: [
-                    Text(
-                      'Sisa Aktual: ',
-                      style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
-                    ),
-                    Text(
-                      '$sisaAkhir $satuan',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-
-                if (keterangan != '-' && keterangan.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Catatan: $keterangan',
-                    style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B), fontStyle: FontStyle.italic),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFF86EFAC)),
                   ),
-                ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.inventory_2_outlined, size: 13, color: Color(0xFF059669)),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Sisa: $sisaAkhir $satuan',
+                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF059669)),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
-          ),
-        ],
+
+            const SizedBox(height: 10),
+
+            // Item Name & Time
+            Text(
+              namaBarang,
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF1E293B),
+              ),
+            ),
+            const SizedBox(height: 3),
+            Row(
+              children: [
+                const Icon(Icons.access_time_rounded, size: 13, color: Color(0xFF64748B)),
+                const SizedBox(width: 4),
+                Text(
+                  waktu,
+                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF64748B)),
+                ),
+              ],
+            ),
+
+            if (fotoBhp.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _buildPhotoThumbnailBox(
+                url: fotoBhp,
+                title: 'Foto Sisa Barang',
+                badge: 'FOTO AKTUAL',
+                badgeColor: AppColors.primary,
+              ),
+            ],
+
+            if (keterangan != '-' && keterangan.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.comment_outlined, size: 13, color: Color(0xFF64748B)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Catatan: $keterangan',
+                        style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF475569)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildPhotoThumbnail({
+  Widget _buildPhotoThumbnailBox({
     required String url,
+    required String title,
     required String badge,
     required Color badgeColor,
   }) {
@@ -981,8 +1094,7 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
       onTap: () => _showFullImage(url),
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        width: 72,
-        height: 72,
+        height: 100,
         decoration: BoxDecoration(
           color: const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(12),
@@ -1001,18 +1113,30 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
               ),
             ),
             Positioned(
-              top: 4,
-              left: 4,
+              top: 6,
+              left: 6,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(4),
+                  color: Colors.black.withValues(alpha: 0.75),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   badge,
-                  style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w800, color: Colors.white),
+                  style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white),
                 ),
+              ),
+            ),
+            Positioned(
+              bottom: 6,
+              right: 6,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.zoom_in_rounded, size: 14, color: Colors.white),
               ),
             ),
           ],
@@ -1021,17 +1145,26 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
     );
   }
 
-  Widget _buildEmptyThumbnail() {
+  Widget _buildEmptyPhotoBox() {
     return Container(
-      width: 72,
-      height: 72,
+      height: 80,
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
-      child: const Center(
-        child: Icon(Icons.image_not_supported_rounded, color: Color(0xFFCBD5E1), size: 24),
+      child: Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.image_not_supported_outlined, color: Color(0xFF94A3B8), size: 18),
+            const SizedBox(width: 8),
+            Text(
+              'Tidak ada foto',
+              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8)),
+            ),
+          ],
+        ),
       ),
     );
   }

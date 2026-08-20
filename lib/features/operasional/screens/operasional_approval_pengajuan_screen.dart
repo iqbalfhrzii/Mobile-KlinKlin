@@ -152,35 +152,25 @@ class _OperasionalApprovalPengajuanScreenState extends State<OperasionalApproval
     }
   }
 
-  Future<void> _selectDateRange() async {
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-      initialDateRange: _startDate != null && _endDate != null
-          ? DateTimeRange(start: _startDate!, end: _endDate!)
-          : null,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppColors.primary,
-              onPrimary: Colors.white,
-              onSurface: Color(0xFF1E293B),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
+  String _getUrgensiLabel(dynamic raw) {
+    final str = (raw ?? '').toString().toLowerCase().trim();
+    if (str == 'high' || str == 'tinggi') return 'Tinggi';
+    if (str == 'medium' || str == 'sedang') return 'Sedang';
+    return 'Rendah';
+  }
 
-    if (picked != null) {
-      setState(() {
-        _startDate = picked.start;
-        _endDate = picked.end;
-      });
-      _loadHistoryData();
-    }
+  Color _getUrgensiColor(dynamic raw) {
+    final str = (raw ?? '').toString().toLowerCase().trim();
+    if (str == 'high' || str == 'tinggi') return const Color(0xFFDC2626);
+    if (str == 'medium' || str == 'sedang') return const Color(0xFFD97706);
+    return const Color(0xFF16A34A);
+  }
+
+  Color _getUrgensiBg(dynamic raw) {
+    final str = (raw ?? '').toString().toLowerCase().trim();
+    if (str == 'high' || str == 'tinggi') return const Color(0xFFFEE2E2);
+    if (str == 'medium' || str == 'sedang') return const Color(0xFFFEF3C7);
+    return const Color(0xFFDCFCE7);
   }
 
   String _getImageUrl(dynamic rawPath) {
@@ -407,248 +397,239 @@ class _OperasionalApprovalPengajuanScreenState extends State<OperasionalApproval
     );
   }
 
+  int get _activeFiltersCount {
+    int count = 0;
+    if (_selectedCabangId != null) count++;
+    if (_selectedStatus != null) count++;
+    if (_startDate != null || _endDate != null) count++;
+    return count;
+  }
+
   Widget _buildMobileFilterBar() {
-    String dateRangeStr = 'Pilih Tanggal';
-    if (_startDate != null && _endDate != null) {
-      dateRangeStr = '${DateFormat('dd MMM').format(_startDate!)} - ${DateFormat('dd MMM').format(_endDate!)}';
-    }
+    final activeCount = _activeFiltersCount;
+    final bool hasActiveFilters = activeCount > 0;
 
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Search Input
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.search_rounded, size: 20, color: Color(0xFF64748B)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: _onSearchChanged,
-                    style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1E293B), fontWeight: FontWeight.w500),
-                    decoration: InputDecoration(
-                      hintText: 'Cari barang, nama pemohon...',
-                      hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 11),
+          // Search Input & Filter Button Row
+          Row(
+            children: [
+              // Search Input Box
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.search_rounded, size: 20, color: Color(0xFF64748B)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: _onSearchChanged,
+                          style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1E293B), fontWeight: FontWeight.w500),
+                          decoration: InputDecoration(
+                            hintText: 'Cari barang, nama pemohon...',
+                            hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                          ),
+                        ),
+                      ),
+                      if (_searchController.text.isNotEmpty)
+                        IconButton(
+                          icon: const Icon(Icons.clear_rounded, size: 16, color: Color(0xFF64748B)),
+                          onPressed: () {
+                            _searchController.clear();
+                            _loadHistoryData();
+                          },
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+
+              // Filter Button (HRD Style)
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _showComprehensiveFilterModal,
+                  borderRadius: BorderRadius.circular(12),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: hasActiveFilters ? AppColors.primary : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: hasActiveFilters ? AppColors.primary : const Color(0xFFCBD5E1),
+                        width: 1.5,
+                      ),
+                      boxShadow: hasActiveFilters
+                          ? [
+                              BoxShadow(
+                                color: AppColors.primary.withValues(alpha: 0.25),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              )
+                            ]
+                          : [],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.tune_rounded,
+                          size: 18,
+                          color: hasActiveFilters ? Colors.white : const Color(0xFF334155),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          hasActiveFilters ? 'Filter ($activeCount)' : 'Filter',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: hasActiveFilters ? Colors.white : const Color(0xFF334155),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                if (_searchController.text.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.clear_rounded, size: 16, color: Color(0xFF64748B)),
-                    onPressed: () {
-                      _searchController.clear();
+              ),
+            ],
+          ),
+
+          // Active Filter Badges Bar
+          if (hasActiveFilters) ...[
+            const SizedBox(height: 10),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  if (_selectedCabangId != null)
+                    _buildActiveBadge(
+                      label: _cabangs.firstWhere(
+                        (c) => c['id'] == _selectedCabangId,
+                        orElse: () => {'nama_cabang': 'Cabang'},
+                      )['nama_cabang'],
+                      onRemove: () {
+                        setState(() => _selectedCabangId = null);
+                        _loadHistoryData();
+                      },
+                    ),
+                  if (_selectedStatus != null)
+                    _buildActiveBadge(
+                      label: _selectedStatus == 'approved' ? 'Disetujui' : 'Ditolak',
+                      onRemove: () {
+                        setState(() => _selectedStatus = null);
+                        _loadHistoryData();
+                      },
+                    ),
+                  if (_startDate != null && _endDate != null)
+                    _buildActiveBadge(
+                      label: '${DateFormat('dd MMM').format(_startDate!)} - ${DateFormat('dd MMM').format(_endDate!)}',
+                      onRemove: () {
+                        setState(() {
+                          _startDate = null;
+                          _endDate = null;
+                        });
+                        _loadHistoryData();
+                      },
+                    ),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedCabangId = null;
+                        _selectedStatus = null;
+                        _startDate = null;
+                        _endDate = null;
+                      });
                       _loadHistoryData();
                     },
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 6, right: 4),
+                      child: Text(
+                        'Reset Semua',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFFDC2626),
+                        ),
+                      ),
+                    ),
                   ),
-              ],
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActiveBadge({required String label, required VoidCallback onRemove}) {
+    return Container(
+      margin: const EdgeInsets.only(right: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primary,
             ),
           ),
-          const SizedBox(height: 10),
-
-          // Horizontal Filter Chips
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                // Cabang Filter Chip
-                _buildFilterChip(
-                  label: _selectedCabangId == null
-                      ? 'Semua Cabang'
-                      : _cabangs.firstWhere(
-                          (c) => c['id'] == _selectedCabangId,
-                          orElse: () => {'nama_cabang': 'Cabang'},
-                        )['nama_cabang'],
-                  isActive: _selectedCabangId != null,
-                  icon: Icons.storefront_rounded,
-                  onTap: _showCabangPicker,
-                ),
-                const SizedBox(width: 8),
-
-                // Status Filter Chip
-                _buildFilterChip(
-                  label: _selectedStatus == null
-                      ? 'Semua Status'
-                      : (_selectedStatus == 'approved' ? 'Disetujui' : 'Ditolak'),
-                  isActive: _selectedStatus != null,
-                  icon: Icons.filter_list_rounded,
-                  onTap: _showStatusPicker,
-                ),
-                const SizedBox(width: 8),
-
-                // Date Filter Chip
-                _buildFilterChip(
-                  label: dateRangeStr,
-                  isActive: _startDate != null,
-                  icon: Icons.calendar_today_rounded,
-                  onTap: _selectDateRange,
-                  onClear: _startDate != null
-                      ? () {
-                          setState(() {
-                            _startDate = null;
-                            _endDate = null;
-                          });
-                          _loadHistoryData();
-                        }
-                      : null,
-                ),
-              ],
-            ),
+          const SizedBox(width: 4),
+          InkWell(
+            onTap: onRemove,
+            child: const Icon(Icons.close_rounded, size: 13, color: AppColors.primary),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFilterChip({
-    required String label,
-    required bool isActive,
-    required IconData icon,
-    required VoidCallback onTap,
-    VoidCallback? onClear,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        decoration: BoxDecoration(
-          color: isActive ? AppColors.primary.withValues(alpha: 0.1) : const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isActive ? AppColors.primary : const Color(0xFFE2E8F0),
-            width: isActive ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: isActive ? AppColors.primary : const Color(0xFF64748B)),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
-                color: isActive ? AppColors.primary : const Color(0xFF334155),
-              ),
-            ),
-            if (onClear != null) ...[
-              const SizedBox(width: 4),
-              InkWell(
-                onTap: onClear,
-                child: const Icon(Icons.close_rounded, size: 14, color: AppColors.primary),
-              ),
-            ] else ...[
-              const SizedBox(width: 4),
-              Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: isActive ? AppColors.primary : const Color(0xFF94A3B8)),
-            ]
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showCabangPicker() {
+  void _showComprehensiveFilterModal() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Pilih Cabang',
-                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
-              ),
-            ),
-            const Divider(height: 1, color: Color(0xFFF1F5F9)),
-            ListTile(
-              title: Text('Semua Cabang', style: GoogleFonts.inter(fontWeight: _selectedCabangId == null ? FontWeight.w800 : FontWeight.w500)),
-              trailing: _selectedCabangId == null ? const Icon(Icons.check_rounded, color: AppColors.primary) : null,
-              onTap: () {
-                setState(() => _selectedCabangId = null);
-                Navigator.pop(context);
-                _loadHistoryData();
-              },
-            ),
-            ..._cabangs.map((c) => ListTile(
-                  title: Text(c['nama_cabang'], style: GoogleFonts.inter(fontWeight: _selectedCabangId == c['id'] ? FontWeight.w800 : FontWeight.w500)),
-                  trailing: _selectedCabangId == c['id'] ? const Icon(Icons.check_rounded, color: AppColors.primary) : null,
-                  onTap: () {
-                    setState(() => _selectedCabangId = c['id'] as int);
-                    Navigator.pop(context);
-                    _loadHistoryData();
-                  },
-                )),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showStatusPicker() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Pilih Status',
-                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
-              ),
-            ),
-            const Divider(height: 1, color: Color(0xFFF1F5F9)),
-            ListTile(
-              title: Text('Semua Status', style: GoogleFonts.inter(fontWeight: _selectedStatus == null ? FontWeight.w800 : FontWeight.w500)),
-              trailing: _selectedStatus == null ? const Icon(Icons.check_rounded, color: AppColors.primary) : null,
-              onTap: () {
-                setState(() => _selectedStatus = null);
-                Navigator.pop(context);
-                _loadHistoryData();
-              },
-            ),
-            ListTile(
-              title: Text('Disetujui (Approved)', style: GoogleFonts.inter(color: const Color(0xFF16A34A), fontWeight: _selectedStatus == 'approved' ? FontWeight.w800 : FontWeight.w500)),
-              trailing: _selectedStatus == 'approved' ? const Icon(Icons.check_rounded, color: Color(0xFF16A34A)) : null,
-              onTap: () {
-                setState(() => _selectedStatus = 'approved');
-                Navigator.pop(context);
-                _loadHistoryData();
-              },
-            ),
-            ListTile(
-              title: Text('Ditolak (Rejected)', style: GoogleFonts.inter(color: const Color(0xFFDC2626), fontWeight: _selectedStatus == 'rejected' ? FontWeight.w800 : FontWeight.w500)),
-              trailing: _selectedStatus == 'rejected' ? const Icon(Icons.check_rounded, color: Color(0xFFDC2626)) : null,
-              onTap: () {
-                setState(() => _selectedStatus = 'rejected');
-                Navigator.pop(context);
-                _loadHistoryData();
-              },
-            ),
-          ],
-        ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _HistoryFilterBottomSheet(
+        selectedCabangId: _selectedCabangId,
+        selectedStatus: _selectedStatus,
+        startDate: _startDate,
+        endDate: _endDate,
+        cabangs: _cabangs,
+        onApply: (cabangId, status, start, end) {
+          setState(() {
+            _selectedCabangId = cabangId;
+            _selectedStatus = status;
+            _startDate = start;
+            _endDate = end;
+          });
+          _loadHistoryData();
+        },
       ),
     );
   }
@@ -662,22 +643,14 @@ class _OperasionalApprovalPengajuanScreenState extends State<OperasionalApproval
     final jenis = item['jenis_pembelian'] ?? '-';
     final merk = item['merk_spesifikasi'] ?? '-';
     final qty = '${item['jumlah']} ${item['satuan'] == 'Lainnya' ? (item['satuan_lainnya'] ?? '') : (item['satuan'] ?? 'Pcs')}';
-    final urgensi = (item['tingkat_urgensi'] ?? 'Low').toString();
+    final rawUrgensi = (item['tingkat_urgensi'] ?? 'Low').toString();
+    final urgensi = _getUrgensiLabel(rawUrgensi);
+    final urgensiColor = _getUrgensiColor(rawUrgensi);
+    final urgensiBg = _getUrgensiBg(rawUrgensi);
     final alasan = item['alasan_pengajuan'] ?? '';
 
     final List<String> photos = _getItemPhotos(item);
     final isChemical = jenis.toString().toLowerCase().contains('chemical');
-
-    Color urgensiColor = const Color(0xFF16A34A);
-    Color urgensiBg = const Color(0xFFDCFCE7);
-
-    if (urgensi.toLowerCase() == 'high') {
-      urgensiColor = const Color(0xFFDC2626);
-      urgensiBg = const Color(0xFFFEE2E2);
-    } else if (urgensi.toLowerCase() == 'medium') {
-      urgensiColor = const Color(0xFFD97706);
-      urgensiBg = const Color(0xFFFEF3C7);
-    }
 
     return Container(
       decoration: BoxDecoration(
@@ -1175,6 +1148,20 @@ class _DetailBottomSheetState extends State<_DetailBottomSheet> {
     return '$baseDomain/storage/$p';
   }
 
+  String _getUrgensiLabel(dynamic raw) {
+    final str = (raw ?? '').toString().toLowerCase().trim();
+    if (str == 'high' || str == 'tinggi') return 'Tinggi';
+    if (str == 'medium' || str == 'sedang') return 'Sedang';
+    return 'Rendah';
+  }
+
+  Color _getUrgensiColor(dynamic raw) {
+    final str = (raw ?? '').toString().toLowerCase().trim();
+    if (str == 'high' || str == 'tinggi') return const Color(0xFFDC2626);
+    if (str == 'medium' || str == 'sedang') return const Color(0xFFD97706);
+    return const Color(0xFF16A34A);
+  }
+
   List<String> _getItemPhotos() {
     final List<String> list = [];
     for (final key in ['foto_1', 'foto_2', 'foto_3', 'foto_4', 'foto_5', 'foto_bukti', 'foto']) {
@@ -1257,7 +1244,9 @@ class _DetailBottomSheetState extends State<_DetailBottomSheet> {
     final merk = item['merk_spesifikasi'] ?? '-';
     final satuan = item['satuan'] == 'Lainnya' ? (item['satuan_lainnya'] ?? '') : (item['satuan'] ?? 'Pcs');
     final qty = '${item['jumlah']} $satuan';
-    final urgensi = (item['tingkat_urgensi'] ?? 'Low').toString();
+    final rawUrgensi = (item['tingkat_urgensi'] ?? 'Low').toString();
+    final urgensi = _getUrgensiLabel(rawUrgensi);
+    final urgensiColor = _getUrgensiColor(rawUrgensi);
     final alasan = item['alasan_pengajuan'] ?? '-';
 
     final List<String> photos = _getItemPhotos();
@@ -1266,14 +1255,6 @@ class _DetailBottomSheetState extends State<_DetailBottomSheet> {
         ? item['disetujuiOleh']
         : (item['disetujui_oleh'] is Map ? item['disetujui_oleh'] : null);
     final String approverName = approverData?['nama_lengkap'] ?? approverData?['nama'] ?? '-';
-
-    Color urgensiColor = const Color(0xFF16A34A);
-
-    if (urgensi.toLowerCase() == 'high') {
-      urgensiColor = const Color(0xFFDC2626);
-    } else if (urgensi.toLowerCase() == 'medium') {
-      urgensiColor = const Color(0xFFD97706);
-    }
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
@@ -1423,7 +1404,7 @@ class _DetailBottomSheetState extends State<_DetailBottomSheet> {
                         _buildDetailRow('Kategori / Jenis', jenis),
                         _buildDetailRow('Merk / Spesifikasi', merk),
                         _buildDetailRow('Jumlah Pengajuan', qty, valueColor: AppColors.primary, isBold: true),
-                        _buildDetailRow('Tingkat Urgensi', urgensi.toUpperCase(), valueColor: urgensiColor, isBold: true),
+                        _buildDetailRow('Tingkat Urgensi', urgensi, valueColor: urgensiColor, isBold: true),
                       ],
                     ),
                   ),
@@ -2049,6 +2030,538 @@ class _SmartNetworkImageState extends State<SmartNetworkImage> {
         return widget.errorBuilder?.call(context, error, stackTrace) ??
             const Center(child: Icon(Icons.broken_image_rounded, color: Color(0xFF94A3B8), size: 20));
       },
+    );
+  }
+}
+
+// --- COMPREHENSIVE FILTER BOTTOM SHEET (HRD STYLE) ---
+class _HistoryFilterBottomSheet extends StatefulWidget {
+  final int? selectedCabangId;
+  final String? selectedStatus;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final List<dynamic> cabangs;
+  final Function(int? cabangId, String? status, DateTime? start, DateTime? end) onApply;
+
+  const _HistoryFilterBottomSheet({
+    required this.selectedCabangId,
+    required this.selectedStatus,
+    required this.startDate,
+    required this.endDate,
+    required this.cabangs,
+    required this.onApply,
+  });
+
+  @override
+  State<_HistoryFilterBottomSheet> createState() => _HistoryFilterBottomSheetState();
+}
+
+class _HistoryFilterBottomSheetState extends State<_HistoryFilterBottomSheet> {
+  int? _cabangId;
+  String? _status;
+  DateTime? _startDate;
+  DateTime? _endDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _cabangId = widget.selectedCabangId;
+    _status = widget.selectedStatus;
+    _startDate = widget.startDate;
+    _endDate = widget.endDate;
+  }
+
+  void _applyQuickDatePreset(String preset) {
+    final now = DateTime.now();
+    setState(() {
+      if (preset == 'today') {
+        _startDate = DateTime(now.year, now.month, now.day);
+        _endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+      } else if (preset == '7days') {
+        _startDate = now.subtract(const Duration(days: 7));
+        _endDate = now;
+      } else if (preset == 'this_month') {
+        _startDate = DateTime(now.year, now.month, 1);
+        _endDate = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+      } else {
+        _startDate = null;
+        _endDate = null;
+      }
+    });
+  }
+
+  Future<void> _pickDate({required bool isStart}) async {
+    final initialDate = isStart
+        ? (_startDate ?? DateTime.now())
+        : (_endDate ?? _startDate ?? DateTime.now());
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2035),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              onSurface: Color(0xFF1E293B),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        if (isStart) {
+          _startDate = picked;
+          if (_endDate != null && _endDate!.isBefore(_startDate!)) {
+            _endDate = _startDate;
+          }
+        } else {
+          _endDate = picked;
+          if (_startDate != null && _startDate!.isAfter(_endDate!)) {
+            _startDate = _endDate;
+          }
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+      ),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Drag Handle
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  width: 44,
+                  height: 4.5,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFCBD5E1),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              ),
+
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 6, 16, 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.tune_rounded, color: AppColors.primary, size: 18),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Filter Riwayat Approval',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF1E293B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 20),
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFFF1F5F9),
+                        padding: const EdgeInsets.all(6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: Color(0xFFF1F5F9)),
+
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // --- 1. STATUS FILTER ---
+                    Text(
+                      'STATUS KEPUTUSAN',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF64748B),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _buildStatusOption(
+                          label: 'Semua',
+                          value: null,
+                          icon: Icons.all_inclusive_rounded,
+                          accentColor: AppColors.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        _buildStatusOption(
+                          label: 'Disetujui',
+                          value: 'approved',
+                          icon: Icons.check_circle_rounded,
+                          accentColor: const Color(0xFF16A34A),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildStatusOption(
+                          label: 'Ditolak',
+                          value: 'rejected',
+                          icon: Icons.cancel_rounded,
+                          accentColor: const Color(0xFFDC2626),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+
+                    // --- 2. CABANG FILTER ---
+                    Text(
+                      'CABANG',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF64748B),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<dynamic>(
+                          value: _cabangId,
+                          isExpanded: true,
+                          hint: Row(
+                            children: [
+                              const Icon(Icons.storefront_outlined, size: 16, color: Color(0xFF64748B)),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Semua Cabang',
+                                style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B)),
+                              ),
+                            ],
+                          ),
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B), size: 18),
+                          style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1E293B), fontWeight: FontWeight.w600),
+                          items: [
+                            DropdownMenuItem(
+                              value: null,
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.storefront_outlined, size: 16, color: Color(0xFF64748B)),
+                                  const SizedBox(width: 8),
+                                  Text('Semua Cabang', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                            ),
+                            ...widget.cabangs.map(
+                              (c) => DropdownMenuItem(
+                                value: c['id'],
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.location_on_outlined, size: 16, color: Color(0xFF64748B)),
+                                    const SizedBox(width: 8),
+                                    Text(c['nama_cabang'] ?? '-'),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                          onChanged: (val) => setState(() => _cabangId = val as int?),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+
+                    // --- 3. TANGGAL FILTER ---
+                    Text(
+                      'RENTANG TANGGAL PENGAJUAN',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF64748B),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Date Presets
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildDatePresetChip('Semua Waktu', () => _applyQuickDatePreset('all'), _startDate == null && _endDate == null),
+                          const SizedBox(width: 6),
+                          _buildDatePresetChip('Hari Ini', () => _applyQuickDatePreset('today'), false),
+                          const SizedBox(width: 6),
+                          _buildDatePresetChip('7 Hari Terakhir', () => _applyQuickDatePreset('7days'), false),
+                          const SizedBox(width: 6),
+                          _buildDatePresetChip('Bulan Ini', () => _applyQuickDatePreset('this_month'), false),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Date Pickers (Dari - Sampai)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => _pickDate(isStart: true),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: _startDate != null ? AppColors.primary : const Color(0xFFE2E8F0)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Dari Tanggal',
+                                    style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.calendar_today_rounded, size: 14, color: _startDate != null ? AppColors.primary : const Color(0xFF94A3B8)),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          _startDate != null ? DateFormat('dd/MM/yyyy').format(_startDate!) : 'Pilih...',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: _startDate != null ? const Color(0xFF1E293B) : const Color(0xFF94A3B8),
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => _pickDate(isStart: false),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: _endDate != null ? AppColors.primary : const Color(0xFFE2E8F0)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Sampai Tanggal',
+                                    style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.calendar_today_rounded, size: 14, color: _endDate != null ? AppColors.primary : const Color(0xFF94A3B8)),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          _endDate != null ? DateFormat('dd/MM/yyyy').format(_endDate!) : 'Pilih...',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: _endDate != null ? const Color(0xFF1E293B) : const Color(0xFF94A3B8),
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // --- ACTION BUTTONS ---
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: OutlinedButton(
+                            onPressed: () {
+                              setState(() {
+                                _cabangId = null;
+                                _status = null;
+                                _startDate = null;
+                                _endDate = null;
+                              });
+                            },
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              side: const BorderSide(color: Color(0xFFCBD5E1)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: Text(
+                              'Reset',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF64748B),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          flex: 3,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              widget.onApply(_cabangId, _status, _startDate, _endDate);
+                              Navigator.pop(context);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.check_rounded, color: Colors.white, size: 18),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Terapkan Filter',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusOption({
+    required String label,
+    required String? value,
+    required IconData icon,
+    required Color accentColor,
+  }) {
+    final isSelected = _status == value;
+
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() => _status = value),
+        borderRadius: BorderRadius.circular(10),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? accentColor.withValues(alpha: 0.1) : const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected ? accentColor : const Color(0xFFE2E8F0),
+              width: isSelected ? 1.5 : 1.0,
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, size: 18, color: isSelected ? accentColor : const Color(0xFF64748B)),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  color: isSelected ? accentColor : const Color(0xFF334155),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDatePresetChip(String label, VoidCallback onTap, bool isSelected) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : const Color(0xFFE2E8F0),
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? AppColors.primary : const Color(0xFF475569),
+          ),
+        ),
+      ),
     );
   }
 }

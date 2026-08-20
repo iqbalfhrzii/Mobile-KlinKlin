@@ -111,6 +111,8 @@ class _OperasionalDataChatScreenState extends State<OperasionalDataChatScreen> {
             GradientHeader(
             child: Row(
               children: [
+                const AppBackButton(),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

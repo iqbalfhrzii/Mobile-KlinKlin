@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../../../core/api/api_client.dart';
 
 class OperasionalKantorService {
@@ -12,8 +13,21 @@ class OperasionalKantorService {
       }
       return [];
     } catch (e) {
-      print('Error fetchKantor: $e');
+      debugPrint('Error fetchKantor: $e');
       rethrow;
+    }
+  }
+
+  static Future<List<dynamic>> fetchRiwayatKantor(int cabangId) async {
+    try {
+      final response = await _dio.get('/operasional/cabangs/$cabangId/riwayat');
+      if (response.statusCode == 200 && response.data['data'] != null) {
+        return response.data['data'] as List<dynamic>;
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error fetchRiwayatKantor: $e');
+      return [];
     }
   }
 
@@ -27,7 +41,7 @@ class OperasionalKantorService {
         throw Exception('Gagal memperbarui data kantor');
       }
     } catch (e) {
-      print('Error updateKantor: $e');
+      debugPrint('Error updateKantor: $e');
       rethrow;
     }
   }

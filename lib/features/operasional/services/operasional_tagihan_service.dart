@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../../../core/api/api_client.dart';
 
 class OperasionalTagihanService {
@@ -7,12 +8,12 @@ class OperasionalTagihanService {
   static Future<List<dynamic>> getCabangs() async {
     try {
       final response = await _dio.get('/cabangs');
-      if (response.data['success'] == true) {
+      if (response.data != null && response.data['data'] != null) {
         return response.data['data'] as List<dynamic>;
       }
       return [];
     } catch (e) {
-      print('Error getCabangs: $e');
+      debugPrint('Error getCabangs: $e');
       return [];
     }
   }
@@ -33,12 +34,12 @@ class OperasionalTagihanService {
         queryParameters: queryParams,
       );
       
-      if (response.data['success'] == true) {
+      if (response.data != null && response.data['data'] != null) {
         return response.data['data'] as List<dynamic>;
       }
       return [];
     } catch (e) {
-      print('Error getTagihanBulanan: $e');
+      debugPrint('Error getTagihanBulanan: $e');
       rethrow;
     }
   }
@@ -54,11 +55,11 @@ class OperasionalTagihanService {
         '/operasional/tagihan-bulanan',
         data: formData,
       );
-      if (response.data['success'] != true) {
+      if (response.statusCode != 200 && response.statusCode != 201 && response.data['success'] != true) {
         throw Exception(response.data['message'] ?? 'Gagal membuat tagihan');
       }
     } catch (e) {
-      print('Error createTagihan: $e');
+      debugPrint('Error createTagihan: $e');
       rethrow;
     }
   }
@@ -75,11 +76,11 @@ class OperasionalTagihanService {
         '/operasional/tagihan-bulanan/$id',
         data: formData,
       );
-      if (response.data['success'] != true) {
+      if (response.statusCode != 200 && response.statusCode != 201 && response.data['success'] != true) {
         throw Exception(response.data['message'] ?? 'Gagal memperbarui tagihan');
       }
     } catch (e) {
-      print('Error updateTagihan: $e');
+      debugPrint('Error updateTagihan: $e');
       rethrow;
     }
   }
@@ -87,11 +88,11 @@ class OperasionalTagihanService {
   static Future<void> deleteTagihan(int id) async {
     try {
       final response = await _dio.delete('/operasional/tagihan-bulanan/$id');
-      if (response.data['success'] != true) {
+      if (response.statusCode != 200 && response.data['success'] != true) {
         throw Exception(response.data['message'] ?? 'Gagal menghapus tagihan');
       }
     } catch (e) {
-      print('Error deleteTagihan: $e');
+      debugPrint('Error deleteTagihan: $e');
       rethrow;
     }
   }

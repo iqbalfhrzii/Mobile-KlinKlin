@@ -20,10 +20,8 @@ class OperasionalPengaturanScreen extends StatelessWidget {
           GradientHeader(
             child: Row(
               children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
+                const AppBackButton(),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

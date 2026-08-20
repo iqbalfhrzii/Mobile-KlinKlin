@@ -223,10 +223,8 @@ class _OperasionalTargetOmzetScreenState extends State<OperasionalTargetOmzetScr
         child: GradientHeader(
           child: Row(
             children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
-              ),
+              const AppBackButton(),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
