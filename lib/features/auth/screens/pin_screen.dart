@@ -46,12 +46,13 @@ class _PinScreenState extends State<PinScreen> {
       final res = await AuthService.login(widget.email, _pin);
       if (mounted) {
         String roleName = '';
-        if (res['data'] != null && res['data']['jabatan'] != null) {
-          final jab = res['data']['jabatan'];
+        if (res is Map && res['data'] is Map) {
+          final userData = res['data'] as Map;
+          final jab = userData['jabatan'];
           debugPrint('DEBUG LOGIN JABATAN: $jab');
           if (jab is Map) {
             roleName = (jab['nama_jabatan'] ?? '').toString().toLowerCase();
-          } else {
+          } else if (jab != null) {
             roleName = jab.toString().toLowerCase();
           }
         }

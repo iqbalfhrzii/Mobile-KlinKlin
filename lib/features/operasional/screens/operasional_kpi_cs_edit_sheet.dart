@@ -207,7 +207,7 @@ class _EditKpiCsBottomSheetState extends State<EditKpiCsBottomSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Edit KPI CS - $cabangName',
+                      'Edit KPI Cabang - $cabangName',
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

@@ -171,7 +171,7 @@ class OperasionalMenuScreen extends StatelessWidget {
           ),
           _MenuItem(
             icon: Icons.leaderboard_rounded,
-            title: 'KPI CS',
+            title: 'KPI Cabang',
             iconColor: const Color(0xFFEA580C),
             bgColor: const Color(0xFFFFEDD5),
             onTap: () {

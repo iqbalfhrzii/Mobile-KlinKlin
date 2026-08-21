@@ -80,7 +80,7 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
       if (res['status'] == true) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('KPI CS berhasil diperbarui', style: TextStyle(color: Colors.white)), backgroundColor: Colors.green),
+            const SnackBar(content: Text('KPI Cabang berhasil diperbarui', style: TextStyle(color: Colors.white)), backgroundColor: Colors.green),
           );
         }
         _fetchData();
@@ -104,7 +104,7 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
           if (!widget.hideHeader)
@@ -118,7 +118,7 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'KPI CS',
+                          'KPI Cabang',
                           style: GoogleFonts.inter(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -140,10 +140,10 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
               ),
             ),
           
-          // Filter section
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          // Sleek Month & Year Filter Bar
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
             child: Row(
               children: [
                 if (!widget.hideHeader) ...[
@@ -155,18 +155,18 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
                         Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalKpiMainScreen(initialIndex: 0)));
                       }
                     },
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.analytics_rounded, size: 15, color: AppColors.primary),
+                          const Icon(Icons.analytics_rounded, size: 16, color: AppColors.primary),
                           const SizedBox(width: 4),
                           Text(
                             'Report CS',
@@ -178,39 +178,99 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
                   ),
                   const SizedBox(width: 8),
                 ],
-                _buildDropdown(
-                  items: List.generate(12, (index) => index + 1),
-                  value: _selectedBulan,
-                  labelBuilder: (val) => _bulanNames[val - 1],
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() => _selectedBulan = val);
-                      _fetchData();
-                    }
-                  },
-                  prefix: 'BULAN',
+
+                // Month Dropdown
+                Expanded(
+                  flex: 3,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calendar_month_rounded, size: 16, color: AppColors.primary),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<int>(
+                              value: _selectedBulan,
+                              isExpanded: true,
+                              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B), size: 18),
+                              style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B)),
+                              items: List.generate(12, (index) {
+                                return DropdownMenuItem<int>(
+                                  value: index + 1,
+                                  child: Text(_bulanNames[index]),
+                                );
+                              }),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setState(() => _selectedBulan = val);
+                                  _fetchData();
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 8),
-                _buildDropdown(
-                  items: List.generate(10, (index) => 2020 + index),
-                  value: _selectedTahun,
-                  labelBuilder: (val) => val.toString(),
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() => _selectedTahun = val);
-                      _fetchData();
-                    }
-                  },
-                  prefix: 'TAHUN',
+
+                // Year Dropdown
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.primary),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<int>(
+                              value: _selectedTahun,
+                              isExpanded: true,
+                              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B), size: 18),
+                              style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B)),
+                              items: List.generate(7, (index) {
+                                final year = 2024 + index;
+                                return DropdownMenuItem<int>(
+                                  value: year,
+                                  child: Text(year.toString()),
+                                );
+                              }),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setState(() => _selectedTahun = val);
+                                  _fetchData();
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
           
           // Content
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
                 : _error.isNotEmpty
                     ? Center(child: Text(_error, style: const TextStyle(color: Colors.red)))
                     : _buildContent(),
@@ -220,62 +280,35 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
     );
   }
 
-  Widget _buildDropdown<T>({
-    required List<T> items,
-    required T value,
-    required String Function(T) labelBuilder,
-    required ValueChanged<T?> onChanged,
-    required String prefix,
-  }) {
-    return Container(
-      height: 36,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            prefix,
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textMuted,
-            ),
-          ),
-          const SizedBox(width: 8),
-          DropdownButtonHideUnderline(
-            child: DropdownButton<T>(
-              value: value,
-              icon: const Padding(
-                padding: EdgeInsets.only(left: 4),
-                child: Icon(Icons.keyboard_arrow_down, size: 16),
-              ),
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textDark,
-              ),
-              items: items.map((e) => DropdownMenuItem(value: e, child: Text(labelBuilder(e)))).toList(),
-              onChanged: onChanged,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildContent() {
-    if (_data.isEmpty) return const Center(child: Text('Tidak ada data'));
+    if (_data.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.08), shape: BoxShape.circle),
+                child: const Icon(Icons.leaderboard_rounded, size: 36, color: AppColors.primary),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Tidak Ada Data KPI Cabang',
+                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       children: [
         _buildSummaryTable(),
-        const SizedBox(height: 24),
+        const SizedBox(height: 12),
         ..._data.map((item) => _buildDetailedCard(item)),
       ],
     );
@@ -288,199 +321,199 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.only(bottom: 6),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Text(
-                  'Ringkasan Nilai KPI per Cabang',
-                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              Text(
+                'Ringkasan KPI Cabang',
+                style: GoogleFonts.inter(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF0F172A),
                 ),
               ),
-              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50,
+                  color: const Color(0xFFFFF1F2),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.red.shade200),
+                  border: Border.all(color: const Color(0xFFFECDD3)),
                 ),
-                child: Text(
-                  'Merah = Belum Capai Target',
-                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.red.shade700),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 5,
+                      height: 5,
+                      decoration: const BoxDecoration(color: Color(0xFFE11D48), shape: BoxShape.circle),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Merah: < 100%',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFFBE123C),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: _data.length,
-          itemBuilder: (context, index) {
-            final item = _data[index];
-            final totalNilai = (item['total_nilai_kpi'] as num).toDouble();
-            final isAman = totalNilai >= 100.0;
-            
-            Color statusColor = isAman ? Colors.green : Colors.red;
-            Color statusBgColor = statusColor.withValues(alpha: 0.1);
-            IconData statusIcon = isAman ? Icons.trending_up_rounded : Icons.trending_down_rounded;
+        ..._data.map((item) {
+          final totalNilai = (item['total_nilai_kpi'] as num).toDouble();
+          final isAman = totalNilai >= 100.0;
+          
+          Color statusColor = isAman ? const Color(0xFF059669) : const Color(0xFFE11D48);
+          Color statusBgColor = statusColor.withValues(alpha: 0.1);
+          IconData statusIcon = isAman ? Icons.trending_up_rounded : Icons.trending_down_rounded;
 
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(16),
+          return Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: statusColor.withValues(alpha: 0.3),
-                  width: 1.5,
+                  color: const Color(0xFFE2E8F0),
+                  width: 1.1,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: statusColor.withValues(alpha: 0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
                   ),
                 ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header Row: Cabang & KPI Badge
+                  // Row 1: Cabang & KPI Badge
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(8),
+                            padding: const EdgeInsets.all(5),
                             decoration: BoxDecoration(
                               color: statusBgColor,
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(7),
                             ),
-                            child: Icon(statusIcon, color: statusColor, size: 18),
+                            child: Icon(statusIcon, color: statusColor, size: 14),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                           Text(
                             item['nama_cabang'].toString().toUpperCase(),
                             style: GoogleFonts.inter(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textDark,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF1E293B),
                             ),
                           ),
                         ],
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                         decoration: BoxDecoration(
                           color: statusColor,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(14),
                         ),
                         child: Text(
                           '${totalNilai.toStringAsFixed(1)}%',
                           style: GoogleFonts.inter(
                             color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 11,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  const Divider(height: 1, color: Color(0xFFEEEEEE)),
-                  const SizedBox(height: 14),
-                  // Body Grid: Realisasi Omzet vs Target KPI
+                  const SizedBox(height: 6),
+                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  const SizedBox(height: 6),
+                  // Row 2: Realisasi Omzet vs Target KPI
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(
-                        flex: 3,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'REALISASI OMZET',
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textMuted,
-                              ),
+                      Row(
+                        children: [
+                          Text(
+                            'Realisasi: ',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF64748B),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _formatCurrency(item['realisasi_omzet']),
-                              style: GoogleFonts.inter(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textDark,
-                              ),
+                          ),
+                          Text(
+                            _formatCurrency(item['realisasi_omzet']),
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF0F172A),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      Expanded(
-                        flex: 2,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              'TARGET NILAI KPI',
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textMuted,
-                              ),
+                      Row(
+                        children: [
+                          Text(
+                            'Target: ',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF64748B),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              item['target_nilai_kpi'].toString(),
-                              style: GoogleFonts.inter(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textDark,
-                              ),
+                          ),
+                          Text(
+                            item['target_nilai_kpi'].toString(),
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF0F172A),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 6),
                   // Progress Bar
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(3),
                     child: LinearProgressIndicator(
                       value: (totalNilai / 100).clamp(0.0, 1.0),
-                      backgroundColor: statusColor.withValues(alpha: 0.12),
+                      backgroundColor: statusColor.withValues(alpha: 0.1),
                       valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-                      minHeight: 8,
+                      minHeight: 4,
                     ),
                   ),
                 ],
               ),
             );
-          },
-        ),
-        const SizedBox(height: 8),
+          }),
+        const SizedBox(height: 6),
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.blue.shade50,
-            borderRadius: BorderRadius.circular(16),
+            color: const Color(0xFFEFF6FF),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFDBEAFE)),
           ),
           child: Row(
             children: [
-              Icon(Icons.info_outline_rounded, size: 16, color: Colors.blue.shade700),
+              const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF2563EB)),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Nilai Omzet, Closing Rate, Closing Chat dihitung otomatis. Metrik manual diisi lewat tombol "Atur" di bawah.',
-                  style: GoogleFonts.inter(fontSize: 11, color: Colors.blue.shade800),
+                  style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF1D4ED8), fontWeight: FontWeight.w500),
                 ),
               ),
             ],

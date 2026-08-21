@@ -25,7 +25,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
 
   // Filters for KPI Tab
   String _selectedFilter = 'Bulan Ini';
-  final List<String> _filters = ['Bulan Ini', 'Kemarin', 'Hari Ini', 'Kustom Tanggal'];
+  final List<String> _filters = ['Bulan Ini', 'Kemarin', 'Hari Ini', 'Besok', 'Kustom Tanggal'];
   DateTime? _customStartDate;
   DateTime? _customEndDate;
 
@@ -180,7 +180,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
 
       if (_selectedFilter == 'Bulan Ini') {
         start = DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month, 1));
-        end = DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month + 1, 0));
+        end = DateFormat('yyyy-MM-dd').format(now);
       } else if (_selectedFilter == 'Hari Ini') {
         start = DateFormat('yyyy-MM-dd').format(now);
         end = DateFormat('yyyy-MM-dd').format(now);
@@ -188,13 +188,17 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
         final yesterday = now.subtract(const Duration(days: 1));
         start = DateFormat('yyyy-MM-dd').format(yesterday);
         end = DateFormat('yyyy-MM-dd').format(yesterday);
+      } else if (_selectedFilter == 'Besok') {
+        final tomorrow = now.add(const Duration(days: 1));
+        start = DateFormat('yyyy-MM-dd').format(tomorrow);
+        end = DateFormat('yyyy-MM-dd').format(tomorrow);
       } else if (_selectedFilter == 'Kustom Tanggal') {
         if (_customStartDate != null && _customEndDate != null) {
           start = DateFormat('yyyy-MM-dd').format(_customStartDate!);
           end = DateFormat('yyyy-MM-dd').format(_customEndDate!);
         } else {
           start = DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month, 1));
-          end = DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month + 1, 0));
+          end = DateFormat('yyyy-MM-dd').format(now);
         }
       }
 
@@ -234,6 +238,22 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
 
   String _formatCurrency(num value) {
     return NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(value);
+  }
+
+  String _formatIndoDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '-';
+    try {
+      final dt = DateTime.parse(dateStr);
+      const months = [
+        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      ];
+      final day = dt.day.toString().padLeft(2, '0');
+      final month = months[dt.month - 1];
+      return '$day $month ${dt.year}';
+    } catch (_) {
+      return dateStr;
+    }
   }
 
   @override
@@ -346,51 +366,206 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
 
         // Legend & Target Banner
         if (_data != null)
-          Container(
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withValues(alpha: 0.06),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.flag_rounded, color: AppColors.primary, size: 16),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Target Aman Global: ',
-                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
-                    ),
-                    Text(
-                      '${_data!['target_aman_global']}%',
-                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+          Builder(
+            builder: (context) {
+              final double targetAmanGlobal = (_data!['target_aman_global'] is num)
+                  ? (_data!['target_aman_global'] as num).toDouble()
+                  : 68.0;
+              final double kuningMin = (targetAmanGlobal - 20.0).clamp(0.0, 100.0);
+
+              final periode = _data!['periode'] as Map<String, dynamic>?;
+              final String startDateStr = _formatIndoDate(periode?['start']?.toString());
+              final String endDateStr = _formatIndoDate(periode?['end']?.toString());
+              final String prevStartStr = _formatIndoDate(periode?['prev_start']?.toString());
+              final String prevEndStr = _formatIndoDate(periode?['prev_end']?.toString());
+
+              return Container(
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                const Divider(height: 1, color: Color(0xFFEEEEEE)),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
                   children: [
-                    _buildLegendItem(Colors.green, 'Hijau', '≥100%'),
-                    _buildLegendItem(Colors.amber.shade700, 'Kuning', '70%-99%'),
-                    _buildLegendItem(Colors.red, 'Merah', '<70%'),
+                    // TOP SECTION: Period & Target Aman Pill
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Row 1: Periode & Target Badge
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // Left: Periode Icon & Text
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(
+                                        Icons.calendar_today_rounded,
+                                        size: 14,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Periode Laporan',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              color: const Color(0xFF64748B),
+                                            ),
+                                          ),
+                                          Text(
+                                            '$startDateStr - $endDateStr',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w800,
+                                              color: const Color(0xFF0F172A),
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+
+                              // Right: Target Aman Badge Pill
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.flag_rounded, size: 12, color: AppColors.primary),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Target: ',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${targetAmanGlobal.toStringAsFixed(0)}%',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w900,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Row 2: Pembanding (-1 bulan) subtle chip
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.compare_arrows_rounded, size: 14, color: Color(0xFF64748B)),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Pembanding (-1 bln): ',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFF64748B),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    '$prevStartStr - $prevEndStr',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF334155),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // BOTTOM SECTION: 3 Micro-Cards for Indicators
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+                        border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
+                      ),
+                      child: Row(
+                        children: [
+                          _buildIndicatorPill(
+                            label: 'Hijau',
+                            range: '≥ ${targetAmanGlobal.toStringAsFixed(0)}%',
+                            bgColor: const Color(0xFFECFDF5),
+                            borderColor: const Color(0xFFA7F3D0),
+                            textColor: const Color(0xFF059669),
+                          ),
+                          const SizedBox(width: 6),
+                          _buildIndicatorPill(
+                            label: 'Kuning',
+                            range: '${kuningMin.toStringAsFixed(0)}% - ${(targetAmanGlobal - 1).clamp(0, 100).toStringAsFixed(0)}%',
+                            bgColor: const Color(0xFFFFFBEB),
+                            borderColor: const Color(0xFFFDE68A),
+                            textColor: const Color(0xFFD97706),
+                          ),
+                          const SizedBox(width: 6),
+                          _buildIndicatorPill(
+                            label: 'Merah',
+                            range: '< ${kuningMin.toStringAsFixed(0)}%',
+                            bgColor: const Color(0xFFFFF1F2),
+                            borderColor: const Color(0xFFFECDD3),
+                            textColor: const Color(0xFFE11D48),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
 
         // Table
@@ -422,17 +597,19 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
         Color statusBgColor;
         IconData statusIcon;
 
+        final double kuningThreshold = (targetAman - 20.0).clamp(0.0, 100.0);
+
         if (kpiOmzet >= targetAman) {
-          statusColor = Colors.green;
-          statusBgColor = Colors.green.withValues(alpha: 0.1);
+          statusColor = const Color(0xFF059669); // Emerald Green
+          statusBgColor = const Color(0xFFECFDF5);
           statusIcon = Icons.trending_up_rounded;
-        } else if (kpiOmzet >= 70.0) {
-          statusColor = Colors.amber.shade700;
-          statusBgColor = Colors.amber.withValues(alpha: 0.15);
+        } else if (kpiOmzet >= kuningThreshold) {
+          statusColor = const Color(0xFFD97706); // Amber / Yellow
+          statusBgColor = const Color(0xFFFEF3C7);
           statusIcon = Icons.trending_flat_rounded;
         } else {
-          statusColor = Colors.red;
-          statusBgColor = Colors.red.withValues(alpha: 0.1);
+          statusColor = const Color(0xFFE11D48); // Rose / Red
+          statusBgColor = const Color(0xFFFFE4E6);
           statusIcon = Icons.trending_down_rounded;
         }
 
@@ -690,29 +867,84 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
     );
   }
 
+  Widget _buildIndicatorPill({
+    required String label,
+    required String range,
+    required Color bgColor,
+    required Color borderColor,
+    required Color textColor,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: borderColor, width: 1.2),
+        ),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(color: textColor, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: textColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              range,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: textColor.withValues(alpha: 0.9),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildLegendItem(Color color, String title, String subtitle) {
     return Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          width: 10,
-          height: 10,
+          width: 8,
+          height: 8,
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
           ),
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: 5),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               title,
-              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: color),
+              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: color),
             ),
             Text(
               subtitle,
-              style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted),
+              style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF64748B), fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -720,8 +952,440 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
     );
   }
 
+  // --- ORDER TAB FILTER GETTERS & BADGES ---
+  int get _activeOrderFiltersCount {
+    int count = 0;
+    if (_selectedOrderCabangId != null) count++;
+    if (_selectedOrderStatus != null && _selectedOrderStatus!.isNotEmpty) count++;
+    if (_selectedOrderPeriode != 'Semua' && _selectedOrderPeriode.isNotEmpty) count++;
+    return count;
+  }
+
+  Widget _buildOrderActiveBadge({required String label, required VoidCallback onRemove}) {
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(width: 4),
+          InkWell(
+            onTap: onRemove,
+            child: const Icon(Icons.close_rounded, size: 14, color: AppColors.primary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusOption({
+    required String label,
+    required String? value,
+    required String? selectedValue,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    final isSelected = selectedValue == value;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.1) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? color : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+            color: isSelected ? color : const Color(0xFF475569),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- MODAL FILTER FOR SEMUA ORDER ---
+  void _showOrderFilterModal() {
+    int? tempCabangId = _selectedOrderCabangId;
+    String? tempStatus = _selectedOrderStatus;
+    String tempPeriode = _selectedOrderPeriode;
+    DateTime? tempCustomStart = _orderCustomStartDate;
+    DateTime? tempCustomEnd = _orderCustomEndDate;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle Bar
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 12, bottom: 8),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 16, 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(7),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.tune_rounded, color: AppColors.primary, size: 18),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'Filter Pencarian Order',
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF1E293B),
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 20),
+                          style: IconButton.styleFrom(
+                            backgroundColor: const Color(0xFFF1F5F9),
+                            padding: const EdgeInsets.all(6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
+
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // --- 1. CABANG ---
+                          Text(
+                            'CABANG',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF64748B),
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<int?>(
+                                value: tempCabangId,
+                                isExpanded: true,
+                                hint: Text(
+                                  'Semua Cabang',
+                                  style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
+                                ),
+                                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B), size: 18),
+                                style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1E293B), fontWeight: FontWeight.w600),
+                                items: [
+                                  DropdownMenuItem<int?>(
+                                    value: null,
+                                    child: Text('Semua Cabang', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                                  ),
+                                  ..._cabangs.map((c) {
+                                    return DropdownMenuItem<int?>(
+                                      value: c['id'],
+                                      child: Text(
+                                        c['nama_cabang'] ?? '-',
+                                        style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                                      ),
+                                    );
+                                  }),
+                                ],
+                                onChanged: (val) {
+                                  setModalState(() => tempCabangId = val);
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+
+                          // --- 2. STATUS ORDER ---
+                          Text(
+                            'STATUS ORDER',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF64748B),
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _buildStatusOption(
+                                label: 'Semua Status',
+                                value: null,
+                                selectedValue: tempStatus,
+                                color: const Color(0xFF0F172A),
+                                onTap: () => setModalState(() => tempStatus = null),
+                              ),
+                              _buildStatusOption(
+                                label: 'Process',
+                                value: 'process',
+                                selectedValue: tempStatus,
+                                color: const Color(0xFF0284C7),
+                                onTap: () => setModalState(() => tempStatus = 'process'),
+                              ),
+                              _buildStatusOption(
+                                label: 'Done',
+                                value: 'done',
+                                selectedValue: tempStatus,
+                                color: const Color(0xFF16A34A),
+                                onTap: () => setModalState(() => tempStatus = 'done'),
+                              ),
+                              _buildStatusOption(
+                                label: 'Pending',
+                                value: 'pending',
+                                selectedValue: tempStatus,
+                                color: const Color(0xFFD97706),
+                                onTap: () => setModalState(() => tempStatus = 'pending'),
+                              ),
+                              _buildStatusOption(
+                                label: 'Cancelled',
+                                value: 'cancelled',
+                                selectedValue: tempStatus,
+                                color: const Color(0xFFDC2626),
+                                onTap: () => setModalState(() => tempStatus = 'cancelled'),
+                              ),
+                              _buildStatusOption(
+                                label: 'Draft',
+                                value: 'draft',
+                                selectedValue: tempStatus,
+                                color: const Color(0xFF64748B),
+                                onTap: () => setModalState(() => tempStatus = 'draft'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 18),
+
+                          // --- 3. PERIODE TANGGAL ---
+                          Text(
+                            'PERIODE WAKTU',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF64748B),
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: _orderPeriodeFilters.map((p) {
+                              final isSelected = tempPeriode == p;
+                              return InkWell(
+                                onTap: () async {
+                                  if (p == 'Rentang Waktu') {
+                                    final picked = await showDateRangePicker(
+                                      context: context,
+                                      firstDate: DateTime(2020),
+                                      lastDate: DateTime(2030),
+                                      initialDateRange: tempCustomStart != null && tempCustomEnd != null
+                                          ? DateTimeRange(start: tempCustomStart!, end: tempCustomEnd!)
+                                          : null,
+                                    );
+                                    if (picked != null) {
+                                      setModalState(() {
+                                        tempPeriode = p;
+                                        tempCustomStart = picked.start;
+                                        tempCustomEnd = picked.end;
+                                      });
+                                    }
+                                  } else {
+                                    setModalState(() {
+                                      tempPeriode = p;
+                                      tempCustomStart = null;
+                                      tempCustomEnd = null;
+                                    });
+                                  }
+                                },
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: isSelected ? AppColors.primary : const Color(0xFFE2E8F0),
+                                      width: isSelected ? 1.5 : 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    p == 'Rentang Waktu' && tempCustomStart != null && tempCustomEnd != null
+                                        ? '${DateFormat('dd MMM').format(tempCustomStart!)} - ${DateFormat('dd MMM').format(tempCustomEnd!)}'
+                                        : p,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                                      color: isSelected ? AppColors.primary : const Color(0xFF475569),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Bottom Buttons
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: const Border(top: BorderSide(color: Color(0xFFF1F5F9))),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, -3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              setState(() {
+                                _selectedOrderCabangId = null;
+                                _selectedOrderStatus = null;
+                                _selectedOrderPeriode = 'Semua';
+                                _orderCustomStartDate = null;
+                                _orderCustomEndDate = null;
+                              });
+                              Navigator.pop(context);
+                              _fetchOrders();
+                            },
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: const BorderSide(color: Color(0xFFCBD5E1)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: Text(
+                              'Reset Filter',
+                              style: GoogleFonts.inter(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF475569),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                _selectedOrderCabangId = tempCabangId;
+                                _selectedOrderStatus = tempStatus;
+                                _selectedOrderPeriode = tempPeriode;
+                                _orderCustomStartDate = tempCustomStart;
+                                _orderCustomEndDate = tempCustomEnd;
+                              });
+                              Navigator.pop(context);
+                              _fetchOrders();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: Text(
+                              'Terapkan Filter',
+                              style: GoogleFonts.inter(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   // --- TAB 2: SEMUA ORDER ---
   Widget _buildSemuaOrderTab() {
+    final activeCount = _activeOrderFiltersCount;
+    final bool hasActiveFilters = activeCount > 0;
+
     return RefreshIndicator(
       onRefresh: _fetchOrders,
       color: AppColors.primary,
@@ -730,149 +1394,175 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
           // Filter Bar
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Search Field
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.search_rounded, size: 20, color: Color(0xFF64748B)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextField(
-                          controller: _orderSearchController,
-                          onChanged: _onOrderSearchChanged,
-                          style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1E293B), fontWeight: FontWeight.w500),
-                          decoration: InputDecoration(
-                            hintText: 'Cari customer, ID, atau cleaner...',
-                            hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
-                            border: InputBorder.none,
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 11),
-                          ),
-                        ),
-                      ),
-                      if (_orderSearchController.text.isNotEmpty)
-                        IconButton(
-                          icon: const Icon(Icons.clear_rounded, size: 16, color: Color(0xFF64748B)),
-                          onPressed: () {
-                            _orderSearchController.clear();
-                            _fetchOrders();
-                          },
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // Cabang & Status Order Dropdowns
                 Row(
                   children: [
+                    // Search Field
                     Expanded(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          color: const Color(0xFFF1F5F9),
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<int>(
-                            value: _selectedOrderCabangId,
-                            isExpanded: true,
-                            hint: Text('Semua Cabang', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
-                            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary, size: 20),
-                            style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF1E293B), fontWeight: FontWeight.w600),
-                            items: [
-                              DropdownMenuItem<int>(value: null, child: Text('Semua Cabang', style: GoogleFonts.inter(fontWeight: FontWeight.normal))),
-                              ..._cabangs.map((c) => DropdownMenuItem<int>(value: c['id'], child: Text(c['nama_cabang'] ?? '-'))),
-                            ],
-                            onChanged: (val) {
-                              setState(() => _selectedOrderCabangId = val);
-                              _fetchOrders();
-                            },
-                          ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.search_rounded, size: 20, color: Color(0xFF64748B)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                controller: _orderSearchController,
+                                onChanged: _onOrderSearchChanged,
+                                style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1E293B), fontWeight: FontWeight.w500),
+                                decoration: InputDecoration(
+                                  hintText: 'Cari customer, ID, atau cleaner...',
+                                  hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                                ),
+                              ),
+                            ),
+                            if (_orderSearchController.text.isNotEmpty)
+                              IconButton(
+                                icon: const Icon(Icons.clear_rounded, size: 16, color: Color(0xFF64748B)),
+                                onPressed: () {
+                                  _orderSearchController.clear();
+                                  _fetchOrders();
+                                },
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              ),
+                          ],
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: _selectedOrderStatus,
-                            isExpanded: true,
-                            hint: Text('Semua Status', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
-                            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary, size: 20),
-                            style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF1E293B), fontWeight: FontWeight.w600),
-                            items: const [
-                              DropdownMenuItem(value: null, child: Text('Semua Status')),
-                              DropdownMenuItem(value: 'process', child: Text('Process')),
-                              DropdownMenuItem(value: 'done', child: Text('Done')),
-                              DropdownMenuItem(value: 'pending', child: Text('Pending')),
-                              DropdownMenuItem(value: 'cancelled', child: Text('Cancelled')),
-                              DropdownMenuItem(value: 'draft', child: Text('Draft')),
+                    const SizedBox(width: 10),
+
+                    // Unified Filter Button
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _showOrderFilterModal,
+                        borderRadius: BorderRadius.circular(12),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: hasActiveFilters ? AppColors.primary : Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: hasActiveFilters ? AppColors.primary : const Color(0xFFCBD5E1),
+                              width: 1.5,
+                            ),
+                            boxShadow: hasActiveFilters
+                                ? [
+                                    BoxShadow(
+                                      color: AppColors.primary.withValues(alpha: 0.25),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    )
+                                  ]
+                                : [],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.tune_rounded,
+                                size: 18,
+                                color: hasActiveFilters ? Colors.white : const Color(0xFF334155),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                hasActiveFilters ? 'Filter ($activeCount)' : 'Filter',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: hasActiveFilters ? Colors.white : const Color(0xFF334155),
+                                ),
+                              ),
                             ],
-                            onChanged: (val) {
-                              setState(() => _selectedOrderStatus = val);
-                              _fetchOrders();
-                            },
                           ),
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
 
-                // Periode Chips
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _orderPeriodeFilters.map((f) {
-                      final isSelected = _selectedOrderPeriode == f;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: InkWell(
-                          onTap: () => _onOrderPeriodeChanged(f),
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              f == 'Rentang Waktu' && _orderCustomStartDate != null && isSelected
-                                  ? '${DateFormat('dd MMM').format(_orderCustomStartDate!)} - ${DateFormat('dd MMM').format(_orderCustomEndDate!)}'
-                                  : f,
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                color: isSelected ? Colors.white : const Color(0xFF475569),
-                              ),
+                // Active Badges Row (if active)
+                if (hasActiveFilters) ...[
+                  const SizedBox(height: 10),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        if (_selectedOrderCabangId != null)
+                          _buildOrderActiveBadge(
+                            label: _cabangs.firstWhere(
+                              (c) => c['id'] == _selectedOrderCabangId,
+                              orElse: () => {'nama_cabang': 'Cabang'},
+                            )['nama_cabang'],
+                            onRemove: () {
+                              setState(() => _selectedOrderCabangId = null);
+                              _fetchOrders();
+                            },
+                          ),
+                        if (_selectedOrderStatus != null && _selectedOrderStatus!.isNotEmpty)
+                          _buildOrderActiveBadge(
+                            label: 'Status: ${_selectedOrderStatus!.toUpperCase()}',
+                            onRemove: () {
+                              setState(() => _selectedOrderStatus = null);
+                              _fetchOrders();
+                            },
+                          ),
+                        if (_selectedOrderPeriode != 'Semua')
+                          _buildOrderActiveBadge(
+                            label: _selectedOrderPeriode == 'Rentang Waktu' && _orderCustomStartDate != null
+                                ? '${DateFormat('dd MMM').format(_orderCustomStartDate!)} - ${DateFormat('dd MMM').format(_orderCustomEndDate!)}'
+                                : _selectedOrderPeriode,
+                            onRemove: () {
+                              setState(() {
+                                _selectedOrderPeriode = 'Semua';
+                                _orderCustomStartDate = null;
+                                _orderCustomEndDate = null;
+                              });
+                              _fetchOrders();
+                            },
+                          ),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _selectedOrderCabangId = null;
+                              _selectedOrderStatus = null;
+                              _selectedOrderPeriode = 'Semua';
+                              _orderCustomStartDate = null;
+                              _orderCustomEndDate = null;
+                            });
+                            _fetchOrders();
+                          },
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
+                            'Reset Semua',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFFDC2626),
                             ),
                           ),
                         ),
-                      );
-                    }).toList(),
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -945,7 +1635,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
   }
 
   Widget _buildOrderCard(Map<String, dynamic> item) {
-    final String idOrder = item['id_order'] ?? (item['id'] != null ? '#${item['id']}' : '-');
+    final String idOrder = item['nomor_pesanan'] ?? item['id_order'] ?? (item['id'] != null ? '#${item['id']}' : '-');
     final String cabangName = item['cabang']?['nama_cabang'] ?? '-';
     final String customerName = item['pelanggan']?['nama_pelanggan'] ?? item['nama_customer'] ?? '-';
     

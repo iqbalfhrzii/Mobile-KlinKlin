@@ -125,7 +125,7 @@ class OperasionalQuotationService {
 
   Future<Map<String, dynamic>> updateQuotation(int id, Map<String, dynamic> data) async {
     try {
-      final response = await _apiClient.post('/operasional/quotation/$id', data: data); // Laravel handles PUT via POST with _method=PUT or just PUT
+      final response = await _apiClient.put('/operasional/quotation/$id', data: data);
       return response.data;
     } on DioException catch (e) {
       return {

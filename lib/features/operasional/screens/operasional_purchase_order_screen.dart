@@ -412,7 +412,7 @@ class _OperasionalPurchaseOrderScreenState extends State<OperasionalPurchaseOrde
                 ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
                 : RefreshIndicator(
                     onRefresh: _loadData,
-                    color: _selectedTipePo == 'distribusi' ? const Color(0xFF7E22CE) : AppColors.primary,
+                    color: AppColors.primary,
                     child: _purchaseOrders.isEmpty
                         ? _buildEmptyState()
                         : ListView.separated(
@@ -431,7 +431,7 @@ class _OperasionalPurchaseOrderScreenState extends State<OperasionalPurchaseOrde
         onPressed: () => _showFormModal(
           item: null,
         ),
-        backgroundColor: _selectedTipePo == 'distribusi' ? const Color(0xFF7E22CE) : AppColors.primary,
+        backgroundColor: AppColors.primary,
         elevation: 4,
         icon: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
         label: Text(
@@ -476,7 +476,7 @@ class _OperasionalPurchaseOrderScreenState extends State<OperasionalPurchaseOrde
                 title: 'PO Distribusi',
                 icon: Icons.local_shipping_outlined,
                 isSelected: _selectedTipePo == 'distribusi',
-                activeColor: const Color(0xFF7E22CE),
+                activeColor: AppColors.primary,
                 onTap: () {
                   setState(() => _selectedTipePo = 'distribusi');
                   _loadData();
@@ -822,15 +822,6 @@ class _OperasionalPurchaseOrderScreenState extends State<OperasionalPurchaseOrde
     final noPo = item['no_po']?.toString().trim() ?? '-';
     final cabang = item['cabang']?['nama_cabang']?.toString().trim() ?? '-';
     final supplier = item['supplier']?.toString().trim() ?? '-';
-    final barang = item['nama_barang']?.toString().trim() ?? '-';
-
-    final qtyNumber = double.tryParse(item['jumlah']?.toString() ?? '0') ?? 0;
-    final qtyStr = qtyNumber == qtyNumber.toInt() ? qtyNumber.toInt().toString() : qtyNumber.toStringAsFixed(2);
-    final satuan = item['satuan']?.toString().trim() ?? '';
-    final total = item['total_harga'] != null
-        ? NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(double.parse(item['total_harga'].toString()))
-        : '-';
-
     final status = item['status_po'] ?? 'Draft';
     final filePo = item['file_po'];
     final bool hasFile = filePo != null && filePo.toString().trim().isNotEmpty && filePo.toString() != 'null';
@@ -859,21 +850,55 @@ class _OperasionalPurchaseOrderScreenState extends State<OperasionalPurchaseOrde
     final fullFileUrl = hasFile ? _getFileUrl(filePo) : '';
     final bool isImage = hasFile && _isImageFile(fullFileUrl);
 
-    final bool hasBarang = barang != '-' && barang.isNotEmpty;
-    final bool hasQty = qtyNumber > 0 || satuan.isNotEmpty;
-    final bool hasTotal = total != '-' && total != 'Rp 0';
     final bool hasCabang = cabang != '-' && cabang.isNotEmpty;
     final bool hasSupplier = supplier != '-' && supplier.isNotEmpty;
     final keterangan = item['keterangan']?.toString().trim() ?? '';
     final hasKeterangan = keterangan.isNotEmpty && keterangan != '-';
 
-    // Calculate distribution summary if available
+    // 1. Calculate Items & Total for PO Pembelian (Matching Web)
+    final rawPembelianDetails = item['pembelian_details'] ?? item['pembelianDetails'];
+    List<dynamic> pembelianList = [];
+    if (rawPembelianDetails is List) {
+      pembelianList = rawPembelianDetails;
+    }
+
+    double totalPembelian = 0;
+    int itemCount = pembelianList.length;
+    String firstItemName = '';
+
+    if (pembelianList.isNotEmpty) {
+      for (var d in pembelianList) {
+        final dTot = double.tryParse(d['total_harga']?.toString() ?? '0') ??
+            ((double.tryParse(d['qty']?.toString() ?? '0') ?? 0) * (double.tryParse(d['harga']?.toString() ?? '0') ?? 0));
+        totalPembelian += dTot;
+      }
+      firstItemName = (pembelianList.first['nama_barang'] ?? pembelianList.first['deskripsi_barang'] ?? '').toString().trim();
+    }
+
+    if (totalPembelian == 0 && item['total_harga'] != null) {
+      totalPembelian = double.tryParse(item['total_harga'].toString()) ?? 0;
+    }
+
+    if (itemCount == 0 && item['nama_barang'] != null && item['nama_barang'].toString().trim().isNotEmpty) {
+      itemCount = 1;
+      firstItemName = item['nama_barang'].toString().trim();
+    }
+
+    final currency = (item['currency']?.toString().trim().isNotEmpty == true)
+        ? item['currency'].toString().trim()
+        : 'IDR';
+
+    final totalFormatted = '$currency ${NumberFormat.currency(locale: 'id_ID', symbol: '', decimalDigits: 0).format(totalPembelian).trim()}';
+
+    // 2. Calculate distribution summary if PO Distribusi (Matching Web)
     int distJenisCount = 1;
-    int distCabangCount = 2;
-    final distDetails = item['distribusi_details'] as List<dynamic>?;
-    if (distDetails != null && distDetails.isNotEmpty) {
-      distJenisCount = distDetails.map((d) => d['nama_barang']).toSet().length;
-      distCabangCount = distDetails.map((d) => d['cabang_id']).toSet().length;
+    int distCabangCount = 1;
+    final rawDistDetails = item['distribusi_details'] ?? item['distribusiDetails'];
+    if (rawDistDetails is List && rawDistDetails.isNotEmpty) {
+      distJenisCount = rawDistDetails.map((d) => d['nama_barang']).where((n) => n != null).toSet().length;
+      distCabangCount = rawDistDetails.map((d) => d['cabang_id']).where((c) => c != null).toSet().length;
+      if (distJenisCount == 0) distJenisCount = 1;
+      if (distCabangCount == 0) distCabangCount = 1;
     }
 
     return Container(
@@ -881,7 +906,7 @@ class _OperasionalPurchaseOrderScreenState extends State<OperasionalPurchaseOrde
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDistribusi ? const Color(0xFFF3E8FF) : const Color(0xFFE2E8F0),
+          color: const Color(0xFFE2E8F0),
         ),
         boxShadow: [
           BoxShadow(
@@ -904,15 +929,15 @@ class _OperasionalPurchaseOrderScreenState extends State<OperasionalPurchaseOrde
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: isDistribusi ? const Color(0xFFFAF5FF) : const Color(0xFFEFF6FF),
+                    color: const Color(0xFFEFF6FF),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isDistribusi ? const Color(0xFFE9D5FF) : const Color(0xFFDBEAFE),
+                      color: const Color(0xFFDBEAFE),
                     ),
                   ),
                   child: Icon(
                     isDistribusi ? Icons.local_shipping_rounded : Icons.receipt_long_rounded,
-                    color: isDistribusi ? const Color(0xFF7E22CE) : AppColors.primary,
+                    color: AppColors.primary,
                     size: 22,
                   ),
                 ),
@@ -959,7 +984,7 @@ class _OperasionalPurchaseOrderScreenState extends State<OperasionalPurchaseOrde
                       ),
                       const SizedBox(height: 6),
 
-                      // Supplier & Details for Distribusi
+                      // Cabang & Supplier Row (Matching Web Column 2)
                       if (isDistribusi) ...[
                         if (hasSupplier)
                           Text(
@@ -984,157 +1009,137 @@ class _OperasionalPurchaseOrderScreenState extends State<OperasionalPurchaseOrde
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
-                        const SizedBox(height: 6),
-                        // Distribusi Data Summary Pill
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFAF5FF),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFFE9D5FF)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.inventory_2_outlined, size: 12, color: Color(0xFF7E22CE)),
-                              const SizedBox(width: 4),
-                              Text(
-                                '$distJenisCount Jenis Barang',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF7E22CE),
+                      ] else ...[
+                        Row(
+                          children: [
+                            if (hasCabang)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFECFDF5),
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(color: const Color(0xFFA7F3D0)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.storefront_rounded, size: 11, color: Color(0xFF059669)),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      cabang,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF059669),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(width: 6),
-                              Text('•', style: GoogleFonts.inter(color: const Color(0xFFCBD5E1))),
-                              const SizedBox(width: 6),
-                              const Icon(Icons.location_on_outlined, size: 12, color: Color(0xFF7E22CE)),
-                              const SizedBox(width: 3),
-                              Text(
-                                'Ke $distCabangCount Cabang',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF7E22CE),
+                            if (hasCabang && hasSupplier) const SizedBox(width: 6),
+                            if (hasSupplier)
+                              Expanded(
+                                child: Text(
+                                  supplier,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFF64748B),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
+                              ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+
+                      // Items & Total Box (Matching Web Column 3)
+                      if (isDistribusi) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFDBEAFE)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.inventory_2_outlined, size: 12.5, color: Color(0xFF1D4ED8)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$distJenisCount Jenis Barang',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF1D4ED8),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.location_on_outlined, size: 12.5, color: Color(0xFF1D4ED8)),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    'Ke $distCabangCount Cabang',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF1D4ED8),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
                         ),
                       ] else ...[
-                        // Nama Barang (PO Pembelian)
-                        if (hasBarang) ...[
-                          Text(
-                            barang,
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF334155),
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
                           ),
-                          const SizedBox(height: 4),
-                        ],
-
-                        // Qty & Total Harga Row
-                        if (hasQty || hasTotal) ...[
-                          Row(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              if (hasQty)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF1F5F9),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    '$qtyStr $satuan',
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.shopping_bag_outlined, size: 13, color: Color(0xFF475569)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$itemCount Items${firstItemName.isNotEmpty ? ' ($firstItemName)' : ''}',
                                     style: GoogleFonts.inter(
-                                      fontSize: 11,
-                                      color: const Color(0xFF475569),
+                                      fontSize: 11.5,
                                       fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF475569),
                                     ),
                                   ),
+                                ],
+                              ),
+                              Text(
+                                totalFormatted,
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF0F172A),
+                                  letterSpacing: -0.2,
                                 ),
-                              if (hasQty && hasTotal) ...[
-                                const SizedBox(width: 6),
-                                Text('•', style: GoogleFonts.inter(color: const Color(0xFFCBD5E1))),
-                                const SizedBox(width: 6),
-                              ],
-                              if (hasTotal)
-                                Expanded(
-                                  child: Text(
-                                    total,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.primary,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
+                              ),
                             ],
                           ),
-                          const SizedBox(height: 6),
-                        ],
-
-                        // Cabang & Supplier
-                        if (hasCabang || hasSupplier) ...[
-                          Row(
-                            children: [
-                              if (hasCabang)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFEFF6FF),
-                                    borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(color: const Color(0xFFDBEAFE)),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.storefront_rounded, size: 11, color: Color(0xFF1D4ED8)),
-                                      const SizedBox(width: 3),
-                                      Text(
-                                        cabang,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w700,
-                                          color: const Color(0xFF1D4ED8),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              if (hasCabang && hasSupplier)
-                                const SizedBox(width: 6),
-                              if (hasSupplier)
-                                Expanded(
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.local_shipping_outlined, size: 12, color: Color(0xFF64748B)),
-                                      const SizedBox(width: 4),
-                                      Expanded(
-                                        child: Text(
-                                          supplier,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w500,
-                                            color: const Color(0xFF64748B),
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ],
+                        ),
                       ],
                     ],
                   ),
@@ -1145,107 +1150,128 @@ class _OperasionalPurchaseOrderScreenState extends State<OperasionalPurchaseOrde
 
           const Divider(height: 1, color: Color(0xFFF1F5F9)),
 
-          // Bottom Bar: Status Badge & Actions
+          // Badges Row (Type & Status)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Badges (Type & Status)
-                Row(
-                  children: [
-                    // Type Badge (Pembelian / Distribusi)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                      decoration: BoxDecoration(
-                        color: (item['tipe_po']?.toString().toLowerCase() == 'distribusi' || (item['cabang_id'] == null && item['cabang'] == null))
-                            ? const Color(0xFFFAF5FF)
-                            : const Color(0xFFEFF6FF),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: (item['tipe_po']?.toString().toLowerCase() == 'distribusi' || (item['cabang_id'] == null && item['cabang'] == null))
-                              ? const Color(0xFFE9D5FF)
-                              : const Color(0xFFBFDBFE),
-                        ),
-                      ),
-                      child: Text(
-                        (item['tipe_po']?.toString().toLowerCase() == 'distribusi' || (item['cabang_id'] == null && item['cabang'] == null))
-                            ? '📦 Distribusi'
-                            : '🛒 Pembelian',
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: (item['tipe_po']?.toString().toLowerCase() == 'distribusi' || (item['cabang_id'] == null && item['cabang'] == null))
-                              ? const Color(0xFF7E22CE)
-                              : const Color(0xFF1D4ED8),
-                        ),
-                      ),
+                // Type Badge (Pembelian / Distribusi)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFFBFDBFE),
                     ),
-                    const SizedBox(width: 6),
-
-                    // Status Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
-                      decoration: BoxDecoration(
-                        color: statusBg,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        status,
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: statusColor,
-                        ),
-                      ),
+                  ),
+                  child: Text(
+                    isDistribusi ? '📦 Distribusi' : '🛒 Pembelian',
+                    style: GoogleFonts.inter(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF1D4ED8),
                     ),
-                  ],
+                  ),
                 ),
 
-                // Action Buttons
-                Row(
-                  children: [
-                    // IN-APP PDF INVOICE PRINT BUTTON
-                    InkWell(
+                // Status Badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusBg,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    status,
+                    style: GoogleFonts.inter(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      color: statusColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Bottom Action Bar: Text + Icon Buttons (Print, Berkas, Edit, Hapus)
+          Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(16),
+                bottomRight: Radius.circular(16),
+              ),
+              border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Row(
+              children: [
+                // 1. INVOICE PRINT BUTTON
+                Expanded(
+                  child: Material(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(8),
+                    child: InkWell(
                       onTap: () => _printInvoicePdf(item),
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
-                        padding: const EdgeInsets.all(7),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEFF6FF),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFDBEAFE)),
+                          border: Border.all(color: const Color(0xFFBFDBFE)),
                         ),
-                        child: const Icon(Icons.print_rounded, color: Color(0xFF2563EB), size: 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.print_rounded, size: 15, color: Color(0xFF1D4ED8)),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Print',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF1D4ED8),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 6),
+                  ),
+                ),
+                const SizedBox(width: 6),
 
-                    // IN-APP FILE VIEWER BUTTON (UPLOADED ATTACHMENT)
-                    if (hasFile) ...[
-                      InkWell(
+                // 2. ATTACHMENT BUTTON (IF HAS FILE)
+                if (hasFile) ...[
+                  Expanded(
+                    child: Material(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      child: InkWell(
                         onTap: () => _viewFileInApp(filePo, noPo),
                         borderRadius: BorderRadius.circular(8),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                            border: Border.all(color: const Color(0xFFCBD5E1)),
                           ),
                           child: Row(
-                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
                                 isImage ? Icons.image_rounded : Icons.attach_file_rounded,
+                                size: 15,
                                 color: const Color(0xFF475569),
-                                size: 13,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 isImage ? 'Foto' : 'Berkas',
                                 style: GoogleFonts.inter(
-                                  fontSize: 10.5,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFF475569),
                                 ),
@@ -1254,38 +1280,78 @@ class _OperasionalPurchaseOrderScreenState extends State<OperasionalPurchaseOrde
                           ),
                         ),
                       ),
-                      const SizedBox(width: 6),
-                    ],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
 
-                    // Edit Button
-                    InkWell(
+                // 3. EDIT BUTTON
+                Expanded(
+                  child: Material(
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(8),
+                    child: InkWell(
                       onTap: () => _showFormModal(item: item),
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
-                        padding: const EdgeInsets.all(7),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFEF3C7),
                           borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFFDE68A)),
                         ),
-                        child: const Icon(Icons.edit_rounded, color: Color(0xFFD97706), size: 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.edit_rounded, size: 15, color: Color(0xFFD97706)),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Edit',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFFD97706),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 6),
+                  ),
+                ),
+                const SizedBox(width: 6),
 
-                    // Delete Button
-                    InkWell(
+                // 4. DELETE BUTTON
+                Expanded(
+                  child: Material(
+                    color: const Color(0xFFFEE2E2),
+                    borderRadius: BorderRadius.circular(8),
+                    child: InkWell(
                       onTap: () => _deleteData(item['id']),
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
-                        padding: const EdgeInsets.all(7),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFEE2E2),
                           borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFFECACA)),
                         ),
-                        child: const Icon(Icons.delete_outline_rounded, color: Color(0xFFDC2626), size: 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.delete_outline_rounded, size: 15, color: Color(0xFFDC2626)),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Hapus',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFFDC2626),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -2053,12 +2119,12 @@ class _FormBottomSheetState extends State<_FormBottomSheet> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: (_tipePo == 'pembelian' ? AppColors.primary : const Color(0xFF7E22CE)).withValues(alpha: 0.1),
+                        color: (_tipePo == 'pembelian' ? AppColors.primary : const Color(0xFF1D4ED8)).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
                         _tipePo == 'pembelian' ? Icons.shopping_cart_outlined : Icons.local_shipping_outlined,
-                        color: _tipePo == 'pembelian' ? AppColors.primary : const Color(0xFF7E22CE),
+                        color: _tipePo == 'pembelian' ? AppColors.primary : const Color(0xFF1D4ED8),
                         size: 20,
                       ),
                     ),
@@ -2388,7 +2454,7 @@ class _FormBottomSheetState extends State<_FormBottomSheet> {
                             icon: const Icon(Icons.add_rounded, size: 16),
                             label: const Text('Tambah Kolom'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF7E22CE),
+                              backgroundColor: const Color(0xFF1D4ED8),
                               foregroundColor: Colors.white,
                               elevation: 0,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -2408,21 +2474,21 @@ class _FormBottomSheetState extends State<_FormBottomSheet> {
                           return Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFAF5FF),
+                              color: const Color(0xFFEFF6FF),
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFE9D5FF)),
+                              border: Border.all(color: const Color(0xFFDBEAFE)),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
                                   col,
-                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF7E22CE)),
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF1D4ED8)),
                                 ),
                                 const SizedBox(width: 6),
                                 InkWell(
                                   onTap: () => _removeDistribusiColumn(col),
-                                  child: const Icon(Icons.close_rounded, size: 14, color: Color(0xFF7E22CE)),
+                                  child: const Icon(Icons.close_rounded, size: 14, color: Color(0xFF1D4ED8)),
                                 ),
                               ],
                             ),
@@ -2529,8 +2595,8 @@ class _FormBottomSheetState extends State<_FormBottomSheet> {
                         icon: const Icon(Icons.add_rounded, size: 16),
                         label: const Text('+ Tambah Baris Cabang'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF7E22CE),
-                          side: const BorderSide(color: Color(0xFF7E22CE)),
+                          foregroundColor: const Color(0xFF1D4ED8),
+                          side: const BorderSide(color: Color(0xFF1D4ED8)),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700),
@@ -2656,7 +2722,7 @@ class _FormBottomSheetState extends State<_FormBottomSheet> {
                   child: ElevatedButton(
                     onPressed: _isSaving ? null : _saveData,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _tipePo == 'pembelian' ? AppColors.primary : const Color(0xFF7E22CE),
+                      backgroundColor: _tipePo == 'pembelian' ? AppColors.primary : const Color(0xFF1D4ED8),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

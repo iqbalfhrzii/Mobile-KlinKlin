@@ -5,8 +5,7 @@ import '../../app/app.dart';
 import '../../features/auth/screens/login_screen.dart';
 
 class ApiClient {
-  // Gunakan IP teman Anda (192.168.1.18) sebagai base URL
-  static const String baseUrl = 'http://erp.klinklin.online/api';
+  static const String baseUrl = 'https://erp.klinklin.online/api';
 
   static final Dio _dio =
       Dio(
@@ -14,6 +13,8 @@ class ApiClient {
             baseUrl: baseUrl,
             connectTimeout: const Duration(seconds: 30),
             receiveTimeout: const Duration(seconds: 30),
+            followRedirects: true,
+            maxRedirects: 5,
             headers: {
               'Accept': 'application/json',
               'Content-Type': 'application/json',

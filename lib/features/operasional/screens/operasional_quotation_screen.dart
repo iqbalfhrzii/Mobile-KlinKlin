@@ -137,6 +137,208 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
     }
   }
 
+  int get _activeFilterCount {
+    int count = 0;
+    if (_selectedStatus != 'Semua' && _selectedStatus.isNotEmpty) count++;
+    if (_isOperasionalOrAdmin && _selectedCabangId != null) count++;
+    return count;
+  }
+
+  void _showFilterModal() {
+    String tempStatus = _selectedStatus;
+    int? tempCabangId = _selectedCabangId;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.tune_rounded, size: 20, color: AppColors.primaryMid),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Filter Penawaran',
+                              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 24),
+
+                    // Section 1: Status Persetujuan
+                    Text(
+                      'Status Persetujuan',
+                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _statusFilters.map((s) {
+                        final isSel = tempStatus == s;
+                        return ChoiceChip(
+                          label: Text(s),
+                          selected: isSel,
+                          selectedColor: AppColors.primaryMid,
+                          backgroundColor: const Color(0xFFF1F5F9),
+                          labelStyle: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                            color: isSel ? Colors.white : AppColors.textDark,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            side: BorderSide(color: isSel ? AppColors.primaryMid : Colors.transparent),
+                          ),
+                          onSelected: (_) {
+                            setModalState(() => tempStatus = s);
+                          },
+                        );
+                      }).toList(),
+                    ),
+
+                    // Section 2: Cabang (Jika Operasional / Admin)
+                    if (_isOperasionalOrAdmin && _cabangs.isNotEmpty) ...[
+                      const SizedBox(height: 20),
+                      Text(
+                        'Cabang',
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ChoiceChip(
+                            label: const Text('Semua Cabang'),
+                            selected: tempCabangId == null,
+                            selectedColor: AppColors.primaryMid,
+                            backgroundColor: const Color(0xFFF1F5F9),
+                            labelStyle: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: tempCabangId == null ? FontWeight.bold : FontWeight.w500,
+                              color: tempCabangId == null ? Colors.white : AppColors.textDark,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              side: BorderSide(color: tempCabangId == null ? AppColors.primaryMid : Colors.transparent),
+                            ),
+                            onSelected: (_) {
+                              setModalState(() => tempCabangId = null);
+                            },
+                          ),
+                          ..._cabangs.map((c) {
+                            final isSel = tempCabangId == c['id'];
+                            final cName = c['nama_cabang'] ?? c['nama'] ?? 'Cabang ${c['id']}';
+                            return ChoiceChip(
+                              label: Text(cName),
+                              selected: isSel,
+                              selectedColor: AppColors.primaryMid,
+                              backgroundColor: const Color(0xFFF1F5F9),
+                              labelStyle: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                                color: isSel ? Colors.white : AppColors.textDark,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side: BorderSide(color: isSel ? AppColors.primaryMid : Colors.transparent),
+                              ),
+                              onSelected: (_) {
+                                setModalState(() => tempCabangId = c['id']);
+                              },
+                            );
+                          }),
+                        ],
+                      ),
+                    ],
+
+                    const SizedBox(height: 24),
+                    // Action Buttons: Reset & Terapkan
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              setModalState(() {
+                                tempStatus = 'Semua';
+                                if (_isOperasionalOrAdmin) {
+                                  tempCabangId = null;
+                                }
+                              });
+                            },
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: BorderSide(color: Colors.grey.shade300),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            child: Text(
+                              'Reset Filter',
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                _selectedStatus = tempStatus;
+                                _selectedCabangId = tempCabangId;
+                              });
+                              Navigator.pop(context);
+                              _fetchQuotations(page: 1);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryMid,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              elevation: 0,
+                            ),
+                            child: Text(
+                              'Terapkan Filter',
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   String _formatCurrency(num value) {
     return NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(value);
   }
@@ -574,32 +776,18 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                     OutlinedButton(
                       onPressed: () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         side: const BorderSide(color: Color(0xFFCBD5E1)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       child: Text('Tutup', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF475569))),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _shareToWhatsApp(item),
-                        icon: const Icon(Icons.chat_outlined, size: 16, color: Color(0xFF16A34A)),
-                        label: Text('Kirim WA', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF16A34A))),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFF86EFAC)),
-                          backgroundColor: const Color(0xFFF0FDF4),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () => _downloadOrPrintInvoice(item),
                         icon: const Icon(Icons.print_outlined, size: 16, color: Colors.white),
-                        label: Text('Cetak PDF', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                        label: Text('Cetak PDF', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryMid,
                           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -749,127 +937,85 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
             ),
           ),
           
-          // Search Bar & Branch Indicator
+          // Search Bar & Unified Filter Button
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Column(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: TextField(
-                          controller: _searchController,
-                          style: GoogleFonts.inter(fontSize: 13),
-                          decoration: InputDecoration(
-                            hintText: 'Cari No Quotation / Customer...',
-                            hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 12),
-                            prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
-                            suffixIcon: _searchController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear, size: 16, color: Colors.grey),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      _fetchQuotations(page: 1);
-                                    },
-                                  )
-                                : null,
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                          ),
-                          onSubmitted: (_) => _fetchQuotations(page: 1),
-                        ),
-                      ),
+                Expanded(
+                  child: Container(
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade300),
                     ),
-                    const SizedBox(width: 8),
-
-                    // Branch Indicator for CS or Selector for Operasional
-                    if (!_isOperasionalOrAdmin && _userCabangId != null)
-                      Container(
-                        height: 42,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryMid.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.primaryMid.withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.location_on, size: 14, color: AppColors.primaryMid),
-                            const SizedBox(width: 4),
-                            Text(
-                              _userCabangName.isNotEmpty ? _userCabangName : 'Cabang $_userCabangId',
-                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
-                            ),
-                          ],
-                        ),
-                      )
-                    else if (_cabangs.isNotEmpty)
-                      Container(
-                        height: 42,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<int?>(
-                            value: _selectedCabangId,
-                            hint: Text('Semua Cabang', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark)),
-                            icon: const Icon(Icons.location_on_outlined, size: 16, color: AppColors.textMuted),
-                            items: [
-                              const DropdownMenuItem<int?>(value: null, child: Text('Semua Cabang')),
-                              ..._cabangs.map((c) => DropdownMenuItem<int?>(
-                                    value: c['id'],
-                                    child: Text(c['nama_cabang'] ?? c['nama'] ?? 'Cabang ${c['id']}'),
-                                  )),
-                            ],
-                            onChanged: (val) {
-                              setState(() => _selectedCabangId = val);
-                              _fetchQuotations(page: 1);
-                            },
-                          ),
-                        ),
+                    child: TextField(
+                      controller: _searchController,
+                      style: GoogleFonts.inter(fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: 'Cari No Quotation / Customer...',
+                        hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 12),
+                        prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 16, color: Colors.grey),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _fetchQuotations(page: 1);
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 10),
                       ),
-                  ],
+                      onSubmitted: (_) => _fetchQuotations(page: 1),
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(width: 8),
 
-                // Status Filter Chips
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _statusFilters.map((s) {
-                      final isSelected = _selectedStatus == s;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          label: Text(s),
-                          selected: isSelected,
-                          selectedColor: AppColors.primaryMid,
-                          backgroundColor: Colors.grey.shade100,
-                          labelStyle: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                            color: isSelected ? Colors.white : AppColors.textDark,
-                          ),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          onSelected: (_) {
-                            setState(() => _selectedStatus = s);
-                            _fetchQuotations(page: 1);
-                          },
+                // Single Unified Filter Button
+                GestureDetector(
+                  onTap: _showFilterModal,
+                  child: Container(
+                    height: 42,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: _activeFilterCount > 0 ? AppColors.primaryMid : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: _activeFilterCount > 0 ? AppColors.primaryMid : Colors.grey.shade300,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _activeFilterCount > 0
+                              ? AppColors.primaryMid.withValues(alpha: 0.25)
+                              : Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
                         ),
-                      );
-                    }).toList(),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.tune_rounded,
+                          size: 16,
+                          color: _activeFilterCount > 0 ? Colors.white : AppColors.textDark,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _activeFilterCount > 0 ? 'Filter ($_activeFilterCount)' : 'Filter',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: _activeFilterCount > 0 ? Colors.white : AppColors.textDark,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -917,16 +1063,6 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                     : _buildList(),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openForm(),
-        backgroundColor: AppColors.primaryMid,
-        elevation: 3,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: Text(
-          'Buat Penawaran',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
-        ),
       ),
     );
   }
@@ -999,7 +1135,8 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
           final statusColor = _getStatusColor(item['status']);
           final customer = item['nama_customer'] ?? '-';
           final noQuo = item['no_quotation'] ?? '-';
-          final cabang = item['cabang']?['nama_cabang'] ?? item['cabang']?['nama'] ?? 'Surabaya';
+          final cabang = item['cabang']?['nama_cabang'] ?? item['cabang']?['nama'] ?? item['nama_cabang'] ?? 'Surabaya';
+          final dibuatOleh = item['pembuat']?['nama'] ?? item['pembuat']?['name'] ?? item['dibuat_oleh_nama'] ?? item['pembuat_nama'] ?? '-';
           final grandTotal = item['grand_total_calc'] ?? item['grand_total'] ?? 0;
 
           String tglStr = '-';
@@ -1034,210 +1171,256 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                 ),
               ],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Header Card
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
+            child: Material(
+              color: Colors.transparent,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Clickable Card Area (Header + Body -> Opens Detail)
+                  InkWell(
+                    onTap: () => _showDetailModal(item),
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-                    border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.request_quote_rounded, size: 16, color: AppColors.primaryMid),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          noQuo,
-                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: statusColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          item['status'] ?? 'Menunggu',
-                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Body Card
-                Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Customer & Phone
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Customer', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-                                const SizedBox(height: 2),
-                                Text(
-                                  customer,
-                                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Header Card
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                            border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.request_quote_rounded, size: 16, color: AppColors.primaryMid),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  noQuo,
+                                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
                                 ),
-                                if (item['no_wa_customer'] != null && item['no_wa_customer'].toString().isNotEmpty) ...[
-                                  const SizedBox(height: 2),
-                                  Row(
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  item['status'] ?? 'Menunggu',
+                                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        // Body Card
+                        Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Customer & Total
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Customer', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          customer,
+                                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                        ),
+                                        if (item['no_wa_customer'] != null && item['no_wa_customer'].toString().isNotEmpty) ...[
+                                          const SizedBox(height: 2),
+                                          Row(
+                                            children: [
+                                              const Icon(Icons.chat_bubble_outline, size: 11, color: Color(0xFF16A34A)),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                item['no_wa_customer'].toString(),
+                                                style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF16A34A), fontWeight: FontWeight.w600),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      const Icon(Icons.chat_bubble_outline, size: 11, color: Color(0xFF16A34A)),
-                                      const SizedBox(width: 4),
+                                      Text('Total Penawaran', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
+                                      const SizedBox(height: 2),
                                       Text(
-                                        item['no_wa_customer'].toString(),
-                                        style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF16A34A), fontWeight: FontWeight.w600),
+                                        _formatCurrency(grandTotal),
+                                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
                                       ),
                                     ],
                                   ),
                                 ],
-                              ],
-                            ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text('Total Penawaran', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-                              const SizedBox(height: 2),
-                              Text(
-                                _formatCurrency(grandTotal),
-                                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
+                              ),
+                              const SizedBox(height: 10),
+
+                              // Info Box: Dibuat Oleh, Cabang & Dates
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFF1F5F9)),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.person_outline_rounded, size: 13, color: AppColors.primaryMid),
+                                            const SizedBox(width: 4),
+                                            RichText(
+                                              text: TextSpan(
+                                                text: 'Dibuat: ',
+                                                style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                                                children: [
+                                                  TextSpan(
+                                                    text: dibuatOleh,
+                                                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.location_on_outlined, size: 13, color: AppColors.textMuted),
+                                            const SizedBox(width: 3),
+                                            Text(cabang, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark, fontWeight: FontWeight.w600)),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.textMuted),
+                                            const SizedBox(width: 4),
+                                            Text('Tgl: $tglStr', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                                          ],
+                                        ),
+                                        Text('Exp: $expStr', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFFDC2626), fontWeight: FontWeight.w500)),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-
-                      // Location & Dates info
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const Divider(height: 1, color: Color(0xFFEEEEEE)),
+                  
+                  // Action Buttons Bar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Row(
+                      children: [
+                        // Cetak PDF Button
+                        InkWell(
+                          onTap: () => _downloadOrPrintInvoice(item),
                           borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.blue.shade200),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.location_on_outlined, size: 13, color: AppColors.textMuted),
+                                const Icon(Icons.print_outlined, size: 14, color: Colors.blue),
                                 const SizedBox(width: 4),
-                                Text(cabang, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark, fontWeight: FontWeight.w500)),
+                                Text(
+                                  'Cetak PDF',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue.shade700),
+                                ),
                               ],
                             ),
-                            Row(
+                          ),
+                        ),
+                        const Spacer(),
+
+                        // Edit Button (Labelled Pill)
+                        InkWell(
+                          onTap: () => _openForm(item),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFFBEB),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFFDE68A)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.textMuted),
+                                const Icon(Icons.edit_outlined, size: 14, color: Color(0xFFD97706)),
                                 const SizedBox(width: 4),
-                                Text('$tglStr (Exp: $expStr)', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                                Text(
+                                  'Edit',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFD97706)),
+                                ),
                               ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+
+                        // Hapus Button (Labelled Pill)
+                        InkWell(
+                          onTap: () => _deleteQuotation(item['id']),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF2F2),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFFECACA)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.delete_outline_rounded, size: 14, color: Color(0xFFDC2626)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Hapus',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                
-                const Divider(height: 1, color: Color(0xFFEEEEEE)),
-                
-                // Action Buttons Bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Row(
-                    children: [
-                      InkWell(
-                        onTap: () => _showDetailModal(item),
-                        borderRadius: BorderRadius.circular(6),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryMid.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.remove_red_eye_outlined, size: 14, color: AppColors.primaryMid),
-                              const SizedBox(width: 4),
-                              Text('Detail', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryMid)),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      InkWell(
-                        onTap: () => _downloadOrPrintInvoice(item),
-                        borderRadius: BorderRadius.circular(6),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.print_outlined, size: 14, color: Colors.blue),
-                              const SizedBox(width: 4),
-                              Text('Cetak PDF', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      InkWell(
-                        onTap: () => _shareToWhatsApp(item),
-                        borderRadius: BorderRadius.circular(6),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.chat_outlined, size: 14, color: Color(0xFF16A34A)),
-                              const SizedBox(width: 4),
-                              Text('Kirim WA', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF15803D))),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.orange),
-                        onPressed: () => _openForm(item),
-                        padding: const EdgeInsets.all(4),
-                        constraints: const BoxConstraints(),
-                        tooltip: 'Edit',
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                        onPressed: () => _deleteQuotation(item['id']),
-                        padding: const EdgeInsets.all(4),
-                        constraints: const BoxConstraints(),
-                        tooltip: 'Hapus',
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },

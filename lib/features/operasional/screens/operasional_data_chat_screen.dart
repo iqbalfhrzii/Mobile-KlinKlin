@@ -214,26 +214,43 @@ class _OperasionalDataChatScreenState extends State<OperasionalDataChatScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Summary Cards
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildMainCard(summary),
-                  const SizedBox(width: 12),
-                  _buildSubCard('Iklan', summary['rate_iklan'], summary['chat_iklan'], summary['closing_iklan'], '% dari chat baru'),
-                  const SizedBox(width: 12),
-                  _buildSubCard('Organik', summary['rate_organik'], summary['chat_organik'], summary['closing_organik'], '% dari chat baru'),
-                  const SizedBox(width: 12),
-                  _buildCustLamaCard(summary),
-                ],
-              ),
+            // Summary Cards (NO horizontal scroll)
+            _buildMainCard(summary),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSubCard(
+                    title: 'Iklan',
+                    rate: summary['rate_iklan'],
+                    chat: summary['chat_iklan'] ?? 0,
+                    closing: summary['closing_iklan'] ?? 0,
+                    badgeColor: const Color(0xFFD97706),
+                    badgeBg: const Color(0xFFFEF3C7),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildSubCard(
+                    title: 'Organik',
+                    rate: summary['rate_organik'],
+                    chat: summary['chat_organik'] ?? 0,
+                    closing: summary['closing_organik'] ?? 0,
+                    badgeColor: const Color(0xFF2563EB),
+                    badgeBg: const Color(0xFFDBEAFE),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildCustLamaCard(summary),
+                ),
+              ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // Cards Section
             Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(bottom: 10),
               child: Row(
                 children: [
                   Text(
@@ -258,55 +275,111 @@ class _OperasionalDataChatScreenState extends State<OperasionalDataChatScreen> {
 
   Widget _buildMainCard(Map<String, dynamic> summary) {
     return Container(
-      width: 280,
-      padding: const EdgeInsets.all(20),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E3A5F), // Dark blue like the screenshot
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.12),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'CLOSING RATE — CUSTOMER BARU',
-            style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.8), fontWeight: FontWeight.bold),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'CLOSING RATE — CUSTOMER BARU',
+                style: GoogleFonts.inter(
+                  fontSize: 10.5,
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${summary['hari_lapor']} hari lapor',
+                  style: GoogleFonts.inter(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
                 '${summary['rate_baru']}',
-                style: GoogleFonts.inter(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.white),
+                style: GoogleFonts.inter(fontSize: 38, fontWeight: FontWeight.w900, color: Colors.white),
               ),
               Text(
                 '%',
-                style: GoogleFonts.inter(fontSize: 24, color: Colors.white),
+                style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white70),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
-            '${summary['closing_baru']} closing dari ${summary['chat_baru']} chat customer baru • ${summary['hari_lapor']} hari lapor',
-            style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.8)),
+            '${summary['closing_baru']} closing dari ${summary['chat_baru']} chat customer baru',
+            style: GoogleFonts.inter(fontSize: 11.5, color: Colors.white.withValues(alpha: 0.75)),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 14),
+          const Divider(height: 1, color: Color(0xFF334155)),
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
                 children: [
-                  Text('Chat Baru', style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.8))),
-                  Text('${summary['chat_baru']}', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: const BoxDecoration(color: Color(0xFF38BDF8), shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Chat Baru: ',
+                    style: GoogleFonts.inter(fontSize: 11, color: Colors.white70),
+                  ),
+                  Text(
+                    '${summary['chat_baru']}',
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white),
+                  ),
                 ],
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
                 children: [
-                  Text('Closing Baru', style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.8))),
-                  Text('${summary['closing_baru']}', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: const BoxDecoration(color: Color(0xFF4ADE80), shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Closing Baru: ',
+                    style: GoogleFonts.inter(fontSize: 11, color: Colors.white70),
+                  ),
+                  Text(
+                    '${summary['closing_baru']}',
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white),
+                  ),
                 ],
               ),
             ],
@@ -316,14 +389,27 @@ class _OperasionalDataChatScreenState extends State<OperasionalDataChatScreen> {
     );
   }
 
-  Widget _buildSubCard(String title, num rate, int chat, int closing, String desc) {
+  Widget _buildSubCard({
+    required String title,
+    required num rate,
+    required int chat,
+    required int closing,
+    required Color badgeColor,
+    required Color badgeBg,
+  }) {
     return Container(
-      width: 200,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,67 +419,87 @@ class _OperasionalDataChatScreenState extends State<OperasionalDataChatScreen> {
             children: [
               Text(
                 title,
-                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF1E293B),
+                ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
+                  color: badgeBg,
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '${rate}%',
-                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.orange.shade800),
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: badgeColor,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 8),
           Text(
             'CLOSING RATE',
-            style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold),
+            style: GoogleFonts.inter(
+              fontSize: 8.5,
+              color: const Color(0xFF94A3B8),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 6),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('$chat', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                  Text('chat', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                  Text(
+                    '$chat',
+                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                  ),
+                  Text('chat', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF64748B))),
                 ],
               ),
-              const SizedBox(width: 16),
               Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('$closing', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                  Text('closing', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                  Text(
+                    '$closing',
+                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                  ),
+                  Text('closing', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF64748B))),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            '${rate}% dari chat baru • ${rate}% dari closing baru',
-            style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted),
-          )
         ],
       ),
     );
   }
 
   Widget _buildCustLamaCard(Map<String, dynamic> summary) {
-    final rateLama = (summary['total_orderan'] ?? 0) > 0 
-        ? ((summary['order_lama'] ?? 0) / summary['total_orderan'] * 100).toStringAsFixed(1)
-        : '0.0';
+    final orderLama = summary['order_lama'] ?? 0;
+    final chatLama = summary['chat_lama'] ?? 0;
+
     return Container(
-      width: 200,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -403,51 +509,65 @@ class _OperasionalDataChatScreenState extends State<OperasionalDataChatScreen> {
             children: [
               Text(
                 'Cust Lama',
-                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF1E293B),
+                ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '0',
-                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey.shade800),
+                  '$orderLama',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF475569),
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 8),
           Text(
-            'ORDER PELANGGAN LAMA',
-            style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold),
+            'ORDER PELANGGAN',
+            style: GoogleFonts.inter(
+              fontSize: 8.5,
+              color: const Color(0xFF94A3B8),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 6),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${summary['chat_lama']}', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                  Text('chat', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                  Text(
+                    '$chatLama',
+                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                  ),
+                  Text('chat', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF64748B))),
                 ],
               ),
-              const SizedBox(width: 16),
               Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('${summary['order_lama']}', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                  Text('order', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                  Text(
+                    '$orderLama',
+                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                  ),
+                  Text('order', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF64748B))),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            '$rateLama% dari total orderan',
-            style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted),
-          )
         ],
       ),
     );
@@ -495,9 +615,9 @@ class _OperasionalDataChatScreenState extends State<OperasionalDataChatScreen> {
                           color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(Icons.storefront_rounded, color: AppColors.primary, size: 18),
+                        child: Icon(Icons.domain_rounded, color: AppColors.primary, size: 16),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
                       Text(
                         item['nama_cabang'].toString().toUpperCase(),
                         style: GoogleFonts.inter(

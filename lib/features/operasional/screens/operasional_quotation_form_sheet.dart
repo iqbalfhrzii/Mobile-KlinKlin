@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -37,7 +38,7 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
   
   bool _sameAsCustomerAddress = false;
   bool _alatChemical = true;
-  bool _usePpn = true;
+  bool _usePpn = false;
   bool _usePph = false;
   
   List<Map<String, dynamic>> _rincian = [];
@@ -82,32 +83,57 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
     if (widget.initialData != null) {
       final data = widget.initialData;
       _noQuotationController.text = data['no_quotation'] ?? '';
-      _tanggalController.text = data['tanggal']?.toString().split(' ')[0] ?? '';
-      _expDateController.text = data['exp_date']?.toString().split(' ')[0] ?? '';
+      _tanggalController.text = data['tanggal']?.toString().split('T')[0].split(' ')[0] ?? '';
+      _expDateController.text = data['exp_date']?.toString().split('T')[0].split(' ')[0] ?? '';
       _namaCustomerController.text = data['nama_customer'] ?? '';
       _noWaController.text = data['no_wa_customer'] ?? '';
       _alamatController.text = data['alamat'] ?? '';
       _jobLocationController.text = data['job_location'] ?? '';
-      _diskonController.text = (data['diskon'] ?? 0).toString();
-      _alatChemical = data['alat_chemical_klinklin'] == 1 || data['alat_chemical_klinklin'] == true;
-      _usePpn = (data['ppn'] ?? 0) > 0;
-      _usePph = (data['pph'] ?? 0) > 0;
+      
+      final diskonRaw = (data['diskon'] ?? 0).toString();
+      _diskonController.text = diskonRaw.contains('.') ? diskonRaw.split('.')[0] : diskonRaw;
+      
+      _alatChemical = data['alat_chemical_klinklin'] == 1 || data['alat_chemical_klinklin'] == true || data['alat_chemical_klinklin'] == '1';
+      
+      final num ppnNum = num.tryParse(data['ppn']?.toString() ?? '0') ?? 0;
+      final num pphNum = num.tryParse(data['pph']?.toString() ?? '0') ?? 0;
+      _usePpn = ppnNum > 0;
+      _usePph = pphNum > 0;
+      
       _cabangId = data['cabang_id'] ?? _cabangId;
       
-      if (data['rincian'] != null) {
-        if (data['rincian'] is List) {
-          _rincian = List<Map<String, dynamic>>.from(data['rincian'].map((item) => {
-            'deskripsi': TextEditingController(text: item['deskripsi']?.toString() ?? ''),
-            'qty': TextEditingController(text: (item['qty'] ?? 1).toString()),
-            'harga': TextEditingController(text: (item['harga'] ?? 0).toString()),
-          }));
+      dynamic rawRincian = data['rincian'];
+      if (rawRincian is String) {
+        try {
+          rawRincian = jsonDecode(rawRincian);
+        } catch (_) {}
+      }
+      
+      _rincian = [];
+      if (rawRincian is List && rawRincian.isNotEmpty) {
+        for (var item in rawRincian) {
+          final deskripsi = item['deskripsi']?.toString() ?? '';
+          final qty = (item['qty'] ?? 1).toString();
+          final hargaRaw = (item['harga'] ?? 0).toString();
+          final harga = hargaRaw.contains('.') ? hargaRaw.split('.')[0] : hargaRaw;
+          _rincian.add({
+            'deskripsi': TextEditingController(text: deskripsi),
+            'qty': TextEditingController(text: qty),
+            'harga': TextEditingController(text: harga),
+          });
         }
+      }
+      
+      if (_rincian.isEmpty) {
+        _rincian.add(_createEmptyRincian());
       }
     } else {
       _noQuotationController.text = 'Terisi otomatis (Auto Generate)';
       _tanggalController.text = DateFormat('yyyy-MM-dd').format(DateTime.now());
       _expDateController.text = DateFormat('yyyy-MM-dd').format(DateTime.now().add(const Duration(days: 14)));
-      _rincian.add(_createEmptyRincian());
+      _usePpn = false;
+      _usePph = false;
+      _rincian = [_createEmptyRincian()];
     }
 
     if (mounted) setState(() {});
@@ -309,92 +335,94 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
                   // 1. INFORMASI PENAWARAN
                   _buildSectionTitle('INFORMASI PENAWARAN'),
                   
-                  // No Quotation & Cabang Row
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: _buildTextField(
-                          'No Quotation',
-                          _noQuotationController,
-                          required: true,
-                          readOnly: true,
-                          hintText: 'Auto Generate',
+                  if (widget.initialData == null) ...[
+                    // No Quotation & Cabang Row (Hanya muncul saat Buat Penawaran Baru)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _buildTextField(
+                            'No Quotation',
+                            _noQuotationController,
+                            required: true,
+                            readOnly: true,
+                            hintText: 'Auto Generate',
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            RichText(
-                              text: TextSpan(
-                                text: 'Cabang',
-                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                                children: const [TextSpan(text: ' *', style: TextStyle(color: Colors.red))],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              RichText(
+                                text: TextSpan(
+                                  text: 'Cabang',
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                                  children: const [TextSpan(text: ' *', style: TextStyle(color: Colors.red))],
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            if (!_isOperasionalOrAdmin && _cabangId != null && _cabangs.isNotEmpty)
-                              Container(
-                                height: 48,
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.grey.shade300),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.location_on, size: 14, color: AppColors.primaryMid),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(
-                                        _cabangs.firstWhere((c) => c['id'] == _cabangId, orElse: () => {'nama_cabang': 'Cabang $_cabangId'})['nama_cabang'] ??
-                                            _cabangs.firstWhere((c) => c['id'] == _cabangId, orElse: () => {'nama': 'Cabang $_cabangId'})['nama'] ??
-                                            'Cabang $_cabangId',
-                                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            else
-                              Container(
-                                height: 48,
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.grey.shade300),
-                                ),
-                                child: _isLoadingCabangs
-                                    ? const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)))
-                                    : DropdownButtonHideUnderline(
-                                        child: DropdownButton<int>(
-                                          value: _cabangId,
-                                          isExpanded: true,
-                                          icon: const Icon(Icons.keyboard_arrow_down, size: 18),
-                                          style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
-                                          items: _cabangs.map((c) {
-                                            return DropdownMenuItem<int>(
-                                              value: c['id'],
-                                              child: Text(c['nama_cabang'] ?? c['nama'] ?? 'Cabang ${c['id']}'),
-                                            );
-                                          }).toList(),
-                                          onChanged: (val) {
-                                            if (val != null) setState(() => _cabangId = val);
-                                          },
+                              const SizedBox(height: 8),
+                              if (!_isOperasionalOrAdmin && _cabangId != null && _cabangs.isNotEmpty)
+                                Container(
+                                  height: 48,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: Colors.grey.shade300),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.location_on, size: 14, color: AppColors.primaryMid),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          _cabangs.firstWhere((c) => c['id'] == _cabangId, orElse: () => {'nama_cabang': 'Cabang $_cabangId'})['nama_cabang'] ??
+                                              _cabangs.firstWhere((c) => c['id'] == _cabangId, orElse: () => {'nama': 'Cabang $_cabangId'})['nama'] ??
+                                              'Cabang $_cabangId',
+                                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
-                              ),
-                          ],
+                                    ],
+                                  ),
+                                )
+                              else
+                                Container(
+                                  height: 48,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: Colors.grey.shade300),
+                                  ),
+                                  child: _isLoadingCabangs
+                                      ? const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)))
+                                      : DropdownButtonHideUnderline(
+                                          child: DropdownButton<int>(
+                                            value: _cabangId,
+                                            isExpanded: true,
+                                            icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+                                            style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
+                                            items: _cabangs.map((c) {
+                                              return DropdownMenuItem<int>(
+                                                value: c['id'],
+                                                child: Text(c['nama_cabang'] ?? c['nama'] ?? 'Cabang ${c['id']}'),
+                                              );
+                                            }).toList(),
+                                            onChanged: (val) {
+                                              if (val != null) setState(() => _cabangId = val);
+                                            },
+                                          ),
+                                        ),
+                                ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                  ],
 
                   // Tanggal & Exp Date Row
                   Row(
@@ -574,15 +602,28 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
                                 Expanded(
                                   child: Text('Layanan / Barang', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
                                 ),
-                                if (_rincian.length > 1)
-                                  InkWell(
-                                    onTap: () => setState(() => _rincian.removeAt(index)),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(4)),
-                                      child: const Icon(Icons.delete_outline, color: Colors.red, size: 16),
+                                InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      final removed = _rincian.removeAt(index);
+                                      removed['deskripsi'].dispose();
+                                      removed['qty'].dispose();
+                                      removed['harga'].dispose();
+                                      if (_rincian.isEmpty) {
+                                        _rincian.add(_createEmptyRincian());
+                                      }
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.shade50,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: Colors.red.shade200),
                                     ),
+                                    child: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 16),
                                   ),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 8),

@@ -17,64 +17,109 @@ class AuthService {
         data: {'email': email, 'pin': pin},
       );
 
-      final data = response.data;
+      dynamic rawData = response.data;
+      if (rawData is String) {
+        try {
+          rawData = jsonDecode(rawData);
+        } catch (_) {}
+      }
+
+      if (rawData is! Map) {
+        throw Exception('Respon server tidak valid');
+      }
+
+      final Map<String, dynamic> data = Map<String, dynamic>.from(rawData);
+
       if (data['token'] != null) {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('auth_token', data['token']);
+        await prefs.setString('auth_token', data['token'].toString());
+        
         // Save user data (safely handle if value is Map/Object)
         String extractStr(dynamic val, [String mapKey = 'nama']) {
           if (val == null) return '';
-          if (val is Map) return val[mapKey]?.toString() ?? val.toString();
+          if (val is Map) return val[mapKey]?.toString() ?? '';
           return val.toString();
         }
 
-        await prefs.setString(
-          'user_name',
-          extractStr(data['data']['nama']) == ''
-              ? 'Customer Service'
-              : extractStr(data['data']['nama']),
-        );
-        await prefs.setString('user_email', extractStr(data['data']['email']));
-        await prefs.setString(
-          'user_role',
-          extractStr(data['data']['jabatan'], 'nama_jabatan') == ''
-              ? 'Customer Service'
-              : extractStr(data['data']['jabatan'], 'nama_jabatan'),
-        );
-        await prefs.setString(
-          'user_branch',
-          extractStr(data['data']['cabang'], 'nama_cabang') == ''
-              ? '-'
-              : extractStr(data['data']['cabang'], 'nama_cabang'),
-        );
-        await prefs.setString(
-          'user_id',
-          'KLK-CS-0${data['data']['id'] ?? '0'}',
-        );
-        if (data['data']['id'] != null) {
-          await prefs.setString('karyawan_id', data['data']['id'].toString());
-        }
-        if (data['data']['cabang_id'] != null) {
-          await prefs.setInt(
-            'user_cabang_id',
-            int.tryParse(data['data']['cabang_id'].toString()) ?? 1,
+        final dynamic userData = data['data'];
+        if (userData is Map) {
+          final nama = extractStr(userData['nama']);
+          await prefs.setString(
+            'user_name',
+            nama.isEmpty ? 'Customer Service' : nama,
           );
-        } else if (data['data']['cabang'] != null &&
-            data['data']['cabang'] is Map &&
-            data['data']['cabang']['id'] != null) {
-          await prefs.setInt(
-            'user_cabang_id',
-            int.tryParse(data['data']['cabang']['id'].toString()) ?? 1,
+          await prefs.setString('user_email', extractStr(userData['email']));
+          
+          final jabatan = extractStr(userData['jabatan'], 'nama_jabatan');
+          await prefs.setString(
+            'user_role',
+            jabatan.isEmpty ? 'Customer Service' : jabatan,
           );
+
+          final cabang = extractStr(userData['cabang'], 'nama_cabang');
+          await prefs.setString(
+            'user_branch',
+            cabang.isEmpty ? '-' : cabang,
+          );
+
+          final userId = userData['id']?.toString() ?? '0';
+          await prefs.setString('user_id', 'KLK-CS-0$userId');
+          await prefs.setString('karyawan_id', userId);
+
+          if (userData['cabang_id'] != null) {
+            await prefs.setInt(
+              'user_cabang_id',
+              int.tryParse(userData['cabang_id'].toString()) ?? 1,
+            );
+          } else if (userData['cabang'] != null &&
+              userData['cabang'] is Map &&
+              userData['cabang']['id'] != null) {
+            await prefs.setInt(
+              'user_cabang_id',
+              int.tryParse(userData['cabang']['id'].toString()) ?? 1,
+            );
+          }
         }
       }
 
       return data;
     } on DioException catch (e) {
       if (e.response != null && e.response?.data != null) {
-        throw Exception(e.response?.data['message'] ?? 'Gagal login');
+        dynamic errData = e.response?.data;
+        if (errData is String) {
+          try {
+            errData = jsonDecode(errData);
+          } catch (_) {}
+        }
+        if (errData is Map) {
+          if (errData['errors'] != null && errData['errors'] is Map) {
+            final errorsMap = errData['errors'] as Map;
+            if (errorsMap.isNotEmpty) {
+              final firstVal = errorsMap.values.first;
+              if (firstVal is List && firstVal.isNotEmpty) {
+                throw Exception(firstVal.first.toString());
+              } else if (firstVal != null) {
+                throw Exception(firstVal.toString());
+              }
+            }
+          }
+          final msg = errData['message'] ?? errData['error'];
+          if (msg != null && msg.toString().trim().isNotEmpty) {
+            throw Exception(msg.toString());
+          }
+        } else if (errData is String && errData.trim().isNotEmpty) {
+          final trimmed = errData.trim();
+          if (trimmed.contains('<html') || trimmed.contains('<!DOCTYPE')) {
+            throw Exception('Terjadi kesalahan koneksi ke server (${e.response?.statusCode ?? 500})');
+          }
+          throw Exception(trimmed);
+        }
+        throw Exception('Gagal login (Status ${e.response?.statusCode})');
       }
       throw Exception('Tidak dapat terhubung ke server');
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception(e.toString());
     }
   }
 

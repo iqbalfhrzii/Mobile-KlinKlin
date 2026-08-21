@@ -96,7 +96,7 @@ class _OperasionalKpiMainScreenState extends State<OperasionalKpiMainScreen> wit
                     padding: const EdgeInsets.all(4),
                     tabs: const [
                       Tab(text: 'Report CS'),
-                      Tab(text: 'KPI CS'),
+                      Tab(text: 'KPI Cabang'),
                     ],
                   ),
                 ),
