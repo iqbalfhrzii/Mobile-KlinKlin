@@ -228,7 +228,7 @@ class _OperasionalLayananKesehatanFormSheetState extends State<OperasionalLayana
                               ),
                               child: DropdownButtonHideUnderline(
                                 child: DropdownButton<String>(
-                                  value: _selectedCabangId,
+                                  value: widget.cabangList.any((c) => c['id'].toString() == _selectedCabangId) ? _selectedCabangId : null,
                                   isExpanded: true,
                                   hint: Text('Pilih Cabang', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade400)),
                                   items: widget.cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama_cabang'] ?? c['nama'] ?? ''))).toList(),
@@ -266,7 +266,7 @@ class _OperasionalLayananKesehatanFormSheetState extends State<OperasionalLayana
                               ),
                               child: DropdownButtonHideUnderline(
                                 child: DropdownButton<String>(
-                                  value: _selectedJenis,
+                                  value: const ['Rumah Sakit', 'RSUD', 'Puskesmas', 'Klinik', 'Apotek', 'Lainnya'].contains(_selectedJenis) ? _selectedJenis : null,
                                   isExpanded: true,
                                   hint: Text('Pilih Jenis', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade400)),
                                   items: const [
@@ -327,7 +327,7 @@ class _OperasionalLayananKesehatanFormSheetState extends State<OperasionalLayana
                               ),
                               child: DropdownButtonHideUnderline(
                                 child: DropdownButton<String>(
-                                  value: _buka24Jam,
+                                  value: const ['Ya', 'Tidak'].contains(_buka24Jam) ? _buka24Jam : 'Tidak',
                                   isExpanded: true,
                                   items: const [
                                     DropdownMenuItem(value: 'Ya', child: Text('Ya')),
@@ -359,7 +359,7 @@ class _OperasionalLayananKesehatanFormSheetState extends State<OperasionalLayana
                               ),
                               child: DropdownButtonHideUnderline(
                                 child: DropdownButton<String>(
-                                  value: _kerjaSamaBpjs,
+                                  value: const ['Ya', 'Tidak'].contains(_kerjaSamaBpjs) ? _kerjaSamaBpjs : 'Tidak',
                                   isExpanded: true,
                                   items: const [
                                     DropdownMenuItem(value: 'Ya', child: Text('Ya')),

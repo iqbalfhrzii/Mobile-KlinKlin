@@ -24,6 +24,7 @@ import 'operasional_monthly_report_screen.dart';
 import 'operasional_kajian_rd_screen.dart';
 import 'operasional_target_omzet_screen.dart';
 import 'operasional_permintaan_design_screen.dart';
+import 'operasional_pengumuman_screen.dart';
 import '../../master_barang/screens/master_barang_screen.dart';
 // TODO: import screens as they are created
 
@@ -344,6 +345,15 @@ class OperasionalMenuScreen extends StatelessWidget {
             bgColor: const Color(0xFFFCE7F3),
             onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalPermintaanDesignScreen()));
+            },
+          ),
+          _MenuItem(
+            icon: Icons.campaign_rounded,
+            title: 'Pengumuman',
+            iconColor: const Color(0xFF059669),
+            bgColor: const Color(0xFFD1FAE5),
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalPengumumanScreen()));
             },
           ),
         ],

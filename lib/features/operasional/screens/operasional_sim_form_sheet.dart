@@ -86,10 +86,27 @@ class _OperasionalSimFormSheetState extends State<OperasionalSimFormSheet> {
 
   Future<void> _fetchKaryawan(String cabangId) async {
     try {
-      final res = await ApiClient.instance.get('/operasional/karyawans?cabang_id=$cabangId&per_page=100');
-      if (res.data['status'] == true) {
+      final res = await ApiClient.instance.get('/karyawans?cabang_id=$cabangId&all=true');
+      List<dynamic> list = [];
+      if (res.data != null) {
+        if (res.data['data'] is List) {
+          list = res.data['data'];
+        } else if (res.data['data']?['data'] is List) {
+          list = res.data['data']['data'];
+        }
+      }
+      if (mounted) {
         setState(() {
-          _karyawanList = res.data['data']['data'] ?? [];
+          _karyawanList = list;
+          if (_selectedKaryawanId == null && _namaKaryawanController.text.isNotEmpty) {
+            final match = list.firstWhere(
+              (k) => (k['nama'] ?? k['nama_karyawan'] ?? '').toString().trim().toLowerCase() == _namaKaryawanController.text.trim().toLowerCase(),
+              orElse: () => null,
+            );
+            if (match != null) {
+              _selectedKaryawanId = match['id']?.toString();
+            }
+          }
         });
       }
     } catch (e) {
@@ -311,7 +328,7 @@ class _OperasionalSimFormSheetState extends State<OperasionalSimFormSheet> {
                               ),
                               child: DropdownButtonHideUnderline(
                                 child: DropdownButton<String>(
-                                  value: _selectedCabangId,
+                                  value: widget.cabangList.any((c) => c['id'].toString() == _selectedCabangId) ? _selectedCabangId : null,
                                   isExpanded: true,
                                   hint: Text('Pilih Cabang', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade400)),
                                   items: widget.cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama_cabang'] ?? c['nama'] ?? ''))).toList(),
@@ -345,17 +362,22 @@ class _OperasionalSimFormSheetState extends State<OperasionalSimFormSheet> {
                               ),
                               child: DropdownButtonHideUnderline(
                                 child: DropdownButton<String>(
-                                  value: _selectedKaryawanId,
+                                  value: _karyawanList.any((k) => k['id'].toString() == _selectedKaryawanId) ? _selectedKaryawanId : null,
                                   isExpanded: true,
                                   hint: Text(_selectedCabangId == null ? 'Pilih cabang terlebih dahulu' : 'Pilih karyawan...', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade400)),
-                                  items: _karyawanList.map((k) => DropdownMenuItem(value: k['id'].toString(), child: Text(k['nama'] ?? ''))).toList(),
+                                  items: _karyawanList.map((k) {
+                                    final name = k['nama'] ?? k['nama_karyawan'] ?? '';
+                                    final jab = k['jabatan']?['nama_jabatan'] ?? k['jabatan']?.toString() ?? '';
+                                    final display = jab.isNotEmpty ? '$name ($jab)' : name;
+                                    return DropdownMenuItem(value: k['id'].toString(), child: Text(display, style: GoogleFonts.inter(fontSize: 13)));
+                                  }).toList(),
                                   onChanged: _selectedCabangId == null ? null : (val) {
                                     setState(() {
                                       _selectedKaryawanId = val;
                                       final k = _karyawanList.firstWhere((element) => element['id'].toString() == val, orElse: () => null);
                                       if (k != null) {
-                                        _namaKaryawanController.text = k['nama'] ?? '';
-                                        _jabatanController.text = k['jabatan']?['nama_jabatan'] ?? 'CS';
+                                        _namaKaryawanController.text = k['nama'] ?? k['nama_karyawan'] ?? '';
+                                        _jabatanController.text = k['jabatan']?['nama_jabatan'] ?? k['jabatan']?.toString() ?? '';
                                       }
                                     });
                                   },
@@ -426,7 +448,7 @@ class _OperasionalSimFormSheetState extends State<OperasionalSimFormSheet> {
                                     ),
                                     child: DropdownButtonHideUnderline(
                                       child: DropdownButton<String>(
-                                        value: _selectedJenisSim,
+                                        value: const ['SIM A', 'SIM A Umum', 'SIM B I', 'SIM B II', 'SIM C', 'SIM D'].contains(_selectedJenisSim) ? _selectedJenisSim : null,
                                         isExpanded: true,
                                         hint: Text('Pilih Jenis SIM', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade400)),
                                         items: const [

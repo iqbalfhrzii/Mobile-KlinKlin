@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'auth_service.dart';
 import '../../features/cleaner/jobs/cleaner_job_detail_screen.dart';
+import '../../features/operasional/screens/operasional_pengumuman_screen.dart';
 
 // Top-level background message handler
 @pragma('vm:entry-point')
@@ -54,9 +56,44 @@ class FcmService {
         debugPrint('Got a message whilst in the foreground!');
         debugPrint('Message data: ${message.data}');
 
-        if (message.notification != null) {
-          debugPrint('Message also contained a notification: ${message.notification}');
-          // Could show a local notification or snackbar here if desired
+        if (message.notification != null && navigatorKey?.currentContext != null) {
+          ScaffoldMessenger.of(navigatorKey!.currentContext!).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFF0F172A),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: Row(
+                children: [
+                  const Icon(Icons.campaign_rounded, color: Color(0xFF10B981), size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          message.notification!.title ?? 'Pengumuman Baru',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
+                        ),
+                        if (message.notification!.body != null)
+                          Text(
+                            message.notification!.body!,
+                            style: GoogleFonts.inter(color: Colors.white.withValues(alpha: 0.85), fontSize: 11.5),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              action: SnackBarAction(
+                label: 'Lihat',
+                textColor: const Color(0xFF34D399),
+                onPressed: () => _handleMessage(message),
+              ),
+            ),
+          );
         }
       });
 
@@ -108,18 +145,29 @@ class FcmService {
 
   void _handleMessage(RemoteMessage message) {
     debugPrint("Handling notification click: ${message.data}");
+    if (navigatorKey?.currentContext == null) return;
+
+    if (message.data['type'] == 'pengumuman' || message.data['screen'] == 'pengumuman') {
+      Navigator.of(navigatorKey!.currentContext!).push(
+        MaterialPageRoute(
+          builder: (_) => const OperasionalPengumumanScreen(),
+        ),
+      );
+      return;
+    }
+
     if (message.data['type'] == 'new_job' && message.data['screen'] == 'detail_pesanan') {
       final String? cleanerIdStr = message.data['pesanan_cleaner_id'];
-      if (cleanerIdStr != null && navigatorKey?.currentContext != null) {
+      if (cleanerIdStr != null) {
         final int? cleanerId = int.tryParse(cleanerIdStr);
         if (cleanerId != null) {
-           Navigator.of(navigatorKey!.currentContext!).push(
-             MaterialPageRoute(
-               builder: (_) => CleanerJobDetailScreen(
-                 job: {'id': cleanerId, 'status_pengerjaan': 'notified'},
-               ),
-             ),
-           );
+          Navigator.of(navigatorKey!.currentContext!).push(
+            MaterialPageRoute(
+              builder: (_) => CleanerJobDetailScreen(
+                job: {'id': cleanerId, 'status_pengerjaan': 'notified'},
+              ),
+            ),
+          );
         }
       }
     }

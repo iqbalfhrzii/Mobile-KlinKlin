@@ -15,6 +15,7 @@ import 'kpi_screen.dart';
 import '../../stok_opname/screens/stok_opname_screen.dart';
 import '../../master_barang/screens/master_barang_screen.dart';
 import '../../operasional/screens/operasional_permintaan_design_screen.dart';
+import '../../operasional/screens/operasional_pengumuman_screen.dart';
 import '../../operasional/screens/operasional_quotation_screen.dart';
 import '../../pengadaan_barang/screens/pengadaan_barang_screen.dart';
 import '../../pembelian_bhp/screens/pembelian_bhp_screen.dart';
@@ -177,6 +178,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _MenuItem(Icons.brush_outlined, 'Permintaan Design', onTap: () {
                             Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPermintaanDesignScreen()));
                           }),
+                          _MenuItem(Icons.campaign_outlined, 'Pengumuman', onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPengumumanScreen()));
+                          }),
                         ]),
                         const SizedBox(height: 12),
                       ],
@@ -200,6 +204,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _MenuItem(Icons.brush_outlined, 'Permintaan Design', onTap: () {
                             Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPermintaanDesignScreen()));
                           }),
+                          _MenuItem(Icons.campaign_outlined, 'Pengumuman', onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPengumumanScreen()));
+                          }),
                         ]),
                         const SizedBox(height: 12),
                       ],
@@ -207,7 +214,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     _buildMenuSection('Akun', [
                       _MenuItem(Icons.lock_outline_rounded, 'Ganti PIN', onTap: () => _changePIN(context)),
-                      _MenuItem(Icons.notifications_outlined, 'Notifikasi', onTap: () {}),
+                      _MenuItem(Icons.notifications_outlined, 'Notifikasi / Pengumuman', onTap: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPengumumanScreen()));
+                      }),
                       _MenuItem(Icons.language_outlined, 'Bahasa', trailing: 'Indonesia', onTap: () {}),
                     ]),
                     const SizedBox(height: 12),
