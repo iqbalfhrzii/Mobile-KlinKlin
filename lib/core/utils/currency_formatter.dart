@@ -1,5 +1,14 @@
 import 'package:flutter/services.dart';
 
+class CurrencyFormatter {
+  static String format(num value) {
+    return 'Rp ${value.toInt().toString().replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    )}';
+  }
+}
+
 class CurrencyInputFormatter extends TextInputFormatter {
   static String format(int value) {
     return value.toString().replaceAllMapped(

@@ -501,6 +501,38 @@ class OrderModel {
     }
   }
 
+  DateTime get scheduleFullDateTime {
+    final dt = scheduleDateTime;
+    if (services.isEmpty || services.first.waktuPengerjaan.isEmpty) {
+      return dt;
+    }
+    final wkt = services.first.waktuPengerjaan;
+    final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(wkt);
+    if (match != null) {
+      final h = int.tryParse(match.group(1)!) ?? 0;
+      final m = int.tryParse(match.group(2)!) ?? 0;
+      return DateTime(dt.year, dt.month, dt.day, h, m);
+    }
+    return dt;
+  }
+
+  bool get hasUploadedTransferProof {
+    final proof = paymentProof ?? pembayaran?.buktiTransfer;
+    return proof != null && proof.trim().isNotEmpty;
+  }
+
+  bool get isPaymentApproved {
+    final p = paymentStatus.toLowerCase();
+    final pSub = pembayaran?.statusPembayaran.toLowerCase() ?? '';
+    return p == 'approved' || p == 'paid' || p == 'lunas' || pSub == 'approved';
+  }
+
+  bool get needsTransferProofUpload {
+    if (status == OrderStatus.cancelled || paymentStatus.toLowerCase() == 'cancelled') return false;
+    if (isPaymentApproved) return false;
+    return !hasUploadedTransferProof;
+  }
+
   int get netTotal {
     if (pembayaran?.total != null && pembayaran!.total! > 0) {
       return pembayaran!.total!;

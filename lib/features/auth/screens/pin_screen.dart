@@ -66,10 +66,8 @@ class _PinScreenState extends State<PinScreen> {
 
         debugPrint('DEBUG LOGIN isFinance: $isFinance');
 
-        if (isCleaner) {
-          // Send FCM token to backend
-          FcmService.instance.updateTokenToServer();
-        }
+        // Send FCM token to backend for all roles
+        FcmService.instance.updateTokenToServer();
 
         if (res['wajib_ganti_pin'] == true) {
           if (isCleaner) {

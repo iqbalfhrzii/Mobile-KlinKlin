@@ -211,42 +211,248 @@ class _PengadaanBarangScreenState extends State<PengadaanBarangScreen> {
     );
   }
 
-  Future<void> _deletePengajuan(int id) async {
-    final confirm = await showDialog<bool>(
+  int get _activeFilterCount {
+    int count = 0;
+    if (_selectedJenis != 'Semua') count++;
+    if (_selectedStatus != 'Semua') count++;
+    if (_isOperasionalOrAdmin && _selectedCabangId != null) count++;
+    return count;
+  }
+
+  void _openFilterSheet() {
+    String tempJenis = _selectedJenis;
+    String tempStatus = _selectedStatus;
+    int? tempCabangId = _selectedCabangId;
+
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Hapus Pengajuan?', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Text('Data pengadaan barang ini akan dihapus dari sistem.', style: GoogleFonts.inter(fontSize: 13)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, elevation: 0),
-            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
-        ],
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Drag Handle
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.tune_rounded, size: 20, color: AppColors.primaryMid),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Filter Pengajuan',
+                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          setModalState(() {
+                            tempJenis = 'Semua';
+                            tempStatus = 'Semua';
+                            if (_isOperasionalOrAdmin) {
+                              tempCabangId = null;
+                            }
+                          });
+                        },
+                        child: Text(
+                          'Reset',
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const Divider(height: 16),
+
+              // Section 1: Jenis Barang
+              Text(
+                'Jenis Barang',
+                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _jenisFilters.map((j) {
+                  final isSel = tempJenis == j;
+                  return ChoiceChip(
+                    label: Text(j == 'Semua' ? 'Semua Jenis' : j),
+                    selected: isSel,
+                    selectedColor: AppColors.primaryMid,
+                    backgroundColor: const Color(0xFFF1F5F9),
+                    labelStyle: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                      color: isSel ? Colors.white : AppColors.textDark,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: BorderSide(color: isSel ? AppColors.primaryMid : Colors.transparent),
+                    ),
+                    onSelected: (_) {
+                      setModalState(() => tempJenis = j);
+                    },
+                  );
+                }).toList(),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Section 2: Status Pengajuan
+              Text(
+                'Status Pengajuan',
+                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _statusFilters.map((s) {
+                  final isSel = tempStatus == s;
+                  final activeColor = s == 'Approved'
+                      ? const Color(0xFF16A34A)
+                      : s == 'Rejected'
+                          ? const Color(0xFFDC2626)
+                          : s == 'Pending'
+                              ? const Color(0xFFD97706)
+                              : AppColors.primaryMid;
+                  return ChoiceChip(
+                    label: Text(s == 'Semua' ? 'Semua Status' : s),
+                    selected: isSel,
+                    selectedColor: activeColor,
+                    backgroundColor: const Color(0xFFF1F5F9),
+                    labelStyle: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                      color: isSel ? Colors.white : AppColors.textDark,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: BorderSide(color: isSel ? activeColor : Colors.transparent),
+                    ),
+                    onSelected: (_) {
+                      setModalState(() => tempStatus = s);
+                    },
+                  );
+                }).toList(),
+              ),
+
+              // Section 3: Cabang (Jika Operasional / Admin)
+              if (_isOperasionalOrAdmin && _cabangs.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text(
+                  'Cabang',
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('Semua Cabang'),
+                      selected: tempCabangId == null,
+                      selectedColor: AppColors.primaryMid,
+                      backgroundColor: const Color(0xFFF1F5F9),
+                      labelStyle: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: tempCabangId == null ? FontWeight.bold : FontWeight.w500,
+                        color: tempCabangId == null ? Colors.white : AppColors.textDark,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(color: tempCabangId == null ? AppColors.primaryMid : Colors.transparent),
+                      ),
+                      onSelected: (_) {
+                        setModalState(() => tempCabangId = null);
+                      },
+                    ),
+                    ..._cabangs.map((c) {
+                      final isSel = tempCabangId == c['id'];
+                      final cName = c['nama_cabang'] ?? c['nama'] ?? 'Cabang ${c['id']}';
+                      return ChoiceChip(
+                        label: Text(cName),
+                        selected: isSel,
+                        selectedColor: AppColors.primaryMid,
+                        backgroundColor: const Color(0xFFF1F5F9),
+                        labelStyle: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                          color: isSel ? Colors.white : AppColors.textDark,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: BorderSide(color: isSel ? AppColors.primaryMid : Colors.transparent),
+                        ),
+                        onSelected: (_) {
+                          setModalState(() => tempCabangId = c['id']);
+                        },
+                      );
+                    }),
+                  ],
+                ),
+              ],
+
+              const SizedBox(height: 20),
+
+              // Apply Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    setState(() {
+                      _selectedJenis = tempJenis;
+                      _selectedStatus = tempStatus;
+                      _selectedCabangId = tempCabangId;
+                    });
+                    _fetchPengajuans(page: 1);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryMid,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Terapkan Filter',
+                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
-
-    if (confirm != true) return;
-    if (!mounted) return;
-
-    try {
-      await _service.deletePengajuan(id);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pengajuan berhasil dihapus'), backgroundColor: Colors.green),
-        );
-        _fetchPengajuans(page: 1);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
-        );
-      }
-    }
   }
 
   @override
@@ -292,165 +498,82 @@ class _PengadaanBarangScreenState extends State<PengadaanBarangScreen> {
             ),
           ),
 
-          // Search & Filters Header
+          // Search & Filter Row Header
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Column(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+            child: Row(
               children: [
-                // Search + Branch
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey.shade300),
+                // Search Input Box
+                Expanded(
+                  child: Container(
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      style: GoogleFonts.inter(fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: 'Cari Nama Barang / Merk...',
+                        hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 12),
+                        prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 16, color: Colors.grey),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _fetchPengajuans(page: 1);
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      onSubmitted: (_) => _fetchPengajuans(page: 1),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // Single Filter Button
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _openFilterSheet,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      height: 42,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: _activeFilterCount > 0 ? AppColors.primaryMid : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _activeFilterCount > 0 ? AppColors.primaryMid : Colors.grey.shade300,
                         ),
-                        child: TextField(
-                          controller: _searchController,
-                          style: GoogleFonts.inter(fontSize: 13),
-                          decoration: InputDecoration(
-                            hintText: 'Cari Nama Barang / Merk...',
-                            hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 12),
-                            prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
-                            suffixIcon: _searchController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear, size: 16, color: Colors.grey),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      _fetchPengajuans(page: 1);
-                                    },
-                                  )
-                                : null,
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.tune_rounded,
+                            size: 16,
+                            color: _activeFilterCount > 0 ? Colors.white : AppColors.textDark,
                           ),
-                          onSubmitted: (_) => _fetchPengajuans(page: 1),
-                        ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _activeFilterCount > 0 ? 'Filter ($_activeFilterCount)' : 'Filter',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: _activeFilterCount > 0 ? Colors.white : AppColors.textDark,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-
-                    // Branch indicator / selector
-                    if (!_isOperasionalOrAdmin && _userCabangId != null)
-                      Container(
-                        height: 42,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryMid.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.primaryMid.withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.location_on, size: 14, color: AppColors.primaryMid),
-                            const SizedBox(width: 4),
-                            Text(
-                              _userCabangName.isNotEmpty ? _userCabangName : 'Cabang $_userCabangId',
-                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
-                            ),
-                          ],
-                        ),
-                      )
-                    else if (_cabangs.isNotEmpty)
-                      Container(
-                        height: 42,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<int?>(
-                            value: _selectedCabangId,
-                            hint: Text('Semua Cabang', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark)),
-                            icon: const Icon(Icons.location_on_outlined, size: 16, color: AppColors.textMuted),
-                            items: [
-                              const DropdownMenuItem<int?>(value: null, child: Text('Semua Cabang')),
-                              ..._cabangs.map((c) => DropdownMenuItem<int?>(
-                                    value: c['id'],
-                                    child: Text(c['nama_cabang'] ?? c['nama'] ?? 'Cabang ${c['id']}'),
-                                  )),
-                            ],
-                            onChanged: (val) {
-                              setState(() => _selectedCabangId = val);
-                              _fetchPengajuans(page: 1);
-                            },
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-
-                const SizedBox(height: 10),
-
-                // Filter Chips Row (Jenis & Status)
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      // Jenis Chips
-                      ..._jenisFilters.map((j) {
-                        final isSelected = _selectedJenis == j;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: ChoiceChip(
-                            label: Text(j == 'Semua' ? 'Semua Jenis' : j),
-                            selected: isSelected,
-                            selectedColor: AppColors.primaryMid,
-                            backgroundColor: Colors.grey.shade100,
-                            labelStyle: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                              color: isSelected ? Colors.white : AppColors.textDark,
-                            ),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            onSelected: (_) {
-                              setState(() => _selectedJenis = j);
-                              _fetchPengajuans(page: 1);
-                            },
-                          ),
-                        );
-                      }),
-                      const SizedBox(width: 4),
-                      Container(height: 20, width: 1, color: Colors.grey.shade300),
-                      const SizedBox(width: 8),
-
-                      // Status Chips
-                      ..._statusFilters.map((s) {
-                        final isSelected = _selectedStatus == s;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: ChoiceChip(
-                            label: Text(s),
-                            selected: isSelected,
-                            selectedColor: s == 'Approved'
-                                ? const Color(0xFF16A34A)
-                                : s == 'Rejected'
-                                    ? const Color(0xFFDC2626)
-                                    : s == 'Pending'
-                                        ? const Color(0xFFD97706)
-                                        : AppColors.textDark,
-                            backgroundColor: Colors.grey.shade100,
-                            labelStyle: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                              color: isSelected ? Colors.white : AppColors.textDark,
-                            ),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            onSelected: (_) {
-                              setState(() => _selectedStatus = s);
-                              _fetchPengajuans(page: 1);
-                            },
-                          ),
-                        );
-                      }),
-                    ],
                   ),
                 ),
               ],
@@ -605,198 +728,168 @@ class _PengadaanBarangScreenState extends State<PengadaanBarangScreen> {
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.grey.shade200),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Header Card
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-                    border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(_getJenisIcon(jenis), size: 16, color: AppColors.primaryMid),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryMid.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          jenis,
-                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
-                        ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _showDetailModal(item),
+                borderRadius: BorderRadius.circular(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Header Card
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                        border: const Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          tglStr,
-                          style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: statusColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          status == 'pending'
-                              ? 'Pending'
-                              : status == 'approved'
-                                  ? 'Approved'
-                                  : 'Rejected',
-                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Body Card
-                Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Item Name & Qty
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  namaBarang,
-                                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  merkSpek,
-                                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
-                                ),
-                              ],
+                          Icon(_getJenisIcon(jenis), size: 16, color: AppColors.primaryMid),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryMid.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              jenis,
+                              style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.primaryMid),
                             ),
                           ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey.shade300),
-                                ),
-                                child: Text(
-                                  '$jumlah $satuan',
-                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: urgensiColor.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  _getUrgensiLabel(urgensi),
-                                  style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: urgensiColor),
-                                ),
-                              ),
-                            ],
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              tglStr,
+                              style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textMuted),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              status == 'pending'
+                                  ? 'Pending'
+                                  : status == 'approved'
+                                      ? 'Approved'
+                                      : 'Rejected',
+                              style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.bold, color: statusColor),
+                            ),
                           ),
                         ],
                       ),
+                    ),
 
-                      const SizedBox(height: 10),
-
-                      // Location & Requester info banner
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.person_outline, size: 13, color: AppColors.textMuted),
-                                const SizedBox(width: 4),
-                                Text(pemohon, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark, fontWeight: FontWeight.w500)),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                const Icon(Icons.location_on_outlined, size: 13, color: AppColors.textMuted),
-                                const SizedBox(width: 4),
-                                Text(cabang, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const Divider(height: 1, color: Color(0xFFEEEEEE)),
-
-                // Actions Footer
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Row(
-                    children: [
-                      InkWell(
-                        onTap: () => _showDetailModal(item),
-                        borderRadius: BorderRadius.circular(6),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryMid.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
+                    // Body Card
+                    Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.remove_red_eye_outlined, size: 14, color: AppColors.primaryMid),
-                              const SizedBox(width: 4),
-                              Text('Detail', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryMid)),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      namaBarang,
+                                      style: GoogleFonts.inter(fontSize: 14.5, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      merkSpek,
+                                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    ),
+                                    child: Text(
+                                      '$jumlah $satuan',
+                                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: urgensiColor.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'Urgensi: ${_getUrgensiLabel(urgensi)}',
+                                      style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.bold, color: urgensiColor),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
-                        ),
+
+                          const SizedBox(height: 12),
+
+                          // Location & Requester info banner with chevron
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFF1F5F9)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.person_outline, size: 14, color: AppColors.textMuted),
+                                const SizedBox(width: 4),
+                                Text(pemohon, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark, fontWeight: FontWeight.w600)),
+                                const SizedBox(width: 12),
+                                const Icon(Icons.location_on_outlined, size: 14, color: AppColors.textMuted),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(cabang, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted), overflow: TextOverflow.ellipsis),
+                                ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text('Detail', style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.primaryMid)),
+                                    const SizedBox(width: 2),
+                                    const Icon(Icons.chevron_right_rounded, size: 14, color: AppColors.primaryMid),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const Spacer(),
-                      if (status == 'pending')
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                          onPressed: () => _deletePengajuan(item['id']),
-                          padding: const EdgeInsets.all(4),
-                          constraints: const BoxConstraints(),
-                          tooltip: 'Hapus',
-                        ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           );
         },

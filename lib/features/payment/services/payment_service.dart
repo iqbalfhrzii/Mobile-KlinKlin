@@ -31,6 +31,7 @@ class PaymentService {
         'metode_pembayaran': metodePembayaran,
         'diskon_persen': diskonPersen,
         'ppn': ppn,
+        'use_ppn': ppn > 0 ? 1 : 0,
         'use_pph': usePph ? 1 : 0,
         'total_tagihan': totalTagihan,
         'total_setelah_diskon': totalSetelahDiskon,

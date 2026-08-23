@@ -18,79 +18,81 @@ class _KpiScreenState extends State<KpiScreen> {
   bool _isLoading = true;
   String _namaPeriode = 'Memuat...';
 
+  int _selectedBulan = DateTime.now().month;
+  int _selectedTahun = DateTime.now().year;
+
   double _apiTotalNilaiKpi = -1;
-  double _targetTgl7 = 3750000;
-  double _targetTgl14 = 7500000;
-  double _targetTgl21 = 11250000;
-  double _targetTgl28 = 15000000;
-  String _stratTgl7 = '';
-  String _stratTgl14 = '';
-  String _stratTgl21 = '';
-  String _stratTgl28 = '';
+  double _realOmzet = 0;
+  double _targetTgl7 = 30000000;
+  double _targetTgl14 = 60000000;
+  double _targetTgl21 = 90000000;
+  double _targetTgl28 = 120000000;
 
   @override
   void initState() {
     super.initState();
+    _selectedBulan = DateTime.now().month;
+    _selectedTahun = DateTime.now().year.clamp(2025, 2030);
     _loadKpi();
   }
 
   Future<void> _loadKpi() async {
+    setState(() => _isLoading = true);
     try {
-      final now = DateTime.now();
       final service = KpiService();
-      final kpiData = await service.getKpiCs(bulan: now.month, tahun: now.year);
+      final kpiData = await service.getKpiCs(bulan: _selectedBulan, tahun: _selectedTahun);
       
       if (mounted) {
         setState(() {
-          _namaPeriode = '${_getMonthName(now.month)} ${now.year}';
+          _namaPeriode = '${_getMonthName(_selectedBulan)} $_selectedTahun';
           
           if (kpiData['total_nilai_kpi'] != null) {
             _apiTotalNilaiKpi = (kpiData['total_nilai_kpi'] as num).toDouble();
+          } else {
+            _apiTotalNilaiKpi = -1;
           }
-          _targetTgl7 = (kpiData['target_tgl_7'] ?? 3750000).toDouble();
-          _targetTgl14 = (kpiData['target_tgl_14'] ?? 7500000).toDouble();
-          _targetTgl21 = (kpiData['target_tgl_21'] ?? 11250000).toDouble();
-          _targetTgl28 = (kpiData['target_tgl_28'] ?? 15000000).toDouble();
-          _stratTgl7 = kpiData['strategi_tgl_7']?.toString() ?? '';
-          _stratTgl14 = kpiData['strategi_tgl_14']?.toString() ?? '';
-          _stratTgl21 = kpiData['strategi_tgl_21']?.toString() ?? '';
-          _stratTgl28 = kpiData['strategi_tgl_28']?.toString() ?? '';
+          
+          _realOmzet = (kpiData['real_omzet'] ?? kpiData['realisasi_omzet'] ?? 0).toDouble();
+          _targetTgl7 = (kpiData['target_tgl_7'] ?? 30000000).toDouble();
+          _targetTgl14 = (kpiData['target_tgl_14'] ?? 60000000).toDouble();
+          _targetTgl21 = (kpiData['target_tgl_21'] ?? 90000000).toDouble();
+          _targetTgl28 = (kpiData['target_tgl_28'] ?? 120000000).toDouble();
 
-          final p = PeriodeKpi(id: 1, bulan: now.month.toString(), tahun: now.year, namaPeriode: _namaPeriode);
+          final p = PeriodeKpi(id: 1, bulan: _selectedBulan.toString(), tahun: _selectedTahun, namaPeriode: _namaPeriode);
           
           _kpiList = [
             TargetKpi(
               id: 1, karyawanId: 'CS', periode: p, indikator: mockIndikatorKpi[0],
               target: (kpiData['target_omzet'] ?? 0).toDouble(),
-              bobot: (kpiData['bobot_omzet'] ?? 0).toDouble(),
+              bobot: (kpiData['bobot_omzet'] ?? 40).toDouble(),
               keterangan: 'Target pencapaian omzet bulanan cabang',
-              capaian: CapaianKpi(id: 1, targetKpiId: 1, nilaiCapaian: (kpiData['capaian_omzet'] ?? kpiData['realisasi_omzet'] ?? 0).toDouble(), catatan: ''),
+              capaian: CapaianKpi(id: 1, targetKpiId: 1, nilaiCapaian: _realOmzet, catatan: ''),
             ),
             TargetKpi(
               id: 2, karyawanId: 'CS', periode: p, indikator: mockIndikatorKpi[1],
               target: (kpiData['target_closing_rate'] ?? 0).toDouble(),
-              bobot: (kpiData['bobot_closing_rate'] ?? 0).toDouble(),
+              bobot: (kpiData['bobot_closing_rate'] ?? 20).toDouble(),
               keterangan: 'Rasio closing pesanan dari total chat masuk',
-              capaian: CapaianKpi(id: 2, targetKpiId: 2, nilaiCapaian: (kpiData['capaian_closing_rate'] ?? kpiData['real_closing_rate'] ?? 0).toDouble(), catatan: ''),
+              capaian: CapaianKpi(id: 2, targetKpiId: 2, nilaiCapaian: (kpiData['real_closing_rate'] ?? 0).toDouble(), catatan: ''),
             ),
             TargetKpi(
               id: 3, karyawanId: 'CS', periode: p, indikator: mockIndikatorKpi[2],
               target: (kpiData['target_closing_chat'] ?? 0).toDouble(),
-              bobot: (kpiData['bobot_closing_chat'] ?? 0).toDouble(),
+              bobot: (kpiData['bobot_closing_chat'] ?? 20).toDouble(),
               keterangan: 'Rata-rata closing chat per hari kerja aktif',
-              capaian: CapaianKpi(id: 3, targetKpiId: 3, nilaiCapaian: (kpiData['capaian_closing_chat'] ?? kpiData['real_closing_chat'] ?? 0).toDouble(), catatan: ''),
+              capaian: CapaianKpi(id: 3, targetKpiId: 3, nilaiCapaian: (kpiData['real_closing_chat'] ?? 0).toDouble(), catatan: ''),
             ),
             TargetKpi(
               id: 4, karyawanId: 'CS', periode: p, indikator: mockIndikatorKpi[3],
               target: (kpiData['target_stock_opname'] ?? 0).toDouble(),
-              bobot: (kpiData['bobot_stock_opname'] ?? 0).toDouble(),
+              bobot: (kpiData['bobot_stock_opname'] ?? 10).toDouble(),
               keterangan: 'Kedisiplinan pelaporan stock opname rutin',
               capaian: CapaianKpi(id: 4, targetKpiId: 4, nilaiCapaian: (kpiData['nilai_stock_opname'] ?? 0).toDouble(), catatan: ''),
             ),
             TargetKpi(
               id: 5, karyawanId: 'CS', periode: p, indikator: mockIndikatorKpi[4],
               target: (kpiData['target_review_maps'] ?? 0).toDouble(),
-              bobot: (kpiData['bobot_review_maps'] ?? 0).toDouble(),
+              bobot: (kpiData['bobot_review_maps'] ?? 10).toDouble(),
               keterangan: 'Perolehan ulasan bintang 5 dari pelanggan',
               capaian: CapaianKpi(id: 5, targetKpiId: 5, nilaiCapaian: (kpiData['nilai_review_maps'] ?? 0).toDouble(), catatan: ''),
             ),
@@ -102,11 +104,233 @@ class _KpiScreenState extends State<KpiScreen> {
       if (mounted) {
         setState(() {
           _kpiList = mockTargetKpi;
-          _namaPeriode = mockPeriodeKpi.namaPeriode;
+          _namaPeriode = '${_getMonthName(_selectedBulan)} $_selectedTahun';
           _isLoading = false;
         });
       }
     }
+  }
+
+  void _showPeriodPicker() {
+    int tempMonth = _selectedBulan;
+    int tempYear = _selectedTahun;
+
+    final List<int> years = [2025, 2026, 2027, 2028, 2029, 2030];
+    final List<String> monthShortNames = [
+      'Januari', 'Februari', 'Maret', 'April',
+      'Mei', 'Juni', 'Juli', 'Agustus',
+      'September', 'Oktober', 'November', 'Desember'
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Pull Bar
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.border,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Pilih Periode KPI',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.textMuted),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // Section 1: Tahun (2025 - 2030)
+                  Text(
+                    'TAHUN (2025 - 2030)',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textMuted,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: years.map((y) {
+                        final isSelected = tempYear == y;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: InkWell(
+                            onTap: () {
+                              setModalState(() {
+                                tempYear = y;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0),
+                                ),
+                              ),
+                              child: Text(
+                                y.toString(),
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                  color: isSelected ? Colors.white : const Color(0xFF334155),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  // Section 2: Bulan (Jan - Des)
+                  Text(
+                    'BULAN',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textMuted,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                      childAspectRatio: 2.4,
+                    ),
+                    itemCount: 12,
+                    itemBuilder: (context, index) {
+                      final monthNum = index + 1;
+                      final isSelected = tempMonth == monthNum;
+                      return InkWell(
+                        onTap: () {
+                          setModalState(() {
+                            tempMonth = monthNum;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0),
+                            ),
+                          ),
+                          child: Text(
+                            monthShortNames[index],
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                              color: isSelected ? Colors.white : const Color(0xFF334155),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Action Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.textMuted,
+                            side: const BorderSide(color: Color(0xFFE2E8F0)),
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('Batal'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            setState(() {
+                              _selectedBulan = tempMonth;
+                              _selectedTahun = tempYear;
+                            });
+                            _loadKpi();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0284C7),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: Text(
+                            'Terapkan Periode',
+                            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   String _getMonthName(int m) {
@@ -145,10 +369,10 @@ class _KpiScreenState extends State<KpiScreen> {
                   onRefresh: _loadKpi,
                   color: AppColors.primary,
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                     children: [
                       Text(
-                        'INDIKATOR PENILAIAN KPI',
+                        'RINCIAN INDIKATOR KPI',
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -156,9 +380,9 @@ class _KpiScreenState extends State<KpiScreen> {
                           letterSpacing: 0.8,
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                       ..._kpiList.map((kpi) => _buildKpiCard(kpi)),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       _buildStrategiPencapaian(),
                     ],
                   ),
@@ -192,7 +416,7 @@ class _KpiScreenState extends State<KpiScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'KPI Customer Service ✨',
+                      'KPI Customer Service',
                       style: GoogleFonts.inter(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -209,27 +433,33 @@ class _KpiScreenState extends State<KpiScreen> {
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.calendar_month_rounded, color: Colors.white, size: 14),
-                    const SizedBox(width: 6),
-                    Text(
-                      _namaPeriode,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+              InkWell(
+                onTap: _showPeriodPicker,
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.calendar_month_rounded, color: Colors.white, size: 14),
+                      const SizedBox(width: 5),
+                      Text(
+                        _namaPeriode,
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 2),
+                      const Icon(Icons.arrow_drop_down_rounded, color: Colors.white, size: 16),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -283,10 +513,10 @@ class _KpiScreenState extends State<KpiScreen> {
                       const SizedBox(height: 4),
                       Text(
                         isAchieved
-                            ? 'Luar biasa! Target bulan ini tercapai 🎉'
+                            ? 'Luar biasa! Target bulan ini tercapai'
                             : isGood
-                                ? 'Performa bagus, sedikit lagi capai 100% 💪'
-                                : 'Ayo tingkatkan performa minggu ini! 🚀',
+                                ? 'Performa bagus, sedikit lagi capai 100%'
+                                : 'Ayo tingkatkan performa minggu ini!',
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           color: Colors.white.withValues(alpha: 0.85),
@@ -326,8 +556,12 @@ class _KpiScreenState extends State<KpiScreen> {
     bool isRupiah = kpi.indikator.satuan.toLowerCase() == 'rupiah';
     bool isPercent = kpi.indikator.satuan == '%';
     
-    String targetStr = isRupiah ? _formatRupiah(kpi.target) : '${kpi.target.toInt()}${isPercent ? '%' : ' ' + kpi.indikator.satuan}';
-    String capaianStr = isRupiah ? _formatRupiah(capaian) : '${capaian.toInt()}${isPercent ? '%' : ' ' + kpi.indikator.satuan}';
+    String targetStr = isRupiah
+        ? _formatRupiah(kpi.target)
+        : '${kpi.target.toStringAsFixed(kpi.target % 1 == 0 ? 0 : 1)}${isPercent ? '%' : ' ${kpi.indikator.satuan}'}';
+    String capaianStr = isRupiah
+        ? _formatRupiah(capaian)
+        : '${capaian.toStringAsFixed(capaian % 1 == 0 ? 0 : 1)}${isPercent ? '%' : ' ${kpi.indikator.satuan}'}';
 
     final bool isDone = percentage >= 1.0;
     final bool isProgress = percentage >= 0.7;
@@ -342,17 +576,17 @@ class _KpiScreenState extends State<KpiScreen> {
             ? const Color(0xFF1E40AF)
             : const Color(0xFF92400E);
     final String badgeLabel = isDone
-        ? 'Tercapai 🎯'
+        ? 'Tercapai'
         : isProgress
-            ? 'Progres 📈'
-            : 'Belum Capai ⚡';
+            ? 'Progres'
+            : 'Belum Capai';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(18),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: isDone ? const Color(0xFF10B981).withValues(alpha: 0.4) : AppColors.border, width: isDone ? 1.5 : 1),
         boxShadow: [AppColors.cardShadow],
       ),
@@ -375,11 +609,11 @@ class _KpiScreenState extends State<KpiScreen> {
                       ),
                     ),
                     if (kpi.keterangan.isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
                       Text(
                         kpi.keterangan,
                         style: GoogleFonts.inter(
-                          fontSize: 12,
+                          fontSize: 11.5,
                           color: AppColors.textMuted,
                         ),
                       ),
@@ -419,9 +653,9 @@ class _KpiScreenState extends State<KpiScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: AppColors.background,
               borderRadius: BorderRadius.circular(14),
@@ -433,12 +667,12 @@ class _KpiScreenState extends State<KpiScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Capaian Saat Ini', style: GoogleFonts.inter(
+                    Text('Nilai / Realisasi', style: GoogleFonts.inter(
                       fontSize: 11, color: AppColors.textMuted,
                     )),
                     const SizedBox(height: 2),
                     Text(capaianStr, style: GoogleFonts.inter(
-                      fontSize: 15, fontWeight: FontWeight.bold, color: isDone ? const Color(0xFF10B981) : AppColors.primary,
+                      fontSize: 14.5, fontWeight: FontWeight.bold, color: isDone ? const Color(0xFF10B981) : AppColors.primary,
                     )),
                   ],
                 ),
@@ -455,14 +689,14 @@ class _KpiScreenState extends State<KpiScreen> {
                     )),
                     const SizedBox(height: 2),
                     Text(targetStr, style: GoogleFonts.inter(
-                      fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark,
+                      fontSize: 14.5, fontWeight: FontWeight.w700, color: AppColors.textDark,
                     )),
                   ],
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
@@ -473,15 +707,15 @@ class _KpiScreenState extends State<KpiScreen> {
                 isProgress ? const Color(0xFF3B82F6) : 
                 const Color(0xFFF59E0B)
               ),
-              minHeight: 10,
+              minHeight: 8,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Rasio Pencapaian: ${(percentage * 100).toInt()}%',
+                'Rasio Capaian: ${(percentage * 100).toInt()}%',
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
@@ -489,7 +723,7 @@ class _KpiScreenState extends State<KpiScreen> {
                 ),
               ),
               Text(
-                'Poin Akhir: ${(percentage * kpi.bobot).toStringAsFixed(1)} / ${kpi.bobot.toInt()}',
+                'Poin: ${(percentage * kpi.bobot).toStringAsFixed(1)} / ${kpi.bobot.toInt()}%',
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -505,11 +739,11 @@ class _KpiScreenState extends State<KpiScreen> {
 
   Widget _buildStrategiPencapaian() {
     return Container(
-      margin: const EdgeInsets.only(top: 8, bottom: 20),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(top: 6, bottom: 20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.border),
         boxShadow: [AppColors.cardShadow],
       ),
@@ -521,10 +755,10 @@ class _KpiScreenState extends State<KpiScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
+                  color: const Color(0xFFEFF6FF),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.rocket_launch_rounded, color: Color(0xFFD97706), size: 22),
+                child: const Icon(Icons.track_changes_rounded, color: Color(0xFF0284C7), size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -532,7 +766,7 @@ class _KpiScreenState extends State<KpiScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Strategi & Target Mingguan 🚀',
+                      'Strategi Pencapaian Omzet',
                       style: GoogleFonts.inter(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -540,9 +774,9 @@ class _KpiScreenState extends State<KpiScreen> {
                       ),
                     ),
                     Text(
-                      'Milestone pencapaian omzet tgl 7, 14, 21, & 28',
+                      'Tahapan target omzet kumulatif mingguan',
                       style: GoogleFonts.inter(
-                        fontSize: 12,
+                        fontSize: 11.5,
                         color: AppColors.textMuted,
                       ),
                     ),
@@ -551,20 +785,20 @@ class _KpiScreenState extends State<KpiScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 18),
-          _buildMilestoneCard('Milestone 1 — Tgl 7 (25%)', _targetTgl7, _stratTgl7, const Color(0xFFEFF6FF), const Color(0xFF2563EB)),
-          const SizedBox(height: 12),
-          _buildMilestoneCard('Milestone 2 — Tgl 14 (50%)', _targetTgl14, _stratTgl14, const Color(0xFFF5F3FF), const Color(0xFF7C3AED)),
-          const SizedBox(height: 12),
-          _buildMilestoneCard('Milestone 3 — Tgl 21 (75%)', _targetTgl21, _stratTgl21, const Color(0xFFFFF7ED), const Color(0xFFEA580C)),
-          const SizedBox(height: 12),
-          _buildMilestoneCard('Milestone 4 — Tgl 28 (100%)', _targetTgl28, _stratTgl28, const Color(0xFFECFDF5), const Color(0xFF059669)),
+          const SizedBox(height: 16),
+          _buildMilestoneCard('TGL 7', '25%', _targetTgl7, _realOmzet, const Color(0xFFEFF6FF), const Color(0xFF2563EB)),
+          const SizedBox(height: 10),
+          _buildMilestoneCard('TGL 14', '50%', _targetTgl14, _realOmzet, const Color(0xFFF5F3FF), const Color(0xFF7C3AED)),
+          const SizedBox(height: 10),
+          _buildMilestoneCard('TGL 21', '75%', _targetTgl21, _realOmzet, const Color(0xFFFFF7ED), const Color(0xFFEA580C)),
+          const SizedBox(height: 10),
+          _buildMilestoneCard('TGL 28', '100%', _targetTgl28, _realOmzet, const Color(0xFFECFDF5), const Color(0xFF059669)),
         ],
       ),
     );
   }
 
-  Widget _buildMilestoneCard(String title, double target, String strategi, Color bg, Color accent) {
+  Widget _buildMilestoneCard(String label, String percentBadge, double target, double omzetAktual, Color bg, Color accent) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -579,52 +813,64 @@ class _KpiScreenState extends State<KpiScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                title,
+                label,
                 style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w800,
                   color: accent,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  percentBadge,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: accent,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _formatRupiah(target),
+            style: GoogleFonts.inter(
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              color: AppColors.textDark,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Omzet Aktual:',
+                style: GoogleFonts.inter(
+                  fontSize: 11.5,
+                  color: AppColors.textMuted,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               Text(
-                _formatRupiah(target),
+                _formatRupiah(omzetAktual),
                 style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.bold,
                   color: AppColors.textDark,
                 ),
               ),
             ],
           ),
-          if (strategi.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.8),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: accent.withValues(alpha: 0.15)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.lightbulb_outline_rounded, color: accent, size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      strategi,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: AppColors.textDark,
-                        height: 1.3,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ],
       ),
     );

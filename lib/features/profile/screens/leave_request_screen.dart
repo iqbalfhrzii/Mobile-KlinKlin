@@ -122,7 +122,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
       }
     } catch (e) {
       if (mounted) {
-        SnackbarUtils.showError(context, e.toString());
+        SnackbarUtils.showError(context, e.toString().replaceAll('Exception: ', ''));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

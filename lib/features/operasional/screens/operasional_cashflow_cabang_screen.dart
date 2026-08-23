@@ -28,7 +28,6 @@ class _OperasionalCashflowCabangScreenState extends State<OperasionalCashflowCab
 
   int? _selectedCabangId;
   String _selectedArus = 'Semua Arus';
-  final List<String> _arusOptions = ['Semua Arus', 'Masuk', 'Keluar'];
 
   // Summary Metrics matching Web Dashboard
   double _masukBulanIni = 0.0;
@@ -290,31 +289,6 @@ class _OperasionalCashflowCabangScreenState extends State<OperasionalCashflowCab
     );
   }
 
-  // --- STATS SUMMARY CALCULATIONS ---
-  double get _totalMasuk {
-    double total = 0;
-    for (final item in _cashflows) {
-      final arus = item['arus']?.toString() ?? '';
-      if (arus.contains('Masuk')) {
-        total += double.tryParse(item['nominal']?.toString() ?? '0') ?? 0;
-      }
-    }
-    return total;
-  }
-
-  double get _totalKeluar {
-    double total = 0;
-    for (final item in _cashflows) {
-      final arus = item['arus']?.toString() ?? '';
-      if (arus.contains('Keluar')) {
-        total += double.tryParse(item['nominal']?.toString() ?? '0') ?? 0;
-      }
-    }
-    return total;
-  }
-
-  double get _saldoBersih => _totalMasuk - _totalKeluar;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -326,20 +300,22 @@ class _OperasionalCashflowCabangScreenState extends State<OperasionalCashflowCab
             padding: const EdgeInsets.fromLTRB(20, 52, 20, 18),
             child: Row(
               children: [
-                InkWell(
-                  onTap: () => Navigator.pop(context),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                if (Navigator.canPop(context)) ...[
+                  InkWell(
+                    onTap: () => Navigator.pop(context),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                      ),
+                      child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
                     ),
-                    child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
                   ),
-                ),
-                const SizedBox(width: 14),
+                  const SizedBox(width: 14),
+                ],
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

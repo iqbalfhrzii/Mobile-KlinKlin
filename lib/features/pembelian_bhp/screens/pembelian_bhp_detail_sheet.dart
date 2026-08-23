@@ -16,9 +16,14 @@ class PembelianBhpDetailSheet extends StatelessWidget {
     if (date == null) return '-';
     try {
       final dt = DateTime.parse(date.toString());
-      return DateFormat('dd MMMM yyyy').format(dt);
+      return DateFormat('dd MMMM yyyy', 'id_ID').format(dt);
     } catch (_) {
-      return date.toString();
+      try {
+        final dt = DateTime.parse(date.toString());
+        return DateFormat('dd MMM yyyy').format(dt);
+      } catch (_) {
+        return date.toString();
+      }
     }
   }
 
@@ -44,19 +49,22 @@ class PembelianBhpDetailSheet extends StatelessWidget {
           children: [
             InteractiveViewer(
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 child: Image.network(
                   imageUrl,
                   fit: BoxFit.contain,
                   errorBuilder: (_, __, ___) => Container(
-                    padding: const EdgeInsets.all(20),
-                    color: Colors.white,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.broken_image, size: 40, color: Colors.grey),
-                        const SizedBox(height: 8),
-                        Text('Gagal memuat gambar', style: GoogleFonts.inter(fontSize: 12)),
+                        const Icon(Icons.broken_image_rounded, size: 48, color: Colors.grey),
+                        const SizedBox(height: 10),
+                        Text('Gagal memuat gambar', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark)),
                       ],
                     ),
                   ),
@@ -69,12 +77,12 @@ class PembelianBhpDetailSheet extends StatelessWidget {
               child: InkWell(
                 onTap: () => Navigator.pop(ctx),
                 child: Container(
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(8),
                   decoration: const BoxDecoration(
                     color: Colors.black54,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.close, color: Colors.white, size: 20),
+                  child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
                 ),
               ),
             ),
@@ -98,29 +106,40 @@ class PembelianBhpDetailSheet extends StatelessWidget {
 
     return Container(
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFF8FAFC),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Drag Handle
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 6),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
+
           // Header
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
+            padding: const EdgeInsets.fromLTRB(20, 8, 12, 12),
             decoration: const BoxDecoration(
+              color: Colors.white,
               border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
             ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: AppColors.primaryMid.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.shopping_cart_outlined, color: AppColors.primaryMid, size: 22),
+                  child: const Icon(Icons.shopping_cart_outlined, color: AppColors.primaryMid, size: 20),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,17 +166,18 @@ class PembelianBhpDetailSheet extends StatelessWidget {
           // Body
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Kode & Tanggal Card
+                  // 1. Kode & Tanggal Card
                   Container(
+                    width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppColors.primaryMid.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.primaryMid.withValues(alpha: 0.15)),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -165,109 +185,226 @@ class PembelianBhpDetailSheet extends StatelessWidget {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('KODE PEMBELIAN', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryMid, letterSpacing: 0.5)),
+                            Text(
+                              'KODE TRANSAKSI',
+                              style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryMid, letterSpacing: 0.5),
+                            ),
                             const SizedBox(height: 2),
-                            Text(kode, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                            Text(
+                              kode,
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                            ),
                           ],
                         ),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text('TANGGAL', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 0.5)),
+                            Text(
+                              'TANGGAL BELI',
+                              style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 0.5),
+                            ),
                             const SizedBox(height: 2),
-                            Text(tglStr, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                            Row(
+                              children: [
+                                const Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.textMuted),
+                                const SizedBox(width: 4),
+                                Text(
+                                  tglStr,
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
 
-                  // Item & Info Details
-                  _buildDetailRow('Nama Item BHP', namaBarang, bold: true),
-                  const Divider(height: 20),
-                  _buildDetailRow('Merk Barang', merk),
-                  const Divider(height: 20),
-                  _buildDetailRow('Toko Tempat Beli', toko, icon: Icons.storefront_outlined),
-                  const Divider(height: 20),
-                  _buildDetailRow('Kuantitas Dibeli', '$qty $satuan', isBadge: true),
-                  const Divider(height: 20),
-                  _buildDetailRow('Cabang', cabang, icon: Icons.location_on_outlined),
-
-                  const SizedBox(height: 20),
-
-                  // Foto Barang
-                  Text(
-                    'FOTO BARANG DIBELI',
-                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 0.5),
-                  ),
-                  const SizedBox(height: 8),
-
-                  if (photoUrl.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: Center(
-                        child: Text('Tidak ada foto barang yang diunggah', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey)),
-                      ),
-                    )
-                  else
-                    InkWell(
-                      onTap: () => _showFullScreenImage(context, photoUrl, namaBarang),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        width: double.infinity,
-                        height: 200,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(11),
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              Image.network(
-                                photoUrl,
-                                fit: BoxFit.cover,
-                                loadingBuilder: (_, child, progress) {
-                                  if (progress == null) return child;
-                                  return const Center(child: CircularProgressIndicator(strokeWidth: 2));
-                                },
-                                errorBuilder: (_, __, ___) => const Center(
-                                  child: Icon(Icons.broken_image, size: 36, color: Colors.grey),
-                                ),
-                              ),
-                              Positioned(
-                                bottom: 8,
-                                right: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black54,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.zoom_in, size: 14, color: Colors.white),
-                                      const SizedBox(width: 4),
-                                      Text('Klik untuk perbesar', style: GoogleFonts.inter(fontSize: 10, color: Colors.white)),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                  // 2. Main Hero Item Card
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          namaBarang,
+                          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Text('Merk: ', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+                            Text(merk, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF334155))),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.storefront_outlined, size: 14, color: AppColors.textMuted),
+                            const SizedBox(width: 4),
+                            Text(toko, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+                        const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                        const SizedBox(height: 14),
+
+                        // Metric Strip
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('KUANTITAS DIBELI', style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
+                                    const SizedBox(height: 2),
+                                    Text('$qty $satuan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primaryMid)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('LOKASI CABANG', style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
+                                    const SizedBox(height: 2),
+                                    Text(cabang, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // 3. Foto Bukti Fisik
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.photo_library_outlined, size: 18, color: AppColors.primaryMid),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Foto Bukti Fisik / Nota',
+                              style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        if (photoUrl.isEmpty)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 24),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(Icons.image_not_supported_outlined, size: 36, color: Colors.grey.shade400),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Tidak ada foto bukti yang diunggah',
+                                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          InkWell(
+                            onTap: () => _showFullScreenImage(context, photoUrl, namaBarang),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              width: double.infinity,
+                              height: 190,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(11),
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    Image.network(
+                                      photoUrl,
+                                      fit: BoxFit.cover,
+                                      loadingBuilder: (_, child, progress) {
+                                        if (progress == null) return child;
+                                        return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                                      },
+                                      errorBuilder: (_, __, ___) => Center(
+                                        child: Icon(Icons.broken_image, size: 36, color: Colors.grey.shade400),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      bottom: 8,
+                                      right: 8,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withValues(alpha: 0.65),
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.zoom_in, size: 14, color: Colors.white),
+                                            const SizedBox(width: 4),
+                                            Text('Perbesar Foto', style: GoogleFonts.inter(fontSize: 10.5, color: Colors.white, fontWeight: FontWeight.w500)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
 
                   const SizedBox(height: 20),
                 ],
@@ -292,53 +429,12 @@ class PembelianBhpDetailSheet extends StatelessWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   elevation: 0,
                 ),
-                child: Text('Tutup', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
+                child: Text('Tutup', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value, {bool bold = false, bool isBadge = false, IconData? icon}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
-        if (isBadge)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.primaryMid.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.primaryMid.withValues(alpha: 0.2)),
-            ),
-            child: Text(
-              value,
-              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
-            ),
-          )
-        else
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (icon != null) ...[
-                Icon(icon, size: 14, color: AppColors.textMuted),
-                const SizedBox(width: 4),
-              ],
-              Text(
-                value,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: bold ? FontWeight.bold : FontWeight.w600,
-                  color: AppColors.textDark,
-                ),
-              ),
-            ],
-          ),
-      ],
     );
   }
 }

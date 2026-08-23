@@ -25,6 +25,7 @@ import 'operasional_kajian_rd_screen.dart';
 import 'operasional_target_omzet_screen.dart';
 import 'operasional_permintaan_design_screen.dart';
 import 'operasional_pengumuman_screen.dart';
+import '../../konten_marketing/screens/konten_marketing_screen.dart';
 import '../../master_barang/screens/master_barang_screen.dart';
 // TODO: import screens as they are created
 
@@ -115,6 +116,15 @@ class OperasionalMenuScreen extends StatelessWidget {
             bgColor: const Color(0xFFEEF2FF),
             onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => const MonitoringStokOpnameScreen()));
+            },
+          ),
+          _MenuItem(
+            icon: Icons.category_rounded,
+            title: 'Master Barang',
+            iconColor: const Color(0xFF0284C7),
+            bgColor: const Color(0xFFE0F2FE),
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const MasterBarangScreen()));
             },
           ),
           _MenuItem(
@@ -354,6 +364,15 @@ class OperasionalMenuScreen extends StatelessWidget {
             bgColor: const Color(0xFFD1FAE5),
             onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalPengumumanScreen()));
+            },
+          ),
+          _MenuItem(
+            icon: Icons.perm_media_rounded,
+            title: 'Konten Marketing',
+            iconColor: const Color(0xFF7C3AED),
+            bgColor: const Color(0xFFF3E8FF),
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const KontenMarketingScreen()));
             },
           ),
         ],

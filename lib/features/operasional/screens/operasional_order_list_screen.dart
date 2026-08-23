@@ -90,7 +90,7 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
   }
 
   List<OrderModel> get _filteredOrders {
-    return _orders.where((o) {
+    final list = _orders.where((o) {
       // Search
       final q = _searchQuery.toLowerCase();
       final matchQ = q.isEmpty ||
@@ -121,6 +121,23 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
 
       return matchQ && matchCabang && matchStatus && matchDate;
     }).toList();
+
+    list.sort((a, b) {
+      final aNeedsProof = a.needsTransferProofUpload;
+      final bNeedsProof = b.needsTransferProofUpload;
+
+      if (aNeedsProof && !bNeedsProof) return -1;
+      if (!aNeedsProof && bNeedsProof) return 1;
+
+      final aTime = a.scheduleFullDateTime;
+      final bTime = b.scheduleFullDateTime;
+      final timeCmp = aTime.compareTo(bTime);
+      if (timeCmp != 0) return timeCmp;
+
+      return b.tanggalInput.compareTo(a.tanggalInput);
+    });
+
+    return list;
   }
 
   void _onDayFilterChanged(String? val) async {

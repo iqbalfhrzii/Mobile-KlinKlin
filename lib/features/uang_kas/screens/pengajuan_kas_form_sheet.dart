@@ -82,19 +82,25 @@ class _PengajuanKasFormSheetState extends State<PengajuanKasFormSheet> {
     }
   }
 
+  String _formatDisplayDate(String dateStr) {
+    if (dateStr.isEmpty) return 'Pilih Tanggal';
+    try {
+      final dt = DateTime.parse(dateStr);
+      return DateFormat('dd MMMM yyyy', 'id_ID').format(dt);
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
   Future<void> _save() async {
     final nominal = double.tryParse(_nominalController.text.trim().replaceAll('.', '').replaceAll(',', '')) ?? 0;
     if (nominal <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nominal wajib diisi dan lebih dari 0!'), backgroundColor: Colors.red),
-      );
+      _showErrorDialog('Nominal permohonan dana wajib diisi dan harus lebih dari 0!');
       return;
     }
 
     if (_keteranganController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Keterangan / Tujuan pengajuan wajib diisi!'), backgroundColor: Colors.red),
-      );
+      _showErrorDialog('Keterangan / Keperluan pengajuan dana wajib diisi!');
       return;
     }
 
@@ -118,8 +124,14 @@ class _PengajuanKasFormSheetState extends State<PengajuanKasFormSheet> {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(widget.item != null ? 'Pengajuan kas berhasil diperbarui' : 'Pengajuan uang kas berhasil dibuat'),
-            backgroundColor: Colors.green,
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(child: Text(widget.item != null ? 'Pengajuan kas berhasil diperbarui' : 'Pengajuan uang kas berhasil dibuat!')),
+              ],
+            ),
+            backgroundColor: const Color(0xFF16A34A),
           ),
         );
         widget.onSave();
@@ -127,11 +139,36 @@ class _PengajuanKasFormSheetState extends State<PengajuanKasFormSheet> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
-        );
+        _showErrorDialog(e.toString().replaceAll('Exception: ', ''));
       }
     }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.error_outline_rounded, color: Colors.red, size: 22),
+            const SizedBox(width: 8),
+            Text('Perhatian', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text(message, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, height: 1.4)),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryMid,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('OK', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -141,7 +178,7 @@ class _PengajuanKasFormSheetState extends State<PengajuanKasFormSheet> {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         children: [
@@ -157,76 +194,101 @@ class _PengajuanKasFormSheetState extends State<PengajuanKasFormSheet> {
 
           // Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            padding: const EdgeInsets.fromLTRB(20, 8, 12, 12),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.monetization_on_outlined, color: Color(0xFF10B981), size: 20),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isEdit ? 'Edit Pengajuan Uang Kas' : 'Buat Pengajuan Uang Kas',
+                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
                       ),
-                      child: const Icon(Icons.monetization_on_outlined, color: Color(0xFF10B981), size: 22),
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          isEdit ? 'Edit Pengajuan Uang Kas' : 'Buat Pengajuan Uang Kas',
-                          style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                        ),
-                        Text(
-                          'Pengajuan dana operasional kas ke Finance',
-                          style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
-                        ),
-                      ],
-                    ),
-                  ],
+                      Text(
+                        'Permohonan dana operasional kas ke Finance',
+                        style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                      ),
+                    ],
+                  ),
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close, color: AppColors.textMuted),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                  icon: const Icon(Icons.close_rounded, color: Color(0xFF94A3B8)),
                 ),
               ],
             ),
           ),
-          const Divider(height: 1),
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
 
           // Form Body
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Tanggal
-                  _buildLabel('Tanggal', required: true),
+                  // Info Box
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.info_outline_rounded, color: Color(0xFF2563EB), size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Pengajuan dana kas ini akan masuk ke antrean tim Finance untuk diverifikasi dan dicairkan via transfer bank.',
+                            style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF1E40AF), height: 1.4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // 1. Tanggal Pengajuan
+                  _buildLabel('Tanggal Pengajuan', required: true),
                   const SizedBox(height: 6),
                   InkWell(
                     onTap: _selectDate,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     child: Container(
-                      height: 46,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.grey.shade300),
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            _tanggalController.text,
-                            style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, fontWeight: FontWeight.w500),
+                          Row(
+                            children: [
+                              const Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.primaryMid),
+                              const SizedBox(width: 10),
+                              Text(
+                                _formatDisplayDate(_tanggalController.text),
+                                style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, fontWeight: FontWeight.w600),
+                              ),
+                            ],
                           ),
-                          const Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.primaryMid),
+                          const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textMuted),
                         ],
                       ),
                     ),
@@ -234,24 +296,24 @@ class _PengajuanKasFormSheetState extends State<PengajuanKasFormSheet> {
 
                   const SizedBox(height: 16),
 
-                  // Nominal
-                  _buildLabel('Nominal', required: true),
+                  // 2. Nominal Permohonan (Rp)
+                  _buildLabel('Nominal Permohonan (Rp)', required: true),
                   const SizedBox(height: 6),
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.grey.shade300),
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
                     child: TextField(
                       controller: _nominalController,
                       keyboardType: TextInputType.number,
-                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                      style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
                       decoration: InputDecoration(
-                        hintText: '100000',
+                        hintText: '0',
+                        hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 16),
                         prefixText: 'Rp ',
-                        prefixStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
-                        hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 13),
+                        prefixStyle: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF10B981)),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       ),
@@ -260,21 +322,21 @@ class _PengajuanKasFormSheetState extends State<PengajuanKasFormSheet> {
 
                   const SizedBox(height: 16),
 
-                  // Keterangan / Tujuan
-                  _buildLabel('Keterangan / Tujuan', required: true),
+                  // 3. Keterangan / Keperluan Dana
+                  _buildLabel('Keterangan / Keperluan Dana', required: true),
                   const SizedBox(height: 6),
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.grey.shade300),
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
                     child: TextField(
                       controller: _keteranganController,
-                      maxLines: 4,
-                      style: GoogleFonts.inter(fontSize: 13),
+                      maxLines: 3,
+                      style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
                       decoration: InputDecoration(
-                        hintText: 'Tuliskan tujuan pengajuan kas ini (contoh: Tambahan modal kas untuk beli sabun & transport)...',
+                        hintText: 'Contoh: Pengisian kas kecil cabang bulan ini untuk operasional laundry & kebersihan',
                         hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 12),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -288,14 +350,12 @@ class _PengajuanKasFormSheetState extends State<PengajuanKasFormSheet> {
             ),
           ),
 
-          // Footer
+          // Footer Action Bar
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: Colors.white,
-              boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -4)),
-              ],
+              border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
             ),
             child: Row(
               children: [
@@ -304,10 +364,10 @@ class _PengajuanKasFormSheetState extends State<PengajuanKasFormSheet> {
                     onPressed: _isLoading ? null : () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: BorderSide(color: Colors.grey.shade300),
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    child: Text('Batal', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                    child: Text('Batal', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: const Color(0xFF475569))),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -316,16 +376,20 @@ class _PengajuanKasFormSheetState extends State<PengajuanKasFormSheet> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _save,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryMid,
+                      backgroundColor: const Color(0xFF10B981),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       elevation: 0,
                     ),
                     child: _isLoading
                         ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : Text(
-                            isEdit ? 'Perbarui Pengajuan' : 'Simpan Pengajuan',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white),
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.send_rounded, size: 18, color: Colors.white),
+                              const SizedBox(width: 6),
+                              Text(isEdit ? 'Perbarui Pengajuan' : 'Kirim Pengajuan', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white)),
+                            ],
                           ),
                   ),
                 ),
@@ -341,8 +405,8 @@ class _PengajuanKasFormSheetState extends State<PengajuanKasFormSheet> {
     return RichText(
       text: TextSpan(
         text: text,
-        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
-        children: required ? [const TextSpan(text: ' *', style: TextStyle(color: Colors.red))] : [],
+        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF334155)),
+        children: required ? [const TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))] : [],
       ),
     );
   }

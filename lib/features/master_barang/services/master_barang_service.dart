@@ -9,11 +9,13 @@ class MasterBarangService {
   // ==============================
   static Future<List<dynamic>> getCabang() async {
     try {
-      final response = await _dio.get('/operasional/cabang');
+      final response = await _dio.get('/cabangs');
       if (response.statusCode == 200) {
         final data = response.data;
-        if (data != null && data['data'] != null) {
-          return data['data'];
+        if (data != null) {
+          if (data['data'] is List) return data['data'];
+          if (data['cabangs'] is List) return data['cabangs'];
+          if (data is List) return data;
         }
       }
       return [];

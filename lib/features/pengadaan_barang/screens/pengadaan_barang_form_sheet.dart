@@ -555,40 +555,45 @@ class _PengadaanBarangFormSheetState extends State<PengadaanBarangFormSheet> {
                     icon: Icons.photo_camera_outlined,
                     title: 'Foto Barang Lama / Rusak',
                     subtitle: 'Unggah foto sebagai bukti pengajuan Anda.',
-                    badge: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF3C7),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFFFDE68A)),
-                      ),
-                      child: Text(
-                        'MINIMAL 1 FOTO WAJIB',
-                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFFB45309)),
-                      ),
-                    ),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Row 1: Foto 1, Foto 2, Foto 3
-                        Row(
-                          children: [
-                            Expanded(child: _buildPhotoSlot(0, 'Foto 1 *', required: true)),
-                            const SizedBox(width: 8),
-                            Expanded(child: _buildPhotoSlot(1, 'Foto 2')),
-                            const SizedBox(width: 8),
-                            Expanded(child: _buildPhotoSlot(2, 'Foto 3')),
-                          ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFFDE68A)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.info_outline, size: 16, color: Color(0xFFB45309)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Wajib melampirkan minimal 1 foto (Foto 1) sebagai bukti kondisi barang.',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF92400E)),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 12),
-                        // Row 2: Foto 4, Foto 5
-                        Row(
-                          children: [
-                            Expanded(child: _buildPhotoSlot(3, 'Foto 4')),
-                            const SizedBox(width: 8),
-                            Expanded(child: _buildPhotoSlot(4, 'Foto 5')),
-                            const SizedBox(width: 8),
-                            const Expanded(child: SizedBox()), // spacer
-                          ],
+                        const SizedBox(height: 14),
+
+                        // Horizontal Scrollable Photo Cards
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          child: Row(
+                            children: List.generate(5, (index) {
+                              final isRequired = index == 0;
+                              final label = isRequired ? 'Foto 1 (Wajib)' : 'Foto ${index + 1}';
+                              return Padding(
+                                padding: EdgeInsets.only(right: index == 4 ? 0 : 10),
+                                child: _buildPhotoSlot(index, label, required: isRequired),
+                              );
+                            }),
+                          ),
                         ),
                       ],
                     ),
@@ -656,64 +661,91 @@ class _PengadaanBarangFormSheetState extends State<PengadaanBarangFormSheet> {
   Widget _buildPhotoSlot(int index, String label, {bool required = false}) {
     final photo = _photos[index];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        RichText(
-          text: TextSpan(
-            text: label,
-            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textDark),
-            children: required ? [const TextSpan(text: ' *', style: TextStyle(color: Colors.red))] : [],
-          ),
-        ),
-        const SizedBox(height: 6),
-        InkWell(
-          onTap: () => _pickImage(index),
-          borderRadius: BorderRadius.circular(10),
-          child: Container(
-            height: 86,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: photo != null ? AppColors.primaryMid : Colors.grey.shade300, style: photo != null ? BorderStyle.solid : BorderStyle.solid),
+    return SizedBox(
+      width: 105,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              color: required ? const Color(0xFFDC2626) : AppColors.textDark,
             ),
-            child: photo != null
-                ? Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(9),
-                        child: Image.file(
-                          photo,
-                          width: double.infinity,
-                          height: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      Positioned(
-                        top: 4,
-                        right: 4,
-                        child: InkWell(
-                          onTap: () => setState(() => _photos[index] = null),
-                          child: Container(
-                            padding: const EdgeInsets.all(3),
-                            decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                            child: const Icon(Icons.close, size: 12, color: Colors.white),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 6),
+          InkWell(
+            onTap: () => _pickImage(index),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              height: 110,
+              width: 105,
+              decoration: BoxDecoration(
+                color: photo != null ? Colors.transparent : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: photo != null
+                      ? AppColors.primaryMid
+                      : required
+                          ? const Color(0xFFFCA5A5)
+                          : const Color(0xFFCBD5E1),
+                  width: photo != null ? 1.5 : 1,
+                ),
+              ),
+              child: photo != null
+                  ? Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(11),
+                          child: Image.file(
+                            photo,
+                            width: double.infinity,
+                            height: double.infinity,
+                            fit: BoxFit.cover,
                           ),
                         ),
-                      ),
-                    ],
-                  )
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.add_photo_alternate_outlined, size: 22, color: Colors.grey.shade500),
-                      const SizedBox(height: 4),
-                      Text('+ Pilih File', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.primaryMid)),
-                    ],
-                  ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: InkWell(
+                            onTap: () => setState(() => _photos[index] = null),
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.close, size: 12, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryMid.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.add_a_photo_outlined, size: 20, color: AppColors.primaryMid),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '+ Pilih Foto',
+                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.primaryMid),
+                        ),
+                      ],
+                    ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -722,7 +754,6 @@ class _PengadaanBarangFormSheetState extends State<PengadaanBarangFormSheet> {
     required String title,
     required String subtitle,
     required Widget child,
-    Widget? badge,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -752,13 +783,7 @@ class _PengadaanBarangFormSheetState extends State<PengadaanBarangFormSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                        if (badge != null) badge,
-                      ],
-                    ),
+                    Text(title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
                     Text(subtitle, style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
                   ],
                 ),

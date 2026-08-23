@@ -4,6 +4,42 @@ import 'package:dio/dio.dart';
 class OperasionalQuotationService {
   final Dio _apiClient = ApiClient.instance;
 
+  String _extractErrorMessage(dynamic e) {
+    if (e is DioException) {
+      if (e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map) {
+          if (data['errors'] != null && data['errors'] is Map) {
+            final Map errMap = data['errors'];
+            final List<String> messages = [];
+            errMap.forEach((key, value) {
+              if (value is List) {
+                messages.add('$key: ${value.join(", ")}');
+              } else {
+                messages.add('$key: $value');
+              }
+            });
+            if (messages.isNotEmpty) {
+              return messages.join('\n');
+            }
+          }
+          if (data['message'] != null && data['message'].toString().isNotEmpty) {
+            return data['message'].toString();
+          }
+          if (data['error'] != null && data['error'].toString().isNotEmpty) {
+            return data['error'].toString();
+          }
+        } else if (data is String && data.isNotEmpty) {
+          return data;
+        }
+      }
+      if (e.message != null && e.message!.isNotEmpty) {
+        return e.message!;
+      }
+    }
+    return e.toString().replaceAll('Exception: ', '');
+  }
+
   Future<Map<String, dynamic>> getQuotations({
     String? search,
     String? status,
@@ -22,15 +58,10 @@ class OperasionalQuotationService {
       );
       
       return response.data;
-    } on DioException catch (e) {
-      return {
-        'status': false,
-        'message': e.response?.data['message'] ?? e.message,
-      };
     } catch (e) {
       return {
         'status': false,
-        'message': e.toString(),
+        'message': _extractErrorMessage(e),
       };
     }
   }
@@ -56,15 +87,10 @@ class OperasionalQuotationService {
         data: {'catatan_persetujuan': notes},
       );
       return response.data;
-    } on DioException catch (e) {
-      return {
-        'status': false,
-        'message': e.response?.data['message'] ?? e.message,
-      };
     } catch (e) {
       return {
         'status': false,
-        'message': e.toString(),
+        'message': _extractErrorMessage(e),
       };
     }
   }
@@ -76,15 +102,10 @@ class OperasionalQuotationService {
         data: {'catatan_persetujuan': notes},
       );
       return response.data;
-    } on DioException catch (e) {
-      return {
-        'status': false,
-        'message': e.response?.data['message'] ?? e.message,
-      };
     } catch (e) {
       return {
         'status': false,
-        'message': e.toString(),
+        'message': _extractErrorMessage(e),
       };
     }
   }
@@ -93,15 +114,10 @@ class OperasionalQuotationService {
     try {
       final response = await _apiClient.get('/operasional/quotation/$id');
       return response.data;
-    } on DioException catch (e) {
-      return {
-        'status': false,
-        'message': e.response?.data['message'] ?? e.message,
-      };
     } catch (e) {
       return {
         'status': false,
-        'message': e.toString(),
+        'message': _extractErrorMessage(e),
       };
     }
   }
@@ -110,15 +126,10 @@ class OperasionalQuotationService {
     try {
       final response = await _apiClient.post('/operasional/quotation', data: data);
       return response.data;
-    } on DioException catch (e) {
-      return {
-        'status': false,
-        'message': e.response?.data['message'] ?? e.message,
-      };
     } catch (e) {
       return {
         'status': false,
-        'message': e.toString(),
+        'message': _extractErrorMessage(e),
       };
     }
   }
@@ -127,15 +138,10 @@ class OperasionalQuotationService {
     try {
       final response = await _apiClient.put('/operasional/quotation/$id', data: data);
       return response.data;
-    } on DioException catch (e) {
-      return {
-        'status': false,
-        'message': e.response?.data['message'] ?? e.message,
-      };
     } catch (e) {
       return {
         'status': false,
-        'message': e.toString(),
+        'message': _extractErrorMessage(e),
       };
     }
   }
@@ -144,15 +150,10 @@ class OperasionalQuotationService {
     try {
       final response = await _apiClient.delete('/operasional/quotation/$id');
       return response.data;
-    } on DioException catch (e) {
-      return {
-        'status': false,
-        'message': e.response?.data['message'] ?? e.message,
-      };
     } catch (e) {
       return {
         'status': false,
-        'message': e.toString(),
+        'message': _extractErrorMessage(e),
       };
     }
   }

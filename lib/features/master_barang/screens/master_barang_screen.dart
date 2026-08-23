@@ -46,7 +46,8 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
   int? _userCabangId;
   String _userCabangName = '';
   String _userRole = '';
-  bool _isOperasionalOrAdmin = true;
+  bool _isOperasional = false;
+  bool get _canModify => true;
 
   final Color _primaryPurple = const Color(0xFF4F46E5);
   final Color _tealAccent = const Color(0xFF0D9488);
@@ -70,9 +71,9 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
     _userCabangName = prefs.getString('user_cabang_name') ?? '';
 
     final r = _userRole.toLowerCase();
-    _isOperasionalOrAdmin = r.contains('operasional') || r.contains('admin') || r.contains('ceo') || r.contains('superadmin');
+    _isOperasional = r.contains('operasional');
 
-    if (!_isOperasionalOrAdmin && _userCabangId != null) {
+    if (!_isOperasional && _userCabangId != null) {
       _filterCabangForItemFisik = _userCabangId;
     }
 
@@ -466,11 +467,24 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
     );
   }
 
-  void _showAddItemFisikDialog() {
+  void _showAddItemFisikDialog() async {
+    if (_cabangs.isEmpty) {
+      await _loadCabang();
+    }
+    if (!mounted) return;
+
     int? selectedBarangId;
-    int? selectedCabangId = (!_isOperasionalOrAdmin && _userCabangId != null)
-        ? _userCabangId
-        : (_filterCabangForItemFisik ?? (_cabangs.isNotEmpty ? _cabangs.first['id'] : null));
+    int? selectedCabangId;
+
+    if (!_isOperasional && _userCabangId != null) {
+      selectedCabangId = _userCabangId;
+    } else if (_filterCabangForItemFisik != null &&
+        _cabangs.any((c) => (int.tryParse(c['id'].toString()) ?? 0) == _filterCabangForItemFisik)) {
+      selectedCabangId = _filterCabangForItemFisik;
+    } else if (_cabangs.isNotEmpty) {
+      selectedCabangId = int.tryParse(_cabangs.first['id'].toString());
+    }
+
     int jumlahItem = 1;
     String? selectedPhotoPath;
     bool isSubmitting = false;
@@ -577,7 +591,7 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                     // Cabang Penempatan Dropdown (Locked for CS, Selectable for Operasional)
                     Text('Cabang Penempatan *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                     const SizedBox(height: 6),
-                    if (!_isOperasionalOrAdmin && _userCabangId != null)
+                    if (!_isOperasional && _userCabangId != null)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         decoration: BoxDecoration(
@@ -587,7 +601,7 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.location_on, size: 16, color: AppColors.primaryMid),
+                            const Icon(Icons.location_on, size: 16, color: AppColors.primaryMid),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -618,15 +632,18 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<int>(
-                            value: selectedCabangId,
+                            value: (_cabangs.any((c) => (int.tryParse(c['id'].toString()) ?? 0) == selectedCabangId))
+                                ? selectedCabangId
+                                : null,
                             isExpanded: true,
                             hint: Text('Pilih Cabang', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13)),
                             icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textMuted),
                             style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
                             items: _cabangs.map((c) {
+                              final cId = int.tryParse(c['id'].toString()) ?? 0;
                               return DropdownMenuItem<int>(
-                                value: c['id'],
-                                child: Text(c['nama_cabang'] ?? c['nama'] ?? 'Cabang ${c['id']}'),
+                                value: cId,
+                                child: Text(c['nama_cabang'] ?? c['nama'] ?? 'Cabang $cId'),
                               );
                             }).toList(),
                             onChanged: (val) {
@@ -1181,8 +1198,10 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
           GradientHeader(
             child: Row(
               children: [
-                HeaderBackButton(onTap: () => Navigator.pop(context)),
-                const SizedBox(width: 12),
+                if (Navigator.canPop(context)) ...[
+                  HeaderBackButton(onTap: () => Navigator.pop(context)),
+                  const SizedBox(width: 12),
+                ],
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1196,10 +1215,10 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                         ),
                       ),
                       Text(
-                        'Kelola kategori, barang & QR code fisik',
+                        'Kelola kategori, barang & cetak fisik ber-QR code',
                         style: GoogleFonts.inter(
                           fontSize: 11,
-                          color: Colors.white.withValues(alpha: 0.8),
+                          color: Colors.white.withValues(alpha: 0.85),
                         ),
                       ),
                     ],
@@ -1217,13 +1236,16 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
           // Modern Tab Bar
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: TabBar(
               controller: _tabController,
+              dividerColor: Colors.transparent,
+              dividerHeight: 0,
               labelColor: _primaryPurple,
               unselectedLabelColor: AppColors.textMuted,
               indicatorColor: _primaryPurple,
               indicatorWeight: 3,
+              indicatorSize: TabBarIndicatorSize.label,
               labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
               unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 13),
               tabs: const [
@@ -1237,7 +1259,7 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                 ),
                 Tab(
                   icon: Icon(Icons.qr_code_2_outlined, size: 18),
-                  text: 'Item Fisik',
+                  text: 'Item Fisik & QR',
                 ),
               ],
             ),
@@ -1278,11 +1300,11 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
         children: [
           // Info Box
           _buildInfoBox(
-            'Kategori barang dibagikan ke semua cabang. Silakan gunakan kategori yang sudah ada atau buat kategori baru.',
+            'Kategori barang ini dibagikan ke semua cabang. Silakan gunakan kategori yang sudah ada atau buat kategori baru.',
           ),
           const SizedBox(height: 14),
 
-          // Search Bar & Add Button
+          // Search Bar & Optional Add Button
           Row(
             children: [
               Expanded(
@@ -1291,33 +1313,35 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
                   child: TextField(
                     onChanged: (v) => setState(() => _searchKategoriQuery = v),
                     style: GoogleFonts.inter(fontSize: 13),
                     decoration: InputDecoration(
                       hintText: 'Cari kategori...',
-                      hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13),
-                      prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textMuted),
+                      hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 13),
+                      prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
-              ElevatedButton.icon(
-                onPressed: () => _showAddEditKategoriDialog(),
-                icon: const Icon(Icons.add, size: 18, color: Colors.white),
-                label: Text('Tambah', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _primaryPurple,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  elevation: 0,
+              if (_canModify) ...[
+                const SizedBox(width: 10),
+                ElevatedButton.icon(
+                  onPressed: () => _showAddEditKategoriDialog(),
+                  icon: const Icon(Icons.add, size: 18, color: Colors.white),
+                  label: Text('Tambah', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _primaryPurple,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    elevation: 0,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
           const SizedBox(height: 16),
@@ -1330,12 +1354,12 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
             ...filteredKategoris.map((k) {
               final isKuantitas = k['tipe_tracking'] == 'kuantitas';
               return Container(
-                margin: const EdgeInsets.only(bottom: 10),
+                margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.02),
@@ -1344,62 +1368,90 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                     ),
                   ],
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: isKuantitas ? Colors.amber.shade50 : _primaryPurple.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        isKuantitas ? Icons.format_list_numbered_rounded : Icons.qr_code_2_rounded,
-                        color: isKuantitas ? Colors.amber.shade800 : _primaryPurple,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            k['nama_kategori'] ?? '-',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textDark),
+                    Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: isKuantitas ? Colors.amber.shade50 : _primaryPurple.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: isKuantitas ? Colors.amber.shade50 : Colors.blue.shade50,
-                              borderRadius: BorderRadius.circular(6),
+                          child: Icon(
+                            isKuantitas ? Icons.format_list_numbered_rounded : Icons.qr_code_2_rounded,
+                            color: isKuantitas ? Colors.amber.shade800 : _primaryPurple,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                k['nama_kategori'] ?? '-',
+                                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14.5, color: AppColors.textDark),
+                              ),
+                              const SizedBox(height: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: isKuantitas ? const Color(0xFFFEF3C7) : const Color(0xFFEFF6FF),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  isKuantitas ? 'Kuantitas (Habis Pakai)' : 'Per Item (QR Code)',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: isKuantitas ? const Color(0xFF92400E) : const Color(0xFF1D4ED8),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_canModify) ...[
+                      const SizedBox(height: 12),
+                      const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _showAddEditKategoriDialog(kategori: k),
+                              icon: const Icon(Icons.edit_outlined, size: 15, color: Color(0xFF2563EB)),
+                              label: Text('Edit', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF2563EB))),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: const Color(0xFFEFF6FF),
+                                side: const BorderSide(color: Color(0xFFBFDBFE)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                              ),
                             ),
-                            child: Text(
-                              isKuantitas ? 'Kuantitas (Habis Pakai)' : 'Per Item (QR Code)',
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: isKuantitas ? Colors.amber.shade900 : Colors.blue.shade800,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _deleteKategori(k['id']),
+                              icon: const Icon(Icons.delete_outline_rounded, size: 15, color: Color(0xFFDC2626)),
+                              label: Text('Hapus', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFFDC2626))),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: const Color(0xFFFEF2F2),
+                                side: const BorderSide(color: Color(0xFFFECACA)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                padding: const EdgeInsets.symmetric(vertical: 8),
                               ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.blue),
-                      onPressed: () => _showAddEditKategoriDialog(kategori: k),
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(),
-                    ),
-                    const SizedBox(width: 6),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                      onPressed: () => _deleteKategori(k['id']),
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(),
-                    ),
+                    ],
                   ],
                 ),
               );
@@ -1413,11 +1465,16 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Hapus Kategori?', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Text('Kategori ini akan dihapus dari daftar sistem.', style: GoogleFonts.inter(fontSize: 13)),
+        content: Text('Kategori ini akan dihapus dari daftar master data sistem.', style: GoogleFonts.inter(fontSize: 13)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hapus', style: TextStyle(color: Colors.red))),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, elevation: 0),
+            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
+          ),
         ],
       ),
     );
@@ -1459,11 +1516,12 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
         children: [
           // Info Box
           _buildInfoBox(
-            'Nama barang dibagikan ke semua cabang agar data standar. Pastikan barang belum ada sebelum menambahkan.',
+            'Nama barang ini dibagikan ke semua cabang agar standar. Pastikan barang belum ada sebelum menambahkan baru.',
           ),
           const SizedBox(height: 14),
 
-          // Search Bar & Add Button
+          // Search Bar & Optional Add Button
+          // Search Bar, Filter Kategori, & Tambah Button
           Row(
             children: [
               Expanded(
@@ -1472,62 +1530,97 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
                   child: TextField(
                     onChanged: (v) => setState(() => _searchBarangQuery = v),
                     style: GoogleFonts.inter(fontSize: 13),
                     decoration: InputDecoration(
-                      hintText: 'Cari nama barang / satuan...',
-                      hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13),
-                      prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textMuted),
+                      hintText: 'Cari barang / satuan...',
+                      hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 13),
+                      prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
-              ElevatedButton.icon(
-                onPressed: () => _showAddEditBarangDialog(),
-                icon: const Icon(Icons.add, size: 18, color: Colors.white),
-                label: Text('Tambah', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _tealAccent,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  elevation: 0,
+              if (_kategoris.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Container(
+                  height: 44,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: _filterKategoriForBarang != null ? _tealAccent.withValues(alpha: 0.1) : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: _filterKategoriForBarang != null ? _tealAccent : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: PopupMenuButton<int?>(
+                    initialValue: _filterKategoriForBarang,
+                    tooltip: 'Filter Kategori',
+                    onSelected: (val) => setState(() => _filterKategoriForBarang = val),
+                    itemBuilder: (ctx) => [
+                      const PopupMenuItem<int?>(value: null, child: Text('Semua Kategori')),
+                      ..._kategoris.map((k) {
+                        final kId = int.tryParse(k['id'].toString()) ?? 0;
+                        return PopupMenuItem<int?>(
+                          value: kId,
+                          child: Text(k['nama_kategori'] ?? ''),
+                        );
+                      }),
+                    ],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.tune_rounded,
+                          size: 16,
+                          color: _filterKategoriForBarang != null ? _tealAccent : const Color(0xFF64748B),
+                        ),
+                        const SizedBox(width: 4),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 76),
+                          child: Text(
+                            _filterKategoriForBarang == null
+                                ? 'Kategori'
+                                : (_kategoris.firstWhere(
+                                      (k) => (int.tryParse(k['id'].toString()) ?? 0) == _filterKategoriForBarang,
+                                      orElse: () => {},
+                                    )['nama_kategori'] ??
+                                    'Kategori'),
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _filterKategoriForBarang != null ? _tealAccent : const Color(0xFF334155),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: Color(0xFF64748B)),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+              ],
+              if (_canModify) ...[
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: () => _showAddEditBarangDialog(),
+                  icon: const Icon(Icons.add, size: 16, color: Colors.white),
+                  label: Text('Tambah', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _tealAccent,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    elevation: 0,
+                  ),
+                ),
+              ],
             ],
           ),
-          const SizedBox(height: 10),
-
-          // Kategori Filter Dropdown
-          if (_kategoris.isNotEmpty)
-            Container(
-              height: 40,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<int?>(
-                  value: _filterKategoriForBarang,
-                  isExpanded: true,
-                  hint: Text('Semua Kategori', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark)),
-                  icon: const Icon(Icons.filter_list, size: 16, color: AppColors.textMuted),
-                  items: [
-                    const DropdownMenuItem<int?>(value: null, child: Text('Semua Kategori')),
-                    ..._kategoris.map((k) => DropdownMenuItem<int?>(value: k['id'], child: Text(k['nama_kategori'] ?? ''))),
-                  ],
-                  onChanged: (val) => setState(() => _filterKategoriForBarang = val),
-                ),
-              ),
-            ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
           if (_isLoadingBarang)
             const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator()))
@@ -1537,12 +1630,12 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
             ...filteredBarangs.map((b) {
               final katName = b['kategori'] != null ? b['kategori']['nama_kategori'] : '-';
               return Container(
-                margin: const EdgeInsets.only(bottom: 10),
+                margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.02),
@@ -1551,71 +1644,99 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                     ),
                   ],
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: _tealAccent.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(Icons.inventory_2_rounded, color: _tealAccent, size: 22),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            b['nama_barang'] ?? '-',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textDark),
+                    Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: _tealAccent.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          const SizedBox(height: 4),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 4,
+                          child: Icon(Icons.inventory_2_rounded, color: _tealAccent, size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  katName,
-                                  style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted, fontWeight: FontWeight.w500),
-                                ),
+                              Text(
+                                b['nama_barang'] ?? '-',
+                                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14.5, color: AppColors.textDark),
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: _tealAccent.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  'Satuan: ${b['satuan'] ?? '-'}',
-                                  style: GoogleFonts.inter(fontSize: 11, color: _tealAccent, fontWeight: FontWeight.w600),
-                                ),
+                              const SizedBox(height: 4),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      katName,
+                                      style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF475569), fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: _tealAccent.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      'Satuan: ${b['satuan'] ?? '-'}',
+                                      style: GoogleFonts.inter(fontSize: 11, color: _tealAccent, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
+                        ),
+                      ],
+                    ),
+                    if (_canModify) ...[
+                      const SizedBox(height: 12),
+                      const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _showAddEditBarangDialog(barang: b),
+                              icon: const Icon(Icons.edit_outlined, size: 15, color: Color(0xFF2563EB)),
+                              label: Text('Edit', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF2563EB))),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: const Color(0xFFEFF6FF),
+                                side: const BorderSide(color: Color(0xFFBFDBFE)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _deleteBarang(b['id']),
+                              icon: const Icon(Icons.delete_outline_rounded, size: 15, color: Color(0xFFDC2626)),
+                              label: Text('Hapus', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFFDC2626))),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: const Color(0xFFFEF2F2),
+                                side: const BorderSide(color: Color(0xFFFECACA)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.blue),
-                      onPressed: () => _showAddEditBarangDialog(barang: b),
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(),
-                    ),
-                    const SizedBox(width: 6),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                      onPressed: () => _deleteBarang(b['id']),
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(),
-                    ),
+                    ],
                   ],
                 ),
               );
@@ -1629,11 +1750,16 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Hapus Barang?', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
         content: Text('Barang ini akan dihapus dari sistem master data.', style: GoogleFonts.inter(fontSize: 13)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hapus', style: TextStyle(color: Colors.red))),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, elevation: 0),
+            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
+          ),
         ],
       ),
     );
@@ -1677,11 +1803,13 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
         children: [
           // Info Box
           _buildInfoBox(
-            'Daftar item fisik khusus per cabang. Tambahkan stok fisik baru untuk men-generate kode QR stiker alat.',
+            _isOperasional
+                ? 'Daftar item fisik ber-QR code untuk seluruh cabang. Anda dapat memantau ketersediaan, kondisi, dan mencetak QR Code.'
+                : 'Daftar item fisik khusus cabang. Tambahkan stok fisik baru untuk men-generate kode QR stiker alat.',
           ),
           const SizedBox(height: 14),
 
-          // Search Bar & Filter Cabang
+          // Search Bar, Filter Cabang, & Tambah Button
           Row(
             children: [
               Expanded(
@@ -1690,26 +1818,26 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
                   child: TextField(
                     onChanged: (v) => setState(() => _searchItemFisikQuery = v),
                     style: GoogleFonts.inter(fontSize: 13),
                     decoration: InputDecoration(
                       hintText: 'Cari Kode QR / Barang...',
-                      hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13),
-                      prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textMuted),
+                      hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 13),
+                      prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
-              if (!_isOperasionalOrAdmin && _userCabangId != null)
+              if (!_isOperasional && _userCabangId != null) ...[
+                const SizedBox(width: 8),
                 Container(
                   height: 44,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   decoration: BoxDecoration(
                     color: AppColors.primaryMid.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(10),
@@ -1718,7 +1846,7 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.location_on, size: 15, color: AppColors.primaryMid),
+                      const Icon(Icons.location_on, size: 15, color: AppColors.primaryMid),
                       const SizedBox(width: 4),
                       Text(
                         _userCabangName.isNotEmpty ? _userCabangName : 'Cabang $_userCabangId',
@@ -1726,95 +1854,134 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                       ),
                     ],
                   ),
-                )
-              else if (_cabangs.isNotEmpty)
+                ),
+              ] else if (_cabangs.isNotEmpty) ...[
+                const SizedBox(width: 8),
                 Container(
                   height: 44,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: _filterCabangForItemFisik != null ? _primaryPurple.withValues(alpha: 0.1) : Colors.white,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<int?>(
-                      value: _filterCabangForItemFisik,
-                      hint: Text('Semua Cabang', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark)),
-                      icon: const Icon(Icons.location_on_outlined, size: 16, color: AppColors.textMuted),
-                      items: [
-                        const DropdownMenuItem<int?>(value: null, child: Text('Semua Cabang')),
-                        ..._cabangs.map((c) => DropdownMenuItem<int?>(
-                              value: c['id'],
-                              child: Text(c['nama_cabang'] ?? c['nama'] ?? 'Cabang ${c['id']}'),
-                            )),
-                      ],
-                      onChanged: (val) {
-                        setState(() => _filterCabangForItemFisik = val);
-                        _loadItemFisik();
-                      },
+                    border: Border.all(
+                      color: _filterCabangForItemFisik != null ? _primaryPurple : const Color(0xFFE2E8F0),
                     ),
+                  ),
+                  child: PopupMenuButton<int?>(
+                    initialValue: _filterCabangForItemFisik,
+                    tooltip: 'Filter Cabang',
+                    onSelected: (val) {
+                      setState(() => _filterCabangForItemFisik = val);
+                      _loadItemFisik();
+                    },
+                    itemBuilder: (ctx) => [
+                      const PopupMenuItem<int?>(value: null, child: Text('Semua Cabang')),
+                      ..._cabangs.map((c) {
+                        final cId = int.tryParse(c['id'].toString()) ?? 0;
+                        return PopupMenuItem<int?>(
+                          value: cId,
+                          child: Text(c['nama_cabang'] ?? c['nama'] ?? 'Cabang $cId'),
+                        );
+                      }),
+                    ],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 16,
+                          color: _filterCabangForItemFisik != null ? _primaryPurple : const Color(0xFF64748B),
+                        ),
+                        const SizedBox(width: 4),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 76),
+                          child: Text(
+                            _filterCabangForItemFisik == null
+                                ? 'Cabang'
+                                : (_cabangs.firstWhere(
+                                      (c) => (int.tryParse(c['id'].toString()) ?? 0) == _filterCabangForItemFisik,
+                                      orElse: () => {},
+                                    )['nama_cabang'] ??
+                                    'Cabang $_filterCabangForItemFisik'),
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _filterCabangForItemFisik != null ? _primaryPurple : const Color(0xFF334155),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: Color(0xFF64748B)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              if (_canModify) ...[
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: _showAddItemFisikDialog,
+                  icon: const Icon(Icons.add, size: 16, color: Colors.white),
+                  label: Text('Tambah', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _primaryPurple,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    elevation: 0,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Slim Selection & Print Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Checkbox(
+                    value: allSelected,
+                    onChanged: (val) {
+                      setState(() {
+                        if (val == true) {
+                          _selectedItemFisikIds.addAll(
+                            filteredItems.map<int>((e) => int.tryParse(e['id'].toString()) ?? 0),
+                          );
+                        } else {
+                          _selectedItemFisikIds.clear();
+                        }
+                      });
+                    },
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                    activeColor: _primaryPurple,
+                  ),
+                  Text(
+                    'Pilih Semua (${filteredItems.length})',
+                    style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B), fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+              if (_selectedItemFisikIds.isNotEmpty)
+                ElevatedButton.icon(
+                  onPressed: () => _printQr(_selectedItemFisikIds.toList()),
+                  icon: const Icon(Icons.print_outlined, size: 14, color: Colors.white),
+                  label: Text(
+                    'Print QR (${_selectedItemFisikIds.length})',
+                    style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryMid,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    elevation: 0,
                   ),
                 ),
             ],
           ),
           const SizedBox(height: 10),
-
-          // Action Buttons Bar (Print QR & Tambah Stok)
-          Row(
-            children: [
-              if (_selectedItemFisikIds.isNotEmpty)
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _printQr(_selectedItemFisikIds.toList()),
-                    icon: const Icon(Icons.print_outlined, size: 16, color: Colors.white),
-                    label: Text(
-                      'Print QR Terpilih (${_selectedItemFisikIds.length})',
-                      style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryMid,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      elevation: 0,
-                    ),
-                  ),
-                )
-              else
-                Expanded(
-                  child: Row(
-                    children: [
-                      Checkbox(
-                        value: allSelected,
-                        onChanged: (val) {
-                          setState(() {
-                            if (val == true) {
-                              _selectedItemFisikIds.addAll(filteredItems.map((e) => e['id'] as int));
-                            } else {
-                              _selectedItemFisikIds.clear();
-                            }
-                          });
-                        },
-                        activeColor: _primaryPurple,
-                      ),
-                      Text('Pilih Semua', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
-                    ],
-                  ),
-                ),
-              const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: _showAddItemFisikDialog,
-                icon: const Icon(Icons.add, size: 18, color: Colors.white),
-                label: Text('Tambah Stok (QR)', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _primaryPurple,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  elevation: 0,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
 
           if (_isLoadingItemFisik)
             const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator()))
@@ -1833,9 +2000,9 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: isSelected ? _primaryPurple : AppColors.border.withValues(alpha: 0.6),
+                    color: isSelected ? _primaryPurple : const Color(0xFFE2E8F0),
                     width: isSelected ? 1.5 : 1,
                   ),
                   boxShadow: [
@@ -1889,16 +2056,17 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                         const Spacer(),
                         InkWell(
                           onTap: () => _showDetailItemFisik(item),
+                          borderRadius: BorderRadius.circular(6),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
+                              color: const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text('Detail', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                                Text('Detail', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textDark)),
                                 const SizedBox(width: 2),
                                 const Icon(Icons.arrow_forward_ios, size: 10, color: AppColors.textMuted),
                               ],
@@ -1927,71 +2095,72 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                     ),
                     const SizedBox(height: 10),
 
-                    // Badges & Delete Button
+                    const SizedBox(height: 12),
+                    const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                    const SizedBox(height: 10),
+
+                    // Badges & Action Buttons
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: isBaik ? Colors.green.shade50 : Colors.red.shade50,
+                            color: isBaik ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             item['kondisi_terakhir'] ?? 'Baik',
                             style: GoogleFonts.inter(
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: isBaik ? Colors.green.shade800 : Colors.red.shade800,
+                              color: isBaik ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
                             ),
                           ),
                         ),
                         const SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: isTersedia ? Colors.blue.shade50 : Colors.orange.shade50,
+                            color: isTersedia ? const Color(0xFFEFF6FF) : const Color(0xFFFEF3C7),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             item['status_ketersediaan'] ?? 'Tersedia',
                             style: GoogleFonts.inter(
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: isTersedia ? Colors.blue.shade800 : Colors.orange.shade800,
+                              color: isTersedia ? const Color(0xFF1D4ED8) : const Color(0xFFB45309),
                             ),
                           ),
                         ),
                         const Spacer(),
-                        InkWell(
-                          onTap: () => _printQr([item['id']], singleItem: item),
-                          borderRadius: BorderRadius.circular(6),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryMid.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: AppColors.primaryMid.withValues(alpha: 0.3)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.print_outlined, size: 13, color: AppColors.primaryMid),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Print QR',
-                                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
-                                ),
-                              ],
-                            ),
+                        OutlinedButton.icon(
+                          onPressed: () => _printQr([item['id']], singleItem: item),
+                          icon: const Icon(Icons.print_outlined, size: 14, color: AppColors.primaryMid),
+                          label: Text('Print QR', style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.primaryMid)),
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: AppColors.primaryMid.withValues(alpha: 0.08),
+                            side: BorderSide(color: AppColors.primaryMid.withValues(alpha: 0.3)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            visualDensity: VisualDensity.compact,
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                          onPressed: () => _deleteItemFisik(item['id']),
-                          padding: const EdgeInsets.all(4),
-                          constraints: const BoxConstraints(),
-                        ),
+                        if (_canModify) ...[
+                          const SizedBox(width: 8),
+                          OutlinedButton.icon(
+                            onPressed: () => _deleteItemFisik(item['id']),
+                            icon: const Icon(Icons.delete_outline_rounded, size: 14, color: Color(0xFFDC2626)),
+                            label: Text('Hapus', style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFFDC2626))),
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFEF2F2),
+                              side: const BorderSide(color: Color(0xFFFECACA)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ],

@@ -12,6 +12,7 @@ class CustomerModel {
     required this.lastOrderDate,
     required this.notes,
     required this.orders,
+    this.rawOrders = const [],
     this.cabangId,
   });
 
@@ -34,6 +35,9 @@ class CustomerModel {
       orders: json['pesanans'] != null && json['pesanans'] is List
           ? (json['pesanans'] as List).map((e) => CustomerOrder.fromJson(e)).toList() 
           : const [],
+      rawOrders: json['pesanans'] != null && json['pesanans'] is List
+          ? (json['pesanans'] as List).whereType<Map<String, dynamic>>().toList()
+          : const [],
     );
   }
 
@@ -48,6 +52,7 @@ class CustomerModel {
   final String lastOrderDate;
   final String notes;
   final List<CustomerOrder> orders;
+  final List<Map<String, dynamic>> rawOrders;
 
   String get initials {
     final parts = name.trim().split(' ');

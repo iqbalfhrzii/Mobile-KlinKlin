@@ -113,6 +113,7 @@ class GroupedAttendanceItem {
   final String? cabangName;
   final AttendanceHistoryItem? checkIn;
   final AttendanceHistoryItem? checkOut;
+  final String? status;
 
   GroupedAttendanceItem({
     required this.tanggal,
@@ -121,5 +122,6 @@ class GroupedAttendanceItem {
     this.cabangName,
     this.checkIn,
     this.checkOut,
+    this.status,
   });
 }

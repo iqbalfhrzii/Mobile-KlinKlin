@@ -143,6 +143,10 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
         children: [
           Row(
             children: [
+              if (Navigator.canPop(context)) ...[
+                const AppBackButton(),
+                const SizedBox(width: 14),
+              ],
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

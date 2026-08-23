@@ -198,7 +198,7 @@ class AuthService {
   static Future<void> updateFcmToken(String fcmToken) async {
     try {
       await _dio.post(
-        '/cleaner/fcm-token',
+        '/fcm-token',
         data: {'fcm_token': fcmToken},
       );
     } catch (e) {

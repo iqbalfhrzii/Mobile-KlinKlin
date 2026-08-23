@@ -37,7 +37,7 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
   final _diskonController = TextEditingController(text: '0');
   
   bool _sameAsCustomerAddress = false;
-  bool _alatChemical = true;
+  bool _alatChemical = false;
   bool _usePpn = false;
   bool _usePph = false;
   
@@ -131,6 +131,7 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
       _noQuotationController.text = 'Terisi otomatis (Auto Generate)';
       _tanggalController.text = DateFormat('yyyy-MM-dd').format(DateTime.now());
       _expDateController.text = DateFormat('yyyy-MM-dd').format(DateTime.now().add(const Duration(days: 14)));
+      _alatChemical = false;
       _usePpn = false;
       _usePph = false;
       _rincian = [_createEmptyRincian()];
@@ -265,8 +266,34 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
       }
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(res['message'] ?? 'Gagal menyimpan penawaran'), backgroundColor: Colors.red),
+        final errorMsg = res['message'] ?? 'Gagal menyimpan penawaran';
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded, color: Colors.red, size: 22),
+                const SizedBox(width: 8),
+                Text(
+                  'Gagal Menyimpan Penawaran',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15, color: const Color(0xFF1E293B)),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Text(
+                errorMsg,
+                style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF475569), height: 1.4),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Tutup', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppColors.primaryMid)),
+              ),
+            ],
+          ),
         );
       }
     }

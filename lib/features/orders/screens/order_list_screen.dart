@@ -113,7 +113,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
   }
 
   List<OrderModel> get _filtered {
-    return _orders.where((o) {
+    final list = _orders.where((o) {
       final q = _query.toLowerCase();
       final matchQ =
           o.nomorPesanan.toLowerCase().contains(q) ||
@@ -206,6 +206,27 @@ class _OrderListScreenState extends State<OrderListScreen> {
           matchStatusBonus &&
           matchDate;
     }).toList();
+
+    // Sorting:
+    // 1. Yang belum upload bukti transfer diutamakan di posisi paling atas
+    // 2. Yang paling pagi (jam kerja mulai paling awal / ascending) di posisi paling atas
+    list.sort((a, b) {
+      final aNeedsProof = a.needsTransferProofUpload;
+      final bNeedsProof = b.needsTransferProofUpload;
+
+      if (aNeedsProof && !bNeedsProof) return -1; // a di atas
+      if (!aNeedsProof && bNeedsProof) return 1;  // b di atas
+
+      // Urutkan berdasarkan waktu jadwal paling pagi (Ascending)
+      final aTime = a.scheduleFullDateTime;
+      final bTime = b.scheduleFullDateTime;
+      final timeCmp = aTime.compareTo(bTime);
+      if (timeCmp != 0) return timeCmp;
+
+      return b.tanggalInput.compareTo(a.tanggalInput);
+    });
+
+    return list;
   }
 
   @override
@@ -329,6 +350,10 @@ class _OrderListScreenState extends State<OrderListScreen> {
         children: [
           Row(
             children: [
+              if (Navigator.canPop(context)) ...[
+                const AppBackButton(),
+                const SizedBox(width: 14),
+              ],
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

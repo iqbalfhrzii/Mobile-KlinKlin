@@ -48,7 +48,6 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
   List<dynamic> _pengajuans = [];
   final _pengajuanSearchController = TextEditingController();
   String _selectedPengajuanStatus = 'Semua';
-  final List<String> _pengajuanStatusFilters = ['Semua', 'Pending', 'Disetujui', 'Ditolak'];
   Timer? _pengajuanDebounce;
 
   @override
@@ -122,7 +121,6 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
 
       final list = (res['data'] is List) ? res['data'] as List : [];
 
-      // Calculate stats locally if not provided
       double allMasuk = 0;
       double allKeluar = 0;
       double thisMonthMasuk = 0;
@@ -273,7 +271,7 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
       builder: (context) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
         child: SizedBox(
-          height: MediaQuery.of(context).size.height * 0.75,
+          height: MediaQuery.of(context).size.height * 0.78,
           child: PengajuanKasFormSheet(
             item: item,
             cabangId: _selectedCabangId ?? 1,
@@ -364,14 +362,24 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
           children: [
             InteractiveViewer(
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 child: Image.network(
                   imageUrl,
                   fit: BoxFit.contain,
                   errorBuilder: (_, __, ___) => Container(
-                    padding: const EdgeInsets.all(20),
-                    color: Colors.white,
-                    child: Text('Gagal memuat gambar', style: GoogleFonts.inter(fontSize: 12)),
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.broken_image_rounded, size: 40, color: Colors.grey),
+                        const SizedBox(height: 8),
+                        Text('Gagal memuat gambar bukti', style: GoogleFonts.inter(fontSize: 12)),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -382,9 +390,9 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
               child: InkWell(
                 onTap: () => Navigator.pop(ctx),
                 child: Container(
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(8),
                   decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                  child: const Icon(Icons.close, color: Colors.white, size: 20),
+                  child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
                 ),
               ),
             ),
@@ -409,8 +417,10 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
               children: [
                 Row(
                   children: [
-                    const AppBackButton(),
-                    const SizedBox(width: 14),
+                    if (Navigator.canPop(context)) ...[
+                      HeaderBackButton(onTap: () => Navigator.pop(context)),
+                      const SizedBox(width: 12),
+                    ],
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -442,8 +452,9 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
                 // Modern 2-Tab Selector
                 Container(
                   height: 44,
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.15),
+                    color: Colors.black.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: TabBar(
@@ -452,9 +463,9 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
                     dividerColor: Colors.transparent,
                     indicator: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(9),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 4, offset: const Offset(0, 2)),
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2)),
                       ],
                     ),
                     labelColor: AppColors.primaryMid,
@@ -501,86 +512,25 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
   Widget _buildCashflowTab() {
     return Column(
       children: [
-        // 3 KPI Metric Cards (Masuk Bulan Ini, Keluar Bulan Ini, Saldo Kas Sekarang)
+        // KPI Summary Cards
         Container(
           color: Colors.white,
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           child: Column(
             children: [
-              // Row 1: Masuk & Keluar Bulan ini
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFECFDF5),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFA7F3D0)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('Total Masuk', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF047857))),
-                              const Icon(Icons.arrow_downward_rounded, size: 14, color: Color(0xFF059669)),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _formatRupiah(_masukBulanIni),
-                            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF065F46)),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text('Bulan ini', style: GoogleFonts.inter(fontSize: 9, color: const Color(0xFF047857))),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFFECACA)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('Total Keluar', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFFB91C1C))),
-                              const Icon(Icons.arrow_upward_rounded, size: 14, color: Color(0xFFDC2626)),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _formatRupiah(_keluarBulanIni),
-                            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF991B1B)),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text('Bulan ini', style: GoogleFonts.inter(fontSize: 9, color: const Color(0xFFB91C1C))),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // Row 2: Saldo Kas Sekarang (Dark Card)
+              // Row 1: Saldo Kas Sekarang (Dark Hero Card)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
-                  borderRadius: BorderRadius.circular(12),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 6, offset: const Offset(0, 2)),
+                    BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 4)),
                   ],
                 ),
                 child: Row(
@@ -589,28 +539,126 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('SALDO KAS SEKARANG (DANA AKTUAL)', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF94A3B8), letterSpacing: 0.5)),
-                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            const Icon(Icons.account_balance_wallet_rounded, size: 14, color: Color(0xFF38BDF8)),
+                            const SizedBox(width: 6),
+                            Text(
+                              'SALDO KAS SEKARANG (DANA AKTUAL)',
+                              style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF94A3B8), letterSpacing: 0.5),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
                         Text(
                           _formatRupiah(_saldoSekarang),
-                          style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.bold, color: const Color(0xFF38BDF8)),
+                          style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
                         ),
                       ],
                     ),
                     if (!_isOperasionalOrAdmin && _userCabangId != null)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
+                          color: Colors.white.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
                         ),
-                        child: Text(
-                          _userCabangName.isNotEmpty ? _userCabangName : 'Cabang $_userCabangId',
-                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.location_on, size: 12, color: Color(0xFF38BDF8)),
+                            const SizedBox(width: 4),
+                            Text(
+                              _userCabangName.isNotEmpty ? _userCabangName : 'Cabang $_userCabangId',
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                          ],
                         ),
                       ),
                   ],
                 ),
+              ),
+
+              const SizedBox(height: 10),
+
+              // Row 2: Masuk & Keluar Bulan ini
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFA7F3D0)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF10B981),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.arrow_downward_rounded, size: 12, color: Colors.white),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Total Masuk', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF047857))),
+                                Text(
+                                  _formatRupiah(_masukBulanIni),
+                                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF065F46)),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFECACA)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFEF4444),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.arrow_upward_rounded, size: 12, color: Colors.white),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Total Keluar', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFFB91C1C))),
+                                Text(
+                                  _formatRupiah(_keluarBulanIni),
+                                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF991B1B)),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -619,66 +667,64 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
         // Search & Filter Arus Chips
         Container(
           color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           child: Column(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: TextField(
-                        controller: _cashflowSearchController,
-                        style: GoogleFonts.inter(fontSize: 13),
-                        decoration: InputDecoration(
-                          hintText: 'Cari keterangan atau kategori...',
-                          hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 11),
-                          prefixIcon: const Icon(Icons.search, size: 16, color: Colors.grey),
-                          suffixIcon: _cashflowSearchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear, size: 16, color: Colors.grey),
-                                  onPressed: () {
-                                    _cashflowSearchController.clear();
-                                    _fetchCashflow();
-                                  },
-                                )
-                              : null,
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                        ),
-                        onChanged: _onCashflowSearchChanged,
-                      ),
-                    ),
+              Container(
+                height: 42,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: TextField(
+                  controller: _cashflowSearchController,
+                  style: GoogleFonts.inter(fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Cari keterangan atau kategori...',
+                    hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 12),
+                    prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
+                    suffixIcon: _cashflowSearchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 16, color: Colors.grey),
+                            onPressed: () {
+                              _cashflowSearchController.clear();
+                              _fetchCashflow();
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
                   ),
-                ],
+                  onChanged: _onCashflowSearchChanged,
+                ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               // Filter Chips
               Row(
                 children: _arusFilters.map((arus) {
                   final isSelected = _selectedArus == arus;
+                  final activeColor = arus == 'Masuk'
+                      ? const Color(0xFF16A34A)
+                      : arus == 'Keluar'
+                          ? const Color(0xFFDC2626)
+                          : AppColors.primaryMid;
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
                       label: Text(arus),
                       selected: isSelected,
-                      selectedColor: arus == 'Masuk'
-                          ? const Color(0xFF16A34A)
-                          : arus == 'Keluar'
-                              ? const Color(0xFFDC2626)
-                              : AppColors.primaryMid,
-                      backgroundColor: Colors.grey.shade100,
+                      selectedColor: activeColor,
+                      backgroundColor: const Color(0xFFF1F5F9),
                       labelStyle: GoogleFonts.inter(
-                        fontSize: 11,
+                        fontSize: 11.5,
                         fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                        color: isSelected ? Colors.white : AppColors.textDark,
+                        color: isSelected ? Colors.white : const Color(0xFF475569),
                       ),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(color: isSelected ? activeColor : Colors.transparent),
+                      ),
                       onSelected: (_) {
                         setState(() => _selectedArus = arus);
                         _fetchCashflow();
@@ -722,11 +768,18 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.account_balance_wallet_outlined, size: 48, color: Colors.grey),
-                                const SizedBox(height: 12),
-                                Text('Belum Ada Data Cashflow', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryMid.withValues(alpha: 0.08),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.account_balance_wallet_outlined, size: 48, color: AppColors.primaryMid),
+                                ),
+                                const SizedBox(height: 14),
+                                Text('Belum Ada Data Cashflow', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
                                 const SizedBox(height: 4),
-                                Text('Tekan tombol "+ Tambah Data" untuk mencatat pemasukan atau pengeluaran kas.', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted), textAlign: TextAlign.center),
+                                Text('Tekan tombol "+ Tambah Data" untuk mencatat pemasukan atau pengeluaran kas.', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted), textAlign: TextAlign.center),
                               ],
                             ),
                           ),
@@ -748,13 +801,13 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
                               final buktiUrl = _getImageUrl(item['bukti']);
 
                               return Container(
-                                margin: const EdgeInsets.only(bottom: 10),
+                                margin: const EdgeInsets.only(bottom: 12),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: Colors.grey.shade200),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
                                   boxShadow: [
-                                    BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 6, offset: const Offset(0, 2)),
+                                    BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
                                   ],
                                 ),
                                 child: Padding(
@@ -770,30 +823,39 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
                                             children: [
                                               const Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.textMuted),
                                               const SizedBox(width: 4),
-                                              Text(tglStr, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                                              Text(tglStr, style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textMuted, fontWeight: FontWeight.w500)),
                                             ],
                                           ),
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                             decoration: BoxDecoration(
-                                              color: isMasuk ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                                              color: isMasuk ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
                                               borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(color: isMasuk ? const Color(0xFFA7F3D0) : const Color(0xFFFECACA)),
                                             ),
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                Icon(isMasuk ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded, size: 11, color: isMasuk ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
+                                                Icon(
+                                                  isMasuk ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                                                  size: 12,
+                                                  color: isMasuk ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                                                ),
                                                 const SizedBox(width: 3),
                                                 Text(
                                                   isMasuk ? 'Masuk' : 'Keluar',
-                                                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: isMasuk ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 10.5,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: isMasuk ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                                                  ),
                                                 ),
                                               ],
                                             ),
                                           ),
                                         ],
                                       ),
-                                      const SizedBox(height: 8),
+                                      const SizedBox(height: 10),
 
                                       // Nominal & Kategori
                                       Row(
@@ -806,42 +868,34 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
                                               Text(
                                                 _formatRupiah(nominal),
                                                 style: GoogleFonts.inter(
-                                                  fontSize: 16,
+                                                  fontSize: 17,
                                                   fontWeight: FontWeight.bold,
                                                   color: isMasuk ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
                                                 ),
                                               ),
-                                              const SizedBox(height: 2),
+                                              const SizedBox(height: 4),
                                               Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                                 decoration: BoxDecoration(
-                                                  color: Colors.grey.shade100,
-                                                  borderRadius: BorderRadius.circular(4),
+                                                  color: const Color(0xFFF1F5F9),
+                                                  borderRadius: BorderRadius.circular(6),
                                                 ),
-                                                child: Text('Kategori: $kategori', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textDark, fontWeight: FontWeight.w500)),
+                                                child: Text(
+                                                  'Kategori: $kategori',
+                                                  style: GoogleFonts.inter(fontSize: 10.5, color: const Color(0xFF475569), fontWeight: FontWeight.w600),
+                                                ),
                                               ),
                                             ],
                                           ),
-                                          if (buktiUrl.isNotEmpty)
-                                            InkWell(
-                                              onTap: () => _showImageDialog(context, buktiUrl, 'Bukti Transaksi'),
-                                              child: Container(
-                                                padding: const EdgeInsets.all(6),
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.primaryMid.withValues(alpha: 0.1),
-                                                  borderRadius: BorderRadius.circular(8),
-                                                ),
-                                                child: const Icon(Icons.receipt_outlined, size: 18, color: AppColors.primaryMid),
-                                              ),
-                                            ),
                                         ],
                                       ),
 
-                                      const SizedBox(height: 8),
+                                      const SizedBox(height: 10),
 
                                       // Keterangan & Via
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                         decoration: BoxDecoration(
                                           color: const Color(0xFFF8FAFC),
                                           borderRadius: BorderRadius.circular(8),
@@ -851,40 +905,97 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
                                           children: [
                                             Expanded(
                                               child: Text(
-                                                keterangan,
-                                                style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark),
+                                                keterangan.isNotEmpty ? keterangan : '-',
+                                                style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF334155)),
                                                 maxLines: 2,
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
+                                            const SizedBox(width: 8),
                                             Text(
                                               'Via: $metode',
-                                              style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted, fontStyle: FontStyle.italic),
+                                              style: GoogleFonts.inter(fontSize: 10.5, color: AppColors.textMuted, fontStyle: FontStyle.italic, fontWeight: FontWeight.w500),
                                             ),
                                           ],
                                         ),
                                       ),
 
-                                      const SizedBox(height: 8),
+                                      const SizedBox(height: 10),
 
-                                      // Actions
+                                      // Bottom Actions: Bukti on Left, Edit/Hapus on Right
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.edit_outlined, size: 16, color: AppColors.primaryMid),
-                                            onPressed: () => _openCashflowForm(item: item),
-                                            padding: const EdgeInsets.all(4),
-                                            constraints: const BoxConstraints(),
-                                            tooltip: 'Edit',
-                                          ),
-                                          const SizedBox(width: 12),
-                                          IconButton(
-                                            icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
-                                            onPressed: () => _deleteCashflow(item['id']),
-                                            padding: const EdgeInsets.all(4),
-                                            constraints: const BoxConstraints(),
-                                            tooltip: 'Hapus',
+                                          // Left: Bukti Button
+                                          if (buktiUrl.isNotEmpty)
+                                            InkWell(
+                                              onTap: () => _showImageDialog(context, buktiUrl, 'Bukti Transaksi'),
+                                              borderRadius: BorderRadius.circular(8),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.primaryMid.withValues(alpha: 0.1),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  border: Border.all(color: AppColors.primaryMid.withValues(alpha: 0.2)),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    const Icon(Icons.receipt_long_rounded, size: 15, color: AppColors.primaryMid),
+                                                    const SizedBox(width: 5),
+                                                    Text(
+                                                      'Lihat Bukti',
+                                                      style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            )
+                                          else
+                                            const SizedBox.shrink(),
+
+                                          // Right: Edit & Hapus Buttons
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              InkWell(
+                                                onTap: () => _openCashflowForm(item: item),
+                                                borderRadius: BorderRadius.circular(8),
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.primaryMid.withValues(alpha: 0.08),
+                                                    borderRadius: BorderRadius.circular(8),
+                                                  ),
+                                                  child: Row(
+                                                    children: [
+                                                      const Icon(Icons.edit_outlined, size: 14, color: AppColors.primaryMid),
+                                                      const SizedBox(width: 4),
+                                                      Text('Edit', style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.primaryMid)),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              InkWell(
+                                                onTap: () => _deleteCashflow(item['id']),
+                                                borderRadius: BorderRadius.circular(8),
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.red.withValues(alpha: 0.08),
+                                                    borderRadius: BorderRadius.circular(8),
+                                                  ),
+                                                  child: Row(
+                                                    children: [
+                                                      const Icon(Icons.delete_outline, size: 14, color: Colors.red),
+                                                      const SizedBox(width: 4),
+                                                      Text('Hapus', style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: Colors.red)),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ],
                                       ),
@@ -906,29 +1017,32 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
     final totalPengajuan = _pengajuans.length;
     final pendingCount = _pengajuans.where((p) => (p['status'] ?? 'pending').toString().toLowerCase() == 'pending').length;
     final approvedCount = _pengajuans.where((p) => (p['status'] ?? '').toString().toLowerCase() == 'disetujui' || (p['status'] ?? '').toString().toLowerCase() == 'approved').length;
+    final rejectedCount = _pengajuans.where((p) => (p['status'] ?? '').toString().toLowerCase() == 'ditolak' || (p['status'] ?? '').toString().toLowerCase() == 'rejected').length;
 
     return Column(
       children: [
-        // Top KPI Mini Metrics
+        // Top KPI Clickable Filter Cards
         Container(
           color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           child: Column(
             children: [
               Row(
                 children: [
-                  _buildPengajuanStat('Total Pengajuan', '$totalPengajuan', AppColors.textDark, Colors.grey.shade100),
-                  const SizedBox(width: 8),
-                  _buildPengajuanStat('Pending', '$pendingCount', const Color(0xFFD97706), const Color(0xFFFEF3C7)),
-                  const SizedBox(width: 8),
-                  _buildPengajuanStat('Disetujui', '$approvedCount', const Color(0xFF16A34A), const Color(0xFFDCFCE7)),
+                  _buildPengajuanStat('Total', '$totalPengajuan', AppColors.primaryMid, const Color(0xFFF1F5F9), 'Semua'),
+                  const SizedBox(width: 6),
+                  _buildPengajuanStat('Pending', '$pendingCount', const Color(0xFFD97706), const Color(0xFFFEF3C7), 'Pending'),
+                  const SizedBox(width: 6),
+                  _buildPengajuanStat('Disetujui', '$approvedCount', const Color(0xFF16A34A), const Color(0xFFDCFCE7), 'Disetujui'),
+                  const SizedBox(width: 6),
+                  _buildPengajuanStat('Ditolak', '$rejectedCount', const Color(0xFFDC2626), const Color(0xFFFEE2E2), 'Ditolak'),
                 ],
               ),
               const SizedBox(height: 10),
 
               // Search Bar
               Container(
-                height: 40,
+                height: 42,
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(10),
@@ -939,8 +1053,8 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
                   style: GoogleFonts.inter(fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'Cari keterangan pengajuan...',
-                    hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 11),
-                    prefixIcon: const Icon(Icons.search, size: 16, color: Colors.grey),
+                    hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 12),
+                    prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
                     suffixIcon: _pengajuanSearchController.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear, size: 16, color: Colors.grey),
@@ -951,44 +1065,10 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
                           )
                         : null,
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
                   ),
                   onChanged: _onPengajuanSearchChanged,
                 ),
-              ),
-
-              const SizedBox(height: 8),
-
-              // Status Filter Chips
-              Row(
-                children: _pengajuanStatusFilters.map((s) {
-                  final isSelected = _selectedPengajuanStatus == s;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(s),
-                      selected: isSelected,
-                      selectedColor: s == 'Disetujui'
-                          ? const Color(0xFF16A34A)
-                          : s == 'Ditolak'
-                              ? const Color(0xFFDC2626)
-                              : s == 'Pending'
-                                  ? const Color(0xFFD97706)
-                                  : AppColors.primaryMid,
-                      backgroundColor: Colors.grey.shade100,
-                      labelStyle: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                        color: isSelected ? Colors.white : AppColors.textDark,
-                      ),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      onSelected: (_) {
-                        setState(() => _selectedPengajuanStatus = s);
-                        _fetchPengajuanKas();
-                      },
-                    ),
-                  );
-                }).toList(),
               ),
             ],
           ),
@@ -1025,11 +1105,18 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.monetization_on_outlined, size: 48, color: Colors.grey),
-                                const SizedBox(height: 12),
-                                Text('Belum Ada Pengajuan Kas', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryMid.withValues(alpha: 0.08),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.monetization_on_outlined, size: 48, color: AppColors.primaryMid),
+                                ),
+                                const SizedBox(height: 14),
+                                Text('Belum Ada Pengajuan Kas', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
                                 const SizedBox(height: 4),
-                                Text('Tekan tombol "+ Buat Pengajuan" untuk mengajukan permohonan uang kas ke Finance.', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted), textAlign: TextAlign.center),
+                                Text('Tekan tombol "+ Buat Pengajuan" untuk mengajukan permohonan uang kas ke Finance.', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted), textAlign: TextAlign.center),
                               ],
                             ),
                           ),
@@ -1054,22 +1141,25 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
 
                               Color statusColor = const Color(0xFFD97706);
                               String statusLabel = 'Pending';
+                              IconData statusIcon = Icons.access_time_rounded;
                               if (isApproved) {
                                 statusColor = const Color(0xFF16A34A);
                                 statusLabel = 'Disetujui';
+                                statusIcon = Icons.check_circle_outline_rounded;
                               } else if (isRejected) {
                                 statusColor = const Color(0xFFDC2626);
                                 statusLabel = 'Ditolak';
+                                statusIcon = Icons.highlight_off_rounded;
                               }
 
                               return Container(
-                                margin: const EdgeInsets.only(bottom: 10),
+                                margin: const EdgeInsets.only(bottom: 12),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: Colors.grey.shade200),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
                                   boxShadow: [
-                                    BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 6, offset: const Offset(0, 2)),
+                                    BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
                                   ],
                                 ),
                                 child: Padding(
@@ -1085,54 +1175,76 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
                                             children: [
                                               const Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.textMuted),
                                               const SizedBox(width: 4),
-                                              Text(tglStr, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                                              Text(tglStr, style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textMuted, fontWeight: FontWeight.w500)),
                                             ],
                                           ),
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                             decoration: BoxDecoration(
-                                              color: statusColor.withValues(alpha: 0.12),
+                                              color: statusColor.withValues(alpha: 0.1),
                                               borderRadius: BorderRadius.circular(6),
-                                            ),
-                                            child: Text(
-                                              statusLabel,
-                                              style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-
-                                      // Nominal
-                                      Text(
-                                        _formatRupiah(nominal),
-                                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                                      ),
-                                      const SizedBox(height: 4),
-
-                                      // Keterangan / Tujuan
-                                      Text(
-                                        keterangan,
-                                        style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark, height: 1.3),
-                                      ),
-
-                                      // Bukti Transfer (if approved)
-                                      if (buktiTransfer.isNotEmpty) ...[
-                                        const SizedBox(height: 8),
-                                        InkWell(
-                                          onTap: () => _showImageDialog(context, buktiTransfer, 'Bukti Transfer Finance'),
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFDCFCE7),
-                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(color: statusColor.withValues(alpha: 0.2)),
                                             ),
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                const Icon(Icons.receipt_long, size: 13, color: Color(0xFF16A34A)),
-                                                const SizedBox(width: 4),
-                                                Text('Lihat Bukti Transfer', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF16A34A))),
+                                                Icon(statusIcon, size: 12, color: statusColor),
+                                                const SizedBox(width: 3),
+                                                Text(
+                                                  statusLabel,
+                                                  style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.bold, color: statusColor),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+
+                                      // Nominal
+                                      Text(
+                                        _formatRupiah(nominal),
+                                        style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                      ),
+                                      const SizedBox(height: 6),
+
+                                      // Keterangan / Tujuan
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF8FAFC),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: const Border(left: BorderSide(color: AppColors.primaryMid, width: 3)),
+                                        ),
+                                        child: Text(
+                                          keterangan,
+                                          style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF334155), height: 1.35),
+                                        ),
+                                      ),
+
+                                      // Bukti Transfer (if approved)
+                                      if (buktiTransfer.isNotEmpty) ...[
+                                        const SizedBox(height: 10),
+                                        InkWell(
+                                          onTap: () => _showImageDialog(context, buktiTransfer, 'Bukti Transfer Finance'),
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFECFDF5),
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: const Color(0xFFA7F3D0)),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.receipt_long_rounded, size: 14, color: Color(0xFF16A34A)),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  'Lihat Bukti Transfer Finance',
+                                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF065F46)),
+                                                ),
                                               ],
                                             ),
                                           ),
@@ -1140,24 +1252,48 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
                                       ],
 
                                       if (isPending) ...[
-                                        const Divider(height: 16, color: Color(0xFFEEEEEE)),
+                                        const SizedBox(height: 10),
+                                        const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                                        const SizedBox(height: 8),
                                         Row(
                                           mainAxisAlignment: MainAxisAlignment.end,
                                           children: [
-                                            IconButton(
-                                              icon: const Icon(Icons.edit_outlined, size: 16, color: AppColors.primaryMid),
-                                              onPressed: () => _openPengajuanForm(item: item),
-                                              padding: const EdgeInsets.all(4),
-                                              constraints: const BoxConstraints(),
-                                              tooltip: 'Edit',
+                                            InkWell(
+                                              onTap: () => _openPengajuanForm(item: item),
+                                              borderRadius: BorderRadius.circular(6),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.primaryMid.withValues(alpha: 0.08),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    const Icon(Icons.edit_outlined, size: 13, color: AppColors.primaryMid),
+                                                    const SizedBox(width: 4),
+                                                    Text('Edit', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryMid)),
+                                                  ],
+                                                ),
+                                              ),
                                             ),
-                                            const SizedBox(width: 12),
-                                            IconButton(
-                                              icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
-                                              onPressed: () => _deletePengajuan(item['id']),
-                                              padding: const EdgeInsets.all(4),
-                                              constraints: const BoxConstraints(),
-                                              tooltip: 'Hapus',
+                                            const SizedBox(width: 8),
+                                            InkWell(
+                                              onTap: () => _deletePengajuan(item['id']),
+                                              borderRadius: BorderRadius.circular(6),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.red.withValues(alpha: 0.08),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    const Icon(Icons.delete_outline, size: 13, color: Colors.red),
+                                                    const SizedBox(width: 4),
+                                                    Text('Hapus', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.red)),
+                                                  ],
+                                                ),
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -1174,20 +1310,59 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildPengajuanStat(String label, String count, Color textColor, Color bgColor) {
+  Widget _buildPengajuanStat(String label, String count, Color textColor, Color bgColor, String filterKey) {
+    final isSelected = _selectedPengajuanStatus == filterKey;
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Column(
-          children: [
-            Text(label, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: textColor)),
-            const SizedBox(height: 2),
-            Text(count, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
-          ],
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            setState(() => _selectedPengajuanStatus = filterKey);
+            _fetchPengajuanKas();
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+            decoration: BoxDecoration(
+              color: isSelected ? textColor : bgColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected ? textColor : Colors.transparent,
+                width: 1.5,
+              ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: textColor.withValues(alpha: 0.3),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Column(
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                    color: isSelected ? Colors.white : textColor,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  count,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? Colors.white : textColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

@@ -810,101 +810,134 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                     BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, -2)),
                   ],
                 ),
-                child: Row(
-                  children: [
-                    OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                        side: const BorderSide(color: Color(0xFFCBD5E1)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      child: Text('Tutup', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF475569))),
-                    ),
-                    const SizedBox(width: 8),
-                    if (item['status'] == 'Menunggu' || item['status'] == 'Dibuat') ...[
-                      // Tolak Button
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _openApprovalDialog(item, 'Ditolak');
-                        },
-                        icon: const Icon(Icons.close_rounded, size: 14, color: Color(0xFFDC2626)),
-                        label: Text(
-                          'Tolak',
-                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626)),
+                child: Builder(
+                  builder: (context) {
+                    final isMenunggu = item['status'] == 'Menunggu' || item['status'] == 'Dibuat' || item['status'] == 'Pending';
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                    Row(
+                      children: [
+                        // 1. Cetak PDF Button
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _downloadOrPrintInvoice(item);
+                            },
+                            icon: const Icon(Icons.picture_as_pdf_rounded, size: 16, color: Colors.white),
+                            label: Text(
+                              'Cetak PDF',
+                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF16A34A),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
                         ),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
-                          side: const BorderSide(color: Color(0xFFFCA5A5)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Setujui & Terbitkan Button
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
+                        const SizedBox(width: 8),
+
+                        // 2. Share WA Button
+                        InkWell(
+                          onTap: () {
                             Navigator.pop(context);
-                            _openApprovalDialog(item, 'Disetujui');
+                            _shareToWhatsApp(item);
                           },
-                          icon: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
-                          label: Text(
-                            'Setujui & Terbitkan',
-                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF16A34A),
-                            padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                        ),
-                      ),
-                    ] else ...[
-                      // Download / Cetak PDF Button
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => _downloadOrPrintInvoice(item),
-                          icon: const Icon(Icons.download_rounded, size: 16, color: Colors.white),
-                          label: Text(
-                            'Download / Cetak',
-                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF16A34A),
-                            padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFF86EFAC)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.chat_rounded, size: 15, color: Color(0xFF16A34A)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Kirim WA',
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF15803D)),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
+                        // 3. Edit Data Button (Hanya Operasional / Admin)
+                        if (_isOperasionalOrAdmin) ...[
+                          const SizedBox(width: 8),
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _openForm(item);
+                            },
+                            icon: const Icon(Icons.edit_outlined, size: 15, color: AppColors.primaryMid),
+                            label: Text(
+                              'Edit',
+                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                              side: const BorderSide(color: AppColors.primaryMid),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    if (isMenunggu && _isOperasionalOrAdmin) ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _openApprovalDialog(item, 'Ditolak');
+                              },
+                              icon: const Icon(Icons.close_rounded, size: 14, color: Color(0xFFDC2626)),
+                              label: Text('Tolak Penawaran', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626))),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                side: const BorderSide(color: Color(0xFFFCA5A5)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _openApprovalDialog(item, 'Disetujui');
+                              },
+                              icon: const Icon(Icons.check_circle_outline_rounded, size: 15, color: Colors.white),
+                              label: Text('Setujui Penawaran', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0284C7),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                    const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _openForm(item);
-                      },
-                      icon: const Icon(Icons.edit_outlined, size: 15, color: AppColors.primaryMid),
-                      label: Text(
-                        'Edit Data',
-                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
-                        side: const BorderSide(color: AppColors.primaryMid),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    ),
                   ],
-                ),
-              ),
-            ],
+                );
+              },
+            ),
           ),
-        );
+        ],
+      ),
+    );
       },
     );
   }
@@ -994,6 +1027,7 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
                       Navigator.pop(context); // close dialog
                       final notes = noteController.text.trim();
                       
@@ -1008,7 +1042,7 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                       if (mounted) {
                         setState(() => _isLoading = false);
                         if (res['status'] == true) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          messenger.showSnackBar(
                             SnackBar(
                               content: Text(res['message'] ?? 'Status penawaran berhasil diperbarui'),
                               backgroundColor: isApprove ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
@@ -1016,7 +1050,7 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                           );
                           _fetchQuotations(page: 1);
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          messenger.showSnackBar(
                             SnackBar(content: Text(res['message'] ?? 'Gagal memproses penawaran'), backgroundColor: Colors.red),
                           );
                         }
@@ -1135,11 +1169,26 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
   Widget build(BuildContext context) {
     // Calculate stats
     final totalCount = _quotations.length;
-    final waitingCount = _quotations.where((q) => (q['status'] ?? '').toString().toLowerCase().contains('menunggu') || (q['status'] ?? '').toString().toLowerCase() == 'pending').length;
+    final waitingCount = _quotations.where((q) {
+      final s = (q['status'] ?? '').toString().toLowerCase();
+      return s.contains('menunggu') || s == 'pending' || s == 'dibuat';
+    }).length;
     final approvedCount = _quotations.where((q) => (q['status'] ?? '').toString().toLowerCase().contains('setuju')).length;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
+      floatingActionButton: !_isOperasionalOrAdmin
+          ? FloatingActionButton.extended(
+              onPressed: () => _openForm(),
+              backgroundColor: AppColors.primaryMid,
+              elevation: 4,
+              icon: const Icon(Icons.add_rounded, color: Colors.white),
+              label: Text(
+                'Buat Penawaran',
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
+              ),
+            )
+          : null,
       body: Column(
         children: [
           // Gradient Header
@@ -1576,26 +1625,78 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     child: Row(
                       children: [
-                        if (item['status'] == 'Menunggu' || item['status'] == 'Dibuat') ...[
-                          // Setujui Button
+                        // Cetak PDF Button (Labelled Pill)
+                        InkWell(
+                          onTap: () => _downloadOrPrintInvoice(item),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.picture_as_pdf_rounded, size: 13, color: Color(0xFF2563EB)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'PDF',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF1D4ED8)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+
+                        // WA Share Button (Labelled Pill)
+                        InkWell(
+                          onTap: () => _shareToWhatsApp(item),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFF86EFAC)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.chat_rounded, size: 13, color: Color(0xFF16A34A)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'WA',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF15803D)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (_isOperasionalOrAdmin) ...[
+                          const Spacer(),
+
+                          // Edit Button (Labelled Pill)
                           InkWell(
-                            onTap: () => _openApprovalDialog(item, 'Disetujui'),
+                            onTap: () => _openForm(item),
                             borderRadius: BorderRadius.circular(8),
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFDCFCE7),
+                                color: const Color(0xFFFFFBEB),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: const Color(0xFF86EFAC)),
+                                border: Border.all(color: const Color(0xFFFDE68A)),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.check_rounded, size: 14, color: Color(0xFF16A34A)),
+                                  const Icon(Icons.edit_outlined, size: 13, color: Color(0xFFD97706)),
                                   const SizedBox(width: 4),
                                   Text(
-                                    'Setujui',
-                                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF16A34A)),
+                                    'Edit',
+                                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFD97706)),
                                   ),
                                 ],
                               ),
@@ -1603,108 +1704,31 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                           ),
                           const SizedBox(width: 6),
 
-                          // Tolak Button
+                          // Hapus Button (Labelled Pill)
                           InkWell(
-                            onTap: () => _openApprovalDialog(item, 'Ditolak'),
+                            onTap: () => _deleteQuotation(item['id']),
                             borderRadius: BorderRadius.circular(8),
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFEE2E2),
+                                color: const Color(0xFFFEF2F2),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: const Color(0xFFFCA5A5)),
+                                border: Border.all(color: const Color(0xFFFECACA)),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.close_rounded, size: 14, color: Color(0xFFDC2626)),
+                                  const Icon(Icons.delete_outline_rounded, size: 13, color: Color(0xFFDC2626)),
                                   const SizedBox(width: 4),
                                   Text(
-                                    'Tolak',
+                                    'Hapus',
                                     style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626)),
                                   ),
                                 ],
                               ),
                             ),
                           ),
-                        ] else ...[
-                          // Cetak PDF Button
-                          InkWell(
-                            onTap: () => _downloadOrPrintInvoice(item),
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.blue.shade200),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.print_outlined, size: 14, color: Colors.blue),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Cetak PDF',
-                                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue.shade700),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
                         ],
-                        const Spacer(),
-
-                        // Edit Button (Labelled Pill)
-                        InkWell(
-                          onTap: () => _openForm(item),
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFFBEB),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFFDE68A)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.edit_outlined, size: 14, color: Color(0xFFD97706)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Edit',
-                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFD97706)),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-
-                        // Hapus Button (Labelled Pill)
-                        InkWell(
-                          onTap: () => _deleteQuotation(item['id']),
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFEF2F2),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFFECACA)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.delete_outline_rounded, size: 14, color: Color(0xFFDC2626)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Hapus',
-                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626)),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),

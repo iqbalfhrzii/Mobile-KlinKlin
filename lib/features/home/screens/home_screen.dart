@@ -25,6 +25,9 @@ import '../../operasional/screens/operasional_permintaan_design_screen.dart';
 import '../../pengadaan_barang/screens/pengadaan_barang_screen.dart';
 import '../../pembelian_bhp/screens/pembelian_bhp_screen.dart';
 import '../../uang_kas/screens/uang_kas_screen.dart';
+import '../../operasional/screens/operasional_quotation_screen.dart';
+import '../../konten_marketing/screens/konten_marketing_screen.dart';
+import '../../operasional/screens/operasional_pengumuman_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -69,75 +72,109 @@ class _HomeScreenState extends State<HomeScreen> {
         continue;
       }
 
-      bool isThisMonth = o.scheduleDateTime.year == now.year && o.scheduleDateTime.month == now.month;
+      bool isThisMonth = (o.scheduleDateTime.year == now.year && o.scheduleDateTime.month == now.month) ||
+          (o.tanggalInput.year == now.year && o.tanggalInput.month == now.month);
       if (isThisMonth) {
-        final int val = o.subtotal > 0 ? o.subtotal : o.total;
+        final int val = o.total > 0 ? o.total : o.subtotal;
         omzetBulan += val;
         countThisMonth++;
       }
     }
 
     setState(() {
-      if (_omzetStatusFilter != null) {
-        _omzetThisMonth = omzetBulan;
-        _rataRataOrder = countThisMonth > 0 ? (omzetBulan / countThisMonth).toDouble() : 0;
-      } else {
-        _omzetThisMonth = omzetBulan > 0 ? omzetBulan : (_dashboardData['omzet_bulan_ini'] ?? 0);
-        _rataRataOrder = countThisMonth > 0
-            ? (omzetBulan / countThisMonth).toDouble()
-            : (_dashboardData['rata_rata_order'] ?? 0).toDouble();
-      }
+      _omzetThisMonth = omzetBulan > 0
+          ? omzetBulan
+          : ((_omzetStatusFilter == null ? _dashboardData['omzet_bulan_ini'] : null) ?? 0);
+      _rataRataOrder = countThisMonth > 0
+          ? (omzetBulan / countThisMonth).toDouble()
+          : ((_omzetStatusFilter == null ? _dashboardData['rata_rata_order'] : null) ?? 0).toDouble();
     });
   }
+
   @override
   void initState() {
     super.initState();
-    _loadProfile();
     _loadStats();
     AuthService.profileUpdateNotifier.addListener(_loadProfile);
   }
 
   Future<void> _loadStats() async {
-    _loadProfile();
+    await _loadProfile();
     try {
       final dbData = await DashboardService().fetchCsDashboard();
-      final orders = await OrderService()
-          .fetchOrders(); // Only fetch for recent orders or we can leave it
+      final orders = await OrderService().fetchOrders(fetchAllPages: true);
 
       if (mounted) {
         _allOrders = orders;
         _dashboardData = dbData;
         
-        setState(() {
-          int omzetHari = 0;
-          int countToday = 0;
-          int waiting = 0;
-          int active = 0;
-          int done = 0;
-          final now = DateTime.now();
+        int omzetBulan = 0;
+        int countThisMonth = 0;
+        int omzetHari = 0;
+        int countToday = 0;
+        int waiting = 0;
+        int active = 0;
+        int done = 0;
+        final now = DateTime.now();
 
-          for (var o in orders) {
-            if (o.status == OrderStatus.cancelled ||
-                o.status == OrderStatus.draft) {
-              continue;
-            }
-            bool isToday =
-                o.scheduleDateTime.year == now.year &&
-                o.scheduleDateTime.month == now.month &&
-                o.scheduleDateTime.day == now.day;
+        for (var o in orders) {
+          if (o.status == OrderStatus.cancelled ||
+              o.status == OrderStatus.draft) {
+            continue;
+          }
 
-            final int val = o.subtotal > 0 ? o.subtotal : o.total;
-            if (isToday) {
-              omzetHari += val;
-              countToday++;
-              if (o.status == OrderStatus.completed) done++;
+          bool isThisMonth = (o.scheduleDateTime.year == now.year && o.scheduleDateTime.month == now.month) ||
+              (o.tanggalInput.year == now.year && o.tanggalInput.month == now.month);
+          
+          final int val = o.total > 0 ? o.total : o.subtotal;
+          
+          if (isThisMonth) {
+            if (_omzetStatusFilter == null || o.status == _omzetStatusFilter) {
+              omzetBulan += val;
+              countThisMonth++;
             }
-            if (o.status == OrderStatus.waitingPaymentApproval) waiting++;
-            if (o.status == OrderStatus.assigned ||
-                o.status == OrderStatus.inProgress) {
+          }
+
+          bool isToday =
+              (o.scheduleDateTime.year == now.year &&
+              o.scheduleDateTime.month == now.month &&
+              o.scheduleDateTime.day == now.day) ||
+              (o.tanggalInput.year == now.year &&
+              o.tanggalInput.month == now.month &&
+              o.tanggalInput.day == now.day);
+
+          final bool isDone = o.status == OrderStatus.completed ||
+              o.statusUtamaRaw?.toLowerCase() == 'done' ||
+              o.statusUtamaLabel.toLowerCase() == 'done';
+
+          final bool isActive = o.status == OrderStatus.assigned ||
+              o.status == OrderStatus.inProgress ||
+              o.statusUtamaRaw?.toLowerCase() == 'process' ||
+              o.statusUtamaLabel.toLowerCase() == 'process';
+
+          if (isToday) {
+            omzetHari += val;
+            countToday++;
+            if (isDone) {
+              done++;
+            } else if (isActive) {
               active++;
             }
           }
+
+          if (o.status == OrderStatus.waitingPaymentApproval ||
+              o.statusUtamaLabel.toLowerCase() == 'pending') {
+            waiting++;
+          }
+        }
+
+        setState(() {
+          _omzetThisMonth = omzetBulan > 0
+              ? omzetBulan
+              : ((_omzetStatusFilter == null ? dbData['omzet_bulan_ini'] : null) ?? 0);
+          _rataRataOrder = countThisMonth > 0
+              ? (omzetBulan / countThisMonth).toDouble()
+              : ((_omzetStatusFilter == null ? dbData['rata_rata_order'] : null) ?? 0).toDouble();
 
           _omzetToday = omzetHari > 0 || orders.isNotEmpty
               ? omzetHari
@@ -161,8 +198,6 @@ class _HomeScreenState extends State<HomeScreen> {
           _recentOrders = orders.take(3).toList();
           _isLoadingStats = false;
         });
-        
-        _calculateOmzetThisMonth();
       }
     } catch (e) {
       if (mounted) setState(() => _isLoadingStats = false);
@@ -225,17 +260,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          _buildStatCards(),
+                          const SizedBox(height: 14),
                           _buildOmzetCard(),
                           const SizedBox(height: 16),
                           _buildCsMenuGrid(),
                           const SizedBox(height: 16),
                           const ClosingRateDashboard(),
                           const SizedBox(height: 16),
-                          _buildStatCards(),
-                          const SizedBox(height: 16),
                           _buildGrafikHarian(),
                           const SizedBox(height: 16),
                           _buildGrafikBulanan(),
+                          const SizedBox(height: 16),
+                          _buildCapaianRankings(),
                           const SizedBox(height: 16),
                           _buildRecentOrders(),
                         ],
@@ -334,7 +371,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               const Spacer(),
-              _buildAvatar(),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const OperasionalPengumumanScreen()),
+                    ),
+                    icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 24),
+                    tooltip: 'Pengumuman & Notifikasi',
+                    padding: const EdgeInsets.all(6),
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildAvatar(),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -483,12 +536,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildStatCards() {
     final items = [
-      _Stat(
-        'Pesanan Hari Ini',
-        '$_ordersToday',
-        Icons.receipt_long_rounded,
-        AppColors.primaryMid,
-        hint: 'Total Order Hari Ini',
+      (
+        title: 'Hari Ini',
+        value: '$_ordersToday',
+        icon: Icons.receipt_long_rounded,
+        color: const Color(0xFF0284C7),
+        bgColor: const Color(0xFFE0F2FE),
         onTap: () {
           Navigator.push(
             context,
@@ -498,65 +551,112 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         },
       ),
-      _Stat(
-        'Pending',
-        '$_waiting',
-        Icons.hourglass_empty_rounded,
-        AppColors.statusPending,
-        hint: 'Payment Approval',
+      (
+        title: 'Dikerjakan',
+        value: '$_active',
+        icon: Icons.cleaning_services_rounded,
+        color: const Color(0xFF7C3AED),
+        bgColor: const Color(0xFFF3E8FF),
         onTap: () {
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => const OrderListScreen(
-                initialStatusFilter: 'waitingPaymentApproval',
+                isTodayOnly: true,
+                initialStatusFilter: 'inProgress',
               ),
             ),
           );
         },
       ),
-      _Stat(
-        'Dikerjakan',
-        '$_active',
-        Icons.cleaning_services_rounded,
-        AppColors.statusProgress,
-        hint: 'Process & Pending',
+      (
+        title: 'Selesai',
+        value: '$_doneToday',
+        icon: Icons.check_circle_rounded,
+        color: const Color(0xFF059669),
+        bgColor: const Color(0xFFECFDF5),
         onTap: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) =>
-                  const OrderListScreen(initialStatusFilter: 'inProgress'),
-            ),
-          );
-        },
-      ),
-      _Stat(
-        'Selesai',
-        '$_doneToday',
-        Icons.check_circle_rounded,
-        AppColors.statusDone,
-        hint: 'Status Done',
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) =>
-                  const OrderListScreen(initialStatusFilter: 'completed'),
+              builder: (_) => const OrderListScreen(
+                isTodayOnly: true,
+                initialStatusFilter: 'completed',
+              ),
             ),
           );
         },
       ),
     ];
 
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.4,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      children: items.map((s) => _StatCard(stat: s)).toList(),
+    return Row(
+      children: items.asMap().entries.map((entry) {
+        final idx = entry.key;
+        final item = entry.value;
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: idx == 0 ? 0 : 5,
+              right: idx == items.length - 1 ? 0 : 5,
+            ),
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              child: InkWell(
+                onTap: item.onTap,
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.02),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: item.bgColor,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(item.icon, size: 16, color: item.color),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        item.value,
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item.title,
+                        style: GoogleFonts.inter(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF64748B),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -1059,6 +1159,27 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPermintaanDesignScreen())),
       ),
       _MenuGridItem(
+        title: 'Penawaran',
+        icon: Icons.request_quote_outlined,
+        iconColor: const Color(0xFF0284C7),
+        bgColor: const Color(0xFFE0F2FE),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalQuotationScreen())),
+      ),
+      _MenuGridItem(
+        title: 'Konten Mktg',
+        icon: Icons.campaign_outlined,
+        iconColor: const Color(0xFF059669),
+        bgColor: const Color(0xFFECFDF5),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KontenMarketingScreen())),
+      ),
+      _MenuGridItem(
+        title: 'Pengumuman',
+        icon: Icons.notifications_active_outlined,
+        iconColor: const Color(0xFFD97706),
+        bgColor: const Color(0xFFFEF3C7),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPengumumanScreen())),
+      ),
+      _MenuGridItem(
         title: 'KPI CS',
         icon: Icons.analytics_outlined,
         iconColor: const Color(0xFFEA580C),
@@ -1125,16 +1246,17 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
             itemCount: menus.length,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 4,
-              mainAxisSpacing: 14,
+              mainAxisSpacing: 12,
               crossAxisSpacing: 8,
-              childAspectRatio: 0.76,
+              childAspectRatio: 0.82,
             ),
             itemBuilder: (context, index) {
               final item = menus[index];
@@ -1143,6 +1265,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 borderRadius: BorderRadius.circular(14),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     Container(
                       width: 50,
@@ -1381,6 +1504,646 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }),
       ],
+    );
+  }
+
+  Widget _buildCapaianRankings() {
+    final validOrders = _allOrders.where((o) =>
+        o.status != OrderStatus.cancelled && o.status != OrderStatus.draft).toList();
+
+    // 1. Top 5 Cleaner — jumlah order
+    final Map<String, int> cleanerCountMap = {};
+    for (var o in validOrders) {
+      for (var c in o.cleaners) {
+        final cName = c.name.trim();
+        if (cName.isNotEmpty && cName != '-') {
+          cleanerCountMap[cName] = (cleanerCountMap[cName] ?? 0) + 1;
+        }
+      }
+    }
+    final sortedCleaners = cleanerCountMap.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final topCleaners = sortedCleaners.take(5).toList();
+    final int maxCleanerCount = topCleaners.isNotEmpty ? topCleaners.first.value : 1;
+
+    // 2. Top 10 Layanan — omzet
+    final Map<String, int> serviceOmzetMap = {};
+    final Map<String, Map<String, Map<String, dynamic>>> serviceCustomersMap = {};
+    for (var o in validOrders) {
+      for (var s in o.services) {
+        final sName = s.name.trim();
+        if (sName.isEmpty) continue;
+        final int sVal = s.subtotal > 0 ? s.subtotal : s.price;
+        serviceOmzetMap[sName] = (serviceOmzetMap[sName] ?? 0) + sVal;
+
+        serviceCustomersMap.putIfAbsent(sName, () => {});
+        final custName = o.customer.name.trim().isNotEmpty ? o.customer.name.trim() : 'Customer';
+        if (!serviceCustomersMap[sName]!.containsKey(custName)) {
+          serviceCustomersMap[sName]![custName] = {
+            'nama_pelanggan': custName,
+            'frekuensi': 0,
+            'total_omzet': 0,
+          };
+        }
+        serviceCustomersMap[sName]![custName]!['frekuensi'] = (serviceCustomersMap[sName]![custName]!['frekuensi'] as int) + 1;
+        serviceCustomersMap[sName]![custName]!['total_omzet'] = (serviceCustomersMap[sName]![custName]!['total_omzet'] as int) + sVal;
+      }
+    }
+    final sortedServices = serviceOmzetMap.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final topServices = sortedServices.take(10).toList();
+    final int maxServiceOmzet = topServices.isNotEmpty ? topServices.first.value : 1;
+
+    // 3. Top 10 Alamat — jumlah order
+    final Map<String, int> addressCountMap = {};
+    for (var o in validOrders) {
+      final addr = o.customer.address.trim();
+      if (addr.isNotEmpty && addr != '-') {
+        addressCountMap[addr] = (addressCountMap[addr] ?? 0) + 1;
+      }
+    }
+    final sortedAddresses = addressCountMap.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final topAddresses = sortedAddresses.take(10).toList();
+    final int maxAddressCount = topAddresses.isNotEmpty ? topAddresses.first.value : 1;
+
+    // 4. Top 10 Customer — jumlah order
+    final Map<String, int> customerCountMap = {};
+    final Map<String, Map<String, Map<String, dynamic>>> customerServicesMap = {};
+    for (var o in validOrders) {
+      final custName = o.customer.name.trim();
+      if (custName.isNotEmpty && custName != '-') {
+        customerCountMap[custName] = (customerCountMap[custName] ?? 0) + 1;
+
+        customerServicesMap.putIfAbsent(custName, () => {});
+        for (var s in o.services) {
+          final sName = s.name.trim();
+          if (sName.isEmpty) continue;
+          final int sVal = s.subtotal > 0 ? s.subtotal : s.price;
+          if (!customerServicesMap[custName]!.containsKey(sName)) {
+            customerServicesMap[custName]![sName] = {
+              'nama_layanan': sName,
+              'frekuensi': 0,
+              'total_omzet': 0,
+            };
+          }
+          customerServicesMap[custName]![sName]!['frekuensi'] = (customerServicesMap[custName]![sName]!['frekuensi'] as int) + 1;
+          customerServicesMap[custName]![sName]!['total_omzet'] = (customerServicesMap[custName]![sName]!['total_omzet'] as int) + sVal;
+        }
+      }
+    }
+    final sortedCustomers = customerCountMap.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final topCustomers = sortedCustomers.take(10).toList();
+    final int maxCustomerCount = topCustomers.isNotEmpty ? topCustomers.first.value : 1;
+
+    return Column(
+      children: [
+        // Top 5 Cleaner
+        _buildRankingCard(
+          title: 'Top 5 Cleaner \u2014 jumlah order',
+          children: topCleaners.asMap().entries.map((e) {
+            final idx = e.key + 1;
+            final item = e.value;
+            return _buildRankingRow(
+              rank: idx,
+              label: item.key,
+              progress: maxCleanerCount > 0 ? item.value / maxCleanerCount : 0.0,
+              valueText: '${item.value} order',
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 16),
+
+        // Top 10 Layanan (Clickable for customer breakdown)
+        _buildRankingCard(
+          title: 'Top 10 Layanan \u2014 omzet',
+          trailingHeader: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.touch_app_rounded, size: 12, color: Color(0xFF2563EB)),
+                const SizedBox(width: 4),
+                Text(
+                  'Klik detail',
+                  style: GoogleFonts.inter(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF2563EB),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          children: topServices.asMap().entries.map((e) {
+            final idx = e.key + 1;
+            final item = e.value;
+            final customersList = (serviceCustomersMap[item.key]?.values.toList() ?? [])
+              ..sort((a, b) => (b['total_omzet'] as int).compareTo(a['total_omzet'] as int));
+            return _buildRankingRow(
+              rank: idx,
+              label: item.key,
+              progress: maxServiceOmzet > 0 ? item.value / maxServiceOmzet : 0.0,
+              valueText: _formatRupiah(item.value),
+              isClickable: true,
+              onTap: () => _showLayananDetailModal(item.key, customersList),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 16),
+
+        // Top 10 Alamat
+        _buildRankingCard(
+          title: 'Top 10 Alamat \u2014 jumlah order',
+          children: topAddresses.asMap().entries.map((e) {
+            final idx = e.key + 1;
+            final item = e.value;
+            return _buildRankingRow(
+              rank: idx,
+              label: item.key,
+              progress: maxAddressCount > 0 ? item.value / maxAddressCount : 0.0,
+              valueText: '${item.value} order',
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 16),
+
+        // Top 10 Customer (Clickable for service history)
+        _buildRankingCard(
+          title: 'Top 10 Customer \u2014 jumlah order',
+          trailingHeader: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.touch_app_rounded, size: 12, color: Color(0xFF2563EB)),
+                const SizedBox(width: 4),
+                Text(
+                  'Klik detail',
+                  style: GoogleFonts.inter(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF2563EB),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          children: topCustomers.asMap().entries.map((e) {
+            final idx = e.key + 1;
+            final item = e.value;
+            final servicesList = (customerServicesMap[item.key]?.values.toList() ?? [])
+              ..sort((a, b) => (b['total_omzet'] as int).compareTo(a['total_omzet'] as int));
+            return _buildRankingRow(
+              rank: idx,
+              label: item.key,
+              progress: maxCustomerCount > 0 ? item.value / maxCustomerCount : 0.0,
+              valueText: '${item.value} order',
+              isClickable: true,
+              onTap: () => _showCustomerDetailModal(item.key, servicesList),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRankingCard({
+    required String title,
+    required List<Widget> children,
+    Widget? trailingHeader,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [AppColors.cardShadow],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              if (trailingHeader != null) trailingHeader,
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (children.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Belum ada data.',
+                style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+              ),
+            )
+          else
+            ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRankingRow({
+    required int rank,
+    required String label,
+    required double progress,
+    required String valueText,
+    VoidCallback? onTap,
+    bool isClickable = false,
+  }) {
+    final rowContent = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          // Rank pill
+          Container(
+            width: 22,
+            height: 22,
+            decoration: const BoxDecoration(
+              color: Color(0xFFF1F5F9),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '$rank',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          // Label
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: isClickable ? const Color(0xFF0284C7) : AppColors.textDark,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 10),
+          // Progress bar
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress.clamp(0.02, 1.0),
+                minHeight: 7,
+                backgroundColor: const Color(0xFFF1F5F9),
+                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFD97706)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          // Value text
+          Text(
+            valueText,
+            style: GoogleFonts.inter(
+              fontSize: 11.5,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textDark,
+            ),
+          ),
+          if (isClickable) ...[
+            const SizedBox(width: 2),
+            const Icon(Icons.chevron_right_rounded, size: 14, color: Color(0xFF94A3B8)),
+          ],
+        ],
+      ),
+    );
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: rowContent,
+      );
+    }
+    return rowContent;
+  }
+
+  void _showLayananDetailModal(String serviceName, List<Map<String, dynamic>> customers) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.75,
+              maxWidth: 480,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 14, 14),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFA7F3D0)),
+                        ),
+                        child: const Icon(
+                          Icons.cleaning_services_rounded,
+                          color: Color(0xFF059669),
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              serviceName,
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textDark,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Daftar Customer',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+
+                // Customer List
+                Flexible(
+                  child: customers.isEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Center(
+                            child: Text(
+                              'Belum ada customer untuk layanan ini.',
+                              style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted),
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          padding: const EdgeInsets.all(16),
+                          itemCount: customers.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (context, idx) {
+                            final c = customers[idx];
+                            final totalVal = c['total_omzet'] as int? ?? 0;
+                            final count = c['frekuensi'] as int? ?? 0;
+                            return Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          c['nama_pelanggan'] ?? '-',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textDark,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          '$count kali pesan',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11.5,
+                                            color: AppColors.textMuted,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    _formatRupiah(totalVal),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF059669),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showCustomerDetailModal(String customerName, List<Map<String, dynamic>> services) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.75,
+              maxWidth: 480,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 14, 14),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                        ),
+                        child: const Icon(
+                          Icons.person_rounded,
+                          color: Color(0xFF2563EB),
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              customerName,
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textDark,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Riwayat Layanan',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+
+                // Services List
+                Flexible(
+                  child: services.isEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Center(
+                            child: Text(
+                              'Belum ada riwayat layanan untuk customer ini.',
+                              style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted),
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          padding: const EdgeInsets.all(16),
+                          itemCount: services.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (context, idx) {
+                            final s = services[idx];
+                            final totalVal = s['total_omzet'] as int? ?? 0;
+                            final count = s['frekuensi'] as int? ?? 0;
+                            return Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          s['nama_layanan'] ?? '-',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textDark,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          '$count kali dipesan',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11.5,
+                                            color: AppColors.textMuted,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    _formatRupiah(totalVal),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF059669),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

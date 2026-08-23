@@ -2,11 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/file_attachment_preview.dart';
-import '../../../core/api/api_client.dart';
 import '../services/operasional_permintaan_design_service.dart';
 import 'operasional_permintaan_design_form_sheet.dart';
 
@@ -510,12 +508,27 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
                           ),
                           if (lampiranDesigner != null && lampiranDesigner.trim().isNotEmpty) ...[
                             const SizedBox(height: 14),
+                            FileAttachmentPreview.buildAttachmentCard(
+                              context,
+                              filePath: lampiranDesigner,
+                              label: 'File Hasil Desain Final',
+                            ),
+                            const SizedBox(height: 10),
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton.icon(
-                                onPressed: () => _openUrl(lampiranDesigner),
-                                icon: const Icon(Icons.download_rounded, size: 18, color: Colors.white),
-                                label: Text('Unduh Hasil Desain', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
+                                onPressed: () {
+                                  FileAttachmentPreview.showPreview(
+                                    context,
+                                    filePath: lampiranDesigner,
+                                    title: 'Hasil Desain - ${data['judul'] ?? 'Desain'}',
+                                  );
+                                },
+                                icon: const Icon(Icons.photo_library_rounded, size: 18, color: Colors.white),
+                                label: Text(
+                                  'Lihat & Simpan Hasil Desain',
+                                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                                ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF16A34A),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -643,24 +656,6 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
         ],
       ),
     );
-  }
-
-  Future<void> _openUrl(String path) async {
-    String finalUrl = path;
-    if (!path.startsWith('http')) {
-      final baseUrl = ApiClient.baseUrl.replaceAll('/api', '');
-      final cleanPath = path.startsWith('/') ? path.substring(1) : path;
-      finalUrl = '$baseUrl/storage/$cleanPath';
-    }
-
-    final uri = Uri.parse(finalUrl);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tidak dapat membuka file lampiran')));
-      }
-    }
   }
 
   Future<void> _deleteRequest(int id) async {

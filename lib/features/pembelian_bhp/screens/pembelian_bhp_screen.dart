@@ -184,45 +184,222 @@ class _PembelianBhpScreenState extends State<PembelianBhpScreen> {
     );
   }
 
-  Future<void> _delete(int id) async {
-    final confirm = await showDialog<bool>(
+  void _openFilterSheet() {
+    int tempBulan = _selectedBulan;
+    int tempTahun = _selectedTahun;
+    int? tempCabangId = _selectedCabangId;
+
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Hapus Pembelian BHP?', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Text(
-          'Catatan pembelian ini akan dihapus. Jika barang ini sudah pernah tercatat dalam laporan Stok Opname, data tidak dapat dihapus.',
-          style: GoogleFonts.inter(fontSize: 13),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, elevation: 0),
-            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
-        ],
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_month_rounded, size: 20, color: AppColors.primaryMid),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Filter Periode & Cabang',
+                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          setModalState(() {
+                            tempBulan = DateTime.now().month;
+                            tempTahun = DateTime.now().year;
+                            if (_isOperasionalOrAdmin) {
+                              tempCabangId = null;
+                            }
+                          });
+                        },
+                        child: Text(
+                          'Bulan Ini',
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const Divider(height: 16),
+              Text(
+                'Pilih Tahun',
+                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _tahunList.map((t) {
+                  final isSel = tempTahun == t;
+                  return ChoiceChip(
+                    label: Text('$t'),
+                    selected: isSel,
+                    selectedColor: AppColors.primaryMid,
+                    backgroundColor: const Color(0xFFF1F5F9),
+                    labelStyle: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                      color: isSel ? Colors.white : AppColors.textDark,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: BorderSide(color: isSel ? AppColors.primaryMid : Colors.transparent),
+                    ),
+                    onSelected: (_) {
+                      setModalState(() => tempTahun = t);
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Pilih Bulan',
+                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 8,
+                children: List.generate(12, (index) {
+                  final monthNum = index + 1;
+                  final isSel = tempBulan == monthNum;
+                  final mName = _bulanNames[index];
+                  return ChoiceChip(
+                    label: Text(mName),
+                    selected: isSel,
+                    selectedColor: AppColors.primaryMid,
+                    backgroundColor: const Color(0xFFF1F5F9),
+                    labelStyle: GoogleFonts.inter(
+                      fontSize: 11.5,
+                      fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                      color: isSel ? Colors.white : AppColors.textDark,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: BorderSide(color: isSel ? AppColors.primaryMid : Colors.transparent),
+                    ),
+                    onSelected: (_) {
+                      setModalState(() => tempBulan = monthNum);
+                    },
+                  );
+                }),
+              ),
+              if (_isOperasionalOrAdmin && _cabangs.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text(
+                  'Cabang',
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('Semua Cabang'),
+                      selected: tempCabangId == null,
+                      selectedColor: AppColors.primaryMid,
+                      backgroundColor: const Color(0xFFF1F5F9),
+                      labelStyle: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: tempCabangId == null ? FontWeight.bold : FontWeight.w500,
+                        color: tempCabangId == null ? Colors.white : AppColors.textDark,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(color: tempCabangId == null ? AppColors.primaryMid : Colors.transparent),
+                      ),
+                      onSelected: (_) {
+                        setModalState(() => tempCabangId = null);
+                      },
+                    ),
+                    ..._cabangs.map((c) {
+                      final isSel = tempCabangId == c['id'];
+                      final cName = c['nama_cabang'] ?? c['nama'] ?? 'Cabang ${c['id']}';
+                      return ChoiceChip(
+                        label: Text(cName),
+                        selected: isSel,
+                        selectedColor: AppColors.primaryMid,
+                        backgroundColor: const Color(0xFFF1F5F9),
+                        labelStyle: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                          color: isSel ? Colors.white : AppColors.textDark,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: BorderSide(color: isSel ? AppColors.primaryMid : Colors.transparent),
+                        ),
+                        onSelected: (_) {
+                          setModalState(() => tempCabangId = c['id']);
+                        },
+                      );
+                    }),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    setState(() {
+                      _selectedBulan = tempBulan;
+                      _selectedTahun = tempTahun;
+                      _selectedCabangId = tempCabangId;
+                    });
+                    _fetchData(page: 1);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryMid,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Terapkan Filter',
+                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
-
-    if (confirm != true) return;
-    if (!mounted) return;
-
-    try {
-      await _service.deletePembelianBhp(id);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pembelian BHP berhasil dihapus'), backgroundColor: Colors.green),
-        );
-        _fetchData(page: 1);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
-        );
-      }
-    }
   }
 
   @override
@@ -232,6 +409,8 @@ class _PembelianBhpScreenState extends State<PembelianBhpScreen> {
     for (var p in _pembelians) {
       totalQty += double.tryParse((p['qty'] ?? 0).toString()) ?? 0;
     }
+
+    final isDefaultPeriod = _selectedBulan == DateTime.now().month && _selectedTahun == DateTime.now().year && (!_isOperasionalOrAdmin || _selectedCabangId == null);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -253,7 +432,7 @@ class _PembelianBhpScreenState extends State<PembelianBhpScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Barang Habis Pakai di bulan ini',
+                        'Barang Habis Pakai Cabang',
                         style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.85)),
                       ),
                     ],
@@ -268,147 +447,83 @@ class _PembelianBhpScreenState extends State<PembelianBhpScreen> {
             ),
           ),
 
-          // Filters & Search Box
+          // Search Bar & Filter Button Header Row
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: Column(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+            child: Row(
               children: [
-                // Month & Year Selector Row
-                Row(
-                  children: [
-                    // Bulan
-                    Expanded(
-                      flex: 3,
-                      child: Container(
-                        height: 42,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<int>(
-                            value: _selectedBulan,
-                            isExpanded: true,
-                            icon: const Icon(Icons.keyboard_arrow_down, size: 18),
-                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                            items: List.generate(12, (index) {
-                              return DropdownMenuItem(
-                                value: index + 1,
-                                child: Text('Bulan: ${_bulanNames[index]}'),
-                              );
-                            }),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() => _selectedBulan = val);
-                                _fetchData(page: 1);
-                              }
-                            },
-                          ),
-                        ),
-                      ),
+                // Search Input Box
+                Expanded(
+                  child: Container(
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade300),
                     ),
-                    const SizedBox(width: 8),
-
-                    // Tahun
-                    Expanded(
-                      flex: 2,
-                      child: Container(
-                        height: 42,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<int>(
-                            value: _selectedTahun,
-                            isExpanded: true,
-                            icon: const Icon(Icons.keyboard_arrow_down, size: 18),
-                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                            items: _tahunList.map((t) {
-                              return DropdownMenuItem(
-                                value: t,
-                                child: Text('Tahun: $t'),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() => _selectedTahun = val);
-                                _fetchData(page: 1);
-                              }
-                            },
-                          ),
-                        ),
+                    child: TextField(
+                      controller: _searchController,
+                      style: GoogleFonts.inter(fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: 'Cari Nama Item / Merk / Toko / Kode...',
+                        hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 11.5),
+                        prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 16, color: Colors.grey),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _fetchData(page: 1);
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 10),
                       ),
+                      onSubmitted: (_) => _fetchData(page: 1),
                     ),
-                  ],
+                  ),
                 ),
+                const SizedBox(width: 8),
 
-                const SizedBox(height: 10),
-
-                // Search Bar + Branch
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey.shade300),
+                // Compact Filter Button
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _openFilterSheet,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      height: 42,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: !isDefaultPeriod ? AppColors.primaryMid : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: !isDefaultPeriod ? AppColors.primaryMid : Colors.grey.shade300,
                         ),
-                        child: TextField(
-                          controller: _searchController,
-                          style: GoogleFonts.inter(fontSize: 13),
-                          decoration: InputDecoration(
-                            hintText: 'Cari Nama Item / Merk / Toko / Kode...',
-                            hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 11),
-                            prefixIcon: const Icon(Icons.search, size: 16, color: Colors.grey),
-                            suffixIcon: _searchController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear, size: 16, color: Colors.grey),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      _fetchData(page: 1);
-                                    },
-                                  )
-                                : null,
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.calendar_month_rounded,
+                            size: 16,
+                            color: !isDefaultPeriod ? Colors.white : AppColors.textDark,
                           ),
-                          onSubmitted: (_) => _fetchData(page: 1),
-                        ),
+                          const SizedBox(width: 5),
+                          Text(
+                            '${_bulanNames[_selectedBulan - 1].substring(0, 3)} $_selectedTahun',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: !isDefaultPeriod ? Colors.white : AppColors.textDark,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-
-                    if (!_isOperasionalOrAdmin && _userCabangId != null) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        height: 40,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryMid.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.primaryMid.withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.location_on, size: 14, color: AppColors.primaryMid),
-                            const SizedBox(width: 4),
-                            Text(
-                              _userCabangName.isNotEmpty ? _userCabangName : 'Cabang $_userCabangId',
-                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -459,7 +574,7 @@ class _PembelianBhpScreenState extends State<PembelianBhpScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('Total Qty', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF047857), fontWeight: FontWeight.w600)),
-                            Text('${totalQty % 1 == 0 ? totalQty.toInt() : totalQty} Unit', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF065F46))),
+                            Text('${totalQty % 1 == 0 ? totalQty.toInt() : totalQty} Unit', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF065F46)),),
                           ],
                         ),
                       ],
@@ -564,6 +679,7 @@ class _PembelianBhpScreenState extends State<PembelianBhpScreen> {
           final qty = item['qty'] ?? 1;
           final satuan = item['satuan'] ?? 'pcs';
           final photoUrl = _getImageUrl(item['foto_barang']);
+          final cabang = item['cabang']?['nama_cabang'] ?? item['cabang']?['nama'] ?? 'Surabaya';
 
           String tglStr = '-';
           if (item['tanggal_pembelian'] != null) {
@@ -578,179 +694,188 @@ class _PembelianBhpScreenState extends State<PembelianBhpScreen> {
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.grey.shade200),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Header Card: Tgl & Kode
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-                    border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryMid.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: AppColors.primaryMid.withValues(alpha: 0.2)),
-                        ),
-                        child: Text(
-                          kode,
-                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
-                        ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _showDetail(item),
+                borderRadius: BorderRadius.circular(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Header Card: Tgl & Kode
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                        border: const Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
                       ),
-                      const Spacer(),
-                      Row(
+                      child: Row(
                         children: [
-                          const Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.textMuted),
-                          const SizedBox(width: 4),
-                          Text(tglStr, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted, fontWeight: FontWeight.w500)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Body Card
-                Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Photo thumbnail
-                      if (photoUrl.isNotEmpty)
-                        Container(
-                          width: 60,
-                          height: 60,
-                          margin: const EdgeInsets.only(right: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(7),
-                            child: Image.network(
-                              photoUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Center(
-                                child: Icon(Icons.image_not_supported_outlined, size: 20, color: Colors.grey.shade400),
-                              ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryMid.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              kode,
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
                             ),
                           ),
-                        )
-                      else
-                        Container(
-                          width: 60,
-                          height: 60,
-                          margin: const EdgeInsets.only(right: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: const Center(
-                            child: Icon(Icons.shopping_bag_outlined, size: 24, color: AppColors.primaryMid),
-                          ),
-                        ),
-
-                      // Details
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              namaBarang,
-                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                            ),
-                            const SizedBox(height: 3),
-                            Row(
-                              children: [
-                                Text('Merk: ', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                                Text(merk, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Row(
-                              children: [
-                                const Icon(Icons.storefront_outlined, size: 12, color: AppColors.textMuted),
-                                const SizedBox(width: 4),
-                                Text(toko, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Qty Pill
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: Text(
-                          '$qty $satuan',
-                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const Divider(height: 1, color: Color(0xFFEEEEEE)),
-
-                // Actions Footer
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Row(
-                    children: [
-                      InkWell(
-                        onTap: () => _showDetail(item),
-                        borderRadius: BorderRadius.circular(6),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryMid.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
+                          const Spacer(),
+                          Row(
                             children: [
-                              const Icon(Icons.remove_red_eye_outlined, size: 14, color: AppColors.primaryMid),
+                              const Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.textMuted),
                               const SizedBox(width: 4),
-                              Text('Detail', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryMid)),
+                              Text(tglStr, style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textMuted, fontWeight: FontWeight.w500)),
                             ],
                           ),
-                        ),
+                        ],
                       ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                        onPressed: () => _delete(item['id']),
-                        padding: const EdgeInsets.all(4),
-                        constraints: const BoxConstraints(),
-                        tooltip: 'Hapus',
+                    ),
+
+                    // Body Card
+                    Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Photo thumbnail
+                          if (photoUrl.isNotEmpty)
+                            Container(
+                              width: 64,
+                              height: 64,
+                              margin: const EdgeInsets.only(right: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(9),
+                                child: Image.network(
+                                  photoUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Center(
+                                    child: Icon(Icons.image_not_supported_outlined, size: 20, color: Colors.grey.shade400),
+                                  ),
+                                ),
+                              ),
+                            )
+                          else
+                            Container(
+                              width: 64,
+                              height: 64,
+                              margin: const EdgeInsets.only(right: 12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: const Center(
+                                child: Icon(Icons.shopping_bag_outlined, size: 26, color: AppColors.primaryMid),
+                              ),
+                            ),
+
+                          // Details
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  namaBarang,
+                                  style: GoogleFonts.inter(fontSize: 14.5, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                ),
+                                const SizedBox(height: 3),
+                                Row(
+                                  children: [
+                                    Text('Merk: ', style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textMuted)),
+                                    Expanded(
+                                      child: Text(
+                                        merk,
+                                        style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: const Color(0xFF334155)),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 3),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.storefront_outlined, size: 13, color: AppColors.textMuted),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        toko,
+                                        style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textMuted),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Qty Pill
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: Text(
+                              '$qty $satuan',
+                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+
+                    // Card Footer (Cabang & Detail indicator)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+                        border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.location_on_outlined, size: 13, color: AppColors.textMuted),
+                              const SizedBox(width: 4),
+                              Text(cabang, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              Text('Detail', style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.bold, color: AppColors.primaryMid)),
+                              const SizedBox(width: 2),
+                              const Icon(Icons.chevron_right_rounded, size: 14, color: AppColors.primaryMid),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           );
         },

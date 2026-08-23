@@ -143,8 +143,10 @@ class _OperasionalRingkasanBarangScreenState extends State<OperasionalRingkasanB
             padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
             child: Row(
               children: [
-                const AppBackButton(),
-                const SizedBox(width: 14),
+                if (Navigator.canPop(context)) ...[
+                  const AppBackButton(),
+                  const SizedBox(width: 14),
+                ],
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

@@ -174,6 +174,32 @@ class AttendanceService {
     }
   }
 
+  Future<List<String>> getMyJadwalLiburs() async {
+    try {
+      final response = await _dio.get('/cleaner/rekan-kerja');
+      if (response.statusCode == 200) {
+        final data = response.data['data'] ?? {};
+        final List liburSaya = data['libur_saya'] ?? [];
+        return liburSaya
+            .map((e) => e['tanggal']?.toString() ?? '')
+            .where((s) => s.isNotEmpty)
+            .toList();
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  Future<List<Map<String, dynamic>>> getMyLeaves() async {
+    try {
+      final response = await _dio.get('/karyawan/pengajuan');
+      if (response.statusCode == 200) {
+        final List data = response.data['data'] ?? [];
+        return data.cast<Map<String, dynamic>>();
+      }
+    } catch (_) {}
+    return [];
+  }
+
   Future<String> getDeviceInfo() async {
     DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
     if (Platform.isAndroid) {

@@ -54,6 +54,21 @@ class StokOpnameService {
     }
   }
 
+  static Future<Map<String, dynamic>?> finishSession(int id) async {
+    try {
+      final response = await _dio.post('/stok-opname/$id/finish');
+      if (response.statusCode == 200) {
+        final resData = response.data;
+        if (resData['success'] == true) {
+          return resData['data'];
+        }
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<Map<String, dynamic>?> scanQr(String kodeQr) async {
     try {
       final response = await _dio.post('/stok-opname/scan', data: {'kode_qr': kodeQr});
@@ -83,7 +98,6 @@ class StokOpnameService {
 
   static Future<Map<String, dynamic>> submitBhpOpname(dynamic data) async {
     try {
-      // Endpoint /stok-opname/consumable or direct multipart submit
       final response = await _dio.post('/stok-opname/consumable', data: data);
       if (response.statusCode == 200 || response.statusCode == 201) {
         return {'success': response.data['success'] == true, 'message': response.data['message'] ?? 'Berhasil'};
@@ -112,6 +126,15 @@ class StokOpnameService {
       return [];
     } catch (_) {
       return [];
+    }
+  }
+
+  static Future<bool> deleteDetail(int id) async {
+    try {
+      final response = await _dio.delete('/stok-opname/detail/$id');
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
     }
   }
 }

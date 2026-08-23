@@ -6,7 +6,7 @@ import 'kantor_klinklin_screen.dart';
 import 'operasional_target_omzet_screen.dart';
 import 'operasional_permintaan_design_screen.dart';
 import 'operasional_pengumuman_screen.dart';
-
+import '../../konten_marketing/screens/konten_marketing_screen.dart';
 import '../../master_barang/screens/master_barang_screen.dart';
 
 class OperasionalPengaturanScreen extends StatelessWidget {
@@ -105,7 +105,6 @@ class OperasionalPengaturanScreen extends StatelessWidget {
                     );
                   },
                 ),
-                const SizedBox(height: 12),
                 _buildMenuCard(
                   context,
                   icon: Icons.campaign_rounded,
@@ -115,6 +114,19 @@ class OperasionalPengaturanScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => const OperasionalPengumumanScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                _buildMenuCard(
+                  context,
+                  icon: Icons.perm_media_outlined,
+                  title: 'Konten Marketing',
+                  subtitle: 'Materi promosi terbaru dari tim desain (Story, Promo, FollowUp).',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const KontenMarketingScreen()),
                     );
                   },
                 ),
