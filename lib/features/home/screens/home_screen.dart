@@ -8,6 +8,7 @@ import 'dart:io';
 import 'dart:convert';
 import '../../orders/screens/order_list_screen.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/api/api_client.dart';
 import '../../orders/screens/create_order_screen.dart';
 import '../../customers/screens/customer_list_screen.dart';
 import '../../orders/services/order_service.dart';
@@ -517,9 +518,10 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    final baseDomain = ApiClient.baseUrl.replaceAll(RegExp(r'/api/?$'), '');
     return ClipOval(
       child: Image.network(
-        'http://192.168.1.242:8000/storage/$_userPhoto',
+        '$baseDomain/storage/$_userPhoto',
         width: 48,
         height: 48,
         fit: BoxFit.cover,

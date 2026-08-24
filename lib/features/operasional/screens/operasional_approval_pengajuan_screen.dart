@@ -10,7 +10,8 @@ import '../../../core/api/api_client.dart';
 import '../services/operasional_approval_pengajuan_service.dart';
 
 class OperasionalApprovalPengajuanScreen extends StatefulWidget {
-  const OperasionalApprovalPengajuanScreen({super.key});
+  final int initialTabIndex;
+  const OperasionalApprovalPengajuanScreen({super.key, this.initialTabIndex = 0});
 
   @override
   State<OperasionalApprovalPengajuanScreen> createState() => _OperasionalApprovalPengajuanScreenState();
@@ -39,7 +40,11 @@ class _OperasionalApprovalPengajuanScreenState extends State<OperasionalApproval
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialTabIndex.clamp(0, 1),
+    );
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         _loadDataForCurrentTab();

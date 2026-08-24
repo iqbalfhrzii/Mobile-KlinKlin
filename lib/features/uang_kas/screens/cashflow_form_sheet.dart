@@ -30,20 +30,18 @@ class _CashflowFormSheetState extends State<CashflowFormSheet> {
   bool _isLoading = false;
 
   final _tanggalController = TextEditingController();
-  final _kategoriController = TextEditingController();
   final _nominalController = TextEditingController();
   final _keteranganController = TextEditingController();
 
   String _arus = 'Masuk';
   String _metode = 'cash';
+  String? _selectedKategori;
 
-  final List<String> _kategoriPresets = [
-    'Customer',
-    'Pengajuan Uang Kas',
+  final List<String> _kategoriOptions = [
+    'Chemical',
+    'Alat',
     'Operasional',
-    'BHP / Bahan',
-    'Transport / Bensin',
-    'Lainnya',
+    'Pengajuan Uang Kas',
   ];
 
   File? _fileBukti;
@@ -54,9 +52,19 @@ class _CashflowFormSheetState extends State<CashflowFormSheet> {
     super.initState();
     if (widget.item != null) {
       final i = widget.item;
-      _tanggalController.text = i['tanggal'] != null ? DateFormat('yyyy-MM-dd').format(DateTime.parse(i['tanggal'].toString())) : DateFormat('yyyy-MM-dd').format(DateTime.now());
+      _tanggalController.text = i['tanggal'] != null
+          ? DateFormat('yyyy-MM-dd').format(DateTime.parse(i['tanggal'].toString()))
+          : DateFormat('yyyy-MM-dd').format(DateTime.now());
       _arus = (i['arus'] ?? 'Masuk').toString().contains('Keluar') ? 'Keluar' : 'Masuk';
-      _kategoriController.text = i['kategori_kas'] ?? 'Customer';
+      final rawKat = i['kategori_kas']?.toString();
+      if (rawKat != null && rawKat.isNotEmpty && rawKat != '-' && rawKat.toLowerCase() != 'null') {
+        _selectedKategori = rawKat;
+        if (!_kategoriOptions.contains(rawKat)) {
+          _kategoriOptions.add(rawKat);
+        }
+      } else {
+        _selectedKategori = null;
+      }
       _nominalController.text = (i['nominal'] ?? '').toString();
       _metode = (i['metode'] ?? 'cash').toString().toLowerCase().contains('transfer') ? 'transfer' : 'cash';
       _keteranganController.text = i['keterangan'] ?? '';
@@ -65,14 +73,13 @@ class _CashflowFormSheetState extends State<CashflowFormSheet> {
       }
     } else {
       _tanggalController.text = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      _kategoriController.text = 'Customer';
+      _selectedKategori = null;
     }
   }
 
   @override
   void dispose() {
     _tanggalController.dispose();
-    _kategoriController.dispose();
     _nominalController.dispose();
     _keteranganController.dispose();
     super.dispose();
@@ -247,7 +254,7 @@ class _CashflowFormSheetState extends State<CashflowFormSheet> {
         'tanggal': _tanggalController.text,
         'cabang_id': widget.cabangId,
         'arus': _arus,
-        'kategori_kas': _kategoriController.text.trim().isNotEmpty ? _kategoriController.text.trim() : 'Umum',
+        'kategori_kas': _selectedKategori != null && _selectedKategori!.isNotEmpty ? _selectedKategori : null,
         'nominal': nominal,
         'metode': _metode,
         'keterangan': _keteranganController.text.trim().isNotEmpty ? _keteranganController.text.trim() : null,
@@ -521,33 +528,50 @@ class _CashflowFormSheetState extends State<CashflowFormSheet> {
 
                   const SizedBox(height: 16),
 
-                  // 4. Kategori Kas
-                  _buildLabel('Kategori Kas', required: true),
+                  // 4. Kategori Kas (Dropdown)
+                  _buildLabel('Kategori Kas'),
                   const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _kategoriPresets.map((kat) {
-                      final isSelected = _kategoriController.text == kat;
-                      return ChoiceChip(
-                        label: Text(kat),
-                        selected: isSelected,
-                        selectedColor: AppColors.primaryMid,
-                        backgroundColor: const Color(0xFFF1F5F9),
-                        labelStyle: GoogleFonts.inter(
-                          fontSize: 11.5,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                          color: isSelected ? Colors.white : const Color(0xFF475569),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String?>(
+                        value: _selectedKategori,
+                        isExpanded: true,
+                        hint: Text(
+                          'Pilih Kategori (Opsional)',
+                          style: GoogleFonts.inter(fontSize: 13, color: Colors.grey.shade500),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          side: BorderSide(color: isSelected ? AppColors.primaryMid : Colors.transparent),
-                        ),
-                        onSelected: (_) {
-                          setState(() => _kategoriController.text = kat);
+                        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
+                        items: [
+                          DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text(
+                              'Pilih Kategori (Opsional)',
+                              style: GoogleFonts.inter(fontSize: 13, color: Colors.grey.shade500),
+                            ),
+                          ),
+                          ..._kategoriOptions.map((kat) {
+                            return DropdownMenuItem<String?>(
+                              value: kat,
+                              child: Text(
+                                kat,
+                                style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, fontWeight: FontWeight.w500),
+                              ),
+                            );
+                          }),
+                        ],
+                        onChanged: (val) {
+                          setState(() {
+                            _selectedKategori = val;
+                          });
                         },
-                      );
-                    }).toList(),
+                      ),
+                    ),
                   ),
 
                   const SizedBox(height: 16),

@@ -15,8 +15,9 @@ import 'order_detail_screen.dart';
 import '../../customers/screens/add_customer_screen.dart';
 
 class CreateOrderScreen extends StatefulWidget {
-  const CreateOrderScreen({super.key, this.existingOrder});
+  const CreateOrderScreen({super.key, this.existingOrder, this.initialCustomer});
   final OrderModel? existingOrder;
+  final CustomerModel? initialCustomer;
 
   @override
   State<CreateOrderScreen> createState() => _CreateOrderScreenState();
@@ -58,6 +59,24 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       if (o.services.isNotEmpty) {
         _draft.tanggalPengerjaan = o.services.first.tanggalPengerjaan;
         _draft.waktuPengerjaan = o.services.first.waktuPengerjaan;
+      }
+    } else if (widget.initialCustomer != null) {
+      final c = widget.initialCustomer!;
+      _draft.customer = OrderCustomer(
+        id: c.id,
+        name: c.name,
+        phone: c.phone,
+        address: c.address,
+        area: '-',
+        notes: c.notes,
+      );
+      final isReturning = c.totalOrders > 0 || c.orders.isNotEmpty;
+      if (isReturning) {
+        _draft.tipeCustomer = CustomerType.lama;
+        _draft.chatDari = ChatSource.lama;
+      } else {
+        _draft.tipeCustomer = CustomerType.baru;
+        _draft.chatDari = ChatSource.organik;
       }
     }
   }

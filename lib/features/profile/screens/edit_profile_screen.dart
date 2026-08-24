@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
@@ -227,6 +228,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       return ClipOval(child: Image.file(File(_photoPath!), width: 100, height: 100, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: nameFallback, size: 100)));
     }
     
-    return ClipOval(child: Image.network('http://192.168.1.242:8000/storage/$_photoPath', width: 100, height: 100, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: nameFallback, size: 100)));
+    final baseDomain = ApiClient.baseUrl.replaceAll(RegExp(r'/api/?$'), '');
+    return ClipOval(child: Image.network('$baseDomain/storage/$_photoPath', width: 100, height: 100, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: nameFallback, size: 100)));
   }
 }

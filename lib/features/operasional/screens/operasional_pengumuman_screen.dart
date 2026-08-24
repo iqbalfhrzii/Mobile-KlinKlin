@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/file_attachment_preview.dart';
 import '../services/operasional_pengumuman_service.dart';
@@ -23,6 +24,16 @@ class _OperasionalPengumumanScreenState extends State<OperasionalPengumumanScree
   bool _isLoading = true;
   String _errorMessage = '';
   Timer? _debounce;
+  String _userRole = '';
+
+  bool get _canCreatePengumuman {
+    final r = _userRole.toLowerCase().trim();
+    if (r.isEmpty) return false;
+    if (r.contains('cleaner') || r.contains('customer service') || r == 'cs') {
+      return false;
+    }
+    return true;
+  }
 
   final Color _primaryEmerald = const Color(0xFF059669);
   final Color _lightEmerald = const Color(0xFFECFDF5);
@@ -36,7 +47,17 @@ class _OperasionalPengumumanScreenState extends State<OperasionalPengumumanScree
         _fetchPengumuman(page: 1);
       }
     });
-    _fetchPengumuman(page: 1);
+    _loadUserRole();
+  }
+
+  Future<void> _loadUserRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _userRole = prefs.getString('user_role') ?? '';
+      });
+      _fetchPengumuman(page: 1);
+    }
   }
 
   @override
@@ -60,7 +81,9 @@ class _OperasionalPengumumanScreenState extends State<OperasionalPengumumanScree
       _errorMessage = '';
     });
 
-    final currentTab = _tabController.index == 0 ? 'diterima' : 'dibuat';
+    final currentTab = !_canCreatePengumuman
+        ? 'diterima'
+        : (_tabController.index == 0 ? 'diterima' : 'dibuat');
     final res = await _service.getPengumuman(
       tab: currentTab,
       search: _searchController.text.trim(),
@@ -465,16 +488,18 @@ class _OperasionalPengumumanScreenState extends State<OperasionalPengumumanScree
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openForm,
-        backgroundColor: _primaryEmerald,
-        elevation: 4,
-        icon: const Icon(Icons.campaign_rounded, color: Colors.white, size: 22),
-        label: Text(
-          'Buat Pengumuman',
-          style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
-        ),
-      ),
+      floatingActionButton: _canCreatePengumuman
+          ? FloatingActionButton.extended(
+              onPressed: _openForm,
+              backgroundColor: _primaryEmerald,
+              elevation: 4,
+              icon: const Icon(Icons.campaign_rounded, color: Colors.white, size: 22),
+              label: Text(
+                'Buat Pengumuman',
+                style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
+              ),
+            )
+          : null,
       body: Column(
         children: [
           // Top Gradient Header
@@ -521,66 +546,67 @@ class _OperasionalPengumumanScreenState extends State<OperasionalPengumumanScree
             ),
           ),
 
-          // Friendly Segmented Tab Bar
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-            child: Container(
-              height: 44,
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: TabBar(
-                controller: _tabController,
-                indicator: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(9),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 1)),
+          // Friendly Segmented Tab Bar (Only for roles with creation rights)
+          if (_canCreatePengumuman)
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+              child: Container(
+                height: 44,
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  indicator: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(9),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 1)),
+                    ],
+                  ),
+                  labelColor: _primaryEmerald,
+                  unselectedLabelColor: const Color(0xFF64748B),
+                  labelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
+                  unselectedLabelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  dividerColor: Colors.transparent,
+                  dividerHeight: 0,
+                  labelPadding: EdgeInsets.zero,
+                  tabs: const [
+                    Tab(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.inbox_rounded, size: 16),
+                          SizedBox(width: 6),
+                          Text('Diterima'),
+                        ],
+                      ),
+                    ),
+                    Tab(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.send_rounded, size: 15),
+                          SizedBox(width: 6),
+                          Text('Dibuat'),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
-                labelColor: _primaryEmerald,
-                unselectedLabelColor: const Color(0xFF64748B),
-                labelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
-                unselectedLabelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
-                indicatorSize: TabBarIndicatorSize.tab,
-                dividerColor: Colors.transparent,
-                dividerHeight: 0,
-                labelPadding: EdgeInsets.zero,
-                tabs: const [
-                  Tab(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.inbox_rounded, size: 16),
-                        SizedBox(width: 6),
-                        Text('Diterima'),
-                      ],
-                    ),
-                  ),
-                  Tab(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.send_rounded, size: 15),
-                        SizedBox(width: 6),
-                        Text('Dibuat'),
-                      ],
-                    ),
-                  ),
-                ],
               ),
             ),
-          ),
 
           // Search Bar
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            padding: EdgeInsets.fromLTRB(16, _canCreatePengumuman ? 0 : 12, 16, 12),
             child: Container(
               height: 42,
               decoration: BoxDecoration(

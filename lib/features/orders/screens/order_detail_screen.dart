@@ -389,6 +389,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       _buildEmptyCleanerCard(o),
                     ],
                     const SizedBox(height: 12),
+                    _buildCleanerPhotosCard(o),
+                    const SizedBox(height: 12),
                     _buildPaymentCard(o),
                     if (o.notes.isNotEmpty) ...[
                       const SizedBox(height: 12),
@@ -1633,6 +1635,452 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         order: o,
         cleaner: cleaner,
         onBonusAdded: _fetchDetail,
+      ),
+    );
+  }
+
+  Widget _buildCleanerPhotosCard(OrderModel o) {
+    if (o.cleaners.isEmpty) return const SizedBox();
+
+    final int totalFotos = o.cleaners.fold(
+      0,
+      (sum, c) => sum + c.fotosStart.length + c.fotosFinish.length,
+    );
+
+    return _card(
+      title: 'Foto Pengerjaan Cleaner',
+      trailingAction: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+        decoration: BoxDecoration(
+          color: totalFotos > 0
+              ? const Color(0xFFECFDF5)
+              : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: totalFotos > 0
+                ? const Color(0xFFA7F3D0)
+                : const Color(0xFFE2E8F0),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.camera_alt_rounded,
+              size: 12,
+              color: totalFotos > 0
+                  ? const Color(0xFF059669)
+                  : const Color(0xFF64748B),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Total $totalFotos Foto',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: totalFotos > 0
+                    ? const Color(0xFF059669)
+                    : const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ...o.cleaners.map((c) {
+            final int cleanerFotosCount = c.fotosStart.length + c.fotosFinish.length;
+
+            return Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Cleaner header
+                  Row(
+                    children: [
+                      InitialsAvatar(
+                        name: c.name,
+                        size: 38,
+                        backgroundColor: const Color(0xFFEFF6FF),
+                        textColor: const Color(0xFF2563EB),
+                        borderColor: const Color(0xFFBFDBFE),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              c.name,
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF0F172A),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                Text(
+                                  'Status: ',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11.5,
+                                    color: const Color(0xFF64748B),
+                                  ),
+                                ),
+                                Text(
+                                  c.statusPengerjaan.label,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: c.statusPengerjaan == CleanerWorkStatus.finished
+                                        ? const Color(0xFF059669)
+                                        : (c.statusPengerjaan == CleanerWorkStatus.inProgress
+                                            ? const Color(0xFF2563EB)
+                                            : const Color(0xFFD97706)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (cleanerFotosCount > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '$cleanerFotosCount Foto',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF2563EB),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Divider(color: Color(0xFFF1F5F9), height: 1),
+                  const SizedBox(height: 12),
+
+                  // Section 1: Foto Mulai (Sebelum)
+                  _buildPhotoSection(
+                    title: 'Foto Mulai (Sebelum)',
+                    icon: Icons.play_circle_outline_rounded,
+                    accentColor: const Color(0xFF2563EB),
+                    bgColor: const Color(0xFFEFF6FF),
+                    timestamp: _formatPhotoDate(c.startedAt ?? (c.fotosStart.isNotEmpty ? c.fotosStart.first.createdAt : null)),
+                    photos: c.fotosStart,
+                    cleanerName: c.name,
+                    emptyText: 'Belum ada foto mulai',
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Section 2: Foto Selesai (Sesudah)
+                  _buildPhotoSection(
+                    title: 'Foto Selesai (Sesudah)',
+                    icon: Icons.check_circle_outline_rounded,
+                    accentColor: const Color(0xFF059669),
+                    bgColor: const Color(0xFFECFDF5),
+                    timestamp: _formatPhotoDate(c.finishedAt ?? (c.fotosFinish.isNotEmpty ? c.fotosFinish.first.createdAt : null)),
+                    photos: c.fotosFinish,
+                    cleanerName: c.name,
+                    emptyText: 'Belum ada foto selesai',
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhotoSection({
+    required String title,
+    required IconData icon,
+    required Color accentColor,
+    required Color bgColor,
+    required String timestamp,
+    required List<CleanerFoto> photos,
+    required String cleanerName,
+    required String emptyText,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: accentColor.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: 13, color: accentColor),
+                    const SizedBox(width: 5),
+                    Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: accentColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (timestamp != '-')
+                Text(
+                  timestamp,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: const Color(0xFF64748B),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (photos.isNotEmpty)
+            SizedBox(
+              height: 78,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: photos.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, idx) {
+                  final f = photos[idx];
+                  final photoUrl = _resolvePhotoUrl(f.url.isNotEmpty ? f.url : f.path);
+
+                  return GestureDetector(
+                    onTap: () => _showPhotoModal(
+                      context,
+                      photoUrl,
+                      '$title - $cleanerName (#${idx + 1})',
+                      timestamp,
+                    ),
+                    child: Container(
+                      width: 78,
+                      height: 78,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                        color: const Color(0xFFE2E8F0),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.network(
+                            photoUrl,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return const Center(
+                                child: SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) => const Center(
+                              child: Icon(Icons.broken_image_rounded, color: Color(0xFF94A3B8), size: 24),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 3,
+                            right: 3,
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.6),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.zoom_in_rounded, size: 12, color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                children: [
+                  const Icon(Icons.photo_outlined, size: 16, color: Color(0xFF94A3B8)),
+                  const SizedBox(width: 6),
+                  Text(
+                    emptyText,
+                    style: GoogleFonts.inter(
+                      fontSize: 11.5,
+                      color: const Color(0xFF94A3B8),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _resolvePhotoUrl(String rawPath) {
+    if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) {
+      return rawPath;
+    }
+    final cleanPath = rawPath.replaceFirst(RegExp(r'^/?storage/'), '');
+    final baseUrl = ApiClient.baseUrl.replaceAll(RegExp(r'/api/?$'), '');
+    return '$baseUrl/storage/$cleanPath';
+  }
+
+  String _formatPhotoDate(DateTime? dt) {
+    if (dt == null) return '-';
+    final months = [
+      '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+    ];
+    final day = dt.day.toString().padLeft(2, '0');
+    final month = months[dt.month];
+    final year = dt.year;
+    final hour = dt.hour.toString().padLeft(2, '0');
+    final minute = dt.minute.toString().padLeft(2, '0');
+    return '$day $month $year $hour:$minute';
+  }
+
+  void _showPhotoModal(BuildContext context, String imageUrl, String title, [String? timestamp]) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F172A),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                color: Colors.black.withValues(alpha: 0.5),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (timestamp != null && timestamp != '-') ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              timestamp,
+                              style: GoogleFonts.inter(
+                                color: Colors.white70,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: Colors.white, size: 22),
+                      onPressed: () => Navigator.pop(dialogCtx),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: InteractiveViewer(
+                  panEnabled: true,
+                  minScale: 0.8,
+                  maxScale: 4.0,
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        height: 300,
+                        alignment: Alignment.center,
+                        child: const CircularProgressIndicator(color: Colors.white),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      height: 200,
+                      alignment: Alignment.center,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.broken_image_rounded, color: Colors.white54, size: 48),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Gagal memuat gambar',
+                            style: GoogleFonts.inter(color: Colors.white70, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

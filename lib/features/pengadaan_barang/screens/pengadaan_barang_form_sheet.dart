@@ -39,9 +39,8 @@ class _PengadaanBarangFormSheetState extends State<PengadaanBarangFormSheet> {
   String _tingkatUrgensi = 'Rendah (Biasa)';
   final List<String> _urgensiOptions = [
     'Rendah (Biasa)',
-    'Sedang',
+    'Sedang (Menengah)',
     'Tinggi (Mendesak)',
-    'Darurat'
   ];
 
   String _satuan = 'Pcs';

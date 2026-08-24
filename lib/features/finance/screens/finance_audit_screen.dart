@@ -711,7 +711,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
 
         // Search & Filter Bar
         _buildProMaxSearchAndFilterBar(),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
 
         if (_approvalTableMode == 'pending')
           _buildPendingOrdersList(pendingAuditList)
@@ -1611,19 +1611,10 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
 
     return Column(
       children: [
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: displayedList.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final order = displayedList[index];
-            final orderNo = order.id.startsWith('SUR') || order.id.startsWith('BAL') || order.id.startsWith('DEN') || order.id.startsWith('MAL')
-                ? order.id
-                : 'Order #${order.id}';
-            return _buildProMaxOrderCard(order, isPending: true);
-          },
-        ),
+        ...displayedList.map((order) => Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: _buildProMaxOrderCard(order, isPending: true),
+        )),
         _buildLoadMoreButton(
           currentCount: displayedList.length,
           totalCount: totalCount,
@@ -1683,20 +1674,10 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
 
     return Column(
       children: [
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: displayedList.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder: (context, index) {
-            final order = displayedList[index];
-            final orderNo = order.id.startsWith('SUR') || order.id.startsWith('BAL') || order.id.startsWith('DEN') || order.id.startsWith('MAL')
-                ? order.id
-                : 'Order #${order.id}';
-
-            return _buildProMaxOrderCard(order, isPending: false);
-          },
-        ),
+        ...displayedList.map((order) => Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: _buildProMaxOrderCard(order, isPending: false),
+        )),
         _buildLoadMoreButton(
           currentCount: displayedList.length,
           totalCount: totalCount,
@@ -1710,7 +1691,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     final orderNo = order.nomorPesanan.isNotEmpty ? order.nomorPesanan : 'Order #${order.id}';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 2),
+      margin: EdgeInsets.zero,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -2701,7 +2682,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildProMaxSearchAndFilterBar(),
-        const SizedBox(height: 14),
+        const SizedBox(height: 4),
 
         _buildApproveEditList(editRequestsList),
       ],
@@ -2758,20 +2739,15 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
 
     return Column(
       children: [
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: displayedList.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final order = displayedList[index];
-            final orderNo = order.nomorPesanan.isNotEmpty ? order.nomorPesanan : 'Order #${order.id}';
-            final csName = order.createdByName.isNotEmpty ? order.createdByName : 'CS';
-            final alasanStr = order.alasanPengajuanEdit.isNotEmpty
-                ? order.alasanPengajuanEdit
-                : 'Pengajuan edit layanan';
+        ...displayedList.map((order) {
+          final csName = order.createdByName.isNotEmpty ? order.createdByName : 'CS';
+          final alasanStr = order.alasanPengajuanEdit.isNotEmpty
+              ? order.alasanPengajuanEdit
+              : 'Pengajuan edit layanan';
 
-            return _buildProMaxOrderCard(
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _buildProMaxOrderCard(
               order,
               customAction: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2850,9 +2826,9 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                   ),
                 ],
               ),
-            );
-          },
-        ),
+            ),
+          );
+        }),
         _buildLoadMoreButton(
           currentCount: displayedList.length,
           totalCount: totalCount,
@@ -3234,118 +3210,190 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
 
 
   void _showApproveEditConfirm(OrderModel order) {
+    bool isSubmitting = false;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Setujui Pengajuan Edit', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-        content: Text('Apakah Anda yakin ingin menyetujui pengajuan edit pesanan ${order.nomorPesanan}? Pesanan akan diizinkan untuk diedit ulang.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
+      barrierDismissible: false,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Setujui Pengajuan Edit',
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-              );
-              try {
-                final identifier = order.pengajuanEditId?.toString() ?? order.id;
-                await _financeService.approvePengajuanEdit(identifier, 'approved');
-                if (mounted) Navigator.pop(context);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Pengajuan edit berhasil disetujui! Status pesanan dikembalikan agar CS dapat mengedit ulang.'), backgroundColor: Color(0xFF059669)),
-                  );
-                  _fetchData();
-                }
-              } catch (e) {
-                if (mounted) Navigator.pop(context);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), foregroundColor: Colors.white),
-            child: const Text('Ya, Setujui'),
+          content: Text(
+            'Apakah Anda yakin ingin menyetujui pengajuan edit pesanan ${order.nomorPesanan}? Pesanan akan diizinkan untuk diedit ulang.',
+            style: GoogleFonts.inter(fontSize: 13),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(dialogCtx),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      setDialogState(() => isSubmitting = true);
+                      try {
+                        final identifier =
+                            order.pengajuanEditId?.toString() ?? order.id;
+                        await _financeService.approvePengajuanEdit(
+                          identifier,
+                          'approved',
+                        );
+                        if (!mounted) return;
+                        Navigator.pop(dialogCtx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Pengajuan edit berhasil disetujui! Status pesanan dikembalikan agar CS dapat mengedit ulang.',
+                            ),
+                            backgroundColor: Color(0xFF059669),
+                          ),
+                        );
+                        _fetchData();
+                      } catch (e) {
+                        setDialogState(() => isSubmitting = false);
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              e.toString().replaceAll('Exception: ', ''),
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF059669),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              ),
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Ya, Setujui'),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   void _showRejectEditModal(OrderModel order) {
     final reasonCtrl = TextEditingController();
+    bool isSubmitting = false;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Tolak Pengajuan Edit', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.red.shade700)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Masukkan alasan penolakan pengajuan edit ${order.nomorPesanan}:', style: GoogleFonts.inter(fontSize: 12)),
-            const SizedBox(height: 10),
-            TextField(
-              controller: reasonCtrl,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: 'Alasan penolakan...',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      barrierDismissible: false,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Tolak Pengajuan Edit',
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.bold,
+              color: Colors.red.shade700,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Masukkan alasan penolakan pengajuan edit ${order.nomorPesanan}:',
+                style: GoogleFonts.inter(fontSize: 12),
               ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: reasonCtrl,
+                maxLines: 3,
+                enabled: !isSubmitting,
+                decoration: InputDecoration(
+                  hintText: 'Alasan penolakan...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(dialogCtx),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final reason = reasonCtrl.text.trim();
+                      if (reason.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Alasan penolakan wajib diisi!'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+                      setDialogState(() => isSubmitting = true);
+                      try {
+                        final identifier =
+                            order.pengajuanEditId?.toString() ?? order.id;
+                        await _financeService.approvePengajuanEdit(
+                          identifier,
+                          'rejected',
+                          alasan: reason,
+                        );
+                        if (!mounted) return;
+                        Navigator.pop(dialogCtx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Pengajuan edit ditolak.'),
+                            backgroundColor: Color(0xFFDC2626),
+                          ),
+                        );
+                        _fetchData();
+                      } catch (e) {
+                        setDialogState(() => isSubmitting = false);
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              e.toString().replaceAll('Exception: ', ''),
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              ),
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Tolak'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final reason = reasonCtrl.text.trim();
-              if (reason.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Alasan penolakan wajib diisi!'), backgroundColor: Colors.red),
-                );
-                return;
-              }
-              Navigator.pop(context);
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-              );
-              try {
-                final identifier = order.pengajuanEditId?.toString() ?? order.id;
-                await _financeService.approvePengajuanEdit(identifier, 'rejected', alasan: reason);
-                if (mounted) Navigator.pop(context);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Pengajuan edit ditolak.'), backgroundColor: Color(0xFFDC2626)),
-                  );
-                  _fetchData();
-                }
-              } catch (e) {
-                if (mounted) Navigator.pop(context);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
-            child: const Text('Tolak'),
-          ),
-        ],
       ),
     );
   }
@@ -3358,7 +3406,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildProMaxSearchAndFilterBar(showStatusFilter: true),
-        const SizedBox(height: 14),
+        const SizedBox(height: 4),
 
         _buildEditOrderBebasList(),
       ],
@@ -3423,36 +3471,30 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
 
     return Column(
       children: [
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: displayedList.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final order = displayedList[index];
-            return _buildProMaxOrderCard(
-              order,
-              customAction: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () => _openFinanceEditOrderBebasModal(order),
-                    icon: const Icon(Icons.edit_note_rounded, size: 16),
-                    label: const Text('Edit Bebas'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0F52BA),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      elevation: 0,
-                      textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
+        ...displayedList.map((order) => Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: _buildProMaxOrderCard(
+            order,
+            customAction: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => _openFinanceEditOrderBebasModal(order),
+                  icon: const Icon(Icons.edit_note_rounded, size: 16),
+                  label: const Text('Edit Bebas'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F52BA),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                    textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
                   ),
-                ],
-              ),
-            );
-          },
-        ),
+                ),
+              ],
+            ),
+          ),
+        )),
         _buildLoadMoreButton(
           currentCount: displayedList.length,
           totalCount: totalCount,
@@ -3488,9 +3530,9 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildUnifiedCancelSummaryBar(totalCancelToday, totalCancelThisMonth),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
         _buildProMaxSearchAndFilterBar(),
-        const SizedBox(height: 14),
+        const SizedBox(height: 4),
 
         _buildHasilAuditList(cancelledOrders),
       ],
@@ -3544,19 +3586,13 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
 
     return Column(
       children: [
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: filtered.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final order = filtered[index];
-            final orderNo = order.nomorPesanan.isNotEmpty ? order.nomorPesanan : 'Order #${order.id}';
+        ...filtered.map((order) {
+          final csName = order.createdByName.isNotEmpty ? order.createdByName : 'Joko';
+          final dateStr = DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(order.waktuBatal ?? order.tanggalInput);
 
-            final csName = order.createdByName.isNotEmpty ? order.createdByName : 'Joko';
-            final dateStr = DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(order.waktuBatal ?? order.tanggalInput);
-
-            return _buildProMaxOrderCard(
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _buildProMaxOrderCard(
               order,
               customAction: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -3575,9 +3611,9 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                   ),
                 ],
               ),
-            );
-          },
-        ),
+            ),
+          );
+        }),
       ],
     );
   }
@@ -3999,7 +4035,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     );
   }
 
-  // --- Modal Edit Order Bebas (Finance Full Authority - Matching Screenshot 2) ---
+  // --- Modal Edit Order Bebas (Finance Full Authority - Mobile & User Friendly) ---
   void _openFinanceEditOrderBebasModal(OrderModel order) {
     String selectedCabang = order.customer.area.isNotEmpty ? order.customer.area.toUpperCase() : 'SURABAYA';
     String csName = order.createdByName.isNotEmpty ? order.createdByName : 'Joko';
@@ -4018,28 +4054,43 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
         builder: (context, setModalState) {
           // Compute Status Utama Live
           String liveStatusUtama = 'Process';
-          if (statusPengerjaan == 'Dibatalkan' || statusPembayaran == 'Dibatalkan' || order.status == OrderStatus.cancelled) {
+          Color statusUtamaColor = const Color(0xFFD97706);
+          Color statusUtamaBg = const Color(0xFFFEF3C7);
+          IconData statusUtamaIcon = Icons.hourglass_top_rounded;
+
+          if (statusPengerjaan == 'Dibatalkan' || statusPembayaran == 'Dibatalkan' || statusPembayaran == 'Ditolak' || order.status == OrderStatus.cancelled) {
             liveStatusUtama = 'Dibatalkan';
-          } else if ((statusPengerjaan == 'Selesai' || statusPengerjaan == 'Selesai Cleaner') && statusPembayaran == 'Disetujui' && statusBonus == 'Selesai') {
+            statusUtamaColor = const Color(0xFFDC2626);
+            statusUtamaBg = const Color(0xFFFEE2E2);
+            statusUtamaIcon = Icons.cancel_rounded;
+          } else if ((statusPengerjaan == 'Selesai' || statusPengerjaan == 'Selesai Cleaner') && (statusPembayaran == 'Disetujui' || statusPembayaran == 'Approved') && statusBonus == 'Selesai') {
             liveStatusUtama = 'Done';
+            statusUtamaColor = const Color(0xFF059669);
+            statusUtamaBg = const Color(0xFFDCFCE7);
+            statusUtamaIcon = Icons.check_circle_rounded;
           } else if (statusPengerjaan == 'Draft') {
             liveStatusUtama = 'Draft';
+            statusUtamaColor = const Color(0xFF64748B);
+            statusUtamaBg = const Color(0xFFF1F5F9);
+            statusUtamaIcon = Icons.edit_note_rounded;
           }
 
+          final orderDisplayId = order.nomorPesanan.isNotEmpty ? order.nomorPesanan : 'Order #${order.id}';
+
           return Container(
-            height: MediaQuery.of(context).size.height * 0.88,
+            height: MediaQuery.of(context).size.height * 0.90,
             decoration: const BoxDecoration(
               color: Color(0xFFF8FAFC),
               borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
               boxShadow: [
-                BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, -4)),
+                BoxShadow(color: Colors.black26, blurRadius: 25, offset: Offset(0, -5)),
               ],
             ),
             child: Column(
               children: [
-                // Header Content
+                // Header Bar
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -4050,30 +4101,39 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                           decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(3)),
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 12),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Expanded(
-                            child: Wrap(
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              spacing: 10,
-                              runSpacing: 6,
+                            child: Row(
                               children: [
-                                Text(
-                                  'Edit Pesanan #${order.id}',
-                                  style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                                Flexible(
+                                  child: Text(
+                                    'Edit $orderDisplayId',
+                                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
+                                const SizedBox(width: 8),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFE0E7FF),
-                                    borderRadius: BorderRadius.circular(12),
+                                    color: const Color(0xFFEEF2FF),
+                                    borderRadius: BorderRadius.circular(10),
                                     border: Border.all(color: const Color(0xFFC7D2FE)),
                                   ),
-                                  child: Text(
-                                    'Full Authority',
-                                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF4338CA)),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.security_rounded, size: 12, color: Color(0xFF4F46E5)),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Full Authority',
+                                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF4F46E5)),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
@@ -4081,51 +4141,68 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                           ),
                           IconButton(
                             onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.close_rounded, size: 22, color: AppColors.textMuted),
+                            icon: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.close_rounded, size: 16, color: Color(0xFF475569)),
+                            ),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 10),
 
-                      // Indigo Gradient Hero Card
+                      // Sleek Compact Notice Banner
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF4F46E5), Color(0xFF3730A3)],
+                            colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(14),
                           boxShadow: [
-                            BoxShadow(color: const Color(0xFF4F46E5).withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                            BoxShadow(color: const Color(0xFF1D4ED8).withValues(alpha: 0.25), blurRadius: 8, offset: const Offset(0, 3)),
                           ],
                         ),
-                        child: Column(
+                        child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.admin_panel_settings_rounded, size: 16, color: Colors.white),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'WEWENANG PENUH FINANCE',
-                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white.withValues(alpha: 0.9), letterSpacing: 0.8),
-                                ),
-                              ],
+                            Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.admin_panel_settings_rounded, size: 16, color: Colors.white),
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Anda dapat mengubah detail administrasi, pelanggan, cleaner, status pengerjaan/pembayaran/bonus, dan rincian layanan pesanan ini secara langsung.',
-                              style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.95), height: 1.4),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'WEWENANG PENUH FINANCE',
+                                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.5),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Ubah data administrasi, status pengerjaan, pembayaran, rincian layanan, dan bonus pesanan secara instan.',
+                                    style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.95), height: 1.3),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                     ],
                   ),
                 ),
@@ -4134,7 +4211,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                 Expanded(
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -4168,9 +4245,10 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Card 1: Informasi Administrasi (Persis Screenshot 2)
+                                // Card 1: Informasi Administrasi
                                 _buildFormCard(
                                   title: 'Informasi Administrasi',
+                                  icon: Icons.domain_rounded,
                                   child: Column(
                                     children: [
                                       Row(
@@ -4179,6 +4257,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                                             child: _buildFormDropdown(
                                               label: 'Cabang',
                                               value: selectedCabang,
+                                              icon: Icons.storefront_rounded,
                                               items: {
                                                 ...(_cabangs.isEmpty
                                                     ? [selectedCabang]
@@ -4194,6 +4273,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                                             child: _buildFormDropdown(
                                               label: 'CS Penginput',
                                               value: csName,
+                                              icon: Icons.support_agent_rounded,
                                               items: {
                                                 ...(availableKaryawans.isEmpty
                                                     ? [csName]
@@ -4209,19 +4289,22 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                                       const SizedBox(height: 10),
                                       _buildFormReadOnlyField(
                                         label: 'Tanggal & Waktu Input Order',
-                                        value: DateFormat('MM/dd/yyyy hh:mm a').format(order.tanggalInput),
+                                        value: DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(order.tanggalInput),
+                                        icon: Icons.calendar_today_rounded,
                                       ),
                                     ],
                                   ),
                                 ),
-                                const SizedBox(height: 14),
+                                const SizedBox(height: 12),
 
-                                // Card 2: Pelanggan (Persis Screenshot 1)
+                                // Card 2: Pelanggan
                                 _buildFormCard(
                                   title: 'Pelanggan',
+                                  icon: Icons.person_rounded,
                                   child: _buildFormDropdown(
-                                    label: 'Pelanggan',
+                                    label: 'Pilih Data Pelanggan',
                                     value: currentCustomerVal,
+                                    icon: Icons.badge_outlined,
                                     items: {
                                       ...(availableCustomers.isEmpty
                                           ? [currentCustomerVal]
@@ -4241,430 +4324,365 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                                     },
                                   ),
                                 ),
-                                const SizedBox(height: 14),
+                                const SizedBox(height: 12),
 
-                                // Card 3: Status Administratif (Persis Screenshot 1)
+                                // Card 3: Status Administratif (RESTRUCTURED FOR MOBILE: 2 ROWS NO OVERFLOW)
                                 _buildFormCard(
                                   title: 'Status Administratif',
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: _buildFormDropdown(
-                                          label: 'Status Pengerjaan',
-                                          value: statusPengerjaan,
-                                          items: {
-                                            'Draft',
-                                            'Assigned (Ditugaskan)',
-                                            'In Progress (Dikerjakan)',
-                                            'Finished by Cleaner',
-                                            'Waiting Payment Approval',
-                                            'Waiting Cancel Approval',
-                                            'Completed (Selesai)',
-                                            'Cancelled (Batal)',
-                                            statusPengerjaan
-                                          }.toList(),
-                                          onChanged: (v) => setModalState(() => statusPengerjaan = v!),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: _buildFormDropdown(
-                                          label: 'Status Pembayaran',
-                                          value: statusPembayaran,
-                                          items: {
-                                            'Belum Dibayar',
-                                            'Pending',
-                                            'Disetujui',
-                                            'Ditolak',
-                                            'Batal',
-                                            statusPembayaran
-                                          }.toList(),
-                                          onChanged: (v) => setModalState(() => statusPembayaran = v!),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: _buildFormDropdown(
-                                          label: 'Status Bonus',
-                                          value: statusBonus,
-                                          items: {
-                                            'Pending',
-                                            'Input',
-                                            'Selesai',
-                                            'Batal',
-                                            statusBonus
-                                          }.toList(),
-                                          onChanged: (v) => setModalState(() => statusBonus = v!),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 14),
-
-                                // Card 4: Penugasan Cleaner (Persis Screenshot 2)
-                                _buildFormCard(
-                                  title: 'Penugasan Cleaner',
+                                  icon: Icons.tune_rounded,
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        'Pilih cleaner yang ditugaskan untuk pesanan ini pada cabang terpilih.',
-                                        style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted),
+                                      // Row 1: Status Pengerjaan (Full Width)
+                                      _buildFormDropdown(
+                                        label: 'Status Pengerjaan Layanan',
+                                        value: statusPengerjaan,
+                                        icon: Icons.engineering_rounded,
+                                        items: {
+                                          'Draft',
+                                          'Assigned (Ditugaskan)',
+                                          'In Progress (Dikerjakan)',
+                                          'Finished by Cleaner',
+                                          'Waiting Payment Approval',
+                                          'Waiting Cancel Approval',
+                                          'Completed (Selesai)',
+                                          'Cancelled (Batal)',
+                                          statusPengerjaan
+                                        }.toList(),
+                                        onChanged: (v) => setModalState(() => statusPengerjaan = v!),
                                       ),
-                                      const SizedBox(height: 8),
-                                _buildFormDropdown(
-                                  label: 'Tambah Cleaner',
-                                  value: 'Pilih Cleaner...',
-                                  items: [
-                                    'Pilih Cleaner...',
-                                    ...(availableCleaners.isEmpty
-                                        ? order.cleaners.map((c) => c.name).toList()
-                                        : availableCleaners.map((k) => k.nama).toList())
-                                  ],
-                                  onChanged: (val) {
-                                    if (val != null && val != 'Pilih Cleaner...') {
-                                      setModalState(() {
-                                        if (!order.cleaners.any((c) => c.name == val)) {
-                                          order.cleaners.add(OrderCleaner(id: '1', pesananCleanerId: '1', name: val, rating: 5.0, statusPengerjaan: CleanerWorkStatus.finished, bonuses: []));
-                                        }
-                                      });
-                                    }
-                                  },
-                                ),
-                                if (order.cleaners.isNotEmpty) ...[
-                                  const SizedBox(height: 10),
-                                  Text('Cleaner Terpilih:', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                                  const SizedBox(height: 6),
-                                  Wrap(
-                                    spacing: 6,
-                                    runSpacing: 6,
-                                    children: order.cleaners.map((c) {
-                                      return InputChip(
-                                        label: Text(c.name, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
-                                        backgroundColor: AppColors.primary,
-                                        deleteIconColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-                                        onDeleted: () {
-                                          setModalState(() {
-                                            order.cleaners.remove(c);
-                                          });
-                                        },
-                                      );
-                                    }).toList(),
-                                  ),
-                                ],
-                              ],
-                            ),
-                        ),
-                        const SizedBox(height: 14),
+                                      const SizedBox(height: 10),
 
-                        // Card 5: Informasi Order (Persis Screenshot 2)
-                        _buildFormCard(
-                          title: 'Informasi Order',
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('Chat dari', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          children: ['Organik', 'Ads', 'Lama'].map((opt) {
-                                            final isSel = (opt.toLowerCase() == 'organik' && order.chatDari == ChatSource.organik) ||
-                                                (opt.toLowerCase() == 'ads' && order.chatDari == ChatSource.ads) ||
-                                                (opt.toLowerCase() == 'lama' && order.chatDari != ChatSource.organik && order.chatDari != ChatSource.ads);
-                                            return Expanded(
-                                              child: InkWell(
-                                                onTap: () => setModalState(() {
-                                                  if (opt.toLowerCase() == 'organik') order.chatDari = ChatSource.organik;
-                                                  else if (opt.toLowerCase() == 'ads') order.chatDari = ChatSource.ads;
-                                                }),
-                                                child: Container(
-                                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                                  margin: const EdgeInsets.only(right: 4),
-                                                  decoration: BoxDecoration(
-                                                    color: isSel ? AppColors.primary : Colors.grey.shade100,
-                                                    borderRadius: BorderRadius.circular(8),
-                                                  ),
-                                                  child: Center(
-                                                    child: Text(opt, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: isSel ? Colors.white : AppColors.textDark)),
-                                                  ),
-                                                ),
-                                              ),
-                                            );
-                                          }).toList(),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('Tipe customer', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          children: ['Lama', 'Baru'].map((opt) {
-                                            final isSel = opt == 'Lama';
-                                            return Expanded(
-                                              child: InkWell(
-                                                onTap: () => setModalState(() {}),
-                                                child: Container(
-                                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                                  margin: const EdgeInsets.only(right: 4),
-                                                  decoration: BoxDecoration(
-                                                    color: isSel ? AppColors.primary : Colors.grey.shade100,
-                                                    borderRadius: BorderRadius.circular(8),
-                                                  ),
-                                                  child: Center(
-                                                    child: Text(opt, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: isSel ? Colors.white : AppColors.textDark)),
-                                                  ),
-                                                ),
-                                              ),
-                                            );
-                                          }).toList(),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildFormReadOnlyField(
-                                      label: 'Tanggal Pengerjaan',
-                                      value: order.services.isNotEmpty ? order.services.first.tanggalPengerjaan : DateFormat('MM/dd/yyyy').format(DateTime.now()),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: _buildFormReadOnlyField(
-                                      label: 'Waktu Pengerjaan',
-                                      value: order.services.isNotEmpty ? order.services.first.waktuPengerjaan : '07:00 PM',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              TextField(
-                                controller: TextEditingController(text: order.notes),
-                                maxLines: 2,
-                                onChanged: (val) => order.notes = val,
-                                decoration: InputDecoration(
-                                  labelText: 'Keterangan Order',
-                                  hintText: 'Catatan tambahan mengenai order...',
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                  isDense: true,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-
-                        // Card 6: Rincian Keuangan & Pembayaran (Persis Screenshot 2)
-                        _buildFormCard(
-                          title: 'Rincian Keuangan & Pembayaran',
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildFormDropdown(
-                                      label: 'Metode Pembayaran',
-                                      value: order.paymentMethod.isNotEmpty && order.paymentMethod != 'Belum Dibayar (None)' ? order.paymentMethod : 'Belum Dibayar',
-                                      items: ['Belum Dibayar', 'Transfer BCA', 'Transfer Mandiri', 'Cash', 'transfer', 'qris', 'cash'],
-                                      onChanged: (v) => setModalState(() => order.paymentMethod = v == 'Belum Dibayar' ? '' : v!),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('Diskon (%)', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                                        const SizedBox(height: 4),
-                                        SizedBox(
-                                          height: 38,
-                                          child: TextField(
-                                            controller: TextEditingController(text: '${order.discount ?? 0}'),
-                                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
-                                            keyboardType: TextInputType.number,
-                                            onChanged: (val) => order.discount = int.tryParse(val) ?? 0,
-                                            decoration: InputDecoration(
-                                              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildFormDropdown(
-                                      label: 'PPN (%)',
-                                      value: (order.ppn ?? 0) > 0 ? '11%' : '0%',
-                                      items: ['0%', '11%'],
-                                      onChanged: (v) => setModalState(() => order.ppn = v!.contains('11') ? 11 : 0),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: _buildFormDropdown(
-                                      label: 'PPH (%)',
-                                      value: (order.pph ?? 0) > 0 ? '2%' : '0%',
-                                      items: ['0%', '2%'],
-                                      onChanged: (v) => setModalState(() => order.pph = v!.contains('2') ? 2 : 0),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-
-                        // Card 7: Detail Layanan (Persis Screenshot 5)
-                        _buildFormCard(
-                          title: 'Detail Layanan',
-                          action: OutlinedButton(
-                            onPressed: () {
-                              setModalState(() {
-                                final defaultLayananName = availableLayanans.isNotEmpty ? availableLayanans.first.namaLayanan : 'General Cleaning';
-                                order.services.add(ServiceItem(
-                                  name: defaultLayananName,
-                                  qty: '1',
-                                  price: 50000,
-                                ));
-                              });
-                            },
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-                              minimumSize: const Size(0, 26),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                              side: BorderSide(color: Colors.grey.shade300),
-                            ),
-                            child: Text('Tambah Baris', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textDark)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ...order.services.map((svc) => Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.grey.shade300),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      // Row 1: Dropdown full width
-                                      Container(
-                                        height: 38,
-                                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                                        decoration: BoxDecoration(
-                                          border: Border.all(color: Colors.grey.shade300),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: DropdownButtonHideUnderline(
-                                          child: DropdownButton<String>(
-                                            value: svc.name,
-                                            isExpanded: true,
-                                            icon: const Icon(Icons.keyboard_arrow_down, size: 16, color: AppColors.textMuted),
-                                            style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark),
-                                            items: {
-                                              ...(availableLayanans.isEmpty
-                                                  ? [svc.name]
-                                                  : availableLayanans.map((l) => l.namaLayanan)),
-                                              if (availableLayanans.isNotEmpty && !availableLayanans.any((l) => l.namaLayanan == svc.name))
-                                                svc.name
-                                            }.map((name) => DropdownMenuItem(value: name, child: Text(name, overflow: TextOverflow.ellipsis))).toList(),
-                                            onChanged: (v) {
-                                              if (v != null) {
-                                                setModalState(() => svc.name = v);
-                                              }
-                                            },
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      // Row 2: Qty, Price, Hapus
+                                      // Row 2: Status Pembayaran (50%) & Status Bonus (50%)
                                       Row(
                                         children: [
                                           Expanded(
-                                            flex: 1,
-                                            child: SizedBox(
-                                              height: 38,
-                                              child: TextField(
-                                                controller: TextEditingController(text: '${svc.qty}'),
-                                                style: GoogleFonts.inter(fontSize: 12),
-                                                keyboardType: TextInputType.number,
-                                                onChanged: (val) => svc.qty = val,
-                                                decoration: InputDecoration(
-                                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-                                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.primary)),
-                                                ),
+                                            child: _buildFormDropdown(
+                                              label: 'Status Pembayaran',
+                                              value: statusPembayaran,
+                                              icon: Icons.payments_outlined,
+                                              items: {
+                                                'Belum Dibayar',
+                                                'Pending',
+                                                'Disetujui',
+                                                'Ditolak',
+                                                'Batal',
+                                                statusPembayaran
+                                              }.toList(),
+                                              onChanged: (v) => setModalState(() => statusPembayaran = v!),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: _buildFormDropdown(
+                                              label: 'Status Bonus',
+                                              value: statusBonus,
+                                              icon: Icons.card_giftcard_rounded,
+                                              items: {
+                                                'Pending',
+                                                'Input',
+                                                'Selesai',
+                                                'Batal',
+                                                statusBonus
+                                              }.toList(),
+                                              onChanged: (v) => setModalState(() => statusBonus = v!),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+
+                                      // Live Status Utama Preview Badge
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: statusUtamaBg,
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(color: statusUtamaColor.withValues(alpha: 0.3)),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(statusUtamaIcon, size: 16, color: statusUtamaColor),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              'Kalkulasi Status Utama: ',
+                                              style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                                            ),
+                                            Text(
+                                              liveStatusUtama.toUpperCase(),
+                                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: statusUtamaColor),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+
+                                // Card 4: Penugasan Cleaner
+                                _buildFormCard(
+                                  title: 'Penugasan Cleaner',
+                                  icon: Icons.cleaning_services_rounded,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      _buildFormDropdown(
+                                        label: 'Tambah Cleaner Cabang Ini',
+                                        value: 'Pilih Cleaner...',
+                                        icon: Icons.person_add_alt_1_rounded,
+                                        items: [
+                                          'Pilih Cleaner...',
+                                          ...(availableCleaners.isEmpty
+                                              ? order.cleaners.map((c) => c.name).toList()
+                                              : availableCleaners.map((k) => k.nama).toList())
+                                        ],
+                                        onChanged: (val) {
+                                          if (val != null && val != 'Pilih Cleaner...') {
+                                            setModalState(() {
+                                              if (!order.cleaners.any((c) => c.name == val)) {
+                                                order.cleaners.add(OrderCleaner(id: DateTime.now().millisecondsSinceEpoch.toString(), pesananCleanerId: '1', name: val, rating: 5.0, statusPengerjaan: CleanerWorkStatus.finished, bonuses: []));
+                                              }
+                                            });
+                                          }
+                                        },
+                                      ),
+                                      if (order.cleaners.isNotEmpty) ...[
+                                        const SizedBox(height: 10),
+                                        Text('Cleaner Ditugaskan (${order.cleaners.length}):', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
+                                        const SizedBox(height: 6),
+                                        Wrap(
+                                          spacing: 6,
+                                          runSpacing: 6,
+                                          children: order.cleaners.map((c) {
+                                            return Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFEFF6FF),
+                                                borderRadius: BorderRadius.circular(10),
+                                                border: Border.all(color: const Color(0xFFBFDBFE)),
                                               ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.person_rounded, size: 14, color: Color(0xFF2563EB)),
+                                                  const SizedBox(width: 4),
+                                                  Text(c.name, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF1D4ED8))),
+                                                  const SizedBox(width: 6),
+                                                  InkWell(
+                                                    onTap: () {
+                                                      setModalState(() {
+                                                        order.cleaners.remove(c);
+                                                      });
+                                                    },
+                                                    child: Container(
+                                                      padding: const EdgeInsets.all(2),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.red.shade100,
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                      child: const Icon(Icons.close_rounded, size: 12, color: Color(0xFFDC2626)),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          }).toList(),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+
+                                // Card 5: Informasi Order
+                                _buildFormCard(
+                                  title: 'Informasi Order',
+                                  icon: Icons.info_outline_rounded,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text('Chat dari', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                                                const SizedBox(height: 4),
+                                                Row(
+                                                  children: ['Organik', 'Ads', 'Lama'].map((opt) {
+                                                    final isSel = (opt.toLowerCase() == 'organik' && order.chatDari == ChatSource.organik) ||
+                                                        (opt.toLowerCase() == 'ads' && order.chatDari == ChatSource.ads) ||
+                                                        (opt.toLowerCase() == 'lama' && order.chatDari != ChatSource.organik && order.chatDari != ChatSource.ads);
+                                                    return Expanded(
+                                                      child: InkWell(
+                                                        onTap: () => setModalState(() {
+                                                          if (opt.toLowerCase() == 'organik') {
+                                                            order.chatDari = ChatSource.organik;
+                                                          } else if (opt.toLowerCase() == 'ads') {
+                                                            order.chatDari = ChatSource.ads;
+                                                          }
+                                                        }),
+                                                        child: Container(
+                                                          padding: const EdgeInsets.symmetric(vertical: 8),
+                                                          margin: const EdgeInsets.only(right: 4),
+                                                          decoration: BoxDecoration(
+                                                            color: isSel ? const Color(0xFF2563EB) : const Color(0xFFF1F5F9),
+                                                            borderRadius: BorderRadius.circular(8),
+                                                            border: Border.all(color: isSel ? const Color(0xFF1D4ED8) : Colors.transparent),
+                                                          ),
+                                                          child: Center(
+                                                            child: Text(opt, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: isSel ? Colors.white : AppColors.textDark)),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    );
+                                                  }).toList(),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                           const SizedBox(width: 8),
                                           Expanded(
-                                            flex: 2,
-                                            child: SizedBox(
-                                              height: 38,
-                                              child: TextField(
-                                                controller: TextEditingController(text: NumberFormat('#,###', 'id_ID').format(svc.price)),
-                                                style: GoogleFonts.inter(fontSize: 12),
-                                                keyboardType: TextInputType.number,
-                                                onChanged: (val) {
-                                                  final parsed = int.tryParse(val.replaceAll('.', '').replaceAll(',', '')) ?? 0;
-                                                  svc.price = parsed;
-                                                },
-                                                decoration: InputDecoration(
-                                                  prefixText: 'Rp ',
-                                                  prefixStyle: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w600),
-                                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-                                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.primary)),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text('Tipe customer', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                                                const SizedBox(height: 4),
+                                                Row(
+                                                  children: ['Lama', 'Baru'].map((opt) {
+                                                    final isSel = opt == 'Lama';
+                                                    return Expanded(
+                                                      child: InkWell(
+                                                        onTap: () => setModalState(() {}),
+                                                        child: Container(
+                                                          padding: const EdgeInsets.symmetric(vertical: 8),
+                                                          margin: const EdgeInsets.only(right: 4),
+                                                          decoration: BoxDecoration(
+                                                            color: isSel ? const Color(0xFF2563EB) : const Color(0xFFF1F5F9),
+                                                            borderRadius: BorderRadius.circular(8),
+                                                            border: Border.all(color: isSel ? const Color(0xFF1D4ED8) : Colors.transparent),
+                                                          ),
+                                                          child: Center(
+                                                            child: Text(opt, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: isSel ? Colors.white : AppColors.textDark)),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    );
+                                                  }).toList(),
                                                 ),
-                                              ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: _buildFormReadOnlyField(
+                                              label: 'Tanggal Pengerjaan',
+                                              value: order.services.isNotEmpty ? order.services.first.tanggalPengerjaan : DateFormat('MM/dd/yyyy').format(DateTime.now()),
+                                              icon: Icons.event_rounded,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: _buildFormReadOnlyField(
+                                              label: 'Waktu Pengerjaan',
+                                              value: order.services.isNotEmpty ? order.services.first.waktuPengerjaan : '07:00 PM',
+                                              icon: Icons.access_time_rounded,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text('Keterangan Order', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                                      const SizedBox(height: 4),
+                                      TextField(
+                                        controller: TextEditingController(text: order.notes),
+                                        maxLines: 2,
+                                        onChanged: (val) => order.notes = val,
+                                        style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark),
+                                        decoration: InputDecoration(
+                                          hintText: 'Catatan tambahan mengenai order...',
+                                          hintStyle: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade400),
+                                          contentPadding: const EdgeInsets.all(10),
+                                          filled: true,
+                                          fillColor: const Color(0xFFF8FAFC),
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF4F46E5), width: 1.5)),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+
+                                // Card 6: Rincian Keuangan & Pembayaran
+                                _buildFormCard(
+                                  title: 'Rincian Keuangan & Pajak',
+                                  icon: Icons.account_balance_wallet_rounded,
+                                  child: Column(
+                                    children: [
+                                      _buildFormDropdown(
+                                        label: 'Metode Pembayaran',
+                                        value: order.paymentMethod.isNotEmpty && order.paymentMethod != 'Belum Dibayar (None)' ? order.paymentMethod : 'Belum Dibayar',
+                                        icon: Icons.payment_rounded,
+                                        items: ['Belum Dibayar', 'Transfer BCA', 'Transfer Mandiri', 'Cash', 'transfer', 'qris', 'cash'],
+                                        onChanged: (v) => setModalState(() => order.paymentMethod = v == 'Belum Dibayar' ? '' : v!),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text('Diskon (%)', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                                                const SizedBox(height: 4),
+                                                Container(
+                                                  height: 42,
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFFF8FAFC),
+                                                    borderRadius: BorderRadius.circular(10),
+                                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                                  ),
+                                                  child: TextField(
+                                                    controller: TextEditingController(text: '${order.discount ?? 0}'),
+                                                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700),
+                                                    keyboardType: TextInputType.number,
+                                                    onChanged: (val) => order.discount = int.tryParse(val) ?? 0,
+                                                    decoration: const InputDecoration(
+                                                      suffixText: '%',
+                                                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                                      border: InputBorder.none,
+                                                      isDense: true,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                           const SizedBox(width: 8),
-                                          InkWell(
-                                            onTap: order.services.length <= 1
-                                                ? null
-                                                : () => setModalState(() => order.services.remove(svc)),
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                              decoration: BoxDecoration(
-                                                color: order.services.length <= 1 ? Colors.grey.shade100 : Colors.red.shade50,
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: Icon(
-                                                Icons.delete_outline_rounded,
-                                                size: 18,
-                                                color: order.services.length <= 1 ? Colors.grey : Colors.red.shade600,
-                                              ),
+                                          Expanded(
+                                            child: _buildFormDropdown(
+                                              label: 'PPN',
+                                              value: (order.ppn ?? 0) > 0 ? '11%' : '0%',
+                                              items: ['0%', '11%'],
+                                              onChanged: (v) => setModalState(() => order.ppn = v!.contains('11') ? 11 : 0),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: _buildFormDropdown(
+                                              label: 'PPH',
+                                              value: (order.pph ?? 0) > 0 ? '2%' : '0%',
+                                              items: ['0%', '2%'],
+                                              onChanged: (v) => setModalState(() => order.pph = v!.contains('2') ? 2 : 0),
                                             ),
                                           ),
                                         ],
@@ -4672,302 +4690,474 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                                     ],
                                   ),
                                 ),
-                              )),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 14),
+                                const SizedBox(height: 12),
 
-                        // Card 8: Rincian Bonus Cleaner (Persis Screenshot 3)
-                        _buildFormCard(
-                          title: 'Rincian Bonus Cleaner',
-                          action: OutlinedButton(
-                            onPressed: order.cleaners.isEmpty ? null : () => _showTambahBonusManualModal(order, setModalState),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-                              minimumSize: const Size(0, 26),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                              side: BorderSide(color: order.cleaners.isEmpty ? Colors.grey.shade300 : AppColors.primary.withValues(alpha: 0.5)),
-                              backgroundColor: order.cleaners.isEmpty ? Colors.grey.shade100 : const Color(0xFFEFF6FF),
-                            ),
-                            child: Text('+ Tambah Bonus Manual', style: GoogleFonts.inter(fontSize: 10, color: order.cleaners.isEmpty ? Colors.grey : const Color(0xFF1D4ED8), fontWeight: FontWeight.bold)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: order.cleaners.isEmpty
-                                ? [
-                                    Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(10)),
-                                      child: Text(
-                                        'Belum ada cleaner yang ditugaskan.',
-                                        style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
-                                      ),
-                                    )
-                                  ]
-                                : order.cleaners.map((cleaner) {
-                                    return Container(
-                                      margin: const EdgeInsets.only(bottom: 8),
-                                      padding: const EdgeInsets.all(10),
+                                // Card 7: Detail Layanan
+                                _buildFormCard(
+                                  title: 'Detail Layanan',
+                                  icon: Icons.inventory_2_rounded,
+                                  action: InkWell(
+                                    onTap: () {
+                                      setModalState(() {
+                                        final defaultLayananName = availableLayanans.isNotEmpty ? availableLayanans.first.namaLayanan : 'General Cleaning';
+                                        order.services.add(ServiceItem(
+                                          name: defaultLayananName,
+                                          qty: '1',
+                                          price: 50000,
+                                        ));
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                       decoration: BoxDecoration(
-                                        color: Colors.white,
+                                        color: const Color(0xFFEEF2FF),
                                         borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: Colors.grey.shade300),
+                                        border: Border.all(color: const Color(0xFFC7D2FE)),
                                       ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          const Icon(Icons.add_rounded, size: 14, color: Color(0xFF4F46E5)),
+                                          const SizedBox(width: 4),
+                                          Text('Tambah Baris', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF4F46E5))),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      ...order.services.map((svc) => Padding(
+                                        padding: const EdgeInsets.only(bottom: 8),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(10),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                                          ),
+                                          child: Column(
                                             children: [
-                                              Text(
-                                                cleaner.name,
-                                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                                              ),
-                                              InkWell(
-                                                onTap: () => _showTambahBonusManualModal(order, setModalState, initialCleanerId: cleaner.id),
-                                                child: Text(
-                                                  '+ Tambah Bonus',
-                                                  style: GoogleFonts.inter(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600),
+                                              // Row 1: Dropdown full width
+                                              Container(
+                                                height: 40,
+                                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFF8FAFC),
+                                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                child: DropdownButtonHideUnderline(
+                                                  child: DropdownButton<String>(
+                                                    value: svc.name,
+                                                    isExpanded: true,
+                                                    icon: const Icon(Icons.keyboard_arrow_down, size: 16, color: AppColors.textMuted),
+                                                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                                                    items: {
+                                                      ...(availableLayanans.isEmpty
+                                                          ? [svc.name]
+                                                          : availableLayanans.map((l) => l.namaLayanan)),
+                                                      if (availableLayanans.isNotEmpty && !availableLayanans.any((l) => l.namaLayanan == svc.name))
+                                                        svc.name
+                                                    }.map((name) => DropdownMenuItem(value: name, child: Text(name, overflow: TextOverflow.ellipsis))).toList(),
+                                                    onChanged: (v) {
+                                                      if (v != null) {
+                                                        setModalState(() => svc.name = v);
+                                                      }
+                                                    },
+                                                  ),
                                                 ),
                                               ),
-                                            ],
-                                          ),
-                                          if (cleaner.bonuses.isEmpty) ...[
-                                            const SizedBox(height: 6),
-                                            Text('Belum ada bonus tercatat.', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted, fontStyle: FontStyle.italic)),
-                                          ] else ...[
-                                            const SizedBox(height: 8),
-                                            ...cleaner.bonuses.map((bonus) => Padding(
-                                              padding: const EdgeInsets.only(bottom: 6),
-                                              child: Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              const SizedBox(height: 8),
+                                              // Row 2: Qty, Price, Hapus
+                                              Row(
                                                 children: [
-                                                  Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(bonus.jenisBonus, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                                                      if (bonus.keterangan.isNotEmpty && bonus.keterangan != '-')
-                                                        Text(bonus.keterangan, style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-                                                    ],
-                                                  ),
-                                                  Row(
-                                                    children: [
-                                                      Text(NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(bonus.nominal), style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF059669))),
-                                                      const SizedBox(width: 8),
-                                                      InkWell(
-                                                        onTap: () {
-                                                          setModalState(() {
-                                                            cleaner.bonuses.remove(bonus);
-                                                          });
-                                                        },
-                                                        child: const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
+                                                  SizedBox(
+                                                    width: 65,
+                                                    height: 38,
+                                                    child: TextField(
+                                                      controller: TextEditingController(text: '${svc.qty}'),
+                                                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+                                                      keyboardType: TextInputType.number,
+                                                      textAlign: TextAlign.center,
+                                                      onChanged: (val) => svc.qty = val,
+                                                      decoration: InputDecoration(
+                                                        prefixText: 'x',
+                                                        contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+                                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF4F46E5))),
                                                       ),
-                                                    ],
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: SizedBox(
+                                                      height: 38,
+                                                      child: TextField(
+                                                        controller: TextEditingController(text: NumberFormat('#,###', 'id_ID').format(svc.price)),
+                                                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+                                                        keyboardType: TextInputType.number,
+                                                        onChanged: (val) {
+                                                          final parsed = int.tryParse(val.replaceAll('.', '').replaceAll(',', '')) ?? 0;
+                                                          svc.price = parsed;
+                                                        },
+                                                        decoration: InputDecoration(
+                                                          prefixText: 'Rp ',
+                                                          prefixStyle: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted, fontWeight: FontWeight.w600),
+                                                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF4F46E5))),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  InkWell(
+                                                    onTap: order.services.length <= 1
+                                                        ? null
+                                                        : () => setModalState(() => order.services.remove(svc)),
+                                                    child: Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                                      decoration: BoxDecoration(
+                                                        color: order.services.length <= 1 ? Colors.grey.shade100 : const Color(0xFFFEE2E2),
+                                                        borderRadius: BorderRadius.circular(8),
+                                                      ),
+                                                      child: Icon(
+                                                        Icons.delete_outline_rounded,
+                                                        size: 18,
+                                                        color: order.services.length <= 1 ? Colors.grey : const Color(0xFFDC2626),
+                                                      ),
+                                                    ),
                                                   ),
                                                 ],
                                               ),
-                                            )),
-                                          ],
-                                        ],
-                                      ),
-                                    );
-                                  }).toList(),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-
-                        // Card 9: Foto Pengerjaan Cleaner (Persis Screenshot 3)
-                        _buildFormCard(
-                          title: 'Foto Pengerjaan Cleaner',
-                          action: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFDCFCE7),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFF86EFAC)),
-                            ),
-                            child: Text(
-                              'Total ${order.cleaners.fold(0, (sum, c) => sum + c.fotosStart.length + c.fotosFinish.length)} Foto',
-                              style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF15803D)),
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (order.cleaners.isEmpty || order.cleaners.every((c) => c.fotosStart.isEmpty && c.fotosFinish.isEmpty))
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      const Icon(Icons.image_outlined, size: 48, color: AppColors.textMuted),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Belum ada foto pengerjaan',
-                                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Cleaner wajib mengunggah foto minimal 2 saat mulai dan 2 saat selesai pengerjaan melalui aplikasi mobile.',
-                                        style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted),
-                                        textAlign: TextAlign.center,
-                                      ),
+                                            ],
+                                          ),
+                                        ),
+                                      )),
                                     ],
                                   ),
-                                )
-                              else
-                                ...order.cleaners.map((c) => _buildCleanerPhotos(c)),
-                            ],
+                                ),
+                                const SizedBox(height: 12),
+
+                                // Card 8: Rincian Bonus Cleaner
+                                _buildFormCard(
+                                  title: 'Rincian Bonus Cleaner',
+                                  icon: Icons.stars_rounded,
+                                  action: InkWell(
+                                    onTap: order.cleaners.isEmpty ? null : () => _showTambahBonusManualModal(order, setModalState),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                      decoration: BoxDecoration(
+                                        color: order.cleaners.isEmpty ? Colors.grey.shade100 : const Color(0xFFEFF6FF),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: order.cleaners.isEmpty ? Colors.grey.shade300 : const Color(0xFFBFDBFE)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.add_circle_outline_rounded, size: 14, color: order.cleaners.isEmpty ? Colors.grey : const Color(0xFF2563EB)),
+                                          const SizedBox(width: 4),
+                                          Text('+ Bonus Manual', style: GoogleFonts.inter(fontSize: 11, color: order.cleaners.isEmpty ? Colors.grey : const Color(0xFF1D4ED8), fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: order.cleaners.isEmpty
+                                        ? [
+                                            Container(
+                                              width: double.infinity,
+                                              padding: const EdgeInsets.all(12),
+                                              decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(10)),
+                                              child: Text(
+                                                'Belum ada cleaner yang ditugaskan.',
+                                                style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                                              ),
+                                            )
+                                          ]
+                                        : order.cleaners.map((cleaner) {
+                                            return Container(
+                                              margin: const EdgeInsets.only(bottom: 8),
+                                              padding: const EdgeInsets.all(10),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius: BorderRadius.circular(10),
+                                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                    children: [
+                                                      Text(
+                                                        cleaner.name,
+                                                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                                                      ),
+                                                      InkWell(
+                                                        onTap: () => _showTambahBonusManualModal(order, setModalState, initialCleanerId: cleaner.id),
+                                                        child: Text(
+                                                          '+ Tambah Bonus',
+                                                          style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF2563EB), fontWeight: FontWeight.bold),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  if (cleaner.bonuses.isEmpty) ...[
+                                                    const SizedBox(height: 6),
+                                                    Text('Belum ada bonus tercatat.', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted, fontStyle: FontStyle.italic)),
+                                                  ] else ...[
+                                                    const SizedBox(height: 8),
+                                                    ...cleaner.bonuses.map((bonus) => Padding(
+                                                      padding: const EdgeInsets.only(bottom: 6),
+                                                      child: Row(
+                                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                        children: [
+                                                          Column(
+                                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                                            children: [
+                                                              Text(bonus.jenisBonus, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                                                              if (bonus.keterangan.isNotEmpty && bonus.keterangan != '-')
+                                                                Text(bonus.keterangan, style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
+                                                            ],
+                                                          ),
+                                                          Row(
+                                                            children: [
+                                                              Text(NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(bonus.nominal), style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF059669))),
+                                                              const SizedBox(width: 8),
+                                                              InkWell(
+                                                                onTap: () {
+                                                                  setModalState(() {
+                                                                    cleaner.bonuses.remove(bonus);
+                                                                  });
+                                                                },
+                                                                child: const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    )),
+                                                  ],
+                                                ],
+                                              ),
+                                            );
+                                          }).toList(),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+
+                                // Card 9: Foto Pengerjaan Cleaner
+                                _buildFormCard(
+                                  title: 'Foto Pengerjaan Cleaner',
+                                  icon: Icons.photo_library_rounded,
+                                  action: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFDCFCE7),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: const Color(0xFF86EFAC)),
+                                    ),
+                                    child: Text(
+                                      'Total ${order.cleaners.fold(0, (sum, c) => sum + c.fotosStart.length + c.fotosFinish.length)} Foto',
+                                      style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF15803D)),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (order.cleaners.isEmpty || order.cleaners.every((c) => c.fotosStart.isEmpty && c.fotosFinish.isEmpty))
+                                        Container(
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF8FAFC),
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                                          ),
+                                          child: Column(
+                                            children: [
+                                              const Icon(Icons.image_outlined, size: 36, color: AppColors.textMuted),
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                'Belum ada foto pengerjaan',
+                                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                'Cleaner wajib mengunggah foto mulai dan selesai pengerjaan melalui aplikasi mobile.',
+                                                style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      else
+                                        ...order.cleaners.map((c) => _buildCleanerPhotos(c)),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                              ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Sticky Bottom Action Bar
+                Container(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 12, offset: const Offset(0, -4)),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            backgroundColor: Colors.white,
+                          ),
+                          child: Text('Batal', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF64748B))),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+                            );
+
+                            String backendStatusPesanan = 'assigned';
+                            if (liveStatusUtama == 'Done') {
+                              backendStatusPesanan = 'completed';
+                            } else if (liveStatusUtama == 'Dibatalkan') {
+                              backendStatusPesanan = 'cancelled';
+                            } else if (liveStatusUtama == 'Draft') {
+                              backendStatusPesanan = 'draft';
+                            } else if (statusPengerjaan == 'In Progress (Dikerjakan)') {
+                              backendStatusPesanan = 'in_progress';
+                            } else if (statusPengerjaan == 'Finished by Cleaner') {
+                              backendStatusPesanan = 'finished_by_cleaner';
+                            } else if (statusPengerjaan == 'Waiting Payment Approval') {
+                              backendStatusPesanan = 'waiting_payment_approval';
+                            } else if (statusPengerjaan == 'Waiting Cancel Approval') {
+                              backendStatusPesanan = 'waiting_cancel_approval';
+                            }
+
+                            String backendStatusPembayaran = 'pending';
+                            if (statusPembayaran == 'Approved (Disetujui)' || statusPembayaran == 'Disetujui') {
+                              backendStatusPembayaran = 'approved';
+                            } else if (statusPembayaran == 'Rejected (Ditolak)' || statusPembayaran == 'Ditolak') {
+                              backendStatusPembayaran = 'rejected';
+                            } else if (statusPembayaran == 'Cancelled (Batal)' || statusPembayaran == 'Dibatalkan') {
+                              backendStatusPembayaran = 'cancelled';
+                            } else if (statusPembayaran == 'Belum Dibayar') {
+                              backendStatusPembayaran = 'belum_dibayar';
+                            }
+
+                            String backendStatusBonus = 'pending';
+                            if (statusBonus == 'Input') {
+                              backendStatusBonus = 'input';
+                            } else if (statusBonus == 'Selesai') {
+                              backendStatusBonus = 'selesai';
+                            } else if (statusBonus == 'Cancelled (Batal)') {
+                              backendStatusBonus = 'cancelled';
+                            }
+
+                            final data = {
+                              'pelanggan_name': customerNameCtrl.text.trim(),
+                              'pelanggan_phone': customerPhoneCtrl.text.trim(),
+                              'cabang_name': selectedCabang,
+                              'cs_name': csName,
+                              'status_pesanan': backendStatusPesanan,
+                              'status_pembayaran': backendStatusPembayaran,
+                              'status_bonus': backendStatusBonus,
+                              'metode_pembayaran': ['cash', 'transfer', 'qris'].contains(order.paymentMethod) ? order.paymentMethod : 'transfer',
+                              'diskon_persen': order.discount ?? 0,
+                              'ppn': order.ppn ?? 0,
+                              'pph': order.pph ?? 0,
+                              'keterangan_order': order.notes,
+                              'chat_dari': order.chatDari == ChatSource.organik ? 'organik' : (order.chatDari == ChatSource.ads ? 'ads' : 'lama'),
+                              'details': order.services.map((s) => {
+                                'name': s.name,
+                                'qty': s.qty.toString(),
+                                'harga': s.price,
+                                'tanggal_pengerjaan': s.tanggalPengerjaan.isNotEmpty ? s.tanggalPengerjaan : null,
+                                'waktu_pengerjaan': s.waktuPengerjaan.isNotEmpty ? s.waktuPengerjaan : null,
+                              }).toList(),
+                              'cleaner_names': order.cleaners.map((c) => c.name).toList(),
+                              'cleaners_with_bonus': order.cleaners.map((c) => {
+                                'name': c.name,
+                                'bonuses': c.bonuses.map((b) => {
+                                  'jenis_bonus': b.jenisBonus,
+                                  'nominal': b.nominal,
+                                  'keterangan': b.keterangan,
+                                }).toList(),
+                              }).toList(),
+                            };
+
+                            try {
+                              await _financeService.updatePesanan(order.id, data);
+                              if (mounted) Navigator.pop(context); // close loading
+                              if (mounted) Navigator.pop(context); // close edit modal
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Perubahan order berhasil disimpan ke server oleh Finance!'),
+                                    backgroundColor: Color(0xFF059669),
+                                  ),
+                                );
+                                _fetchData();
+                              }
+                            } catch (e) {
+                              if (mounted) Navigator.pop(context); // close loading
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(e.toString().replaceAll('Exception: ', '')),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.check_circle_rounded, size: 18, color: Colors.white),
+                          label: Text('Simpan Perubahan', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4F46E5),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 2,
+                            shadowColor: const Color(0xFF4F46E5).withValues(alpha: 0.35),
                           ),
                         ),
-                        const SizedBox(height: 24),
-                      ],
-                    );
-                  },
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 20),
               ],
             ),
-          ),
-        ),
-
-        // Sticky Bottom Action Bar
-        Container(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 12, offset: const Offset(0, -4)),
-            ],
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    side: const BorderSide(color: Color(0xFF64748B), width: 1.5),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    backgroundColor: Colors.white,
-                  ),
-                  child: Text('Batal', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF64748B))),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-                    );
-
-                    String backendStatusPesanan = 'assigned';
-                    if (liveStatusUtama == 'Done') backendStatusPesanan = 'completed';
-                    else if (liveStatusUtama == 'Dibatalkan') backendStatusPesanan = 'cancelled';
-                    else if (liveStatusUtama == 'Draft') backendStatusPesanan = 'draft';
-                    else if (statusPengerjaan == 'In Progress (Dikerjakan)') backendStatusPesanan = 'in_progress';
-                    else if (statusPengerjaan == 'Finished by Cleaner') backendStatusPesanan = 'finished_by_cleaner';
-                    else if (statusPengerjaan == 'Waiting Payment Approval') backendStatusPesanan = 'waiting_payment_approval';
-                    else if (statusPengerjaan == 'Waiting Cancel Approval') backendStatusPesanan = 'waiting_cancel_approval';
-
-                    String backendStatusPembayaran = 'pending';
-                    if (statusPembayaran == 'Approved (Disetujui)' || statusPembayaran == 'Disetujui') backendStatusPembayaran = 'approved';
-                    else if (statusPembayaran == 'Rejected (Ditolak)' || statusPembayaran == 'Ditolak') backendStatusPembayaran = 'rejected';
-                    else if (statusPembayaran == 'Cancelled (Batal)' || statusPembayaran == 'Dibatalkan') backendStatusPembayaran = 'cancelled';
-                    else if (statusPembayaran == 'Belum Dibayar') backendStatusPembayaran = 'belum_dibayar';
-
-                    String backendStatusBonus = 'pending';
-                    if (statusBonus == 'Input') backendStatusBonus = 'input';
-                    else if (statusBonus == 'Selesai') backendStatusBonus = 'selesai';
-                    else if (statusBonus == 'Cancelled (Batal)') backendStatusBonus = 'cancelled';
-
-                    final data = {
-                      'pelanggan_name': customerNameCtrl.text.trim(),
-                      'pelanggan_phone': customerPhoneCtrl.text.trim(),
-                      'cabang_name': selectedCabang,
-                      'cs_name': csName,
-                      'status_pesanan': backendStatusPesanan,
-                      'status_pembayaran': backendStatusPembayaran,
-                      'status_bonus': backendStatusBonus,
-                      'metode_pembayaran': ['cash', 'transfer', 'qris'].contains(order.paymentMethod) ? order.paymentMethod : 'transfer',
-                      'diskon_persen': order.discount ?? 0,
-                      'ppn': order.ppn ?? 0,
-                      'pph': order.pph ?? 0,
-                      'keterangan_order': order.notes,
-                      'chat_dari': order.chatDari == ChatSource.organik ? 'organik' : (order.chatDari == ChatSource.ads ? 'ads' : 'lama'),
-                      'details': order.services.map((s) => {
-                        'name': s.name,
-                        'qty': s.qty.toString(),
-                        'harga': s.price,
-                        'tanggal_pengerjaan': s.tanggalPengerjaan.isNotEmpty ? s.tanggalPengerjaan : null,
-                        'waktu_pengerjaan': s.waktuPengerjaan.isNotEmpty ? s.waktuPengerjaan : null,
-                      }).toList(),
-                      'cleaner_names': order.cleaners.map((c) => c.name).toList(),
-                      'cleaners_with_bonus': order.cleaners.map((c) => {
-                        'name': c.name,
-                        'bonuses': c.bonuses.map((b) => {
-                          'jenis_bonus': b.jenisBonus,
-                          'nominal': b.nominal,
-                          'keterangan': b.keterangan,
-                        }).toList(),
-                      }).toList(),
-                    };
-
-                    try {
-                      await _financeService.updatePesanan(order.id, data);
-                      if (mounted) Navigator.pop(context); // close loading
-                      if (mounted) Navigator.pop(context); // close edit modal
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Perubahan order berhasil disimpan ke server oleh Finance!'),
-                            backgroundColor: Color(0xFF059669),
-                          ),
-                        );
-                        _fetchData();
-                      }
-                    } catch (e) {
-                      if (mounted) Navigator.pop(context); // close loading
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(e.toString().replaceAll('Exception: ', '')),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  icon: const Icon(Icons.save_rounded, size: 18, color: Colors.white),
-                  label: Text('Simpan Perubahan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4F46E5),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 2,
-                    shadowColor: const Color(0xFF4F46E5).withValues(alpha: 0.4),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-},
+          );
+        },
       ),
     );
   }
@@ -4977,18 +5167,14 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     String selectedJenisBonus = 'Bonus Deepclean';
     final nominalCtrl = TextEditingController();
     final keteranganCtrl = TextEditingController();
-    
-    final List<String> jenisBonusList = [
+
+    final jenisBonusList = [
       'Bonus Deepclean',
-      'Bonus Jarak Jauh',
-      'Bonus lainnya',
-      'Bonus Manual',
-      'Bonus Salon',
-      'Kilometer',
-      'Lembur',
-      'Parkir',
-      'Tips',
-      'Uang makan'
+      'Bonus Kasur/Sofa',
+      'Bonus General Cleaning',
+      'Bonus Lembur',
+      'Bonus Kinerja',
+      'Bonus Lainnya',
     ];
 
     showDialog(
@@ -5013,7 +5199,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                   Container(
                     height: 40,
                     padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
+                    decoration: BoxDecoration(border: Border.all(color: const Color(0xFFE2E8F0)), borderRadius: BorderRadius.circular(8)),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: selectedCleanerId,
@@ -5032,7 +5218,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                   Container(
                     height: 40,
                     padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
+                    decoration: BoxDecoration(border: Border.all(color: const Color(0xFFE2E8F0)), borderRadius: BorderRadius.circular(8)),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: selectedJenisBonus,
@@ -5052,13 +5238,13 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                     child: TextField(
                       controller: nominalCtrl,
                       keyboardType: TextInputType.number,
-                      style: GoogleFonts.inter(fontSize: 12),
+                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
                       decoration: InputDecoration(
                         prefixText: 'Rp ',
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.primary)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.primary)),
                       ),
                     ),
                   ),
@@ -5076,9 +5262,9 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         hintText: 'Alasan pemberian bonus...',
                         hintStyle: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade400),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.primary)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.primary)),
                       ),
                     ),
                   ),
@@ -5094,7 +5280,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                           minimumSize: const Size(0, 36),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          side: BorderSide(color: Colors.grey.shade300),
+                          side: const BorderSide(color: Color(0xFFCBD5E1)),
                         ),
                         child: Text('Batal', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark, fontWeight: FontWeight.w600)),
                       ),
@@ -5138,14 +5324,21 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     );
   }
 
-  Widget _buildFormCard({required String title, Widget? action, required Widget child}) {
+  Widget _buildFormCard({required String title, IconData? icon, Widget? action, required Widget child}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -5153,11 +5346,29 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+              Row(
+                children: [
+                  if (icon != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEEF2FF),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(icon, size: 14, color: const Color(0xFF4F46E5)),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                  ),
+                ],
+              ),
               if (action != null) action,
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           child,
         ],
       ),
@@ -5167,6 +5378,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
   Widget _buildFormDropdown({
     required String label,
     required String value,
+    IconData? icon,
     required List<String> items,
     required ValueChanged<String?> onChanged,
   }) {
@@ -5174,21 +5386,48 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+        Text(
+          label,
+          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         const SizedBox(height: 4),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+          height: 42,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: const Color(0xFFF8FAFC),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.grey.shade300),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: cleanValue,
               isExpanded: true,
-              style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark, fontWeight: FontWeight.w600),
-              items: items.map((i) => DropdownMenuItem(value: i, child: Text(i))).toList(),
+              icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF64748B)),
+              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF0F172A), fontWeight: FontWeight.w600),
+              items: items.map((i) {
+                return DropdownMenuItem(
+                  value: i,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (icon != null) ...[
+                        Icon(icon, size: 14, color: const Color(0xFF64748B)),
+                        const SizedBox(width: 6),
+                      ],
+                      Flexible(
+                        child: Text(
+                          i,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
               onChanged: onChanged,
             ),
           ),
@@ -5197,21 +5436,43 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     );
   }
 
-  Widget _buildFormReadOnlyField({required String label, required String value}) {
+  Widget _buildFormReadOnlyField({required String label, required String value, IconData? icon}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+        Text(
+          label,
+          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         const SizedBox(height: 4),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          height: 42,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
+            color: const Color(0xFFF1F5F9),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.grey.shade300),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
-          child: Text(value, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark, fontWeight: FontWeight.w600)),
+          alignment: Alignment.centerLeft,
+          child: Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 14, color: const Color(0xFF64748B)),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: Text(
+                  value,
+                  style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF1E293B), fontWeight: FontWeight.w600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

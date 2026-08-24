@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/badges.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/weekly_date_picker.dart';
+import '../../../core/widgets/whatsapp_icon.dart';
 import '../services/cleaner_job_service.dart';
 import 'cleaner_job_detail_screen.dart';
 
@@ -693,33 +695,36 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
 
   Widget _buildHeader(BuildContext context) {
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              if (Navigator.canPop(context)) ...[
+                HeaderBackButton(onTap: () => Navigator.pop(context)),
+                const SizedBox(width: 12),
+              ],
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Daftar Tugas', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
                   const SizedBox(height: 4),
-                  Text('Kelola tugas Anda', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.8))),
+                  Text('Kelola tugas Anda', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.85))),
                 ],
               ),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-                  onPressed: _fetchJobs,
-                  tooltip: 'Refresh Data',
-                ),
-              ),
             ],
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+              onPressed: _fetchJobs,
+              tooltip: 'Refresh Data',
+            ),
           ),
         ],
       ),
@@ -754,6 +759,30 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
     );
   }
 
+  String _formatRupiah(int n) =>
+      NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(n);
+
+  Future<void> _launchWA(String noWa) async {
+    String phone = noWa.replaceAll(RegExp(r'\D'), '');
+    if (phone.startsWith('0')) {
+      phone = '62${phone.substring(1)}';
+    }
+    final url = Uri.parse('https://wa.me/$phone');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
+
+
+  Future<void> _openMap(String address) async {
+    final query = Uri.encodeComponent(address);
+    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$query');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
   Widget _buildJobCard(Map<String, dynamic> job) {
     final status = job['status_pengerjaan'];
     final pesanan = job['pesanan'] ?? {};
@@ -761,8 +790,8 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
     final details = pesanan['details'] as List? ?? [];
     
     String customerName = pelanggan['nama_pelanggan'] ?? '-';
-    String customerPhone = pelanggan['no_telp'] ?? pelanggan['no_hp'] ?? '';
-    String customerAddress = pelanggan['alamat'] ?? '-';
+    String customerPhone = pelanggan['no_telp'] ?? pelanggan['no_hp'] ?? pelanggan['no_wa'] ?? '';
+    String customerAddress = pelanggan['alamat_pelanggan'] ?? pelanggan['alamat'] ?? '-';
     
     String jam = '-';
     String tanggal = '-';
@@ -781,6 +810,15 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
     }
 
     final relativeDay = _getRelativeDay(rawTanggal);
+    final num totalBonus = job['total_bonus'] is num
+        ? job['total_bonus']
+        : (num.tryParse(job['total_bonus']?.toString() ?? '0') ?? 0);
+    final bool canShowWa = job['show_wa'] == true ||
+        job['show_wa'] == 1 ||
+        job['show_wa'] == '1' ||
+        pesanan['show_wa'] == true ||
+        pesanan['show_wa'] == 1 ||
+        pesanan['show_wa'] == '1';
 
     return GestureDetector(
       onTap: () async {
@@ -793,32 +831,29 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
         }
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 4),
+        margin: const EdgeInsets.only(bottom: 14),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.06),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
+              color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top Gradient Header
+            // Top Bar with Order Code & Status
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppColors.primary.withValues(alpha: 0.08), Colors.transparent],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -827,22 +862,35 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
                     children: [
                       Container(
                         padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4)]),
-                        child: const Icon(Icons.receipt_long_rounded, size: 14, color: AppColors.primary),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.receipt_long_rounded, size: 15, color: Color(0xFF2563EB)),
                       ),
                       const SizedBox(width: 8),
-                      Text(pesanan['nomor_pesanan']?.toString() ?? pesanan['id']?.toString() ?? '-', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                      Text(
+                        pesanan['nomor_pesanan']?.toString() ?? pesanan['id']?.toString() ?? '-',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF1E293B),
+                          letterSpacing: 0.2,
+                        ),
+                      ),
                     ],
                   ),
                   Row(
                     children: [
                       if (relativeDay != null) ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                          margin: const EdgeInsets.only(right: 6),
                           decoration: BoxDecoration(
-                            color: (relativeDay == 'Hari Ini' || relativeDay == 'Besok') ? AppColors.primary : Colors.grey.shade600,
-                            borderRadius: BorderRadius.circular(12),
+                            color: (relativeDay == 'Hari Ini' || relativeDay == 'Besok')
+                                ? const Color(0xFF2563EB)
+                                : const Color(0xFF64748B),
+                            borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             relativeDay,
@@ -856,114 +904,204 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
                 ],
               ),
             ),
-            
+
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Customer Info Pro Max
+                  // Customer Header Row
                   Row(
                     children: [
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3))],
-                        ),
-                        child: const Icon(Icons.person_rounded, size: 24, color: Colors.white),
+                      InitialsAvatar(
+                        name: customerName,
+                        size: 46,
+                        backgroundColor: const Color(0xFFEFF6FF),
+                        textColor: const Color(0xFF2563EB),
+                        borderColor: const Color(0xFFBFDBFE),
                       ),
-                      const SizedBox(width: 14),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               customerName,
-                              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                              style: GoogleFonts.inter(
+                                fontSize: 15.5,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF0F172A),
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            if (customerPhone.isNotEmpty) ...[
-                              const SizedBox(height: 2),
+                            if (canShowWa && customerPhone.isNotEmpty) ...[
+                              const SizedBox(height: 3),
                               Row(
                                 children: [
-                                  const Icon(Icons.phone_android_rounded, size: 12, color: AppColors.textMuted),
-                                  const SizedBox(width: 4),
-                                  Text(customerPhone, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w500)),
+                                  const WhatsAppIcon(size: 13, color: Color(0xFF25D366)),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    customerPhone,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: const Color(0xFF64748B),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                 ],
                               ),
-                            ]
+                            ],
                           ],
                         ),
                       ),
+                      if (canShowWa && customerPhone.isNotEmpty) ...[
+                        GestureDetector(
+                          onTap: () => _launchWA(customerPhone),
+                          child: Container(
+                            padding: const EdgeInsets.all(9),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF25D366).withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const WhatsAppIcon(size: 18, color: Color(0xFF25D366)),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  
-                  // Schedule & Location Container (Pro Max)
+
+                  // Service Tags Preview
+                  if (details.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: details.map((d) {
+                        final l = d['layanan'] ?? {};
+                        final nama = l['nama_layanan'] ?? 'Layanan';
+                        final qty = d['qty'] ?? '1';
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.cleaning_services_rounded, size: 12, color: Color(0xFF3B82F6)),
+                              const SizedBox(width: 5),
+                              Text(
+                                '$nama ($qty)',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF334155),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+
+                  const SizedBox(height: 14),
+
+                  // Schedule & Location Box
                   Container(
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
                     child: Column(
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(10)),
-                                child: const Icon(Icons.calendar_month_rounded, color: Color(0xFF2563EB), size: 18),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Jadwal Pengerjaan', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
-                                    const SizedBox(height: 2),
-                                    Text('$tanggal · $jam WIB', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
-                                  ],
+                              child: const Icon(Icons.calendar_month_rounded, color: Color(0xFF2563EB), size: 16),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                '$tanggal · $jam WIB',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF0F172A),
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        const Divider(height: 1, color: Color(0xFFE2E8F0)),
-                        Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(10)),
-                                child: const Icon(Icons.location_on_rounded, color: Color(0xFFDC2626), size: 18),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Divider(height: 1, color: Color(0xFFE2E8F0)),
+                        ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF2F2),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Alamat', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      customerAddress,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A), height: 1.4),
-                                    ),
-                                  ],
+                              child: const Icon(Icons.location_on_rounded, color: Color(0xFFDC2626), size: 16),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                customerAddress,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF334155),
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                            if (customerAddress.isNotEmpty && customerAddress != '-') ...[
+                              const SizedBox(width: 6),
+                              GestureDetector(
+                                onTap: () => _openMap(customerAddress),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEFF6FF),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.map_rounded, size: 12, color: Color(0xFF2563EB)),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Maps',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFF2563EB),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
-                          ),
+                          ],
                         ),
                       ],
                     ),
@@ -971,19 +1109,59 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
                 ],
               ),
             ),
-            
-            // Footer Action
+
+            // Card Footer Action
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
                 border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Lihat Detail Pekerjaan', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF2563EB), fontWeight: FontWeight.bold)),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.arrow_forward_rounded, color: Color(0xFF2563EB), size: 16),
+                  if (totalBonus > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFDE68A)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.stars_rounded, size: 14, color: Color(0xFFD97706)),
+                          const SizedBox(width: 4),
+                          Text(
+                            '+ ${_formatRupiah(totalBonus.toInt())}',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFFB45309),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    const SizedBox(),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        status == 'assigned' || status == 'notified'
+                            ? 'Mulai Pengerjaan'
+                            : (status == 'in_progress' ? 'Lanjutkan Tugas' : 'Lihat Detail'),
+                        style: GoogleFonts.inter(
+                          fontSize: 12.5,
+                          color: const Color(0xFF2563EB),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.arrow_forward_rounded, color: Color(0xFF2563EB), size: 15),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -1018,8 +1196,15 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12), border: Border.all(color: fg.withValues(alpha: 0.3))),
-      child: Text(text, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: fg)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: fg.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: fg),
+      ),
     );
   }
 

@@ -17,9 +17,17 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
   bool _isLoading = true;
   String _error = '';
   Map<String, dynamic>? _historyData;
+  String _searchQuery = '';
+  final TextEditingController _searchCtrl = TextEditingController();
 
   late DateTime _startDate;
   late DateTime _endDate;
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -124,30 +132,32 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
       body: Column(
         children: [
           GradientHeader(
-            child: SafeArea(
-              bottom: false,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Riwayat Pekerjaan', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-                        const SizedBox(height: 4),
-                        Text('Daftar pekerjaan selesai dan bonusmu', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.8))),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.history_rounded, color: Colors.white),
-                  ),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+            child: Row(
+              children: [
+                if (Navigator.canPop(context)) ...[
+                  HeaderBackButton(onTap: () => Navigator.pop(context)),
+                  const SizedBox(width: 12),
                 ],
-              ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Riwayat Pekerjaan', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                      const SizedBox(height: 4),
+                      Text('Daftar pekerjaan selesai dan bonusmu', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.85))),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.history_rounded, color: Colors.white),
+                ),
+              ],
             ),
           ),
           Expanded(
@@ -187,6 +197,20 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
     final totalBonus = _parseNum(_historyData?['total_bonus']);
     final List<dynamic> pesanans = _historyData?['pesanans'] ?? [];
 
+    final filteredPesanans = pesanans.where((job) {
+      if (_searchQuery.trim().isEmpty) return true;
+      final q = _searchQuery.trim().toLowerCase();
+      final pesanan = job['pesanan'] ?? {};
+      final pelanggan = pesanan['pelanggan'] ?? {};
+      final namaPelanggan = (pelanggan['nama_pelanggan'] ?? '').toString().toLowerCase();
+      final nomorPesanan = (pesanan['nomor_pesanan'] ?? '').toString().toLowerCase();
+      final alamat = (pesanan['alamat'] ?? '').toString().toLowerCase();
+      final details = pesanan['details'] as List? ?? [];
+      final layananMatch = details.any((d) => (d['layanan']?['nama_layanan'] ?? '').toString().toLowerCase().contains(q));
+
+      return namaPelanggan.contains(q) || nomorPesanan.contains(q) || alamat.contains(q) || layananMatch;
+    }).toList();
+
     return RefreshIndicator(
       onRefresh: _fetchHistory,
       child: ListView(
@@ -194,28 +218,143 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
         children: [
           _buildDateRangePicker(),
           _buildTotalBonusCard(totalBonus),
-          const SizedBox(height: 24),
-          Text(
-            'Daftar Riwayat',
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textDark,
-            ),
+          const SizedBox(height: 20),
+          _buildSearchBar(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Daftar Riwayat',
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF1E293B),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${filteredPesanans.length} Tugas',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF2563EB),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          if (pesanans.isEmpty)
+          if (filteredPesanans.isEmpty)
             Center(
               child: Padding(
-                padding: const EdgeInsets.only(top: 40),
-                child: Text(
-                  'Belum ada riwayat pekerjaan selesai.',
-                  style: GoogleFonts.inter(color: AppColors.textMuted),
+                padding: const EdgeInsets.only(top: 30, bottom: 30),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF1F5F9),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _searchQuery.isNotEmpty ? Icons.search_off_rounded : Icons.history_rounded,
+                        size: 32,
+                        color: const Color(0xFF94A3B8),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      _searchQuery.isNotEmpty
+                          ? 'Tidak ada hasil untuk "$_searchQuery"'
+                          : 'Belum ada riwayat pekerjaan selesai.',
+                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textMuted),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ),
             )
           else
-            ...pesanans.map((job) => _buildJobCard(job)),
+            ...filteredPesanans.map((job) => _buildJobCard(job)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      height: 48,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: _searchQuery.isNotEmpty ? AppColors.primary : const Color(0xFFE2E8F0),
+          width: _searchQuery.isNotEmpty ? 1.5 : 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: _searchQuery.isNotEmpty
+                ? AppColors.primary.withValues(alpha: 0.1)
+                : Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.search_rounded,
+            size: 20,
+            color: _searchQuery.isNotEmpty ? AppColors.primary : const Color(0xFF94A3B8),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: _searchCtrl,
+              onChanged: (val) {
+                setState(() => _searchQuery = val);
+              },
+              style: GoogleFonts.inter(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF1E293B),
+              ),
+              decoration: InputDecoration(
+                hintText: 'Cari pelanggan, layanan, alamat...',
+                hintStyle: GoogleFonts.inter(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.normal,
+                  color: const Color(0xFF94A3B8),
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+          if (_searchQuery.isNotEmpty)
+            GestureDetector(
+              onTap: () {
+                _searchCtrl.clear();
+                setState(() => _searchQuery = '');
+              },
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF1F5F9),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close_rounded, size: 14, color: Color(0xFF64748B)),
+              ),
+            ),
         ],
       ),
     );

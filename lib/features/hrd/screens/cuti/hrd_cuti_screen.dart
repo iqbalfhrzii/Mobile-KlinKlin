@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/api/api_client.dart';
 import '../../services/hrd_cuti_service.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:intl/intl.dart';
@@ -46,7 +47,8 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
     if (path == null || path.isEmpty) return null;
     if (path.startsWith('http')) return path;
     String cleanPath = path.replaceFirst(RegExp(r'^/?(storage/)?'), '');
-    return 'http://159.223.59.109/storage/$cleanPath';
+    final baseDomain = ApiClient.baseUrl.replaceAll(RegExp(r'/api/?$'), '');
+    return '$baseDomain/storage/$cleanPath';
   }
 
   Widget _buildAvatar(Map<String, dynamic> k, {double radius = 20}) {
@@ -1163,7 +1165,8 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
     String? lampiranUrl = p['lampiran_path'] ?? p['bukti_foto'] ?? p['bukti'] ?? p['lampiran'];
     if (lampiranUrl != null && !lampiranUrl.startsWith('http')) {
       lampiranUrl = lampiranUrl.replaceFirst(RegExp(r'^/?(storage/)?'), '');
-      lampiranUrl = 'http://159.223.59.109/storage/$lampiranUrl';
+      final baseDomain = ApiClient.baseUrl.replaceAll(RegExp(r'/api/?$'), '');
+      lampiranUrl = '$baseDomain/storage/$lampiranUrl';
     }
 
     showDialog(

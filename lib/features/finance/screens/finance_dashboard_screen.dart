@@ -1,12 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../services/finance_service.dart';
+import '../../operasional/services/operasional_service.dart';
 import '../../../core/widgets/gradient_header.dart';
-import '../../operasional/screens/operasional_report_kpi_screen.dart';
-import '../../operasional/screens/operasional_data_chat_screen.dart';
 
 class FinanceDashboardScreen extends StatefulWidget {
   const FinanceDashboardScreen({super.key});
@@ -18,6 +18,7 @@ class FinanceDashboardScreen extends StatefulWidget {
 class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
     with SingleTickerProviderStateMixin {
   final _service = FinanceService();
+  final _operasionalService = OperasionalService();
   late TabController _tabController;
 
   bool _isLoading = true;
@@ -25,9 +26,22 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
 
   String _userName = 'Finance';
   String _mainTab = 'omzet'; // 'omzet', 'kpi', 'marketing'
+  int _kpiSubTab = 0; // 0 = Ringkasan Nilai KPI, 1 = KPI Omzet per Cabang
+  bool _kpiSortDesc = true;
 
   // API Data
   Map<String, dynamic>? _data;
+  Map<String, dynamic>? _kpiData;
+
+  // Marketing Spend Ads State
+  bool _isLoadingMarketing = false;
+  String _marketingError = '';
+  List<dynamic> _spendAdsList = [];
+  Map<String, dynamic>? _spendAdsSummary;
+  final TextEditingController _marketingSearchController = TextEditingController();
+  String _marketingSelectedPlatform = ''; // '', 'google', 'meta', 'tiktok'
+  String _marketingPeriode = DateFormat('yyyy-MM').format(DateTime.now());
+  Timer? _marketingSearchDebounce;
 
   // Filters
   String _selectedFilter = 'Bulan Ini';
@@ -50,6 +64,15 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
       if (mounted) setState(() {});
     });
     _fetchData();
+    _fetchMarketingData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _marketingSearchController.dispose();
+    _marketingSearchDebounce?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadProfile() async {
@@ -101,21 +124,71 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
         }
       }
 
-      final res = await _service.getLaporanOmzet(
-        startDate: start,
-        endDate: end,
-      );
-      if (res['status'] == true) {
+      final results = await Future.wait([
+        _service.getLaporanOmzet(
+          startDate: start,
+          endDate: end,
+        ),
+        _operasionalService.getReportKpi(
+          startDate: start,
+          endDate: end,
+        ),
+      ]);
+
+      final resOmzet = results[0];
+      final resKpi = results[1];
+
+      if (resOmzet['status'] == true) {
         setState(() {
-          _data = res['data'];
+          _data = resOmzet['data'];
+          if (resKpi['status'] == true) {
+            _kpiData = resKpi['data'];
+          }
         });
       } else {
-        setState(() => _error = res['message'] ?? 'Unknown error');
+        setState(() => _error = resOmzet['message'] ?? 'Unknown error');
       }
     } catch (e) {
       setState(() => _error = e.toString().replaceAll('Exception: ', ''));
     } finally {
       setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _fetchMarketingData() async {
+    setState(() {
+      _isLoadingMarketing = true;
+      _marketingError = '';
+    });
+
+    try {
+      final res = await _service.getSpendAds(
+        periode: _marketingPeriode,
+        search: _marketingSearchController.text.trim(),
+        platform: _marketingSelectedPlatform.isNotEmpty
+            ? _marketingSelectedPlatform
+            : null,
+      );
+
+      if (mounted) {
+        if (res['status'] == true) {
+          final d = res['data'];
+          setState(() {
+            _spendAdsList = d['spend_ads'] ?? [];
+            _spendAdsSummary = d['summary'];
+          });
+        } else {
+          setState(() => _marketingError = res['message'] ?? 'Gagal mengambil data spend ads');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _marketingError = e.toString().replaceAll('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingMarketing = false);
+      }
     }
   }
 
@@ -157,10 +230,8 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
           _buildHeader(),
           _buildMainTabBar(),
 
-          if (_mainTab == 'kpi')
-            const Expanded(child: OperasionalReportKpiScreen(hideHeader: true))
-          else if (_mainTab == 'marketing')
-            const Expanded(child: OperasionalDataChatScreen(hideHeader: true))
+          if (_mainTab == 'marketing')
+            Expanded(child: _buildMarketingContent())
           else ...[
             // Filters
             SingleChildScrollView(
@@ -239,6 +310,8 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
                   ),
                 ),
               )
+            else if (_mainTab == 'kpi')
+              Expanded(child: _buildKpiContent())
             else if (_data != null)
               Expanded(child: _buildContent()),
           ],
@@ -330,28 +403,40 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Selamat Datang,',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: Colors.white.withValues(alpha: 0.85),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Image.asset(
+                      'assets/images/logo.png',
+                      height: 24,
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _userName,
-                    style: GoogleFonts.inter(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                    const SizedBox(height: 10),
+                    Text(
+                      'Selamat Datang,',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 2),
+                    Text(
+                      _userName,
+                      style: GoogleFonts.inter(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 12),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -363,6 +448,7 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
                   border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     const Icon(
                       Icons.shield_rounded,
@@ -1768,5 +1854,1296 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
         ],
       ),
     );
+  }
+
+  // ===========================================================================
+  // KPI VIEW (Matching Web CapaianPage)
+  // ===========================================================================
+  Widget _buildKpiContent() {
+    final rawList = (_kpiData?['kpi_per_cabang'] as List?) ??
+        (_data?['omzet_per_cabang'] as List?) ??
+        [];
+    if (rawList.isEmpty) {
+      return Center(
+        child: Text(
+          'Tidak ada data KPI.',
+          style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13),
+        ),
+      );
+    }
+
+    final list = List<Map<String, dynamic>>.from(rawList);
+    if (_kpiSubTab == 0) {
+      list.sort((a, b) {
+        final aVal = ((a['omzet_dicapai'] ?? a['omzet'] ?? a['periode_ini']) as num? ?? 0).toDouble();
+        final bVal = ((b['omzet_dicapai'] ?? b['omzet'] ?? b['periode_ini']) as num? ?? 0).toDouble();
+        return _kpiSortDesc ? bVal.compareTo(aVal) : aVal.compareTo(bVal);
+      });
+    } else {
+      list.sort((a, b) {
+        final aVal = ((a['kpi_omzet'] ?? a['kpi_omzet_pct']) as num? ?? 0).toDouble();
+        final bVal = ((b['kpi_omzet'] ?? b['kpi_omzet_pct']) as num? ?? 0).toDouble();
+        return _kpiSortDesc ? bVal.compareTo(aVal) : aVal.compareTo(bVal);
+      });
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+      children: [
+        // Sub Tab Selector
+        Row(
+          children: [
+            Expanded(
+              child: _buildKpiSubTabBtn(
+                'Ringkasan Nilai KPI',
+                0,
+                Icons.fact_check_rounded,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildKpiSubTabBtn(
+                'KPI Omzet per Cabang',
+                1,
+                Icons.analytics_rounded,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+
+        // Section Title with Sort Button
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              _kpiSubTab == 0
+                  ? 'RINGKASAN NILAI KPI PER CABANG'
+                  : 'KPI OMZET PER CABANG',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
+                letterSpacing: 0.3,
+              ),
+            ),
+            InkWell(
+              onTap: () => setState(() => _kpiSortDesc = !_kpiSortDesc),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _kpiSubTab == 0 ? 'Urut Omzet' : 'Urut % KPI',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      _kpiSortDesc
+                          ? Icons.arrow_downward_rounded
+                          : Icons.arrow_upward_rounded,
+                      size: 13,
+                      color: AppColors.primary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // Cards List
+        if (_kpiSubTab == 0)
+          ...list.map((item) => _buildRingkasanKpiCard(item))
+        else
+          ...list.map((item) => _buildKpiOmzetCard(item)),
+
+        const SizedBox(height: 12),
+
+        // Legend Box (Matching Web)
+        if (_kpiSubTab == 0)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'Merah',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red.shade700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '— Belum Capai Minimal Target KPI',
+                    style: GoogleFonts.inter(
+                      fontSize: 11.5,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildLegendItem(
+                  'Hijau',
+                  'target aman (100%)',
+                  Colors.green.shade50,
+                  Colors.green.shade700,
+                ),
+                const SizedBox(height: 6),
+                _buildLegendItem(
+                  'Kuning',
+                  'kurang s/d 30% (≥70%)',
+                  Colors.amber.shade50,
+                  Colors.amber.shade800,
+                ),
+                const SizedBox(height: 6),
+                _buildLegendItem(
+                  'Merah',
+                  'kurang >30% (<70%)',
+                  Colors.red.shade50,
+                  Colors.red.shade700,
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildKpiSubTabBtn(String label, int index, IconData icon) {
+    final isSelected = _kpiSubTab == index;
+    return InkWell(
+      onTap: () => setState(() => _kpiSubTab = index),
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : Colors.grey.shade300,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.28),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 17,
+              color: isSelected ? Colors.white : AppColors.textMuted,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  color: isSelected ? Colors.white : AppColors.textDark,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRingkasanKpiCard(Map<String, dynamic> item) {
+    final omzet = ((item['omzet_dicapai'] ?? item['omzet'] ?? item['periode_ini']) as num? ?? 0).toDouble();
+    final namaCabang = item['nama_cabang']?.toString().toUpperCase() ?? '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.storefront_rounded,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    namaCabang,
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '0%',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red.shade700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Divider(color: Colors.grey.shade100, height: 1),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Omzet Dicapai',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _formatCurrency(omzet),
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: omzet > 0 ? Colors.green.shade700 : AppColors.textDark,
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'Target Nilai KPI',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '—',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildKpiOmzetCard(Map<String, dynamic> item) {
+    final omzet = ((item['omzet_dicapai'] ?? item['omzet'] ?? item['periode_ini']) as num? ?? 0).toDouble();
+    final targetOmzet = (item['target_omzet'] as num? ?? 0).toDouble();
+    final pct = ((item['kpi_omzet'] ?? item['kpi_omzet_pct'] ?? (targetOmzet > 0 ? (omzet / targetOmzet) * 100 : 0)) as num? ?? 0).toDouble();
+    final growth = ((item['growth'] ?? item['growth_pct']) as num? ?? 0).toDouble();
+    final isGrowthPos = growth >= 0;
+    final namaCabang = item['nama_cabang']?.toString().toUpperCase() ?? '';
+
+    Color bgBadge;
+    Color textBadge;
+    if (pct >= 100) {
+      bgBadge = Colors.green.shade50;
+      textBadge = Colors.green.shade700;
+    } else if (pct >= 70) {
+      bgBadge = Colors.amber.shade50;
+      textBadge = Colors.amber.shade800;
+    } else {
+      bgBadge = Colors.red.shade50;
+      textBadge = Colors.red.shade700;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.storefront_rounded,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    namaCabang,
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: bgBadge,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${pct.toStringAsFixed(1)}%',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: textBadge,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isGrowthPos ? Colors.green.shade50 : Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${isGrowthPos ? '+' : ''}${growth.toStringAsFixed(1)}%',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isGrowthPos ? Colors.green.shade700 : Colors.red.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Omzet Dicapai',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _formatCurrency(omzet),
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: omzet > 0 ? Colors.green.shade700 : AppColors.textDark,
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'Target Omzet',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _formatCurrency(targetOmzet),
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Divider(color: Colors.grey.shade100, height: 1),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Target Aman: 100%',
+                style: GoogleFonts.inter(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMuted,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(
+    String badgeText,
+    String desc,
+    Color bgColor,
+    Color textColor,
+  ) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            badgeText,
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          desc,
+          style: GoogleFonts.inter(
+            fontSize: 11.5,
+            color: AppColors.textMuted,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ===========================================================================
+  // MARKETING / SPEND ADS VIEW (Mobile Friendly & Web Aligned)
+  // ===========================================================================
+  Widget _buildMarketingContent() {
+    final summary = _spendAdsSummary ?? {
+      'sum_google': 0.0,
+      'sum_meta': 0.0,
+      'sum_tiktok': 0.0,
+      'total_spend': 0.0,
+      'pajak_12': 0.0,
+      'total_termasuk_pajak': 0.0,
+      'periode': _marketingPeriode,
+    };
+
+    final sumGoogle = (summary['sum_google'] as num? ?? 0).toDouble();
+    final sumMeta = (summary['sum_meta'] as num? ?? 0).toDouble();
+    final sumTiktok = (summary['sum_tiktok'] as num? ?? 0).toDouble();
+    final totalSpend = (summary['total_spend'] as num? ?? 0).toDouble();
+    final pajak12 = (summary['pajak_12'] as num? ?? 0).toDouble();
+    final totalTermasukPajak = (summary['total_termasuk_pajak'] as num? ?? 0).toDouble();
+
+    DateTime parsedMonth;
+    try {
+      final parts = _marketingPeriode.split('-');
+      parsedMonth = DateTime(int.parse(parts[0]), int.parse(parts[1]));
+    } catch (_) {
+      parsedMonth = DateTime.now();
+    }
+    final formattedMonth = DateFormat('MMMM yyyy', 'id_ID').format(parsedMonth);
+
+    return RefreshIndicator(
+      onRefresh: _fetchMarketingData,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        children: [
+          // 1. Top Hero Summary Card (Modern Fintech Design)
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.25),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Row: Label & Month Picker Pill
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'TOTAL SPEND MARKETING',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.8,
+                        color: const Color(0xFF94A3B8),
+                      ),
+                    ),
+                    InkWell(
+                      onTap: _pickMarketingMonth,
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.15),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.calendar_month_rounded,
+                              size: 13,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              formattedMonth,
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            const Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 14,
+                              color: Colors.white70,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Big Total Including Tax
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _formatCurrency(totalTermasukPajak),
+                        style: GoogleFonts.inter(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Total termasuk PPN 12%',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: const Color(0xFF94A3B8),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 2 Sub-metrics (Spend Net & Pajak 12%)
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Spend Net',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFFCBD5E1),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _formatCurrency(totalSpend),
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Pajak PPN (12%)',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFFCBD5E1),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _formatCurrency(pajak12),
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF38BDF8),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 2. Interactive Platform Spend Cards
+          Row(
+            children: [
+              Expanded(
+                child: _buildPlatformMetricCard(
+                  title: 'Google',
+                  amount: sumGoogle,
+                  platformKey: 'google',
+                  iconColor: const Color(0xFF10B981),
+                  bgColor: const Color(0xFFECFDF5),
+                  borderColor: const Color(0xFFA7F3D0),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildPlatformMetricCard(
+                  title: 'Meta',
+                  amount: sumMeta,
+                  platformKey: 'meta',
+                  iconColor: const Color(0xFF2563EB),
+                  bgColor: const Color(0xFFEFF6FF),
+                  borderColor: const Color(0xFFBFDBFE),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildPlatformMetricCard(
+                  title: 'TikTok',
+                  amount: sumTiktok,
+                  platformKey: 'tiktok',
+                  iconColor: const Color(0xFF0F172A),
+                  bgColor: const Color(0xFFF1F5F9),
+                  borderColor: const Color(0xFFCBD5E1),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // 3. Search Bar
+          Container(
+            height: 46,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.grey.shade300),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: TextField(
+              controller: _marketingSearchController,
+              onChanged: (val) {
+                _marketingSearchDebounce?.cancel();
+                _marketingSearchDebounce = Timer(
+                  const Duration(milliseconds: 350),
+                  _fetchMarketingData,
+                );
+              },
+              decoration: InputDecoration(
+                hintText: 'Cari nama cabang...',
+                hintStyle: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: AppColors.textMuted,
+                ),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  color: AppColors.textMuted,
+                  size: 20,
+                ),
+                suffixIcon: _marketingSearchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded, size: 18, color: Colors.grey),
+                        onPressed: () {
+                          _marketingSearchController.clear();
+                          _fetchMarketingData();
+                        },
+                      )
+                    : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 12,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // 4. Platform Filter Chips Row
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildPlatformChip('Semua Platform', ''),
+                _buildPlatformChip('Google Ads', 'google'),
+                _buildPlatformChip('Meta Ads', 'meta'),
+                _buildPlatformChip('TikTok Ads', 'tiktok'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 5. Section Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Daftar Spend Ads Cabang',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              if (!_isLoadingMarketing && _marketingError.isEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${_spendAdsList.length} Data',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // 6. Spend Ads Content / Empty State / Loading
+          if (_isLoadingMarketing)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 40),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_marketingError.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.red.shade100),
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 36),
+                  const SizedBox(height: 8),
+                  Text(
+                    _marketingError,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(fontSize: 13, color: AppColors.error),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _fetchMarketingData,
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: const Text('Muat Ulang'),
+                  ),
+                ],
+              ),
+            )
+          else if (_spendAdsList.isEmpty)
+            // Empty State Card
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade200),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      Icons.inbox_rounded,
+                      size: 28,
+                      color: Colors.grey.shade400,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Belum ada data',
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Belum ada pengeluaran iklan di filter/periode ini.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            // Spend Ads Items
+            ..._spendAdsList.map((ad) => _buildSpendAdCard(ad)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlatformMetricCard({
+    required String title,
+    required double amount,
+    required String platformKey,
+    required Color iconColor,
+    required Color bgColor,
+    required Color borderColor,
+  }) {
+    final isSelected = _marketingSelectedPlatform == platformKey;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _marketingSelectedPlatform = isSelected ? '' : platformKey;
+        });
+        _fetchMarketingData();
+      },
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? bgColor : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? iconColor : Colors.grey.shade200,
+            width: isSelected ? 1.5 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: iconColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                    color: isSelected ? iconColor : AppColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _formatCurrency(amount),
+              style: GoogleFonts.inter(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textDark,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlatformChip(String label, String value) {
+    final isSelected = _marketingSelectedPlatform == value;
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: InkWell(
+        onTap: () {
+          setState(() => _marketingSelectedPlatform = value);
+          _fetchMarketingData();
+        },
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primary : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected ? AppColors.primary : Colors.grey.shade300,
+            ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.2),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 11.5,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+              color: isSelected ? Colors.white : AppColors.textDark,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSpendAdCard(dynamic ad) {
+    final cabangName = ad['cabang']?['nama_cabang']?.toString().toUpperCase() ?? '-';
+    final platform = (ad['platform']?.toString() ?? 'google').toLowerCase();
+    final nominal = (ad['nominal'] as num? ?? 0).toDouble();
+    final periode = ad['periode']?.toString() ?? '';
+
+    Color badgeBg;
+    Color badgeText;
+    IconData platformIcon;
+    if (platform == 'google') {
+      badgeBg = const Color(0xFFECFDF5);
+      badgeText = const Color(0xFF059669);
+      platformIcon = Icons.campaign_rounded;
+    } else if (platform == 'meta') {
+      badgeBg = const Color(0xFFEFF6FF);
+      badgeText = const Color(0xFF2563EB);
+      platformIcon = Icons.share_rounded;
+    } else {
+      badgeBg = const Color(0xFFF1F5F9);
+      badgeText = const Color(0xFF0F172A);
+      platformIcon = Icons.music_note_rounded;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Left Platform Icon Avatar
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: badgeBg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              platformIcon,
+              size: 20,
+              color: badgeText,
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          // Center: Branch & Platform / Period
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  cabangName,
+                  style: GoogleFonts.inter(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textDark,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: badgeBg,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        platform.toUpperCase(),
+                        style: GoogleFonts.inter(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w800,
+                          color: badgeText,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      periode,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Right: Amount
+          Text(
+            _formatCurrency(nominal),
+            style: GoogleFonts.inter(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w800,
+              color: AppColors.primary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _pickMarketingMonth() async {
+    DateTime current;
+    try {
+      final parts = _marketingPeriode.split('-');
+      current = DateTime(int.parse(parts[0]), int.parse(parts[1]));
+    } catch (_) {
+      current = DateTime.now();
+    }
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      helpText: 'PILIH PERIODE BULAN',
+    );
+
+    if (picked != null) {
+      setState(() {
+        _marketingPeriode = DateFormat('yyyy-MM').format(picked);
+      });
+      _fetchMarketingData();
+    }
   }
 }

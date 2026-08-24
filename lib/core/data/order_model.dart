@@ -253,10 +253,11 @@ class CleanerFoto {
   });
 
   factory CleanerFoto.fromJson(Map<String, dynamic> json) {
+    String rawPath = json['foto_path'] ?? json['foto_url'] ?? json['path'] ?? json['url'] ?? '';
     return CleanerFoto(
       id: json['id']?.toString() ?? '',
-      url: json['foto_url'] ?? json['foto_path'] ?? '',
-      path: json['foto_path'] ?? '',
+      url: json['foto_url'] ?? json['url'] ?? rawPath,
+      path: rawPath,
       tipe: json['tipe'] ?? 'start',
       createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) : null,
     );
@@ -299,11 +300,16 @@ class OrderCleaner {
   factory OrderCleaner.fromJson(Map<String, dynamic> json) {
     final cleaner = json['cleaner'] ?? {};
     final bonusesData = json['bonuses'] as List? ?? [];
-    final List<CleanerBonus> parsedBonuses = (bonusesData as List).map<CleanerBonus>((e) => CleanerBonus.fromJson(e)).toList();
+    final List<CleanerBonus> parsedBonuses = bonusesData.map<CleanerBonus>((e) => CleanerBonus.fromJson(e)).toList();
     final int totalB = parsedBonuses.fold(0, (sum, b) => sum + b.nominal);
 
-    final fotosStartData = json['fotos_start'] as List? ?? [];
-    final fotosFinishData = json['fotos_finish'] as List? ?? [];
+    var fotosStartData = json['fotos_start'] as List? ?? [];
+    var fotosFinishData = json['fotos_finish'] as List? ?? [];
+    if (fotosStartData.isEmpty && fotosFinishData.isEmpty && json['fotos'] is List) {
+      final allFotos = json['fotos'] as List;
+      fotosStartData = allFotos.where((f) => f['tipe'] == 'start' || f['tipe'] == 'sebelum').toList();
+      fotosFinishData = allFotos.where((f) => f['tipe'] == 'finish' || f['tipe'] == 'sesudah').toList();
+    }
 
     return OrderCleaner(
       id: cleaner['id']?.toString() ?? json['id']?.toString() ?? '',

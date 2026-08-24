@@ -7,6 +7,8 @@ class CurrencyFormatter {
       (Match m) => '${m[1]}.',
     )}';
   }
+
+  static String formatRupiah(num value) => format(value);
 }
 
 class CurrencyInputFormatter extends TextInputFormatter {

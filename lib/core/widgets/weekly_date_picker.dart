@@ -36,10 +36,10 @@ class _WeeklyDatePickerState extends State<WeeklyDatePicker> {
   bool _isAllTime = false;
   final _searchCtrl = TextEditingController();
 
-  static const _dayNames = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+  static const _dayNames = ['SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB', 'MIN'];
   static const _monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
   ];
 
   @override
@@ -69,6 +69,21 @@ class _WeeklyDatePickerState extends State<WeeklyDatePicker> {
   DateTime _getStartOfWeek(DateTime date) {
     final daysToSubtract = date.weekday - 1;
     return DateTime(date.year, date.month, date.day).subtract(Duration(days: daysToSubtract));
+  }
+
+  String _getHeaderTitle() {
+    final start = _currentWeekStart;
+    final end = _currentWeekStart.add(const Duration(days: 6));
+    final startMonth = _monthNames[start.month - 1];
+    final endMonth = _monthNames[end.month - 1];
+
+    if (start.year != end.year) {
+      return '$startMonth ${start.year} - $endMonth ${end.year}';
+    } else if (start.month != end.month) {
+      return '$startMonth - $endMonth ${start.year}';
+    } else {
+      return '$startMonth ${start.year}';
+    }
   }
 
   void _notifyParent() {
@@ -133,8 +148,7 @@ class _WeeklyDatePickerState extends State<WeeklyDatePicker> {
 
   @override
   Widget build(BuildContext context) {
-    final monthName = _monthNames[_currentWeekStart.month - 1];
-    final year = _currentWeekStart.year;
+    final headerTitle = _getHeaderTitle();
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -153,7 +167,7 @@ class _WeeklyDatePickerState extends State<WeeklyDatePicker> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '$monthName $year',
+                    headerTitle,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,

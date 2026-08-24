@@ -1,23 +1,32 @@
-import '../../../../core/network/dio_client.dart';
+import 'package:dio/dio.dart';
+import '../../../../core/api/api_client.dart';
 
 class TukarLiburService {
-  static final _dio = DioClient.instance.dio;
+  static final Dio _dio = ApiClient.instance;
 
   static Future<Map<String, dynamic>> getRekanKerja() async {
     try {
       final response = await _dio.get('/cleaner/rekan-kerja');
-      return response.data['data'];
+      final data = response.data;
+      if (data is Map<String, dynamic> && data['data'] is Map<String, dynamic>) {
+        return data['data'] as Map<String, dynamic>;
+      }
+      return {'rekan': [], 'libur_saya': []};
     } catch (e) {
-      throw Exception('Gagal memuat daftar rekan kerja');
+      return {'rekan': [], 'libur_saya': []};
     }
   }
 
   static Future<List<dynamic>> getRiwayat() async {
     try {
       final response = await _dio.get('/cleaner/tukar-libur');
-      return response.data['data'];
+      final data = response.data;
+      if (data is Map<String, dynamic> && data['data'] is List) {
+        return data['data'] as List<dynamic>;
+      }
+      return [];
     } catch (e) {
-      throw Exception('Gagal memuat riwayat tukar libur');
+      return [];
     }
   }
 
@@ -34,9 +43,9 @@ class TukarLiburService {
         'tanggal_target': tanggalTarget,
         'alasan': alasan,
       });
-      return response.data;
+      return response.data ?? {};
     } catch (e) {
-      throw Exception('Gagal mengajukan tukar libur');
+      throw Exception('Gagal mengajukan tukar libur: $e');
     }
   }
 }
