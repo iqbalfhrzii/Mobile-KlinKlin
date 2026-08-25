@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/gradient_header.dart';
+import '../../attendance/screens/admin_attendance_list_screen.dart';
+import '../../operasional/screens/operasional_pengumuman_screen.dart';
+import '../../operasional/screens/operasional_permintaan_design_screen.dart';
 import 'cabang/cabang_list_screen.dart';
 import 'jabatan/jabatan_list_screen.dart';
 import 'karyawan/karyawan_list_screen.dart';
 import 'layanan/layanan_list_screen.dart';
 import 'pelanggan/pelanggan_list_screen.dart';
-import 'jenis_bonus/jenis_bonus_list_screen.dart';
 import 'gaji_pokok/gaji_pokok_list_screen.dart';
 import 'gaji_karyawan/gaji_karyawan_list_screen.dart';
 import 'insentif/insentif_cleaner_list_screen.dart';
+import 'tukar_libur/hrd_tukar_libur_screen.dart';
+import 'jadwal_libur/hrd_jadwal_libur_screen.dart';
+import 'cuti/hrd_cuti_screen.dart';
 
 class HrdDataMasterScreen extends StatelessWidget {
   const HrdDataMasterScreen({super.key});
@@ -18,163 +22,217 @@ class HrdDataMasterScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
             child: Row(
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Kelola',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: Colors.white.withValues(alpha: 0.8),
+                if (Navigator.canPop(context)) ...[
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      margin: const EdgeInsets.only(right: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Data Master',
-                      style: GoogleFonts.inter(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                      child: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
                         color: Colors.white,
+                        size: 16,
                       ),
                     ),
-                  ],
+                  ),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pusat Kontrol',
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white.withValues(alpha: 0.85),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Menu HRD & Master Data',
+                        style: GoogleFonts.inter(
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.widgets_rounded, size: 14, color: Colors.white),
+                      const SizedBox(width: 4),
+                      Text(
+                        '13 Modul',
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
               children: [
-                _buildMenuCard(
+                // 1. Kepegawaian & SDM
+                _buildMenuSection(
                   context,
-                  title: 'Insentif Cleaner',
-                  description: 'Pantau & kelola insentif cleaner',
-                  icon: Icons.payments_rounded,
-                  color: Colors.teal,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const InsentifCleanerListScreen(),
+                  title: 'Kepegawaian & SDM',
+                  subtitle: 'Manajemen staf, cleaner, libur & presensi',
+                  sectionIcon: Icons.badge_rounded,
+                  sectionColor: const Color(0xFF2563EB),
+                  items: [
+                    _HrdMenuItem(
+                      title: 'Karyawan',
+                      icon: Icons.people_alt_rounded,
+                      color: const Color(0xFF2563EB),
+                      bgColor: const Color(0xFFEFF6FF),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KaryawanListScreen())),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildMenuCard(
-                  context,
-                  title: 'Karyawan',
-                  description: 'Kelola data pegawai',
-                  icon: Icons.badge_outlined,
-                  color: Colors.blue,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const KaryawanListScreen(),
+                    _HrdMenuItem(
+                      title: 'Jabatan',
+                      icon: Icons.work_outline_rounded,
+                      color: const Color(0xFF4F46E5),
+                      bgColor: const Color(0xFFEEF2FF),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const JabatanListScreen())),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildMenuCard(
-                  context,
-                  title: 'Jabatan',
-                  description: 'Atur posisi & role',
-                  icon: Icons.work_outline_rounded,
-                  color: Colors.indigo,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const JabatanListScreen(),
+                    _HrdMenuItem(
+                      title: 'Jadwal Libur',
+                      icon: Icons.calendar_month_rounded,
+                      color: const Color(0xFF0D9488),
+                      bgColor: const Color(0xFFCCFBF1),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HrdJadwalLiburScreen())),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildMenuCard(
-                  context,
-                  title: 'Cabang & Bonus',
-                  description: 'Lokasi & tarif cabang',
-                  icon: Icons.storefront_rounded,
-                  color: Colors.orange,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CabangListScreen()),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildMenuCard(
-                  context,
-                  title: 'Kategori Bonus',
-                  description: 'Jenis bonus tambahan',
-                  icon: Icons.card_giftcard_rounded,
-                  color: Colors.purple,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const JenisBonusListScreen(),
+                    _HrdMenuItem(
+                      title: 'Tukar Libur',
+                      icon: Icons.swap_horiz_rounded,
+                      color: const Color(0xFFD97706),
+                      bgColor: const Color(0xFFFEF3C7),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HrdTukarLiburScreen())),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildMenuCard(
-                  context,
-                  title: 'Layanan',
-                  description: 'Daftar jasa pembersihan',
-                  icon: Icons.cleaning_services_rounded,
-                  color: Colors.green,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const LayananListScreen(),
+                    _HrdMenuItem(
+                      title: 'Cuti & Izin',
+                      icon: Icons.beach_access_rounded,
+                      color: const Color(0xFFE11D48),
+                      bgColor: const Color(0xFFFFE4E6),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HrdCutiScreen())),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildMenuCard(
-                  context,
-                  title: 'Pelanggan',
-                  description: 'Kelola data pelanggan',
-                  icon: Icons.people_alt_rounded,
-                  color: Colors.blueAccent,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const PelangganListScreen(),
+                    _HrdMenuItem(
+                      title: 'Presensi Log',
+                      icon: Icons.fingerprint_rounded,
+                      color: const Color(0xFF059669),
+                      bgColor: const Color(0xFFECFDF5),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminAttendanceListScreen())),
                     ),
-                  ),
+                  ],
                 ),
+
                 const SizedBox(height: 16),
-                _buildMenuCard(
+
+                // 2. Kompensasi & Penggajian
+                _buildMenuSection(
                   context,
-                  title: 'Gaji Pokok',
-                  description: 'Standar gaji karyawan',
-                  icon: Icons.monetization_on_rounded,
-                  color: Colors.teal,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const GajiPokokListScreen(),
+                  title: 'Kompensasi & Penggajian',
+                  subtitle: 'Standar gaji pokok, slip & bonus cleaner',
+                  sectionIcon: Icons.payments_rounded,
+                  sectionColor: const Color(0xFF059669),
+                  items: [
+                    _HrdMenuItem(
+                      title: 'Gaji Karyawan',
+                      icon: Icons.receipt_long_rounded,
+                      color: const Color(0xFF059669),
+                      bgColor: const Color(0xFFECFDF5),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GajiKaryawanListScreen())),
                     ),
-                  ),
+                    _HrdMenuItem(
+                      title: 'Standar Gaji',
+                      icon: Icons.monetization_on_rounded,
+                      color: const Color(0xFF0D9488),
+                      bgColor: const Color(0xFFCCFBF1),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GajiPokokListScreen())),
+                    ),
+                    _HrdMenuItem(
+                      title: 'Insentif Cleaner',
+                      icon: Icons.card_giftcard_rounded,
+                      color: const Color(0xFF7C3AED),
+                      bgColor: const Color(0xFFF3E8FF),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const InsentifCleanerListScreen())),
+                    ),
+                  ],
                 ),
+
                 const SizedBox(height: 16),
-                _buildMenuCard(
+
+                // 3. Operasional Cabang & Data Master
+                _buildMenuSection(
                   context,
-                  title: 'Gaji Karyawan',
-                  description: 'Rekapitulasi gaji bulanan',
-                  icon: Icons.receipt_long_rounded,
-                  color: Colors.indigo,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const GajiKaryawanListScreen(),
+                  title: 'Operasional & Data Master',
+                  subtitle: 'Pengaturan cabang, layanan, pelanggan & info',
+                  sectionIcon: Icons.storefront_rounded,
+                  sectionColor: const Color(0xFF7C3AED),
+                  items: [
+                    _HrdMenuItem(
+                      title: 'Cabang & Bonus',
+                      icon: Icons.storefront_rounded,
+                      color: const Color(0xFF7C3AED),
+                      bgColor: const Color(0xFFF3E8FF),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CabangListScreen())),
                     ),
-                  ),
+                    _HrdMenuItem(
+                      title: 'Layanan',
+                      icon: Icons.cleaning_services_rounded,
+                      color: const Color(0xFF0284C7),
+                      bgColor: const Color(0xFFE0F2FE),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LayananListScreen())),
+                    ),
+                    _HrdMenuItem(
+                      title: 'Pelanggan',
+                      icon: Icons.contact_phone_rounded,
+                      color: const Color(0xFFD97706),
+                      bgColor: const Color(0xFFFEF3C7),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PelangganListScreen())),
+                    ),
+                    _HrdMenuItem(
+                      title: 'Desain',
+                      icon: Icons.brush_rounded,
+                      color: const Color(0xFFEA580C),
+                      bgColor: const Color(0xFFFFEDD5),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPermintaanDesignScreen())),
+                    ),
+                    _HrdMenuItem(
+                      title: 'Pengumuman',
+                      icon: Icons.campaign_rounded,
+                      color: const Color(0xFFE11D48),
+                      bgColor: const Color(0xFFFFE4E6),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPengumumanScreen())),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -184,60 +242,44 @@ class HrdDataMasterScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuCard(
+  Widget _buildMenuSection(
     BuildContext context, {
     required String title,
-    required String description,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
+    required String subtitle,
+    required IconData sectionIcon,
+    required Color sectionColor,
+    required List<_HrdMenuItem> items,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.08),
-            blurRadius: 16,
-            spreadRadius: 2,
-            offset: const Offset(0, 6),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(24),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(7),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Color.lerp(color, Colors.white, 0.2)!, 
-                        color
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: color.withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      )
-                    ],
+                    color: sectionColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, color: Colors.white, size: 26),
+                  child: Icon(sectionIcon, size: 16, color: sectionColor),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -245,28 +287,113 @@ class HrdDataMasterScreen extends StatelessWidget {
                       Text(
                         title,
                         style: GoogleFonts.inter(
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
+                          color: const Color(0xFF0F172A),
                         ),
                       ),
-                      const SizedBox(height: 4),
                       Text(
-                        description,
+                        subtitle,
                         style: GoogleFonts.inter(
-                          fontSize: 13,
-                          color: AppColors.textMuted,
+                          fontSize: 11,
+                          color: const Color(0xFF64748B),
                         ),
                       ),
                     ],
                   ),
                 ),
-                Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
               ],
             ),
           ),
+
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+
+          // Items Grid (4 columns)
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Chunk items into rows of 4
+                final List<List<_HrdMenuItem>> rows = [];
+                for (var i = 0; i < items.length; i += 4) {
+                  rows.add(items.sublist(i, (i + 4 > items.length) ? items.length : i + 4));
+                }
+
+                return Column(
+                  children: rows.map((rowItems) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          ...rowItems.map((item) {
+                            return Expanded(
+                              child: _buildGridItem(item),
+                            );
+                          }),
+                          // Fill remaining spots if row has less than 4 items
+                          ...List.generate(4 - rowItems.length, (_) => const Expanded(child: SizedBox())),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGridItem(_HrdMenuItem item) {
+    return InkWell(
+      onTap: item.onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: item.bgColor,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(item.icon, size: 23, color: item.color),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              item.title,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF334155),
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
       ),
     );
   }
+}
+
+class _HrdMenuItem {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final Color bgColor;
+  final VoidCallback onTap;
+
+  _HrdMenuItem({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.bgColor,
+    required this.onTap,
+  });
 }

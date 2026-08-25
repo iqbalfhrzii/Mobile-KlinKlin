@@ -121,7 +121,7 @@ class _JabatanFormScreenState extends State<JabatanFormScreen> {
                           Text('Cabang', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<int>(
-                            value: _selectedCabang,
+                            initialValue: _selectedCabang,
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: AppColors.surface,

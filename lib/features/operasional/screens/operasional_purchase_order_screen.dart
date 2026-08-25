@@ -15,7 +15,11 @@ import '../services/operasional_purchase_order_service.dart';
 import '../../../core/api/api_client.dart';
 
 class OperasionalPurchaseOrderScreen extends StatefulWidget {
-  const OperasionalPurchaseOrderScreen({super.key});
+  final bool isReadOnly;
+  const OperasionalPurchaseOrderScreen({
+    super.key,
+    this.isReadOnly = false,
+  });
 
   @override
   State<OperasionalPurchaseOrderScreen> createState() => _OperasionalPurchaseOrderScreenState();
@@ -427,22 +431,24 @@ class _OperasionalPurchaseOrderScreenState extends State<OperasionalPurchaseOrde
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showFormModal(
-          item: null,
-        ),
-        backgroundColor: AppColors.primary,
-        elevation: 4,
-        icon: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
-        label: Text(
-          _selectedTipePo == 'distribusi' ? 'Tambah PO Distribusi' : 'Tambah PO Pembelian',
-          style: GoogleFonts.inter(
-            fontSize: 13.5,
-            fontWeight: FontWeight.w800,
-            color: Colors.white,
-          ),
-        ),
-      ),
+      floatingActionButton: widget.isReadOnly
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _showFormModal(
+                item: null,
+              ),
+              backgroundColor: AppColors.primary,
+              elevation: 4,
+              icon: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
+              label: Text(
+                _selectedTipePo == 'distribusi' ? 'Tambah PO Distribusi' : 'Tambah PO Pembelian',
+                style: GoogleFonts.inter(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+            ),
     );
   }
 
@@ -1285,74 +1291,78 @@ class _OperasionalPurchaseOrderScreenState extends State<OperasionalPurchaseOrde
                   const SizedBox(width: 6),
                 ],
 
-                // 3. EDIT BUTTON
-                Expanded(
-                  child: Material(
-                    color: const Color(0xFFFEF3C7),
-                    borderRadius: BorderRadius.circular(8),
-                    child: InkWell(
-                      onTap: () => _showFormModal(item: item),
+                // 3. EDIT BUTTON (Hidden in Read-Only Mode)
+                if (!widget.isReadOnly) ...[
+                  Expanded(
+                    child: Material(
+                      color: const Color(0xFFFEF3C7),
                       borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFFDE68A)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.edit_rounded, size: 15, color: Color(0xFFD97706)),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Edit',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFFD97706),
+                      child: InkWell(
+                        onTap: () => _showFormModal(item: item),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFFDE68A)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.edit_rounded, size: 15, color: Color(0xFFD97706)),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Edit',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFFD97706),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 6),
+                  const SizedBox(width: 6),
+                ],
 
-                // 4. DELETE BUTTON
-                Expanded(
-                  child: Material(
-                    color: const Color(0xFFFEE2E2),
-                    borderRadius: BorderRadius.circular(8),
-                    child: InkWell(
-                      onTap: () => _deleteData(item['id']),
+                // 4. DELETE BUTTON (Hidden in Read-Only Mode)
+                if (!widget.isReadOnly) ...[
+                  Expanded(
+                    child: Material(
+                      color: const Color(0xFFFEE2E2),
                       borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFFECACA)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.delete_outline_rounded, size: 15, color: Color(0xFFDC2626)),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Hapus',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFFDC2626),
+                      child: InkWell(
+                        onTap: () => _deleteData(item['id']),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFFECACA)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.delete_outline_rounded, size: 15, color: Color(0xFFDC2626)),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Hapus',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFFDC2626),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ],
             ),
           ),

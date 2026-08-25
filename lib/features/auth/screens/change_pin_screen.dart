@@ -7,6 +7,10 @@ import '../../shell/main_shell.dart';
 import '../../cleaner/shell/cleaner_main_shell.dart';
 import '../../finance/shell/finance_main_shell.dart';
 import '../../hrd/shell/hrd_main_shell.dart';
+import '../../operasional/shell/operasional_main_shell.dart';
+import '../../designer/shell/designer_main_shell.dart';
+import '../../marketing/shell/marketing_main_shell.dart';
+import '../../ceo/shell/ceo_main_shell.dart';
 
 class ChangePINScreen extends StatefulWidget {
   const ChangePINScreen({
@@ -124,11 +128,19 @@ class _ChangePINScreenState extends State<ChangePINScreen> {
           final isCleaner = roleName.contains('cleaner');
           final isFinance = roleName.contains('finance') || roleName.contains('keuangan');
           final isHrd = roleName == 'hrd' || roleName.contains('hrd');
+          final isOperasional = roleName.contains('operasional');
+          final isDesigner = roleName.contains('designer') || roleName.contains('desain');
+          final isMarketing = roleName.contains('marketing');
+          final isCeo = roleName.contains('ceo') || roleName.contains('owner');
 
           Widget targetShell = const MainShell();
           if (isCleaner) targetShell = const CleanerMainShell();
           if (isFinance) targetShell = const FinanceMainShell();
           if (isHrd) targetShell = const HrdMainShell();
+          if (isOperasional) targetShell = const OperasionalMainShell();
+          if (isDesigner) targetShell = const DesignerMainShell();
+          if (isMarketing) targetShell = const MarketingMainShell();
+          if (isCeo) targetShell = const CeoMainShell();
 
           Navigator.pushAndRemoveUntil(
             context,

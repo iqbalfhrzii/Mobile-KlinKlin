@@ -84,6 +84,7 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
     switch (status?.toLowerCase()) {
       case 'completed':
       case 'selesai':
+      case 'done':
         return const Color(0xFF16A34A);
       case 'in_progress':
       case 'dikerjakan':
@@ -104,6 +105,7 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
     switch (status?.toLowerCase()) {
       case 'completed':
       case 'selesai':
+      case 'done':
         return const Color(0xFFDCFCE7);
       case 'in_progress':
       case 'dikerjakan':
@@ -124,6 +126,7 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
     switch (status?.toLowerCase()) {
       case 'completed':
       case 'selesai':
+      case 'done':
         return 'Selesai';
       case 'in_progress':
       case 'dikerjakan':

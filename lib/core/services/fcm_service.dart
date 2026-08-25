@@ -10,6 +10,15 @@ import '../../features/operasional/screens/operasional_permintaan_design_screen.
 import '../../features/operasional/screens/operasional_data_kecelakaan_screen.dart';
 import '../../features/operasional/screens/monitoring_stok_opname_screen.dart';
 import '../../features/operasional/screens/operasional_laporan_lapangan_screen.dart';
+import '../../features/operasional/screens/operasional_quotation_screen.dart';
+import '../../features/operasional/screens/operasional_purchase_order_screen.dart';
+import '../../features/operasional/screens/tagihan_bulanan_screen.dart';
+import '../../features/operasional/screens/operasional_sim_screen.dart';
+import '../../features/hrd/screens/cuti/hrd_cuti_screen.dart';
+import '../../features/hrd/screens/tukar_libur/hrd_tukar_libur_screen.dart';
+import '../../features/hrd/screens/jadwal_libur/hrd_jadwal_libur_screen.dart';
+import '../../features/hrd/screens/karyawan/karyawan_list_screen.dart';
+import '../../features/designer/screens/designer_aset_sosmed_screen.dart';
 import '../../features/uang_kas/screens/uang_kas_screen.dart';
 import '../../features/konten_marketing/screens/konten_marketing_screen.dart';
 import '../../features/orders/screens/order_detail_screen.dart';
@@ -97,6 +106,24 @@ class FcmService {
           } else if (type.contains('cleaner') || type.contains('job')) {
             iconData = Icons.cleaning_services_rounded;
             iconColor = const Color(0xFF38BDF8);
+          } else if (type.contains('cuti') || type.contains('izin')) {
+            iconData = Icons.beach_access_rounded;
+            iconColor = const Color(0xFFF59E0B);
+          } else if (type.contains('schedule') || type.contains('jadwal')) {
+            iconData = Icons.event_note_rounded;
+            iconColor = const Color(0xFF38BDF8);
+          } else if (type.contains('quotation') || type.contains('penawaran')) {
+            iconData = Icons.request_quote_rounded;
+            iconColor = const Color(0xFF0284C7);
+          } else if (type.contains('purchase_order') || type.contains('po')) {
+            iconData = Icons.shopping_bag_rounded;
+            iconColor = const Color(0xFFF97316);
+          } else if (type.contains('tagihan')) {
+            iconData = Icons.receipt_long_rounded;
+            iconColor = const Color(0xFFEF4444);
+          } else if (type.contains('sim')) {
+            iconData = Icons.badge_rounded;
+            iconColor = const Color(0xFF10B981);
           }
 
           ScaffoldMessenger.of(navigatorKey!.currentContext!).showSnackBar(
@@ -274,6 +301,96 @@ class FcmService {
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => const KontenMarketingScreen(),
+        ),
+      );
+      return;
+    }
+
+    // 9. Quotation / Penawaran
+    if (type == 'quotation' || screen == 'quotation') {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const OperasionalQuotationScreen(),
+        ),
+      );
+      return;
+    }
+
+    // 10. Purchase Order
+    if (type == 'purchase_order' || screen == 'purchase_order') {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const OperasionalPurchaseOrderScreen(),
+        ),
+      );
+      return;
+    }
+
+    // 11. Tagihan Bulanan Kantor
+    if (type == 'tagihan_bulanan' || screen == 'tagihan_bulanan') {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const TagihanBulananScreen(),
+        ),
+      );
+      return;
+    }
+
+    // 12. SIM Driver / Cleaner
+    if (type == 'sim_driver' || screen == 'sim_driver') {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const OperasionalSimScreen(),
+        ),
+      );
+      return;
+    }
+
+    // 13. HRD Cuti & Izin
+    if (type == 'cuti_hrd' || screen == 'hrd_cuti' || type == 'cuti') {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const HrdCutiScreen(),
+        ),
+      );
+      return;
+    }
+
+    // 14. HRD Tukar Libur
+    if (type == 'tukar_libur_hrd' || screen == 'hrd_tukar_libur' || type == 'tukar_libur') {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const HrdTukarLiburScreen(),
+        ),
+      );
+      return;
+    }
+
+    // 15. HRD Jadwal Libur
+    if (type == 'jadwal_libur' || screen == 'jadwal_libur') {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const HrdJadwalLiburScreen(),
+        ),
+      );
+      return;
+    }
+
+    // 16. HRD Data Karyawan
+    if (type == 'karyawan' || screen == 'karyawan') {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const KaryawanListScreen(),
+        ),
+      );
+      return;
+    }
+
+    // 17. Designer Aset Sosmed
+    if (type == 'aset_sosmed' || screen == 'aset_sosmed') {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const DesignerAsetSosmedScreen(),
         ),
       );
       return;

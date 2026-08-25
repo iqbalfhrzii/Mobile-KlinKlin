@@ -65,6 +65,17 @@ class HrdService {
     return KaryawanModel.fromJson(response.data['data']);
   }
 
+  Future<void> updateKaryawanFoto(int id, String filePath) async {
+    final filename = filePath.split(RegExp(r'[/\\]')).last;
+    final formData = FormData.fromMap({
+      'foto_profil': await MultipartFile.fromFile(
+        filePath,
+        filename: filename,
+      ),
+    });
+    await _dio.post('/karyawans/$id/foto-profil', data: formData);
+  }
+
   Future<void> deleteKaryawan(int id) async {
     await _dio.delete('/karyawans/$id');
   }

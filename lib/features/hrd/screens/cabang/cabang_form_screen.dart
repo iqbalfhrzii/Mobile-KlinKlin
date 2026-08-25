@@ -19,6 +19,7 @@ class _CabangFormScreenState extends State<CabangFormScreen> {
   final HrdService _hrdService = HrdService();
   
   late TextEditingController _namaCtrl;
+  late TextEditingController _kodeCtrl;
   late TextEditingController _alamatCtrl;
   late TextEditingController _latCtrl;
   late TextEditingController _lngCtrl;
@@ -34,6 +35,7 @@ class _CabangFormScreenState extends State<CabangFormScreen> {
   void initState() {
     super.initState();
     _namaCtrl = TextEditingController(text: widget.cabang?.namaCabang);
+    _kodeCtrl = TextEditingController(text: widget.cabang?.kodeCabang);
     _alamatCtrl = TextEditingController(text: widget.cabang?.alamat);
     _latCtrl = TextEditingController(text: widget.cabang?.latitude?.toString() ?? '');
     _lngCtrl = TextEditingController(text: widget.cabang?.longitude?.toString() ?? '');
@@ -51,6 +53,7 @@ class _CabangFormScreenState extends State<CabangFormScreen> {
   @override
   void dispose() {
     _namaCtrl.dispose();
+    _kodeCtrl.dispose();
     _alamatCtrl.dispose();
     _latCtrl.dispose();
     _lngCtrl.dispose();
@@ -83,7 +86,9 @@ class _CabangFormScreenState extends State<CabangFormScreen> {
       }
 
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
 
       setState(() {
@@ -176,6 +181,7 @@ class _CabangFormScreenState extends State<CabangFormScreen> {
     try {
       final data = {
         'nama_cabang': _namaCtrl.text,
+        'kode_cabang': _kodeCtrl.text.toUpperCase(),
         'alamat': _alamatCtrl.text,
         'status': _status,
         'latitude': _latCtrl.text,
@@ -233,10 +239,16 @@ class _CabangFormScreenState extends State<CabangFormScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildField(
-                      label: 'Nama Cabang',
+                      label: 'Nama Cabang *',
                       controller: _namaCtrl,
                       hint: 'Masukkan nama cabang',
                       validator: (val) => val == null || val.isEmpty ? 'Nama cabang wajib diisi' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildField(
+                      label: 'Kode Cabang (Singkatan 3 Huruf, misal: SBY, BPN)',
+                      controller: _kodeCtrl,
+                      hint: 'HQ, SBY, MLG...',
                     ),
                     const SizedBox(height: 16),
                     _buildField(
@@ -343,7 +355,7 @@ class _CabangFormScreenState extends State<CabangFormScreen> {
                     Text('Status', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      value: _status,
+                      initialValue: _status,
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: AppColors.surface,

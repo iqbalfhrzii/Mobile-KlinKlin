@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:printing/printing.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:dio/dio.dart';
+import 'package:video_player/video_player.dart';
 import '../api/api_client.dart';
 import '../theme/app_colors.dart';
 
@@ -35,11 +37,37 @@ class FileAttachmentPreview {
     return lower.endsWith('.pdf');
   }
 
+  static bool isVideoFile(String path) {
+    final lower = path.toLowerCase();
+    return lower.endsWith('.mp4') ||
+        lower.endsWith('.mov') ||
+        lower.endsWith('.avi') ||
+        lower.endsWith('.mkv') ||
+        lower.endsWith('.webm') ||
+        lower.endsWith('.3gp') ||
+        lower.endsWith('.flv');
+  }
+
   static void showPreview(BuildContext context, {required String filePath, String? title}) {
     final fullUrl = getFullUrl(filePath);
     final isImg = isImageFile(filePath);
     final isPdf = isPdfFile(filePath);
-    final displayTitle = title ?? (isImg ? 'Pratinjau Foto' : (isPdf ? 'Dokumen PDF' : 'Berkas Lampiran'));
+    final isVid = isVideoFile(filePath);
+    final displayTitle = title ?? (isImg ? 'Pratinjau Foto' : (isPdf ? 'Dokumen PDF' : (isVid ? 'Putar Video' : 'Berkas Lampiran')));
+
+    if (isVid) {
+      // Open dedicated Full-Screen In-App Video Player
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (ctx) => _VideoPlayerScreen(
+            videoUrl: fullUrl,
+            title: displayTitle,
+          ),
+        ),
+      );
+      return;
+    }
 
     if (isPdf) {
       // Open dedicated Full-Screen HD PDF Viewer with Multi-touch Zoom (Pinch-to-zoom)
@@ -632,3 +660,383 @@ class _PdfViewerScreenState extends State<_PdfViewerScreen> {
     );
   }
 }
+
+// ================= IN-APP FULL SCREEN VIDEO PLAYER =================
+class _VideoPlayerScreen extends StatefulWidget {
+  final String videoUrl;
+  final String title;
+
+  const _VideoPlayerScreen({
+    required this.videoUrl,
+    required this.title,
+  });
+
+  @override
+  State<_VideoPlayerScreen> createState() => _VideoPlayerScreenState();
+}
+
+class _VideoPlayerScreenState extends State<_VideoPlayerScreen> {
+  late VideoPlayerController _controller;
+  bool _isLoading = true;
+  bool _hasError = false;
+  String _errorMessage = '';
+  bool _showControls = true;
+  Timer? _hideTimer;
+  bool _isMuted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializePlayer();
+  }
+
+  Future<void> _initializePlayer() async {
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+    });
+
+    try {
+      _controller = VideoPlayerController.networkUrl(
+        Uri.parse(widget.videoUrl),
+      );
+
+      await _controller.initialize();
+      _controller.addListener(_videoListener);
+      await _controller.play();
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        _startHideControlsTimer();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _hasError = true;
+          _errorMessage = 'Gagal memutar video: $e';
+        });
+      }
+    }
+  }
+
+  void _videoListener() {
+    if (mounted) setState(() {});
+  }
+
+  void _startHideControlsTimer() {
+    _hideTimer?.cancel();
+    if (_controller.value.isPlaying) {
+      _hideTimer = Timer(const Duration(seconds: 3), () {
+        if (mounted && _controller.value.isPlaying) {
+          setState(() => _showControls = false);
+        }
+      });
+    }
+  }
+
+  void _toggleControls() {
+    setState(() {
+      _showControls = !_showControls;
+    });
+    if (_showControls) {
+      _startHideControlsTimer();
+    }
+  }
+
+  void _togglePlayPause() {
+    if (_controller.value.isCompleted) {
+      _controller.seekTo(Duration.zero);
+      _controller.play();
+    } else if (_controller.value.isPlaying) {
+      _controller.pause();
+    } else {
+      _controller.play();
+    }
+    setState(() {});
+    _startHideControlsTimer();
+  }
+
+  void _toggleMute() {
+    setState(() {
+      _isMuted = !_isMuted;
+      _controller.setVolume(_isMuted ? 0.0 : 1.0);
+    });
+  }
+
+  String _formatDuration(Duration d) {
+    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
+  @override
+  void dispose() {
+    _hideTimer?.cancel();
+    _controller.removeListener(_videoListener);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // 1. VIDEO SURFACE
+            if (_isLoading)
+              const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: Colors.white),
+                    SizedBox(height: 12),
+                    Text(
+                      'Memuat video...',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                  ],
+                ),
+              )
+            else if (_hasError)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.videocam_off_rounded, color: Colors.redAccent, size: 44),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Pemutar Video Memerlukan Restart Aplikasi',
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Plugin video native baru saja ditambahkan ke proyek. Harap restart aplikasi (hentikan lalu jalankan "flutter run" kembali) agar modul native video terkompilasi ke dalam APK.',
+                        style: GoogleFonts.inter(color: Colors.white70, fontSize: 12, height: 1.4),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton.icon(
+                        onPressed: () => launchUrl(Uri.parse(widget.videoUrl), mode: LaunchMode.externalApplication),
+                        icon: const Icon(Icons.open_in_browser_rounded, color: Colors.white, size: 18),
+                        label: const Text('Buka di Pemutar Eksternal Sementara', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2563EB),
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextButton.icon(
+                        onPressed: _initializePlayer,
+                        icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 16),
+                        label: const Text('Coba Lagi', style: TextStyle(color: Colors.white70)),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              GestureDetector(
+                onTap: _toggleControls,
+                behavior: HitTestBehavior.opaque,
+                child: Center(
+                  child: AspectRatio(
+                    aspectRatio: _controller.value.aspectRatio > 0
+                        ? _controller.value.aspectRatio
+                        : 16 / 9,
+                    child: VideoPlayer(_controller),
+                  ),
+                ),
+              ),
+
+            // 2. CONTROLS OVERLAY
+            if (!_isLoading && !_hasError)
+              AnimatedOpacity(
+                opacity: _showControls ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 250),
+                child: IgnorePointer(
+                  ignoring: !_showControls,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black87,
+                          Colors.transparent,
+                          Colors.transparent,
+                          Colors.black87,
+                        ],
+                        stops: [0.0, 0.25, 0.75, 1.0],
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Top Header Bar
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                          child: Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                                onPressed: () => Navigator.pop(context),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  widget.title,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                                  color: Colors.white,
+                                ),
+                                tooltip: _isMuted ? 'Suara Hidup' : 'Senyap',
+                                onPressed: _toggleMute,
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.share_rounded, color: Colors.white),
+                                tooltip: 'Bagikan Video',
+                                onPressed: () async {
+                                  try {
+                                    final dio = Dio();
+                                    final res = await dio.get<List<int>>(
+                                      widget.videoUrl,
+                                      options: Options(responseType: ResponseType.bytes),
+                                    );
+                                    if (res.data != null) {
+                                      final bytes = Uint8List.fromList(res.data!);
+                                      final cleanTitle = widget.title.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+                                      await Printing.sharePdf(bytes: bytes, filename: '$cleanTitle.mp4');
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Gagal membagikan: $e'), backgroundColor: Colors.red),
+                                      );
+                                    }
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Center Play / Pause Button
+                        Center(
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _togglePlayPause,
+                              borderRadius: BorderRadius.circular(40),
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.5),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white38, width: 1.5),
+                                ),
+                                child: Icon(
+                                  _controller.value.isCompleted
+                                      ? Icons.replay_rounded
+                                      : (_controller.value.isPlaying
+                                          ? Icons.pause_rounded
+                                          : Icons.play_arrow_rounded),
+                                  color: Colors.white,
+                                  size: 44,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Bottom Control Bar (Seek bar + Duration)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Slider
+                              SliderTheme(
+                                data: SliderTheme.of(context).copyWith(
+                                  activeTrackColor: const Color(0xFF2563EB),
+                                  inactiveTrackColor: Colors.white30,
+                                  thumbColor: Colors.white,
+                                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                                  trackHeight: 3,
+                                ),
+                                child: Slider(
+                                  min: 0.0,
+                                  max: _controller.value.duration.inMilliseconds > 0
+                                      ? _controller.value.duration.inMilliseconds.toDouble()
+                                      : 1.0,
+                                  value: _controller.value.position.inMilliseconds.toDouble().clamp(
+                                        0.0,
+                                        _controller.value.duration.inMilliseconds > 0
+                                            ? _controller.value.duration.inMilliseconds.toDouble()
+                                            : 1.0,
+                                      ),
+                                  onChanged: (val) {
+                                    _controller.seekTo(Duration(milliseconds: val.toInt()));
+                                  },
+                                ),
+                              ),
+
+                              // Time row
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    _formatDuration(_controller.value.position),
+                                    style: GoogleFonts.inter(color: Colors.white70, fontSize: 11),
+                                  ),
+                                  Text(
+                                    _formatDuration(_controller.value.duration),
+                                    style: GoogleFonts.inter(color: Colors.white70, fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

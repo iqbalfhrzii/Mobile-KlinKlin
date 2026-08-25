@@ -74,6 +74,7 @@ dependencies:
   shimmer: ^3.0.0
   fl_chart: ^0.69.0
   flutter_svg: ^2.0.10
+  video_player: ^2.9.2
 
   # Attendance & Scanner
   camera: ^0.11.0

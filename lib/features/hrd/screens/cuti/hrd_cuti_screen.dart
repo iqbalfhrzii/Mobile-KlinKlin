@@ -881,7 +881,7 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
                 Text('Cabang Karyawan', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF334155))),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String?>(
-                  value: tempCabangId,
+                  initialValue: tempCabangId,
                   isExpanded: true,
                   decoration: InputDecoration(
                     filled: true,

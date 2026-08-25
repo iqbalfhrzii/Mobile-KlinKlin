@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../shell/main_shell.dart';
 
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/fcm_service.dart';
 
-import 'change_pin_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../cleaner/shell/cleaner_main_shell.dart';
 import '../../finance/shell/finance_main_shell.dart';
 import '../../hrd/shell/hrd_main_shell.dart';
 import '../../operasional/shell/operasional_main_shell.dart';
+import '../../designer/shell/designer_main_shell.dart';
+import '../../marketing/shell/marketing_main_shell.dart';
+import '../../ceo/shell/ceo_main_shell.dart';
 
 class PinScreen extends StatefulWidget {
   const PinScreen({super.key, required this.email});
@@ -27,35 +28,34 @@ class _PinScreenState extends State<PinScreen> {
   bool _isLoading = false;
 
   void _onKeyPress(String digit) {
-    if (_pin.length >= 6 || _isLoading) return;
-    setState(() {
-      _pin += digit;
-      _error = '';
-    });
-    if (_pin.length == 6) _verify();
+    if (_pin.length < 6) {
+      setState(() {
+        _pin += digit;
+        _error = '';
+      });
+      if (_pin.length == 6) {
+        _submitPin();
+      }
+    }
   }
 
   void _onDelete() {
-    if (_pin.isEmpty || _isLoading) return;
-    setState(() => _pin = _pin.substring(0, _pin.length - 1));
+    if (_pin.isNotEmpty) {
+      setState(() {
+        _pin = _pin.substring(0, _pin.length - 1);
+        _error = '';
+      });
+    }
   }
 
-  Future<void> _verify() async {
+  Future<void> _submitPin() async {
     setState(() => _isLoading = true);
     try {
       final res = await AuthService.login(widget.email, _pin);
       if (mounted) {
-        String roleName = '';
-        if (res is Map && res['data'] is Map) {
-          final userData = res['data'] as Map;
-          final jab = userData['jabatan'];
-          debugPrint('DEBUG LOGIN JABATAN: $jab');
-          if (jab is Map) {
-            roleName = (jab['nama_jabatan'] ?? '').toString().toLowerCase();
-          } else if (jab != null) {
-            roleName = jab.toString().toLowerCase();
-          }
-        }
+        final prefs = await SharedPreferences.getInstance();
+        final rawRole = prefs.getString('user_role') ?? '';
+        final roleName = rawRole.toLowerCase().trim();
         
         debugPrint('DEBUG LOGIN ROLENAME: $roleName');
         
@@ -63,8 +63,11 @@ class _PinScreenState extends State<PinScreen> {
         final isFinance = roleName.contains('finance') || roleName.contains('keuangan');
         final isHrd = roleName == 'hrd' || roleName.contains('hrd');
         final isOperasional = roleName.contains('operasional');
+        final isDesigner = roleName.contains('designer') || roleName.contains('desain');
+        final isMarketing = roleName.contains('marketing');
+        final isCeo = roleName.contains('ceo') || roleName.contains('owner');
 
-        debugPrint('DEBUG LOGIN isFinance: $isFinance');
+        debugPrint('DEBUG LOGIN isMarketing: $isMarketing, isCeo: $isCeo');
 
         // Send FCM token to backend for all roles
         FcmService.instance.updateTokenToServer();
@@ -96,9 +99,30 @@ class _PinScreenState extends State<PinScreen> {
             );
           } else if (isOperasional) {
             Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => OperasionalMainShell(
-                // requirePinChange: true, // OperasionalMainShell not currently accepting this arg in Phase 1
-                // currentPin: _pin,
+              MaterialPageRoute(builder: (_) => OperasionalMainShell()),
+              (route) => false,
+            );
+          } else if (isDesigner) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => DesignerMainShell(
+                requirePinChange: true,
+                currentPin: _pin,
+              )),
+              (route) => false,
+            );
+          } else if (isMarketing) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => MarketingMainShell(
+                requirePinChange: true,
+                currentPin: _pin,
+              )),
+              (route) => false,
+            );
+          } else if (isCeo) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => CeoMainShell(
+                requirePinChange: true,
+                currentPin: _pin,
               )),
               (route) => false,
             );
@@ -130,6 +154,21 @@ class _PinScreenState extends State<PinScreen> {
           } else if (isOperasional) {
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => const OperasionalMainShell()),
+              (route) => false,
+            );
+          } else if (isDesigner) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const DesignerMainShell()),
+              (route) => false,
+            );
+          } else if (isMarketing) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const MarketingMainShell()),
+              (route) => false,
+            );
+          } else if (isCeo) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const CeoMainShell()),
               (route) => false,
             );
           } else {

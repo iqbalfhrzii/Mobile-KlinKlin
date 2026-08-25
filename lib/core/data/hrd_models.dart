@@ -1,6 +1,7 @@
 class CabangModel {
   final int id;
   final String namaCabang;
+  final String? kodeCabang;
   final String? alamat;
   final String status;
   final double? latitude;
@@ -14,6 +15,7 @@ class CabangModel {
   CabangModel({
     required this.id,
     required this.namaCabang,
+    this.kodeCabang,
     this.alamat,
     this.status = 'aktif',
     this.latitude,
@@ -29,14 +31,15 @@ class CabangModel {
     return CabangModel(
       id: json['id'] != null ? (int.tryParse(json['id'].toString()) ?? 0) : 0,
       namaCabang: json['nama_cabang']?.toString() ?? '',
+      kodeCabang: json['kode_cabang']?.toString() ?? json['kode']?.toString(),
       alamat: json['alamat']?.toString(),
       status: json['status']?.toString() ?? 'aktif',
       latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
       longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
       radiusAbsensiMeter: json['radius_absensi_meter'] != null ? int.tryParse(json['radius_absensi_meter'].toString()) : null,
-      jamMasuk: json['jam_masuk'] != null ? json['jam_masuk'].toString().substring(0, 5) : null,
+      jamMasuk: json['jam_masuk']?.toString().substring(0, json['jam_masuk'].toString().length >= 5 ? 5 : json['jam_masuk'].toString().length),
       toleransiTelatMenit: json['toleransi_telat_menit'] != null ? int.tryParse(json['toleransi_telat_menit'].toString()) : null,
-      jamPulang: json['jam_pulang'] != null ? json['jam_pulang'].toString().substring(0, 5) : null,
+      jamPulang: json['jam_pulang']?.toString().substring(0, json['jam_pulang'].toString().length >= 5 ? 5 : json['jam_pulang'].toString().length),
       targetOmzet: json['target_omzet'] != null ? double.tryParse(json['target_omzet'].toString()) : null,
     );
   }

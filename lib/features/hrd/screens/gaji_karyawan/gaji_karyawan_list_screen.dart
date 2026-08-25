@@ -944,17 +944,74 @@ class _GajiKaryawanListScreenState extends State<GajiKaryawanListScreen> with Si
       body: Column(
         children: [
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(20, 52, 20, 0),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Gaji Karyawan',
-                  style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                Row(
+                  children: [
+                    if (Navigator.canPop(context)) ...[
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          margin: const EdgeInsets.only(right: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                    ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Rekapitulasi',
+                            style: GoogleFonts.inter(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white.withValues(alpha: 0.85),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Gaji Karyawan',
+                            style: GoogleFonts.inter(
+                              fontSize: 19,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${_allData.length} Slip',
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Container(
-                  margin: const EdgeInsets.only(bottom: 14),
+                  margin: const EdgeInsets.only(bottom: 6),
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.15),

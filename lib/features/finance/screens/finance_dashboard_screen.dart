@@ -9,6 +9,9 @@ import '../../operasional/services/operasional_service.dart';
 import '../../../core/widgets/gradient_header.dart';
 import 'finance_cashflow_cabang_screen.dart';
 import 'finance_approval_kas_screen.dart';
+import 'finance_approval_list_screen.dart';
+import 'finance_pemasukan_screen.dart';
+import 'finance_pengeluaran_screen.dart';
 import 'finance_audit_screen.dart';
 import 'finance_gaji_screen.dart';
 import 'finance_download_screen.dart';
@@ -623,10 +626,10 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
   Widget _buildQuickMenuSection() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
@@ -645,141 +648,117 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
               Text(
                 'Menu Pintas Keuangan',
                 style: GoogleFonts.inter(
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFF0F172A),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(6),
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFBFDBFE)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.bolt_rounded, size: 12, color: Color(0xFFD97706)),
+                    const Icon(Icons.bolt_rounded, size: 12, color: Color(0xFF2563EB)),
                     const SizedBox(width: 2),
                     Text(
                       'Fast Actions',
-                      style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: const Color(0xFFD97706)),
+                      style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF2563EB)),
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           Row(
             children: [
-              Expanded(
-                child: _buildQuickActionBtn(
-                  title: 'Cashflow Cabang',
-                  icon: Icons.account_balance_wallet_rounded,
-                  color: const Color(0xFF059669),
-                  bgColor: const Color(0xFFECFDF5),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const FinanceCashflowCabangScreen()),
-                  ),
+              _buildQuickActionBtn(
+                title: 'Verifikasi',
+                icon: Icons.verified_user_rounded,
+                color: const Color(0xFF2563EB),
+                bgColor: const Color(0xFFEFF6FF),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FinanceApprovalListScreen()),
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildQuickActionBtn(
-                  title: 'Approval Kas',
-                  icon: Icons.assignment_turned_in_rounded,
-                  color: const Color(0xFFD97706),
-                  bgColor: const Color(0xFFFFFBEB),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const FinanceApprovalKasScreen()),
-                  ),
+              _buildQuickActionBtn(
+                title: 'Approval Kas',
+                icon: Icons.account_balance_wallet_rounded,
+                color: const Color(0xFF059669),
+                bgColor: const Color(0xFFECFDF5),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FinanceApprovalKasScreen()),
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildQuickActionBtn(
-                  title: 'Audit Order',
-                  icon: Icons.fact_check_rounded,
-                  color: const Color(0xFF2563EB),
-                  bgColor: const Color(0xFFEFF6FF),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const FinanceAuditScreen()),
-                  ),
+              _buildQuickActionBtn(
+                title: 'Pemasukan',
+                icon: Icons.arrow_downward_rounded,
+                color: const Color(0xFF10B981),
+                bgColor: const Color(0xFFECFDF5),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FinancePemasukanScreen()),
+                ),
+              ),
+              _buildQuickActionBtn(
+                title: 'Pengeluaran',
+                icon: Icons.arrow_upward_rounded,
+                color: const Color(0xFFEF4444),
+                bgColor: const Color(0xFFFEF2F2),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FinancePengeluaranScreen()),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(
-                child: _buildQuickActionBtn(
-                  title: 'Manajemen Gaji',
-                  icon: Icons.payments_rounded,
-                  color: const Color(0xFF4F46E5),
-                  bgColor: const Color(0xFFEEF2FF),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const FinanceGajiScreen()),
-                  ),
+              _buildQuickActionBtn(
+                title: 'Cashflow',
+                icon: Icons.swap_horiz_rounded,
+                color: const Color(0xFF7C3AED),
+                bgColor: const Color(0xFFF5F3FF),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FinanceCashflowCabangScreen()),
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildQuickActionBtn(
-                  title: 'Download Data',
-                  icon: Icons.file_download_rounded,
-                  color: const Color(0xFF0891B2),
-                  bgColor: const Color(0xFFECFEFF),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const FinanceDownloadScreen()),
-                  ),
+              _buildQuickActionBtn(
+                title: 'Slip Gaji',
+                icon: Icons.receipt_long_rounded,
+                color: const Color(0xFFD97706),
+                bgColor: const Color(0xFFFEF3C7),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FinanceGajiScreen()),
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildQuickActionBtn(
-                  title: 'Spend Ads',
-                  icon: Icons.campaign_rounded,
-                  color: const Color(0xFFE11D48),
-                  bgColor: const Color(0xFFFFF1F2),
-                  onTap: () {
-                    setState(() => _mainTab = 'marketing');
-                  },
+              _buildQuickActionBtn(
+                title: 'Desain',
+                icon: Icons.palette_outlined,
+                color: const Color(0xFFE11D48),
+                bgColor: const Color(0xFFFFF1F2),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const OperasionalPermintaanDesignScreen()),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: _buildQuickActionBtn(
-                  title: 'Permintaan Design',
-                  icon: Icons.palette_rounded,
-                  color: const Color(0xFF7C3AED),
-                  bgColor: const Color(0xFFF5F3FF),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const OperasionalPermintaanDesignScreen()),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildQuickActionBtn(
-                  title: 'Pengumuman',
-                  icon: Icons.notifications_active_rounded,
-                  color: const Color(0xFFEA580C),
-                  bgColor: const Color(0xFFFFF7ED),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const OperasionalPengumumanScreen()),
-                  ),
+              _buildQuickActionBtn(
+                title: 'Pengumuman',
+                icon: Icons.campaign_rounded,
+                color: const Color(0xFF0284C7),
+                bgColor: const Color(0xFFF0F9FF),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const OperasionalPengumumanScreen()),
                 ),
               ),
             ],
@@ -796,40 +775,38 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
     required Color bgColor,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: color, size: 22),
               ),
-              child: Icon(icon, size: 14, color: color),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              title,
-              style: GoogleFonts.inter(
-                fontSize: 9.5,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF0F172A),
+              const SizedBox(height: 6),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF334155),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

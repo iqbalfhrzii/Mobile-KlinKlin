@@ -51,9 +51,18 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
       _status = ['aktif', 'nonaktif'].contains(statusVal) ? statusVal : 'aktif';
       
       if (widget.karyawan!.statusKaryawan != null && widget.karyawan!.statusKaryawan!.isNotEmpty) {
-        String statusKar = widget.karyawan!.statusKaryawan!.toLowerCase();
-        _statusKaryawan = ['tetap', 'freelance', 'kontrak'].contains(statusKar) ? statusKar : 'tetap';
+        String statusKar = widget.karyawan!.statusKaryawan!;
+        final validStatuses = ['Tetap', 'Tetap Koor', 'Kontrak', 'Training'];
+        final matched = validStatuses.firstWhere(
+          (s) => s.toLowerCase() == statusKar.toLowerCase() || (statusKar.toLowerCase().contains('koor') && s == 'Tetap Koor'),
+          orElse: () => 'Tetap',
+        );
+        _statusKaryawan = matched;
+      } else {
+        _statusKaryawan = 'Tetap';
       }
+    } else {
+      _statusKaryawan = 'Tetap';
     }
     _fetchRefs();
   }
@@ -206,7 +215,7 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
                           Text('Cabang', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<int>(
-                            value: _selectedCabang,
+                            initialValue: _selectedCabang,
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: AppColors.surface,
@@ -221,7 +230,7 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
                           Text('Jabatan', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<int>(
-                            value: _selectedJabatan,
+                            initialValue: _selectedJabatan,
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: AppColors.surface,
@@ -237,7 +246,7 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
                           Text('Status', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<String>(
-                            value: _status,
+                            initialValue: _status,
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: AppColors.surface,
@@ -255,16 +264,17 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
                           Text('Status Pegawai', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<String>(
-                            value: _statusKaryawan,
+                            initialValue: _statusKaryawan,
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: AppColors.surface,
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                             ),
                             items: const [
-                              DropdownMenuItem(value: 'tetap', child: Text('Tetap')),
-                              DropdownMenuItem(value: 'freelance', child: Text('Freelance')),
-                              DropdownMenuItem(value: 'kontrak', child: Text('Kontrak')),
+                              DropdownMenuItem(value: 'Tetap', child: Text('Tetap')),
+                              DropdownMenuItem(value: 'Tetap Koor', child: Text('Tetap Koor (Cleaner Koor)')),
+                              DropdownMenuItem(value: 'Kontrak', child: Text('Kontrak')),
+                              DropdownMenuItem(value: 'Training', child: Text('Training')),
                             ],
                             onChanged: (val) {
                               if (val != null) setState(() => _statusKaryawan = val);

@@ -47,8 +47,8 @@ class _HrdMainShellState extends State<HrdMainShell> {
   static const _navItems = [
     _NavItem(Icons.grid_view_rounded, Icons.grid_view_rounded, 'Dashboard'),
     _NavItem(Icons.fingerprint_rounded, Icons.fingerprint_rounded, 'Absensi'),
-    _NavItem(Icons.account_balance_wallet_outlined, Icons.account_balance_wallet_rounded, 'Penggajian'),
-    _NavItem(Icons.settings_outlined, Icons.settings_rounded, 'Pengaturan'),
+    _NavItem(Icons.account_balance_wallet_outlined, Icons.account_balance_wallet_rounded, 'Gaji'),
+    _NavItem(Icons.widgets_outlined, Icons.widgets_rounded, 'Menu'),
     _NavItem(Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
   ];
 

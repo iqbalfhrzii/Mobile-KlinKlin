@@ -16,6 +16,7 @@ import '../history/cleaner_history_screen.dart';
 import '../tukar_libur/screens/tukar_libur_screen.dart';
 import '../../attendance/screens/attendance_screen.dart';
 import '../../operasional/screens/operasional_pengumuman_screen.dart';
+import '../../stok_opname/screens/stok_opname_screen.dart';
 
 class CleanerDashboardScreen extends StatefulWidget {
   const CleanerDashboardScreen({super.key});
@@ -30,6 +31,8 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
   String? _userPhoto;
   String _userRole = 'Cleaner';
   String _userBranch = '-';
+  String _userStatusPegawai = '';
+  bool _isKoor = false;
   
   bool _isLoading = true;
   String _error = '';
@@ -66,6 +69,9 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
       _userPhoto = prefs.getString('user_photo');
       _userRole = prefs.getString('user_role') ?? 'Cleaner';
       _userBranch = prefs.getString('user_branch') ?? '-';
+      _userStatusPegawai = prefs.getString('user_status_pegawai') ?? prefs.getString('user_status_karyawan') ?? '';
+      _isKoor = prefs.getBool('is_koor') ?? 
+          (_userRole.toLowerCase().contains('koor') || _userStatusPegawai.toLowerCase().contains('koor'));
     });
   }
 
@@ -82,12 +88,25 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
         final meResponse = await AuthService.getMe();
         final me = meResponse['data'] ?? meResponse;
         if (mounted) {
+          final roleName = me['jabatan'] is Map ? me['jabatan']['nama_jabatan'] ?? _userRole : _userRole;
+          final branchName = me['cabang'] is Map ? me['cabang']['nama_cabang'] ?? _userBranch : _userBranch;
+          final statusPeg = (me['status_karyawan'] ?? me['status_pegawai'] ?? _userStatusPegawai).toString();
+          final isKoorBool = (me['is_koor'] == true) || 
+              roleName.toString().toLowerCase().contains('koor') || 
+              statusPeg.toLowerCase().contains('koor');
+
           setState(() {
             _userName = me['nama'] ?? _userName;
             _userPhoto = me['foto_profil'];
-            _userRole = me['jabatan'] is Map ? me['jabatan']['nama_jabatan'] ?? _userRole : _userRole;
-            _userBranch = me['cabang'] is Map ? me['cabang']['nama_cabang'] ?? _userBranch : _userBranch;
+            _userRole = roleName;
+            _userBranch = branchName;
+            _userStatusPegawai = statusPeg;
+            _isKoor = isKoorBool;
           });
+
+          final prefs = await SharedPreferences.getInstance();
+          prefs.setString('user_status_pegawai', _userStatusPegawai);
+          prefs.setBool('is_koor', _isKoor);
         }
       } catch (_) {
         // Abaikan jika gagal ambil profil
@@ -232,6 +251,12 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
                               _buildQuickActions(),
                               const SizedBox(height: 16),
 
+                              // 1.5. Featured Coordinator Card (Khusus Cleaner Koor)
+                              if (_isKoor) ...[
+                                _buildKoorStokOpnameBanner(),
+                                const SizedBox(height: 16),
+                              ],
+
                               // 2. Ringkasan Tugas Grid (2x2 KPI)
                               _buildTaskSummary(),
                               const SizedBox(height: 16),
@@ -355,6 +380,30 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
                             ],
                           ),
                         ),
+                        if (_isKoor)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF59E0B).withValues(alpha: 0.35),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFFDE68A)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.verified_rounded, size: 11, color: Color(0xFFFDE047)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _userStatusPegawai.isNotEmpty ? _userStatusPegawai : 'Cleaner Koor',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                       ],
                     ),
                   ],
@@ -581,6 +630,17 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
           MaterialPageRoute(builder: (_) => const CleanerJobListScreen()),
         ),
       ),
+      if (_isKoor)
+        _QuickActionItem(
+          title: 'Stok Opname',
+          icon: Icons.inventory_2_rounded,
+          color: const Color(0xFF0284C7),
+          bgColor: const Color(0xFFE0F2FE),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const StokOpnameScreen()),
+          ),
+        ),
       _QuickActionItem(
         title: 'Absensi',
         icon: Icons.fingerprint_rounded,
@@ -611,8 +671,67 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
       ),
     ];
 
+    if (!_isKoor) {
+      // Non-Koor: 1 single clean row with all 5 items
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: actions.map((a) {
+            return Expanded(
+              child: InkWell(
+                onTap: a.onTap,
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: a.bgColor,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(a.icon, size: 20, color: a.color),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        a.title,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF334155),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      );
+    }
+
+    // Koor: 2 rows of 3 columns
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -625,40 +744,195 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: actions.map((a) {
-          return InkWell(
-            onTap: a.onTap,
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: () {
+          // Chunk items into rows of 3
+          final rows = <List<_QuickActionItem>>[];
+          for (var i = 0; i < actions.length; i += 3) {
+            rows.add(actions.sublist(i, (i + 3 > actions.length) ? actions.length : i + 3));
+          }
+
+          final widgets = <Widget>[];
+          for (int r = 0; r < rows.length; r++) {
+            if (r > 0) widgets.add(const SizedBox(height: 12));
+            widgets.add(
+              Row(
                 children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: a.bgColor,
-                      borderRadius: BorderRadius.circular(14),
+                  for (final a in rows[r])
+                    Expanded(
+                      child: InkWell(
+                        onTap: a.onTap,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 46,
+                                height: 46,
+                                decoration: BoxDecoration(
+                                  color: a.bgColor,
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Icon(a.icon, size: 22, color: a.color),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                a.title,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.inter(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF334155),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                    child: Icon(a.icon, size: 20, color: a.color),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    a.title,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF334155),
-                    ),
-                  ),
+                  if (rows[r].length < 3)
+                    for (int pad = 0; pad < 3 - rows[r].length; pad++)
+                      const Expanded(child: SizedBox()),
                 ],
               ),
+            );
+          }
+          return widgets;
+        }(),
+      ),
+    );
+  }
+
+  // ================= 1.5. KOOR STOK OPNAME BANNER =================
+
+  Widget _buildKoorStokOpnameBanner() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0369A1), Color(0xFF0284C7), Color(0xFF0EA5E9)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0284C7).withValues(alpha: 0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const StokOpnameScreen()),
+          ),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.22),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.stars_rounded, size: 13, color: Color(0xFFFDE047)),
+                          const SizedBox(width: 4),
+                          Text(
+                            'FITUR KOORDINATOR',
+                            style: GoogleFonts.inter(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.inventory_2_rounded, size: 18, color: Colors.white),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Stok Opname Cabang',
+                  style: GoogleFonts.inter(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Audit berkala stok alat kerja, mesin, dan barang habis pakai (BHP) cabang $_userBranch.',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.9),
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Mulai Stok Opname',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF0369A1),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.arrow_forward_rounded, size: 14, color: Color(0xFF0369A1)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          );
-        }).toList(),
+          ),
+        ),
       ),
     );
   }
@@ -1266,7 +1540,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
                 ],
               ),
             );
-          }).toList(),
+          }),
       ],
     );
   }

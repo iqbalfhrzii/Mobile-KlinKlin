@@ -11,7 +11,12 @@ import '../services/operasional_approval_pengajuan_service.dart';
 
 class OperasionalApprovalPengajuanScreen extends StatefulWidget {
   final int initialTabIndex;
-  const OperasionalApprovalPengajuanScreen({super.key, this.initialTabIndex = 0});
+  final bool isReadOnly;
+  const OperasionalApprovalPengajuanScreen({
+    super.key,
+    this.initialTabIndex = 0,
+    this.isReadOnly = false,
+  });
 
   @override
   State<OperasionalApprovalPengajuanScreen> createState() => _OperasionalApprovalPengajuanScreenState();
@@ -148,6 +153,7 @@ class _OperasionalApprovalPengajuanScreenState extends State<OperasionalApproval
         item: item,
         isPending: isPending,
         authToken: _authToken,
+        isReadOnly: widget.isReadOnly,
       ),
     );
 
@@ -924,80 +930,111 @@ class _OperasionalApprovalPengajuanScreenState extends State<OperasionalApproval
           // Bottom Action Bar
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-            child: isPending
-                ? Row(
-                    children: [
-                      // View Detail Button
-                      Expanded(
-                        flex: 3,
+            child: widget.isReadOnly
+                ? (isPending
+                    ? SizedBox(
+                        width: double.infinity,
                         child: OutlinedButton.icon(
                           onPressed: () => _showDetailModal(item, true),
-                          icon: const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF475569)),
-                          label: Text('Detail', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF334155))),
+                          icon: const Icon(Icons.remove_red_eye_rounded, size: 16, color: AppColors.primary),
+                          label: Text('Lihat Detail Pengajuan', style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.primary)),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 10),
-                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            side: const BorderSide(color: AppColors.primary),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // Reject Button
-                      Expanded(
-                        flex: 3,
-                        child: ElevatedButton.icon(
-                          onPressed: () => _showDetailModal(item, true),
-                          icon: const Icon(Icons.close_rounded, size: 16, color: Color(0xFFDC2626)),
-                          label: Text('Tolak', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFFDC2626))),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFEE2E2),
-                            foregroundColor: const Color(0xFFDC2626),
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildStatusBadge(item['status_pengajuan']),
+                          OutlinedButton.icon(
+                            onPressed: () => _showDetailModal(item, false),
+                            icon: const Icon(Icons.remove_red_eye_rounded, size: 15, color: AppColors.primary),
+                            label: Text('Lihat Detail', style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w700)),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              side: const BorderSide(color: AppColors.primary),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // Approve Button
-                      Expanded(
-                        flex: 4,
-                        child: ElevatedButton.icon(
-                          onPressed: () => _showDetailModal(item, true),
-                          icon: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
-                          label: Text('Setujui', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF16A34A),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ],
+                      ))
+                : (isPending
+                    ? Row(
+                        children: [
+                          // View Detail Button
+                          Expanded(
+                            flex: 3,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _showDetailModal(item, true),
+                              icon: const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF475569)),
+                              label: Text('Detail', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF334155))),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                    ],
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Status Badge
-                      _buildStatusBadge(item['status_pengajuan']),
+                          const SizedBox(width: 8),
 
-                      // View Detail Button
-                      OutlinedButton.icon(
-                        onPressed: () => _showDetailModal(item, false),
-                        icon: const Icon(Icons.remove_red_eye_rounded, size: 15, color: AppColors.primary),
-                        label: Text('Lihat Detail', style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w700)),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          side: const BorderSide(color: AppColors.primary),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                      ),
-                    ],
-                  ),
+                          // Reject Button
+                          Expanded(
+                            flex: 3,
+                            child: ElevatedButton.icon(
+                              onPressed: () => _showDetailModal(item, true),
+                              icon: const Icon(Icons.close_rounded, size: 16, color: Color(0xFFDC2626)),
+                              label: Text('Tolak', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFFDC2626))),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFFEE2E2),
+                                foregroundColor: const Color(0xFFDC2626),
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+
+                          // Approve Button
+                          Expanded(
+                            flex: 4,
+                            child: ElevatedButton.icon(
+                              onPressed: () => _showDetailModal(item, true),
+                              icon: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
+                              label: Text('Setujui', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF16A34A),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Status Badge
+                          _buildStatusBadge(item['status_pengajuan']),
+
+                          // View Detail Button
+                          OutlinedButton.icon(
+                            onPressed: () => _showDetailModal(item, false),
+                            icon: const Icon(Icons.remove_red_eye_rounded, size: 15, color: AppColors.primary),
+                            label: Text('Lihat Detail', style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w700)),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              side: const BorderSide(color: AppColors.primary),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                        ],
+                      )),
           ),
         ],
       ),
@@ -1103,11 +1140,13 @@ class _DetailBottomSheet extends StatefulWidget {
   final Map<String, dynamic> item;
   final bool isPending;
   final String? authToken;
+  final bool isReadOnly;
 
   const _DetailBottomSheet({
     required this.item,
     required this.isPending,
     this.authToken,
+    this.isReadOnly = false,
   });
 
   @override
@@ -1548,8 +1587,8 @@ class _DetailBottomSheetState extends State<_DetailBottomSheet> {
 
                   const SizedBox(height: 24),
 
-                  // Section 5: Form Persetujuan jika pending
-                  if (widget.isPending) ...[
+                  // Section 5: Form Persetujuan jika pending (Hanya untuk Admin/Operasional yang punya hak approve)
+                  if (widget.isPending && !widget.isReadOnly) ...[
                     _buildSectionHeader('KEPUTUSAN PERSETUJUAN', Icons.rate_review_rounded),
                     const SizedBox(height: 10),
                     Container(
@@ -1653,7 +1692,7 @@ class _DetailBottomSheetState extends State<_DetailBottomSheet> {
               border: const Border(top: BorderSide(color: Color(0xFFF1F5F9))),
               boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -3))],
             ),
-            child: widget.isPending
+            child: (widget.isPending && !widget.isReadOnly)
                 ? Row(
                     children: [
                       Expanded(
@@ -1699,7 +1738,7 @@ class _DetailBottomSheetState extends State<_DetailBottomSheet> {
                         side: const BorderSide(color: Color(0xFFCBD5E1)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: Text('Tutup', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF334155))),
+                      child: Text('Tutup Detail', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF334155))),
                     ),
                   ),
           )

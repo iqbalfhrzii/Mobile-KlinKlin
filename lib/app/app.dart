@@ -7,6 +7,9 @@ import '../features/cleaner/shell/cleaner_main_shell.dart';
 import '../features/finance/shell/finance_main_shell.dart';
 import '../features/hrd/shell/hrd_main_shell.dart';
 import '../features/operasional/shell/operasional_main_shell.dart';
+import '../features/designer/shell/designer_main_shell.dart';
+import '../features/marketing/shell/marketing_main_shell.dart';
+import '../features/ceo/shell/ceo_main_shell.dart';
 import '../core/services/fcm_service.dart';
 
 final GlobalKey<NavigatorState> globalNavigatorKey = GlobalKey<NavigatorState>();
@@ -38,6 +41,12 @@ class _KlinklinAppState extends State<KlinklinApp> {
       return const HrdMainShell();
     } else if (role.contains('operasional')) {
       return const OperasionalMainShell();
+    } else if (role.contains('designer') || role.contains('desain')) {
+      return const DesignerMainShell();
+    } else if (role.contains('marketing')) {
+      return const MarketingMainShell();
+    } else if (role.contains('ceo') || role.contains('owner')) {
+      return const CeoMainShell();
     } else {
       return const MainShell();
     }
