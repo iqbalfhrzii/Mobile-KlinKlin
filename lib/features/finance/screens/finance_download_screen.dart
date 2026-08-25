@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:excel/excel.dart' hide Border;
+import 'package:excel/excel.dart' hide Border, TextSpan;
 import 'package:dio/dio.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
@@ -265,9 +265,11 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
       final noWa = o.customer.phone;
       final layanan = svc.name;
       final qty = svc.qty;
-      final nominal = svc.price;
-      final metode = o.paymentMethod;
-      final status = o.statusUtamaLabel;
+      final nominal = svc.subtotal;
+      final metode = o.paymentMethod.isNotEmpty && o.paymentMethod != '-'
+          ? o.paymentMethod
+          : (o.pembayaran?.metodePembayaran ?? '-');
+      final status = o.statusPesananRaw;
       buffer.writeln([
         _toCsvCell(namaHari),
         _toCsvCell(tgl),
@@ -338,6 +340,10 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
         final tgl = dt != null ? DateFormat('dd MMM yyyy', 'id_ID').format(dt) : '-';
         final cleaners = o.cleaners.isEmpty ? '-' : o.cleaners.map((c) => c.name).join(', ');
         final jam = svc.waktuPengerjaan.isEmpty ? '-' : svc.waktuPengerjaan;
+        final metode = o.paymentMethod.isNotEmpty && o.paymentMethod != '-'
+            ? o.paymentMethod
+            : (o.pembayaran?.metodePembayaran ?? '-');
+        final status = o.statusPesananRaw;
         
         sheet.appendRow([
           TextCellValue(namaHari),
@@ -349,9 +355,9 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
           TextCellValue(o.customer.phone.toString()),
           TextCellValue(svc.name.toString()),
           TextCellValue(svc.qty.toString()),
-          IntCellValue(int.tryParse(svc.price.toString()) ?? 0),
-          TextCellValue(o.paymentMethod.toString()),
-          TextCellValue(o.statusUtamaLabel.toString()),
+          IntCellValue(svc.subtotal),
+          TextCellValue(metode),
+          TextCellValue(status),
         ]);
       }
     } else {
@@ -484,7 +490,7 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
     final previewGaji = filteredGaji.take(100).toList();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
           _buildHeader(),
@@ -494,16 +500,16 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
               color: AppColors.primary,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildTabRow(),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     _buildFilterPanel(),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     _buildDownloadPanel(filteredRows.length, filteredGaji.length),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     _buildPreviewPanel(previewRows, previewGaji),
                   ],
                 ),
@@ -517,7 +523,7 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
 
   Widget _buildHeader() {
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 50, 20, 18),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -525,12 +531,22 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Download Data',
-                    style: GoogleFonts.inter(
-                        fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-                Text('Unduh data Order & Gaji ke file CSV/Excel',
-                    style: GoogleFonts.inter(
-                        fontSize: 11, color: Colors.white.withValues(alpha: 0.8))),
+                Text(
+                  'Download Data',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Unduh data Order & Gaji ke file CSV/Excel',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
               ],
             ),
           ),
@@ -539,14 +555,20 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.download_rounded, color: Colors.white, size: 16),
+                const Icon(Icons.download_rounded, color: Colors.white, size: 15),
                 const SizedBox(width: 6),
-                Text('Rekap Data',
-                    style: GoogleFonts.inter(
-                        fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
+                Text(
+                  'Rekap Data',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
               ],
             ),
           ),
@@ -557,14 +579,23 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
 
   Widget _buildTabRow() {
     return Container(
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
           _buildTabBtn('Order', 'order'),
+          const SizedBox(width: 4),
           _buildTabBtn('Gaji', 'gaji'),
         ],
       ),
@@ -585,19 +616,27 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
           _fetchData();
         },
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 13),
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isActive ? AppColors.primary : Colors.white,
-            borderRadius: BorderRadius.circular(13),
+            color: isActive ? const Color(0xFF0F52BA) : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              if (isActive)
+                BoxShadow(
+                  color: const Color(0xFF0F52BA).withValues(alpha: 0.25),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+            ],
           ),
           child: Center(
             child: Text(
               label,
               style: GoogleFonts.inter(
                 fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: isActive ? Colors.white : AppColors.textDark,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+                color: isActive ? Colors.white : const Color(0xFF64748B),
               ),
             ),
           ),
@@ -608,49 +647,68 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
 
   Widget _buildFilterPanel() {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Pilih data yang diunduh',
-              style: GoogleFonts.inter(
-                  fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary)),
-          const SizedBox(height: 10),
-
-          // Row 1: Kalender (Bulan & Tahun)
           Row(
             children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: _showMonthYearPicker,
-                  child: _buildDropdownContainer(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.calendar_month_rounded, size: 16, color: AppColors.primary),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              DateFormat('MMMM yyyy', 'id_ID').format(DateTime(_selectedYear, _selectedMonth)),
-                              style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textMuted),
-                        ],
-                      ),
-                    ),
-                  ),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.tune_rounded, size: 16, color: Color(0xFF2563EB)),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Pilih Data yang Diunduh',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF0F172A),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
+
+          // Kalender (Bulan & Tahun)
+          GestureDetector(
+            onTap: _showMonthYearPicker,
+            child: _buildDropdownContainer(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_month_rounded, size: 18, color: Color(0xFF2563EB)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        DateFormat('MMMM yyyy', 'id_ID').format(DateTime(_selectedYear, _selectedMonth)),
+                        style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF64748B)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
 
           // Row 2: Cabang + Status (if order)
           Row(
@@ -663,18 +721,18 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
                       value: _filterCabangId,
                       isExpanded: true,
                       isDense: true,
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.textMuted),
-                      hint: Text('Semua Cabang', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                      style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark, fontWeight: FontWeight.w600),
+                      icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF64748B)),
+                      hint: Text('Semua Cabang', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                      style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF0F172A), fontWeight: FontWeight.w600),
                       items: [
                         DropdownMenuItem<String?>(
                             value: null,
                             child: Text('Semua Cabang',
-                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600))),
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600))),
                         ..._cabangs.map((c) => DropdownMenuItem<String?>(
                               value: c.id.toString(),
                               child: Text(c.namaCabang,
-                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
                                   overflow: TextOverflow.ellipsis),
                             )),
                       ],
@@ -684,7 +742,7 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
                 ),
               ),
               if (_tab == 'order') ...[
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Expanded(
                   flex: 1,
                   child: _buildDropdownContainer(
@@ -693,15 +751,15 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
                         value: _filterStatus.isEmpty ? '' : _filterStatus,
                         isExpanded: true,
                         isDense: true,
-                        icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.textMuted),
-                        style: GoogleFonts.inter(fontSize: 11, color: AppColors.textDark, fontWeight: FontWeight.w600),
+                        icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF64748B)),
+                        style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF0F172A), fontWeight: FontWeight.w600),
                         items: [
-                          DropdownMenuItem(value: '', child: Text('Semua Status', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600))),
-                          DropdownMenuItem(value: 'done', child: Text('Done', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600))),
-                          DropdownMenuItem(value: 'process', child: Text('Process', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600))),
-                          DropdownMenuItem(value: 'pending', child: Text('Pending', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600))),
-                          DropdownMenuItem(value: 'cancelled', child: Text('Dibatalkan', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600))),
-                          DropdownMenuItem(value: 'draft', child: Text('Draft', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600))),
+                          DropdownMenuItem(value: '', child: Text('Semua Status', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600))),
+                          DropdownMenuItem(value: 'done', child: Text('Done', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600))),
+                          DropdownMenuItem(value: 'process', child: Text('Process', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600))),
+                          DropdownMenuItem(value: 'pending', child: Text('Pending', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600))),
+                          DropdownMenuItem(value: 'cancelled', child: Text('Dibatalkan', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600))),
+                          DropdownMenuItem(value: 'draft', child: Text('Draft', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600))),
                         ],
                         onChanged: (val) => setState(() => _filterStatus = val ?? ''),
                       ),
@@ -718,11 +776,11 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
 
   Widget _buildDropdownContainer({required Widget child}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade300),
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: child,
     );
@@ -814,64 +872,95 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
     final totalDetailRows = _orders.fold<int>(0, (sum, o) => sum + o.services.length);
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Info text
-          Wrap(
-            children: [
-              Text('Data ', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-              Text(_tab.toUpperCase(), style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-              Text(' periode ', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-              Text(_periodeLabel, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-              Text(' cabang ', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-              Text(_cabangName, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-              if (_tab == 'order') ...[
-                Text(' status ', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                Text(statusLabel, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+          // Info Card with clean background
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFF2563EB)),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Ringkasan Data Unduhan',
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                RichText(
+                  text: TextSpan(
+                    style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B), height: 1.4),
+                    children: [
+                      const TextSpan(text: 'Data '),
+                      TextSpan(text: _tab.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                      const TextSpan(text: ' • Periode: '),
+                      TextSpan(text: _periodeLabel, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                      const TextSpan(text: ' • Cabang: '),
+                      TextSpan(text: _cabangName, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                      if (_tab == 'order') ...[
+                        const TextSpan(text: ' • Status: '),
+                        TextSpan(text: statusLabel, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                      ],
+                      const TextSpan(text: '\nDitemukan: '),
+                      TextSpan(text: '$totalRows baris', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF059669))),
+                      TextSpan(text: ' ($_colCount kolom)', style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                      if (_tab == 'order')
+                        TextSpan(text: ' ($orderCount pesanan, $totalDetailRows detail)', style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
+                    ],
+                  ),
+                ),
               ],
-              Text(' ditemukan ', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-              Text('$totalRows baris', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary)),
-              Text(' $_colCount kolom.', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-              if (_tab == 'order') ...[
-                Text(' (raw: ', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                Text('$orderCount pesanan', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                Text(', ', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                Text('$totalDetailRows detail', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                Text(')', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-              ],
-            ],
+            ),
           ),
           if (_lastFetchError != null) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text(
               'Gagal memuat data: $_lastFetchError',
-              style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFFB91C1C)),
+              style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFFDC2626)),
             ),
           ],
           const SizedBox(height: 12),
 
-          // Download Buttons - vertical stack to avoid overflow
+          // Download Buttons
           SizedBox(
             width: double.infinity,
+            height: 44,
             child: ElevatedButton.icon(
               onPressed: _isDownloading || _isLoading ? null : _downloadExcel,
               icon: _isDownloading
-                  ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.table_chart_outlined, size: 15),
-              label: const Text('Unduh Excel (.xls)'),
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.table_chart_rounded, size: 16, color: Colors.white),
+              label: Text('Unduh Excel (.xls)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: const Color(0xFF059669),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 11),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+                elevation: 1,
+                shadowColor: const Color(0xFF059669).withValues(alpha: 0.3),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ),
@@ -879,33 +968,35 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
           Row(
             children: [
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _isDownloading || _isLoading ? null : _downloadCsv,
-                  icon: const Icon(Icons.description_outlined, size: 14),
-                  label: const Text('Unduh CSV'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textDark,
-                    side: BorderSide(color: Colors.grey.shade300),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    textStyle: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold),
+                child: SizedBox(
+                  height: 42,
+                  child: OutlinedButton.icon(
+                    onPressed: _isDownloading || _isLoading ? null : _downloadCsv,
+                    icon: const Icon(Icons.description_rounded, size: 16, color: Color(0xFF0F172A)),
+                    label: Text('Unduh CSV', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      backgroundColor: Colors.white,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _isLoading ? null : _fetchData,
-                  icon: _isLoading
-                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.refresh_rounded, size: 14),
-                  label: const Text('Muat Ulang'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textDark,
-                    side: BorderSide(color: Colors.grey.shade300),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    textStyle: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold),
+                child: SizedBox(
+                  height: 42,
+                  child: OutlinedButton.icon(
+                    onPressed: _isLoading ? null : _fetchData,
+                    icon: _isLoading
+                        ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.refresh_rounded, size: 16, color: Color(0xFF0F172A)),
+                    label: Text('Muat Ulang', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      backgroundColor: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -924,27 +1015,68 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-            child: Text(
-              _isLoading
-                  ? 'Memuat data...'
-                  : 'Pratinjau ($shownRows dari $totalRows baris)',
-              style: GoogleFonts.inter(
-                  fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.visibility_rounded, size: 16, color: Color(0xFF2563EB)),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Pratinjau Data',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '$shownRows dari $totalRows baris',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF475569),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const Divider(height: 1),
+          const Divider(color: Color(0xFFF1F5F9), height: 1, thickness: 1),
           if (_isLoading)
             const Padding(
               padding: EdgeInsets.all(32),
-              child: Center(child: CircularProgressIndicator()),
+              child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
             )
           else if (_tab == 'order')
             _buildOrderList(previewRows)
@@ -959,94 +1091,85 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
   Widget _buildOrderList(List<(OrderModel, ServiceItem)> rows) {
     if (rows.isEmpty) return _emptyView('Tidak ada data order untuk periode/filter ini.');
 
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: rows.length,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      separatorBuilder: (_, __) => const SizedBox(height: 16),
-      itemBuilder: (context, i) {
-        final (o, svc) = rows[i];
-        final dt = _tryParseFlexibleDate(svc.tanggalPengerjaan);
-        final namaHari = dt != null ? DateFormat('EEEE', 'id_ID').format(dt) : '-';
-        final tgl = dt != null ? DateFormat('dd MMM yyyy', 'id_ID').format(dt) : '-';
-        final cleaners = o.cleaners.isEmpty ? '-' : o.cleaners.map((c) => c.name).join(', ');
-        final jam = svc.waktuPengerjaan.isEmpty ? '-' : svc.waktuPengerjaan;
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          ...rows.map((row) {
+            final (o, svc) = row;
+            final dt = _tryParseFlexibleDate(svc.tanggalPengerjaan);
+            final namaHari = dt != null ? DateFormat('EEEE', 'id_ID').format(dt) : '-';
+            final tgl = dt != null ? DateFormat('dd MMM yyyy', 'id_ID').format(dt) : '-';
+            final cleaners = o.cleaners.isEmpty ? '-' : o.cleaners.map((c) => c.name).join(', ');
+            final jam = svc.waktuPengerjaan.isEmpty ? '-' : svc.waktuPengerjaan;
 
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(color: AppColors.primary.withValues(alpha: 0.05), blurRadius: 15, offset: const Offset(0, 5)),
-              BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Premium Header
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFF8FAFC), Color(0xFFF1F5F9)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                  border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 5)],
-                      ),
-                      child: const Icon(Icons.event_note_rounded, size: 16, color: AppColors.primary),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(namaHari, style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-                          Text(tgl, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                        ],
-                      ),
-                    ),
-                    _buildStatusBadge(o.statusUtamaLabel),
-                  ],
-                ),
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
-              // Body Details
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _buildPremiumInfoRow(Icons.cleaning_services_rounded, 'Layanan', svc.name, const Color(0xFF8B5CF6), const Color(0xFFEDE9FE)),
-                    const SizedBox(height: 12),
-                    _buildPremiumInfoRow(Icons.person_rounded, 'Customer', o.customer.name, const Color(0xFF3B82F6), const Color(0xFFDBEAFE)),
-                    const SizedBox(height: 12),
-                    _buildPremiumInfoRow(Icons.support_agent_rounded, 'Cleaner', cleaners.isEmpty ? '-' : cleaners, const Color(0xFF10B981), const Color(0xFFD1FAE5)),
-                    const SizedBox(height: 12),
-                    Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Clean Header
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(13)),
+                      border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+                    ),
+                    child: Row(
                       children: [
-                        Expanded(child: _buildPremiumInfoRow(Icons.access_time_filled_rounded, 'Jam', jam, const Color(0xFFF59E0B), const Color(0xFFFEF3C7))),
-                        Expanded(child: _buildPremiumInfoRow(Icons.payments_rounded, 'Via', o.paymentMethod.toUpperCase(), const Color(0xFF6366F1), const Color(0xFFE0E7FF))),
+                        const Icon(Icons.event_note_rounded, size: 16, color: Color(0xFF2563EB)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Text(
+                                '$namaHari, ',
+                                style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
+                              ),
+                              Text(
+                                tgl,
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        _buildStatusBadge(o.statusUtamaLabel),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  // Body Details
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      children: [
+                        _buildPremiumInfoRow(Icons.cleaning_services_rounded, 'Layanan', svc.name, const Color(0xFF7C3AED), const Color(0xFFF5F3FF)),
+                        const SizedBox(height: 8),
+                        _buildPremiumInfoRow(Icons.person_rounded, 'Customer', o.customer.name, const Color(0xFF2563EB), const Color(0xFFEFF6FF)),
+                        const SizedBox(height: 8),
+                        _buildPremiumInfoRow(Icons.support_agent_rounded, 'Cleaner', cleaners.isEmpty ? '-' : cleaners, const Color(0xFF059669), const Color(0xFFECFDF5)),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(child: _buildPremiumInfoRow(Icons.access_time_filled_rounded, 'Jam', jam, const Color(0xFFD97706), const Color(0xFFFFFBEB))),
+                            const SizedBox(width: 8),
+                            Expanded(child: _buildPremiumInfoRow(Icons.payments_rounded, 'Via', o.paymentMethod.toUpperCase(), const Color(0xFF4F46E5), const Color(0xFFEEF2FF))),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        );
-      },
+            );
+          }),
+        ],
+      ),
     );
   }
 
@@ -1055,19 +1178,19 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(8)),
-          child: Icon(icon, size: 14, color: iconColor),
+          padding: const EdgeInsets.all(5),
+          decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(6)),
+          child: Icon(icon, size: 13, color: iconColor),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-              const SizedBox(height: 2),
+              Text(label, style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF64748B))),
+              const SizedBox(height: 1),
               Text(value,
-                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 2),
             ],
@@ -1081,135 +1204,145 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
   Widget _buildGajiList(List<GajiKaryawanModel> rows) {
     if (rows.isEmpty) return _emptyView('Tidak ada data gaji untuk periode/filter ini.');
 
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: rows.length,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      separatorBuilder: (_, __) => const SizedBox(height: 16),
-      itemBuilder: (context, i) {
-        final g = rows[i];
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(color: AppColors.primary.withValues(alpha: 0.05), blurRadius: 15, offset: const Offset(0, 5)),
-              BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
-            ],
-          ),
-          child: Column(
-            children: [
-              // Header Cleaner Name
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFF0FDF4), Color(0xFFDCFCE7)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                  border: Border(bottom: BorderSide(color: const Color(0xFFBBF7D0))),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: const Color(0xFF15803D).withValues(alpha: 0.1), blurRadius: 5)],
-                      ),
-                      child: const Icon(Icons.person_outline_rounded, size: 16, color: Color(0xFF15803D)),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('CLEANER', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: const Color(0xFF166534))),
-                          Text(g.karyawan?.nama ?? '-', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF14532D))),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          ...rows.map((g) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
-              // Body: Cards layout
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Row(
+              child: Column(
+                children: [
+                  // Header Cleaner Name
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(13)),
+                      border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+                    ),
+                    child: Row(
                       children: [
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12)),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(Icons.add_circle_rounded, size: 12, color: Color(0xFF059669)),
-                                    const SizedBox(width: 4),
-                                    Text('Bonus', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Text(_currencyFormat.format(g.totalBonus), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF059669))),
-                              ],
-                            ),
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFECFDF5),
+                            shape: BoxShape.circle,
                           ),
+                          child: const Icon(Icons.person_rounded, size: 14, color: Color(0xFF059669)),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
                         Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(12)),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(Icons.remove_circle_rounded, size: 12, color: Color(0xFFDC2626)),
-                                    const SizedBox(width: 4),
-                                    Text('Potongan', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Text(_currencyFormat.format(g.totalPotongan), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626))),
-                              ],
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('CLEANER', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: const Color(0xFF059669))),
+                              Text(g.karyawan?.nama ?? '-', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)]),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('TAKE HOME PAY', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
-                          Text(_currencyFormat.format(g.takeHomePay), style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.white)),
-                        ],
-                      ),
+                  ),
+                  // Body
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF0FDF4),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.add_circle_rounded, size: 12, color: Color(0xFF059669)),
+                                        const SizedBox(width: 4),
+                                        Text('Bonus', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF047857), fontWeight: FontWeight.w500)),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(_currencyFormat.format(g.totalBonus), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF059669))),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF2F2),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xFFFECACA)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.remove_circle_rounded, size: 12, color: Color(0xFFDC2626)),
+                                        const SizedBox(width: 4),
+                                        Text('Potongan', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFFB91C1C), fontWeight: FontWeight.w500)),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(_currencyFormat.format(g.totalPotongan), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626))),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFF0FDF4), Color(0xFFDCFCE7)],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFA7F3D0)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.payments_rounded, size: 15, color: Color(0xFF047857)),
+                                  const SizedBox(width: 6),
+                                  Text('TAKE HOME PAY', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF047857), letterSpacing: 0.5)),
+                                ],
+                              ),
+                              Text(_currencyFormat.format(g.takeHomePay), style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: const Color(0xFF047857))),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        );
-      },
+            );
+          }),
+        ],
+      ),
     );
   }
 
@@ -1219,10 +1352,10 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
       child: Center(
         child: Column(
           children: [
-            const Icon(Icons.inbox_outlined, size: 36, color: AppColors.textMuted),
+            const Icon(Icons.inbox_rounded, size: 36, color: Color(0xFF94A3B8)),
             const SizedBox(height: 8),
             Text(msg,
-                style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+                style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
                 textAlign: TextAlign.center),
           ],
         ),
@@ -1231,28 +1364,34 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
   }
 
   Widget _buildStatusBadge(String status) {
-    Color bg, fg;
+    Color bg, fg, border;
     switch (status.toLowerCase()) {
       case 'done':
-        bg = const Color(0xFFDCFCE7); fg = const Color(0xFF15803D);
+        bg = const Color(0xFFDCFCE7); fg = const Color(0xFF15803D); border = const Color(0xFF86EFAC);
         break;
       case 'cancelled':
-        bg = const Color(0xFFFEE2E2); fg = const Color(0xFFB91C1C);
+        bg = const Color(0xFFFEE2E2); fg = const Color(0xFFB91C1C); border = const Color(0xFFFCA5A5);
         break;
       case 'process':
-        bg = const Color(0xFFFFF7ED); fg = const Color(0xFFD97706);
+        bg = const Color(0xFFFFF7ED); fg = const Color(0xFFC2410C); border = const Color(0xFFFDBA74);
         break;
       case 'pending':
-        bg = const Color(0xFFEFF6FF); fg = const Color(0xFF1D4ED8);
+        bg = const Color(0xFFEFF6FF); fg = const Color(0xFF1D4ED8); border = const Color(0xFF93C5FD);
         break;
       default:
-        bg = Colors.grey.shade200; fg = AppColors.textMuted;
+        bg = const Color(0xFFF1F5F9); fg = const Color(0xFF475569); border = const Color(0xFFCBD5E1);
     }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(7)),
-      child: Text(status,
-          style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: fg)),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: border),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: fg),
+      ),
     );
   }
 }

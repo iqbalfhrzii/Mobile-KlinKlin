@@ -161,13 +161,33 @@ class UangKasService {
     }
   }
 
-  Future<Map<String, dynamic>> updatePengajuanKas(int id, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> updatePengajuanKas(int id, Map<String, dynamic> data, {File? file}) async {
     try {
-      final response = await _dio.put(
-        '/pengajuan-kas/$id',
-        data: data,
-      );
-      return response.data ?? {'status': true, 'message': 'Pengajuan kas berhasil diperbarui'};
+      if (file != null) {
+        final formData = FormData.fromMap(data);
+        String fileName = file.path.split('/').last.split('\\').last;
+        formData.files.add(
+          MapEntry(
+            'bukti_transfer',
+            await MultipartFile.fromFile(
+              file.path,
+              filename: fileName,
+            ),
+          ),
+        );
+        formData.fields.add(const MapEntry('_method', 'PUT'));
+        final response = await _dio.post(
+          '/pengajuan-kas/$id',
+          data: formData,
+        );
+        return response.data ?? {'status': true, 'message': 'Pengajuan kas berhasil diperbarui'};
+      } else {
+        final response = await _dio.put(
+          '/pengajuan-kas/$id',
+          data: data,
+        );
+        return response.data ?? {'status': true, 'message': 'Pengajuan kas berhasil diperbarui'};
+      }
     } on DioException catch (e) {
       throw Exception(e.response?.data['message'] ?? 'Gagal memperbarui pengajuan kas');
     } catch (e) {

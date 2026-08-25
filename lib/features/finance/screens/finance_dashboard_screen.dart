@@ -7,6 +7,13 @@ import '../../../core/theme/app_colors.dart';
 import '../services/finance_service.dart';
 import '../../operasional/services/operasional_service.dart';
 import '../../../core/widgets/gradient_header.dart';
+import 'finance_cashflow_cabang_screen.dart';
+import 'finance_approval_kas_screen.dart';
+import 'finance_audit_screen.dart';
+import 'finance_gaji_screen.dart';
+import 'finance_download_screen.dart';
+import '../../operasional/screens/operasional_permintaan_design_screen.dart';
+import '../../operasional/screens/operasional_pengumuman_screen.dart';
 
 class FinanceDashboardScreen extends StatefulWidget {
   const FinanceDashboardScreen({super.key});
@@ -541,7 +548,14 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
 
                 const SizedBox(height: 16),
 
-                // Fast Buttons Grid (2 atas, 2 bawah - compact)
+                const SizedBox(height: 12),
+
+                // Menu Pintas Keuangan (Fast Action Buttons)
+                _buildQuickMenuSection(),
+
+                const SizedBox(height: 12),
+
+                // Fast Buttons Grid (Sub-Tabs Omzet)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Column(
@@ -602,6 +616,221 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
           _buildTabDetailLayanan(),
           _buildTabRankingVisualisasi(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuickMenuSection() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Menu Pintas Keuangan',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF0F172A),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.bolt_rounded, size: 12, color: Color(0xFFD97706)),
+                    const SizedBox(width: 2),
+                    Text(
+                      'Fast Actions',
+                      style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: const Color(0xFFD97706)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _buildQuickActionBtn(
+                  title: 'Cashflow Cabang',
+                  icon: Icons.account_balance_wallet_rounded,
+                  color: const Color(0xFF059669),
+                  bgColor: const Color(0xFFECFDF5),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const FinanceCashflowCabangScreen()),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuickActionBtn(
+                  title: 'Approval Kas',
+                  icon: Icons.assignment_turned_in_rounded,
+                  color: const Color(0xFFD97706),
+                  bgColor: const Color(0xFFFFFBEB),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const FinanceApprovalKasScreen()),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuickActionBtn(
+                  title: 'Audit Order',
+                  icon: Icons.fact_check_rounded,
+                  color: const Color(0xFF2563EB),
+                  bgColor: const Color(0xFFEFF6FF),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const FinanceAuditScreen()),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildQuickActionBtn(
+                  title: 'Manajemen Gaji',
+                  icon: Icons.payments_rounded,
+                  color: const Color(0xFF4F46E5),
+                  bgColor: const Color(0xFFEEF2FF),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const FinanceGajiScreen()),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuickActionBtn(
+                  title: 'Download Data',
+                  icon: Icons.file_download_rounded,
+                  color: const Color(0xFF0891B2),
+                  bgColor: const Color(0xFFECFEFF),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const FinanceDownloadScreen()),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuickActionBtn(
+                  title: 'Spend Ads',
+                  icon: Icons.campaign_rounded,
+                  color: const Color(0xFFE11D48),
+                  bgColor: const Color(0xFFFFF1F2),
+                  onTap: () {
+                    setState(() => _mainTab = 'marketing');
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildQuickActionBtn(
+                  title: 'Permintaan Design',
+                  icon: Icons.palette_rounded,
+                  color: const Color(0xFF7C3AED),
+                  bgColor: const Color(0xFFF5F3FF),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const OperasionalPermintaanDesignScreen()),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuickActionBtn(
+                  title: 'Pengumuman',
+                  icon: Icons.notifications_active_rounded,
+                  color: const Color(0xFFEA580C),
+                  bgColor: const Color(0xFFFFF7ED),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const OperasionalPengumumanScreen()),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionBtn({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required Color bgColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 14, color: color),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 9.5,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF0F172A),
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }

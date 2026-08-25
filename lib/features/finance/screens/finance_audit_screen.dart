@@ -2547,125 +2547,366 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     );
   }
 
-  // --- Confirm Approve Dialog ---
+  // --- Confirm Approve Dialog (Modern & Mobile Friendly) ---
   void _showApproveConfirm(OrderModel order) {
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Konfirmasi Approval', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-        content: Text('Apakah Anda yakin ingin menyetujui pembayaran ${order.nomorPesanan} sebesar ${_currencyFormat.format(order.total)}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Batal'),
+      builder: (dialogContext) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        backgroundColor: Colors.white,
+        elevation: 10,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header Icon Badge
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCFCE7),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFF86EFAC), width: 2),
+                ),
+                child: const Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 30),
+              ),
+              const SizedBox(height: 16),
+
+              // Title
+              Text(
+                'Konfirmasi Approval',
+                style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+
+              // Subtitle / Prompt
+              Text(
+                'Apakah Anda yakin ingin menyetujui pembayaran untuk pesanan ini?',
+                style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B), height: 1.4),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+
+              // Highlighted Order Info Card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.receipt_long_rounded, size: 16, color: Color(0xFF64748B)),
+                            const SizedBox(width: 6),
+                            Text(
+                              order.nomorPesanan.isNotEmpty ? order.nomorPesanan : 'Order #${order.id}',
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFFDE68A)),
+                          ),
+                          child: Text(
+                            order.statusUtamaLabel,
+                            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFFD97706)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Divider(height: 1, color: Color(0xFFE2E8F0)),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Pelanggan:', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                        Text(
+                          order.customer.name,
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF1E293B)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Total Nominal:', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                        Text(
+                          _currencyFormat.format(order.total),
+                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF059669)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Actions Row
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        backgroundColor: Colors.white,
+                      ),
+                      child: Text(
+                        'Batal',
+                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF64748B)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 1,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(dialogContext);
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+                        );
+                        try {
+                          final int pId = order.pembayaran?.id ??
+                              int.tryParse(order.id.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+                          if (pId == 0) throw Exception('Data pembayaran tidak ditemukan');
+                          await _financeService.approvePembayaran(pId, 'approved');
+                          if (mounted) Navigator.pop(context);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Pembayaran berhasil disetujui!'), backgroundColor: Color(0xFF059669)),
+                            );
+                            _fetchData();
+                          }
+                        } catch (e) {
+                          if (mounted) Navigator.pop(context);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
+                            );
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
+                      label: Text(
+                        'Ya, Approve',
+                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF059669),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 2,
+                        shadowColor: const Color(0xFF059669).withValues(alpha: 0.3),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-              );
-              try {
-                final int pId = order.pembayaran?.id ??
-                    int.tryParse(order.id.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
-                if (pId == 0) throw Exception('Data pembayaran tidak ditemukan');
-                await _financeService.approvePembayaran(pId, 'approved');
-                if (mounted) Navigator.pop(context);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Pembayaran berhasil disetujui!'), backgroundColor: Color(0xFF059669)),
-                  );
-                  _fetchData();
-                }
-              } catch (e) {
-                if (mounted) Navigator.pop(context);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), foregroundColor: Colors.white),
-            child: const Text('Ya, Approve'),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  // --- Reject Modal Dialog ---
+  // --- Reject Modal Dialog (Modern & Mobile Friendly) ---
   void _showRejectModal(OrderModel order) {
     final reasonCtrl = TextEditingController();
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Tolak Pembayaran', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.red.shade700)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Masukkan alasan penolakan pembayaran ${order.nomorPesanan}:', style: GoogleFonts.inter(fontSize: 12)),
-            const SizedBox(height: 10),
-            TextField(
-              controller: reasonCtrl,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: 'Alasan penolakan...',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      builder: (dialogContext) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        backgroundColor: Colors.white,
+        elevation: 10,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header Icon Badge
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEE2E2),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFFCA5A5), width: 2),
+                ),
+                child: const Icon(Icons.cancel_rounded, color: Color(0xFFDC2626), size: 30),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+
+              // Title
+              Text(
+                'Tolak Pembayaran',
+                style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+
+              // Subtitle / Prompt
+              Text(
+                'Pesanan akan ditolak dan status pembayaran dikembalikan.',
+                style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B), height: 1.4),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 14),
+
+              // Highlighted Order Info Card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.receipt_long_rounded, size: 16, color: Color(0xFF64748B)),
+                        const SizedBox(width: 6),
+                        Text(
+                          order.nomorPesanan.isNotEmpty ? order.nomorPesanan : 'Order #${order.id}',
+                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      _currencyFormat.format(order.total),
+                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: const Color(0xFFDC2626)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Reason Input
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Alasan Penolakan:', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF475569))),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: reasonCtrl,
+                maxLines: 3,
+                style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
+                decoration: InputDecoration(
+                  hintText: 'Tuliskan alasan penolakan pembayaran...',
+                  hintStyle: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade400),
+                  contentPadding: const EdgeInsets.all(12),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.5)),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Actions Row
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        backgroundColor: Colors.white,
+                      ),
+                      child: Text(
+                        'Batal',
+                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF64748B)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 1,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final reason = reasonCtrl.text.trim();
+                        if (reason.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Alasan penolakan wajib diisi!'), backgroundColor: Colors.red),
+                          );
+                          return;
+                        }
+                        Navigator.pop(dialogContext);
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+                        );
+                        try {
+                          final int pId = order.pembayaran?.id ??
+                              int.tryParse(order.id.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+                          if (pId == 0) throw Exception('Data pembayaran tidak ditemukan');
+                          await _financeService.approvePembayaran(pId, 'rejected', alasan: reason);
+                          if (mounted) Navigator.pop(context);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Pembayaran berhasil ditolak.'), backgroundColor: Color(0xFFDC2626)),
+                            );
+                            _fetchData();
+                          }
+                        } catch (e) {
+                          if (mounted) Navigator.pop(context);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
+                            );
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.close_rounded, size: 16, color: Colors.white),
+                      label: Text(
+                        'Tolak',
+                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFDC2626),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 2,
+                        shadowColor: const Color(0xFFDC2626).withValues(alpha: 0.3),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final reason = reasonCtrl.text.trim();
-              if (reason.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Alasan penolakan wajib diisi!'), backgroundColor: Colors.red),
-                );
-                return;
-              }
-              Navigator.pop(dialogContext);
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-              );
-              try {
-                final int pId = order.pembayaran?.id ??
-                    int.tryParse(order.id.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
-                if (pId == 0) throw Exception('Data pembayaran tidak ditemukan');
-                await _financeService.approvePembayaran(pId, 'rejected', alasan: reason);
-                if (mounted) Navigator.pop(context);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Pembayaran berhasil ditolak.'), backgroundColor: Color(0xFFDC2626)),
-                  );
-                  _fetchData();
-                }
-              } catch (e) {
-                if (mounted) Navigator.pop(context);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
-            child: const Text('Tolak'),
-          ),
-        ],
       ),
     );
   }
@@ -3215,74 +3456,178 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       context: context,
       barrierDismissible: false,
       builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(
-            'Setujui Pengajuan Edit',
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-          ),
-          content: Text(
-            'Apakah Anda yakin ingin menyetujui pengajuan edit pesanan ${order.nomorPesanan}? Pesanan akan diizinkan untuk diedit ulang.',
-            style: GoogleFonts.inter(fontSize: 13),
-          ),
-          actions: [
-            TextButton(
-              onPressed: isSubmitting ? null : () => Navigator.pop(dialogCtx),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: isSubmitting
-                  ? null
-                  : () async {
-                      setDialogState(() => isSubmitting = true);
-                      try {
-                        final identifier =
-                            order.pengajuanEditId?.toString() ?? order.id;
-                        await _financeService.approvePengajuanEdit(
-                          identifier,
-                          'approved',
-                        );
-                        if (!mounted) return;
-                        Navigator.pop(dialogCtx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Pengajuan edit berhasil disetujui! Status pesanan dikembalikan agar CS dapat mengedit ulang.',
-                            ),
-                            backgroundColor: Color(0xFF059669),
+        builder: (context, setDialogState) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          backgroundColor: Colors.white,
+          elevation: 10,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Padding(
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header Icon Badge
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEEF2FF),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFC7D2FE), width: 2),
+                  ),
+                  child: const Icon(Icons.edit_note_rounded, color: Color(0xFF4F46E5), size: 32),
+                ),
+                const SizedBox(height: 16),
+
+                // Title
+                Text(
+                  'Setujui Pengajuan Edit',
+                  style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 6),
+
+                // Subtitle
+                Text(
+                  'Status pesanan akan dikembalikan agar CS dapat mengedit rincian pesanan ulang.',
+                  style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B), height: 1.4),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+
+                // Order Info Card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.receipt_long_rounded, size: 16, color: Color(0xFF64748B)),
+                              const SizedBox(width: 6),
+                              Text(
+                                order.nomorPesanan.isNotEmpty ? order.nomorPesanan : 'Order #${order.id}',
+                                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                              ),
+                            ],
                           ),
-                        );
-                        _fetchData();
-                      } catch (e) {
-                        setDialogState(() => isSubmitting = false);
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              e.toString().replaceAll('Exception: ', ''),
-                            ),
-                            backgroundColor: Colors.red,
+                          Text(
+                            _currencyFormat.format(order.total),
+                            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF059669)),
                           ),
-                        );
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF059669),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              ),
-              child: isSubmitting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+                        ],
                       ),
-                    )
-                  : const Text('Ya, Setujui'),
+                      if (order.alasanPengajuanEdit.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFFBEB),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFFDE68A)),
+                          ),
+                          child: Text(
+                            'Alasan: ${order.alasanPengajuanEdit}',
+                            style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFFB45309)),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: isSubmitting ? null : () => Navigator.pop(dialogCtx),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          backgroundColor: Colors.white,
+                        ),
+                        child: Text(
+                          'Batal',
+                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF64748B)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                setDialogState(() => isSubmitting = true);
+                                try {
+                                  final identifier =
+                                      order.pengajuanEditId?.toString() ?? order.id;
+                                  await _financeService.approvePengajuanEdit(
+                                    identifier,
+                                    'approved',
+                                  );
+                                  if (!mounted) return;
+                                  Navigator.pop(dialogCtx);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Pengajuan edit berhasil disetujui! Status pesanan dikembalikan agar CS dapat mengedit ulang.',
+                                      ),
+                                      backgroundColor: Color(0xFF059669),
+                                    ),
+                                  );
+                                  _fetchData();
+                                } catch (e) {
+                                  setDialogState(() => isSubmitting = false);
+                                  if (!mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        e.toString().replaceAll('Exception: ', ''),
+                                      ),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              },
+                        icon: isSubmitting
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.check_rounded, size: 16, color: Colors.white),
+                        label: Text(
+                          isSubmitting ? 'Memproses...' : 'Ya, Setujui',
+                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF059669),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 2,
+                          shadowColor: const Color(0xFF059669).withValues(alpha: 0.3),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -3295,104 +3640,160 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       context: context,
       barrierDismissible: false,
       builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(
-            'Tolak Pengajuan Edit',
-            style: GoogleFonts.inter(
-              fontWeight: FontWeight.bold,
-              color: Colors.red.shade700,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Masukkan alasan penolakan pengajuan edit ${order.nomorPesanan}:',
-                style: GoogleFonts.inter(fontSize: 12),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: reasonCtrl,
-                maxLines: 3,
-                enabled: !isSubmitting,
-                decoration: InputDecoration(
-                  hintText: 'Alasan penolakan...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+        builder: (context, setDialogState) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          backgroundColor: Colors.white,
+          elevation: 10,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Padding(
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header Icon Badge
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEE2E2),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFFCA5A5), width: 2),
+                  ),
+                  child: const Icon(Icons.cancel_rounded, color: Color(0xFFDC2626), size: 30),
+                ),
+                const SizedBox(height: 16),
+
+                // Title
+                Text(
+                  'Tolak Pengajuan Edit',
+                  style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 6),
+
+                // Subtitle
+                Text(
+                  'Pengajuan edit dari CS akan ditolak.',
+                  style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B), height: 1.4),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 14),
+
+                // Reason Input
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Alasan Penolakan:', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF475569))),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: reasonCtrl,
+                  maxLines: 3,
+                  enabled: !isSubmitting,
+                  style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
+                  decoration: InputDecoration(
+                    hintText: 'Tuliskan alasan penolakan...',
+                    hintStyle: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade400),
+                    contentPadding: const EdgeInsets.all(12),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.5)),
                   ),
                 ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: isSubmitting ? null : () => Navigator.pop(dialogCtx),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: isSubmitting
-                  ? null
-                  : () async {
-                      final reason = reasonCtrl.text.trim();
-                      if (reason.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Alasan penolakan wajib diisi!'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-                      setDialogState(() => isSubmitting = true);
-                      try {
-                        final identifier =
-                            order.pengajuanEditId?.toString() ?? order.id;
-                        await _financeService.approvePengajuanEdit(
-                          identifier,
-                          'rejected',
-                          alasan: reason,
-                        );
-                        if (!mounted) return;
-                        Navigator.pop(dialogCtx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Pengajuan edit ditolak.'),
-                            backgroundColor: Color(0xFFDC2626),
-                          ),
-                        );
-                        _fetchData();
-                      } catch (e) {
-                        setDialogState(() => isSubmitting = false);
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              e.toString().replaceAll('Exception: ', ''),
-                            ),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFDC2626),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              ),
-              child: isSubmitting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+                const SizedBox(height: 20),
+
+                // Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: isSubmitting ? null : () => Navigator.pop(dialogCtx),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          backgroundColor: Colors.white,
+                        ),
+                        child: Text(
+                          'Batal',
+                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF64748B)),
+                        ),
                       ),
-                    )
-                  : const Text('Tolak'),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                final reason = reasonCtrl.text.trim();
+                                if (reason.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Alasan penolakan wajib diisi!'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                  return;
+                                }
+                                setDialogState(() => isSubmitting = true);
+                                try {
+                                  final identifier =
+                                      order.pengajuanEditId?.toString() ?? order.id;
+                                  await _financeService.approvePengajuanEdit(
+                                    identifier,
+                                    'rejected',
+                                    alasan: reason,
+                                  );
+                                  if (!mounted) return;
+                                  Navigator.pop(dialogCtx);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Pengajuan edit berhasil ditolak.'),
+                                      backgroundColor: Color(0xFFDC2626),
+                                    ),
+                                  );
+                                  _fetchData();
+                                } catch (e) {
+                                  setDialogState(() => isSubmitting = false);
+                                  if (!mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        e.toString().replaceAll('Exception: ', ''),
+                                      ),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              },
+                        icon: isSubmitting
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.close_rounded, size: 16, color: Colors.white),
+                        label: Text(
+                          isSubmitting ? 'Memproses...' : 'Tolak',
+                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFDC2626),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 2,
+                          shadowColor: const Color(0xFFDC2626).withValues(alpha: 0.3),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../core/widgets/app_confirmation_dialog.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -214,21 +215,15 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
   }
 
   Future<void> _deleteCashflow(int id) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Hapus Data Cashflow?', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Text('Data transaksi kas ini akan dihapus permanen.', style: GoogleFonts.inter(fontSize: 13)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, elevation: 0),
-            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+    final confirm = await AppConfirmationDialog.show(
+      context,
+      title: 'Hapus Data Cashflow?',
+      message: 'Data transaksi kas ini akan dihapus permanen dari sistem.',
+      type: ConfirmationDialogType.danger,
+      customIcon: Icons.delete_forever_rounded,
+      confirmText: 'Hapus',
+      cancelText: 'Batal',
+      isDestructive: true,
     );
 
     if (confirm != true) return;
@@ -308,21 +303,15 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
   }
 
   Future<void> _deletePengajuan(int id) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Hapus Pengajuan Kas?', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Text('Pengajuan uang kas ini akan dihapus dari sistem.', style: GoogleFonts.inter(fontSize: 13)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, elevation: 0),
-            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+    final confirm = await AppConfirmationDialog.show(
+      context,
+      title: 'Hapus Pengajuan Kas?',
+      message: 'Pengajuan uang kas ini akan dihapus permanen dari sistem.',
+      type: ConfirmationDialogType.danger,
+      customIcon: Icons.delete_forever_rounded,
+      confirmText: 'Hapus',
+      cancelText: 'Batal',
+      isDestructive: true,
     );
 
     if (confirm != true) return;

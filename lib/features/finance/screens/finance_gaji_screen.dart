@@ -102,7 +102,7 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
     final filtered = _getFilteredData();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
           _buildHeader(),
@@ -116,13 +116,14 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Title Banner matching Web
+                    // Modern Title Banner
                     Container(
+                      width: double.infinity,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.grey.withValues(alpha: 0.18)),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.02),
@@ -134,13 +135,26 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Gaji Karyawan',
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textDark,
-                            ),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEEF2FF),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.badge_rounded, size: 16, color: Color(0xFF4F46E5)),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Gaji Karyawan',
+                                style: GoogleFonts.inter(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF0F172A),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -149,32 +163,40 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
                                 : 'Rekap dan hitung slip gaji harian karyawan.',
                             style: GoogleFonts.inter(
                               fontSize: 11,
-                              color: AppColors.textMuted,
+                              color: const Color(0xFF64748B),
                               height: 1.3,
                             ),
                           ),
                           const SizedBox(height: 12),
 
                           // Sub-tabs Pill (Bulanan | Harian)
-                          Row(
-                            children: [
-                              _buildPillTab('Bulanan', 'bulanan'),
-                              const SizedBox(width: 8),
-                              _buildPillTab('Harian', 'harian'),
-                            ],
+                          Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(child: _buildPillTab('Bulanan', 'bulanan')),
+                                const SizedBox(width: 4),
+                                Expanded(child: _buildPillTab('Harian', 'harian')),
+                              ],
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 10),
 
+                    // Search & Filter Bar
                     _buildProMaxSearchAndFilterBar(),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 4),
 
                     if (_isLoading)
                       const Padding(
                         padding: EdgeInsets.only(top: 40),
-                        child: Center(child: CircularProgressIndicator()),
+                        child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
                       )
                     else if (filtered.isEmpty)
                       Container(
@@ -183,29 +205,33 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
                         child: Column(
                           children: [
-                            const Icon(Icons.credit_card_off_outlined, size: 36, color: AppColors.textMuted),
+                            const Icon(Icons.credit_card_off_rounded, size: 40, color: Color(0xFF94A3B8)),
                             const SizedBox(height: 10),
                             Text(
-                              'Belum ada data slip gaji karyawan.',
-                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textMuted),
+                              'Belum ada data slip gaji karyawan',
+                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B)),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Coba ubah filter atau kata kunci pencarian.',
+                              style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B)),
+                              textAlign: TextAlign.center,
                             ),
                           ],
                         ),
                       )
                     else
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: filtered.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final gaji = filtered[index];
-                          return _buildGajiCard(gaji);
-                        },
+                      Column(
+                        children: [
+                          ...filtered.map((gaji) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: _buildGajiCard(gaji),
+                          )),
+                        ],
                       ),
                   ],
                 ),
@@ -219,7 +245,7 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
 
   Widget _buildHeader() {
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 50, 20, 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -233,15 +259,16 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
                     'Manajemen Gaji',
                     style: GoogleFonts.inter(
                       fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w800,
                       color: Colors.white,
                     ),
                   ),
+                  const SizedBox(height: 2),
                   Text(
                     'Kelola slip gaji bulanan & harian karyawan',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.8),
+                      color: Colors.white.withValues(alpha: 0.85),
                     ),
                   ),
                 ],
@@ -251,16 +278,17 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.credit_card_rounded, color: Colors.white, size: 16),
+                    const Icon(Icons.payments_rounded, color: Colors.white, size: 15),
                     const SizedBox(width: 6),
                     Text(
                       'Finance Gaji',
                       style: GoogleFonts.inter(
                         fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
@@ -278,18 +306,29 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
     final bool isActive = _jenisGajiTab == key;
     return GestureDetector(
       onTap: () => setState(() => _jenisGajiTab = key),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.primary : Colors.grey.shade100,
+          color: isActive ? const Color(0xFF0F52BA) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            if (isActive)
+              BoxShadow(
+                color: const Color(0xFF0F52BA).withValues(alpha: 0.25),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+          ],
         ),
-        child: Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
-            color: isActive ? Colors.white : AppColors.textDark,
+        child: Center(
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+              color: isActive ? Colors.white : const Color(0xFF64748B),
+            ),
           ),
         ),
       ),
@@ -306,235 +345,226 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
     final isBulanan = gaji.jenisGaji.toLowerCase() == 'bulanan';
 
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.025),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Row: Avatar, Name, Cabang & Type Badge
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [AppColors.primary.withValues(alpha: 0.15), AppColors.primary.withValues(alpha: 0.05)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.person_rounded, size: 20, color: AppColors.primary),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textDark),
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Icon(Icons.store_rounded, size: 12, color: AppColors.textMuted),
-                          const SizedBox(width: 4),
-                          Text(
-                            cabang,
-                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textMuted),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          onTap: () => _showSlipDetailModal(gaji),
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.all(15),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header Row: Avatar, Name, Cabang & Type Badge
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: const Color(0xFFBFDBFE)),
                           ),
-                        ],
+                          child: const Icon(Icons.person_rounded, size: 20, color: Color(0xFF2563EB)),
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                const Icon(Icons.storefront_rounded, size: 12, color: Color(0xFF64748B)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  cabang,
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isBulanan ? const Color(0xFFE0F2FE) : const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: isBulanan ? const Color(0xFFBAE6FD) : const Color(0xFFFDE68A)),
+                      ),
+                      child: Text(
+                        gaji.jenisGaji.toUpperCase(),
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: isBulanan ? const Color(0xFF0369A1) : const Color(0xFFB45309),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Divider(color: Color(0xFFF1F5F9), height: 1, thickness: 1),
+                const SizedBox(height: 12),
+
+                // Body Content: 2-Column Grid
+                if (isBulanan) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildInfoItem(
+                          'Periode Gaji',
+                          '${gaji.periodeBulan.toString().padLeft(2, '0')}/${gaji.periodeTahun}',
+                          icon: Icons.calendar_month_rounded,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildInfoItem(
+                          'Pendapatan Kotor',
+                          '+ ${_currencyFormat.format(gaji.totalGajiDiterima)}',
+                          color: const Color(0xFF059669),
+                        ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildInfoItem(
+                          'Total Potongan',
+                          '- ${_currencyFormat.format(gaji.totalPotongan)}',
+                          color: const Color(0xFFDC2626),
+                        ),
+                      ),
+                      const Expanded(child: SizedBox()),
+                    ],
+                  ),
+                ] else ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildInfoItem(
+                          'Periode Kerja',
+                          gaji.awalPeriode != null && gaji.akhirPeriode != null && DateTime.tryParse(gaji.awalPeriode!) != null && DateTime.tryParse(gaji.akhirPeriode!) != null
+                              ? '${DateFormat('dd MMM').format(DateTime.parse(gaji.awalPeriode!))} - ${DateFormat('dd MMM yyyy').format(DateTime.parse(gaji.akhirPeriode!))}'
+                              : '${gaji.periodeBulan}/${gaji.periodeTahun}',
+                          icon: Icons.date_range_rounded,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildInfoItem('Jumlah Hari', hariKerja, icon: Icons.access_time_filled_rounded),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildInfoItem('No. Rekening', noRek, icon: Icons.account_balance_rounded),
+                      ),
+                      Expanded(
+                        child: _buildInfoItem(
+                          'Total Bonus',
+                          '+ ${_currencyFormat.format(gaji.totalBonus)}',
+                          color: const Color(0xFF059669),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildInfoItem(
+                          'Total Potongan',
+                          '- ${_currencyFormat.format(gaji.totalPotongan)}',
+                          color: const Color(0xFFDC2626),
+                        ),
+                      ),
+                      const Expanded(child: SizedBox()),
+                    ],
+                  ),
                 ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: isBulanan ? const Color(0xFFE0F2FE) : const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isBulanan ? const Color(0xFFBAE6FD) : const Color(0xFFFDE68A)),
-                ),
-                child: Text(
-                  gaji.jenisGaji.toUpperCase(),
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: isBulanan ? const Color(0xFF0369A1) : const Color(0xFFB45309),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Divider(color: Colors.grey.withValues(alpha: 0.15), height: 1),
-          const SizedBox(height: 14),
+                const SizedBox(height: 12),
 
-          // Body Content: Synchronized with Web table columns
-          if (isBulanan) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: _buildInfoItem(
-                    'Periode Gaji',
-                    '${gaji.periodeBulan.toString().padLeft(2, '0')}/${gaji.periodeTahun}',
-                    icon: Icons.calendar_month_rounded,
+                // Take Home Pay Box (Emerald Light Gradient)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFF0FDF4), Color(0xFFDCFCE7)],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFA7F3D0)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.payments_rounded, size: 16, color: Color(0xFF047857)),
+                          const SizedBox(width: 6),
+                          Text('TAKE HOME PAY', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF047857), letterSpacing: 0.5)),
+                        ],
+                      ),
+                      Text(
+                        _currencyFormat.format(gaji.takeHomePay),
+                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: const Color(0xFF047857)),
+                      ),
+                    ],
                   ),
                 ),
-                Expanded(
-                  child: _buildInfoItem(
-                    'Pendapatan Kotor',
-                    '+ ${_currencyFormat.format(gaji.totalGajiDiterima)}',
-                    color: const Color(0xFF10B981),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildInfoItem(
-                    'Total Potongan',
-                    '- ${_currencyFormat.format(gaji.totalPotongan)}',
-                    color: const Color(0xFFEF4444),
-                  ),
-                ),
-                const Expanded(child: SizedBox()),
-              ],
-            ),
-          ] else ...[
-            Row(
-              children: [
-                Expanded(
-                  child: _buildInfoItem(
-                    'Periode Kerja',
-                    gaji.awalPeriode != null && gaji.akhirPeriode != null && DateTime.tryParse(gaji.awalPeriode!) != null && DateTime.tryParse(gaji.akhirPeriode!) != null
-                        ? '${DateFormat('dd MMM').format(DateTime.parse(gaji.awalPeriode!))} - ${DateFormat('dd MMM yyyy').format(DateTime.parse(gaji.akhirPeriode!))}'
-                        : '${gaji.periodeBulan}/${gaji.periodeTahun}',
-                    icon: Icons.date_range_rounded,
-                  ),
-                ),
-                Expanded(
-                  child: _buildInfoItem('Jumlah Hari', hariKerja, icon: Icons.access_time_filled_rounded),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildInfoItem('No. Rekening', noRek, icon: Icons.account_balance_rounded),
-                ),
-                Expanded(
-                  child: _buildInfoItem(
-                    'Total Bonus',
-                    '+ ${_currencyFormat.format(gaji.totalBonus)}',
-                    color: const Color(0xFF10B981),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildInfoItem(
-                    'Total Potongan',
-                    '- ${_currencyFormat.format(gaji.totalPotongan)}',
-                    color: const Color(0xFFEF4444),
-                  ),
-                ),
-                const Expanded(child: SizedBox()),
-              ],
-            ),
-          ],
-          const SizedBox(height: 14),
+                const SizedBox(height: 12),
 
-          // Take Home Pay Box (Pro Max Tinted)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFF0F9FF), Color(0xFFE0F2FE)],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFBAE6FD)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
+                // Action Buttons
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    const Icon(Icons.account_balance_wallet_rounded, size: 16, color: Color(0xFF0369A1)),
-                    const SizedBox(width: 6),
-                    Text('TAKE HOME PAY', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF0369A1))),
+                    // Cetak Slip Button
+                    ElevatedButton.icon(
+                      onPressed: () => _printSlip(gaji),
+                      icon: const Icon(Icons.print_rounded, size: 15, color: Colors.white),
+                      label: Text('Cetak Slip', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFD97706),
+                        foregroundColor: Colors.white,
+                        elevation: 1,
+                        shadowColor: const Color(0xFFD97706).withValues(alpha: 0.3),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
                   ],
                 ),
-                Text(
-                  _currencyFormat.format(gaji.takeHomePay),
-                  style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.primary),
-                ),
               ],
             ),
           ),
-          const SizedBox(height: 14),
-
-          // Action Buttons
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              // Cetak Slip Button
-              ElevatedButton.icon(
-                onPressed: () => _printSlip(gaji),
-                icon: const Icon(Icons.print_rounded, size: 15),
-                label: const Text('Cetak Slip'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFD97706),
-                  foregroundColor: Colors.white,
-                  elevation: 2,
-                  shadowColor: const Color(0xFFD97706).withValues(alpha: 0.4),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700),
-                ),
-              ),
-              const SizedBox(width: 8),
-
-              // Detail Modal Button
-              InkWell(
-                onTap: () => _showSlipDetailModal(gaji),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: const Icon(Icons.remove_red_eye_rounded, size: 18, color: AppColors.textDark),
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

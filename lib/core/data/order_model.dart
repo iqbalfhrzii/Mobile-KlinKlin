@@ -112,12 +112,13 @@ class ServiceItem {
 
   factory ServiceItem.fromJson(Map<String, dynamic> json) {
     final layanan = json['layanan'] ?? {};
+    final rawPrice = json['subtotal'] ?? json['harga'] ?? layanan['harga'];
     return ServiceItem(
       id: json['id']?.toString() ?? '',
       layananId: json['layanan_id']?.toString() ?? layanan['id']?.toString(),
       name: layanan['nama_layanan'] ?? json['nama_layanan'] ?? '-',
-      price: (json['harga'] ?? layanan['harga'] ?? json['subtotal']) != null 
-          ? (double.tryParse((json['harga'] ?? layanan['harga'] ?? json['subtotal']).toString())?.toInt() ?? 0)
+      price: rawPrice != null 
+          ? (double.tryParse(rawPrice.toString())?.toInt() ?? 0)
           : 0,
       qty: json['qty']?.toString() ?? '1',
       tanggalPengerjaan: json['tanggal_pengerjaan'] ?? '',
@@ -548,6 +549,8 @@ class OrderModel {
     }
     return total;
   }
+
+  String get statusPesananRaw => _orderStatusToString(status);
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     final orderJson = (json['pesanan'] != null && json['pesanan'] is Map)

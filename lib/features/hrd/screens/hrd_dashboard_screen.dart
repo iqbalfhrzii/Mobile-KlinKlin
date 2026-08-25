@@ -331,7 +331,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
                     ),
                     const SizedBox(width: 10),
                     Text(
-                      'Kehadiran Cleaner Hari Ini',
+                      'Kehadiran Karyawan Hari Ini',
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,

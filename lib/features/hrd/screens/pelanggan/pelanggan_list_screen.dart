@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_confirmation_dialog.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/gradient_header.dart';
@@ -82,19 +83,15 @@ class _PelangganListScreenState extends State<PelangganListScreen> {
     final newStatus = isAktif ? 'nonaktif' : 'aktif';
     final action = isAktif ? 'menonaktifkan' : 'mengaktifkan';
     
-    final bool? confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('${isAktif ? 'Nonaktifkan' : 'Aktifkan'} Pelanggan?'),
-        content: Text('Apakah Anda yakin ingin $action ${pelanggan.namaPelanggan}?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true), 
-            child: Text(isAktif ? 'Nonaktifkan' : 'Aktifkan', style: TextStyle(color: isAktif ? Colors.red : Colors.green)),
-          ),
-        ],
-      ),
+    final bool? confirm = await AppConfirmationDialog.show(
+      context,
+      title: '${isAktif ? 'Nonaktifkan' : 'Aktifkan'} Pelanggan?',
+      message: 'Apakah Anda yakin ingin $action ${pelanggan.namaPelanggan}?',
+      type: isAktif ? ConfirmationDialogType.danger : ConfirmationDialogType.success,
+      customIcon: isAktif ? Icons.block_rounded : Icons.check_circle_rounded,
+      confirmText: isAktif ? 'Nonaktifkan' : 'Aktifkan',
+      cancelText: 'Batal',
+      isDestructive: isAktif,
     );
 
     if (confirm == true) {

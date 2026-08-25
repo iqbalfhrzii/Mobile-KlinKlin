@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../../core/theme/app_colors.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});

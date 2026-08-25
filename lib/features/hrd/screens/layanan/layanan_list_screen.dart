@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_confirmation_dialog.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/gradient_header.dart';
 import '../../../../../core/data/hrd_models.dart';
 import '../../services/hrd_service.dart';
 import 'layanan_form_screen.dart';
-import 'package:intl/intl.dart';
 
 class LayananListScreen extends StatefulWidget {
   const LayananListScreen({super.key});
@@ -55,23 +55,15 @@ class _LayananListScreenState extends State<LayananListScreen> {
   }
 
   Future<void> _delete(LayananModel layanan) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hapus Layanan'),
-        content: Text('Apakah Anda yakin ingin menghapus layanan ${layanan.namaLayanan}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
+    final confirm = await AppConfirmationDialog.show(
+      context,
+      title: 'Hapus Layanan',
+      message: 'Apakah Anda yakin ingin menghapus ${layanan.namaLayanan}?',
+      type: ConfirmationDialogType.danger,
+      customIcon: Icons.delete_forever_rounded,
+      confirmText: 'Hapus',
+      cancelText: 'Batal',
+      isDestructive: true,
     );
 
     if (confirm == true) {

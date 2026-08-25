@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_confirmation_dialog.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/gradient_header.dart';
@@ -55,23 +56,15 @@ class _JenisBonusListScreenState extends State<JenisBonusListScreen> {
   }
 
   Future<void> _delete(JenisBonusModel jenisBonus) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hapus Kategori Bonus'),
-        content: Text('Apakah Anda yakin ingin menghapus kategori ${jenisBonus.namaBonus}? (Pastikan tidak ada cabang yang menggunakan tarif ini)'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
+    final confirm = await AppConfirmationDialog.show(
+      context,
+      title: 'Hapus Jenis Bonus',
+      message: 'Apakah Anda yakin ingin menghapus ${jenisBonus.namaBonus}?',
+      type: ConfirmationDialogType.danger,
+      customIcon: Icons.delete_forever_rounded,
+      confirmText: 'Hapus',
+      cancelText: 'Batal',
+      isDestructive: true,
     );
 
     if (confirm == true) {

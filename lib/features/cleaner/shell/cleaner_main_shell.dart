@@ -25,7 +25,7 @@ class CleanerMainShell extends StatefulWidget {
     final state = context.findAncestorStateOfType<_CleanerMainShellState>();
     if (state != null) {
       state.jobListKey.currentState?.applyFilter(statusFilter: statusFilter, isTodayOnly: isTodayOnly);
-      state.setState(() => state._currentIndex = 1);
+      state.switchTab(1);
     }
   }
 
@@ -37,6 +37,10 @@ class _CleanerMainShellState extends State<CleanerMainShell> {
   late int _currentIndex;
   int _dashKeyVal = 0;
   final GlobalKey<CleanerJobListScreenState> jobListKey = GlobalKey<CleanerJobListScreenState>();
+
+  void switchTab(int index) {
+    setState(() => _currentIndex = index);
+  }
 
   @override
   void initState() {

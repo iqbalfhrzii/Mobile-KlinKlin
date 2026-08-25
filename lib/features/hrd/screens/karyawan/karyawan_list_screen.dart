@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_confirmation_dialog.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/gradient_header.dart';
@@ -55,23 +56,15 @@ class _KaryawanListScreenState extends State<KaryawanListScreen> {
   }
 
   Future<void> _delete(KaryawanModel karyawan) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hapus Karyawan'),
-        content: Text('Apakah Anda yakin ingin menghapus ${karyawan.nama}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
+    final confirm = await AppConfirmationDialog.show(
+      context,
+      title: 'Hapus Karyawan',
+      message: 'Apakah Anda yakin ingin menghapus ${karyawan.nama}?',
+      type: ConfirmationDialogType.danger,
+      customIcon: Icons.delete_forever_rounded,
+      confirmText: 'Hapus',
+      cancelText: 'Batal',
+      isDestructive: true,
     );
 
     if (confirm == true) {

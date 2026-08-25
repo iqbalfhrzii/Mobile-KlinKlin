@@ -1,11 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/api/api_client.dart';
-import '../../services/hrd_cuti_service.dart';
-import 'package:shimmer/shimmer.dart';
-import 'package:intl/intl.dart';
+import '../../../../core/data/hrd_models.dart';
+import '../../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../../core/widgets/gradient_header.dart';
+import '../../services/hrd_cuti_service.dart';
+import '../../services/hrd_service.dart';
+import 'package:shimmer/shimmer.dart';
 
 class HrdCutiScreen extends StatefulWidget {
   const HrdCutiScreen({super.key});
@@ -17,11 +19,15 @@ class HrdCutiScreen extends StatefulWidget {
 class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _service = HrdCutiService();
+  final _hrdService = HrdService();
 
   // Data Cuti State
   List<Map<String, dynamic>> _karyawans = [];
+  List<CabangModel> _cabangs = [];
   bool _isLoadingKaryawan = true;
   String _searchKaryawan = '';
+  String? _selectedJabatan;
+  String? _selectedCabangId;
 
   // Pengajuan State
   List<Map<String, dynamic>> _pengajuan = [];
@@ -43,31 +49,125 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
     {'en': 'Sunday', 'id': 'Minggu'},
   ];
 
-  String? _getFotoUrl(String? path) {
-    if (path == null || path.isEmpty) return null;
-    if (path.startsWith('http')) return path;
-    String cleanPath = path.replaceFirst(RegExp(r'^/?(storage/)?'), '');
-    final baseDomain = ApiClient.baseUrl.replaceAll(RegExp(r'/api/?$'), '');
-    return '$baseDomain/storage/$cleanPath';
+  String _formatDate(dynamic dateVal) {
+    if (dateVal == null) return '-';
+    try {
+      DateTime dt;
+      if (dateVal is DateTime) {
+        dt = dateVal;
+      } else {
+        dt = DateTime.parse(dateVal.toString());
+      }
+      const months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+      return '${dt.day} ${months[dt.month]} ${dt.year}';
+    } catch (_) {
+      return dateVal.toString().split('T').first;
+    }
   }
 
-  Widget _buildAvatar(Map<String, dynamic> k, {double radius = 20}) {
-    final fotoUrl = _getFotoUrl(k['foto_profil']);
-    final fallbackText = Text(
-      k['nama'] != null && k['nama'].toString().isNotEmpty ? k['nama'][0].toUpperCase() : 'K',
-      style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: radius - 4),
+  Widget _buildAvatar(Map<String, dynamic>? k, {double size = 48, double radius = 14}) {
+    final name = k?['nama']?.toString() ?? '';
+    final initial = name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'K';
+    final rawPhoto = (k?['foto_profil'] ?? k?['foto'] ?? k?['foto_url'] ?? k?['profile_photo_url'])?.toString().trim();
+
+    Widget fallback = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(radius),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1D4ED8).withValues(alpha: 0.2),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Text(
+          initial,
+          style: GoogleFonts.inter(
+            fontSize: size * 0.42,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ),
     );
 
-    if (fotoUrl == null) {
-      return CircleAvatar(radius: radius, backgroundColor: AppColors.primary.withValues(alpha: 0.1), child: fallbackText);
+    if (rawPhoto == null || rawPhoto.isEmpty || rawPhoto == 'null') {
+      return fallback;
     }
-    return ClipOval(
-      child: Image.network(
-        fotoUrl,
-        width: radius * 2,
-        height: radius * 2,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => CircleAvatar(radius: radius, backgroundColor: AppColors.primary.withValues(alpha: 0.1), child: fallbackText),
+
+    // 1. Base64 Data URI decoding (e.g. data:image/jpeg;base64,...)
+    if (rawPhoto.startsWith('data:image')) {
+      try {
+        final base64Content = rawPhoto.contains(',') ? rawPhoto.split(',').last : rawPhoto;
+        final bytes = base64Decode(base64Content);
+        return Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(radius),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(radius),
+            child: Image.memory(
+              bytes,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => fallback,
+            ),
+          ),
+        );
+      } catch (_) {
+        return fallback;
+      }
+    }
+
+    // 2. HTTP / Storage URL
+    String fotoUrl = rawPhoto;
+    if (!fotoUrl.startsWith('http://') && !fotoUrl.startsWith('https://')) {
+      final cleanPath = fotoUrl.replaceFirst(RegExp(r'^/?(storage/)?'), '');
+      final baseDomain = ApiClient.baseUrl.replaceAll(RegExp(r'/api/?$'), '');
+      fotoUrl = '$baseDomain/storage/$cleanPath';
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: Image.network(
+          fotoUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => fallback,
+        ),
       ),
     );
   }
@@ -84,14 +184,32 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
       }
     });
     _fetchKaryawans();
+    _fetchCabangs();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchCabangs() async {
+    try {
+      final data = await _hrdService.fetchCabang();
+      if (mounted) setState(() => _cabangs = data);
+    } catch (_) {}
   }
 
   // --- FETCHERS ---
   Future<void> _fetchKaryawans() async {
     setState(() => _isLoadingKaryawan = true);
     try {
-      final data = await _service.fetchKaryawans(search: _searchKaryawan);
-      setState(() => _karyawans = data);
+      final data = await _service.fetchKaryawans(
+        search: _searchKaryawan,
+        cabangId: _selectedCabangId,
+        jabatan: _selectedJabatan,
+      );
+      if (mounted) setState(() => _karyawans = data);
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
@@ -103,10 +221,12 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
     setState(() => _isLoadingPengajuan = true);
     try {
       final res = await _service.fetchPengajuan(status: _statusFilter == 'semua' ? '' : _statusFilter);
-      setState(() {
-        _pengajuan = List<Map<String, dynamic>>.from(res['data']);
-        _pengajuanStats = res['stats'];
-      });
+      if (mounted) {
+        setState(() {
+          _pengajuan = List<Map<String, dynamic>>.from(res['data'] ?? []);
+          _pengajuanStats = Map<String, dynamic>.from(res['stats'] ?? {'pending': 0, 'disetujui': 0, 'ditolak': 0});
+        });
+      }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
@@ -118,10 +238,12 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
     setState(() => _isLoadingPengaturan = true);
     try {
       final data = await _service.fetchPengaturan();
-      setState(() {
-        _defaultJatahCuti = data['default_jatah_cuti'] ?? 12;
-        _hariKerja = List<String>.from(data['hari_kerja'] ?? []);
-      });
+      if (mounted) {
+        setState(() {
+          _defaultJatahCuti = data['default_jatah_cuti'] ?? 12;
+          _hariKerja = List<String>.from(data['hari_kerja'] ?? []);
+        });
+      }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
@@ -133,7 +255,7 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
   Future<void> _updateJatahCuti(int karyawanId, int jatah, int sisa) async {
     try {
       await _service.updateKaryawanCuti(karyawanId, jatah, sisa);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cuti berhasil diupdate')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Data cuti berhasil diperbarui')));
       _fetchKaryawans();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -143,7 +265,7 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
   Future<void> _approve(int id) async {
     try {
       await _service.approvePengajuan(id);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengajuan disetujui')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengajuan berhasil disetujui')));
       _fetchPengajuan();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -153,7 +275,7 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
   Future<void> _reject(int id, String catatan) async {
     try {
       await _service.rejectPengajuan(id, catatan);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengajuan ditolak')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengajuan telah ditolak')));
       _fetchPengajuan();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -163,17 +285,23 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
   Future<void> _savePengaturan() async {
     try {
       await _service.updatePengaturan(_defaultJatahCuti, _hariKerja);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengaturan disimpan')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengaturan cuti berhasil disimpan')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
-  // --- UI BUILDERS ---
+  String _getCabangName(String? cabangId) {
+    if (cabangId == null || cabangId.isEmpty) return 'Semua Cabang';
+    final found = _cabangs.where((c) => c.id.toString() == cabangId);
+    if (found.isNotEmpty) return found.first.namaCabang;
+    return 'Cabang #$cabangId';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
           GradientHeader(
@@ -197,7 +325,7 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
                     Text(
                       'Cuti & Izin',
                       style: GoogleFonts.inter(
-                        fontSize: 22,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
@@ -206,18 +334,28 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
                 ),
                 const SizedBox(height: 16),
                 Container(
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.black.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   child: TabBar(
                     controller: _tabController,
-                    labelColor: Colors.white,
-                    unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
+                    labelColor: const Color(0xFF1D4ED8),
+                    unselectedLabelColor: Colors.white.withValues(alpha: 0.85),
+                    labelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold),
+                    unselectedLabelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
                     indicatorSize: TabBarIndicatorSize.tab,
                     indicator: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     dividerColor: Colors.transparent,
                     tabs: const [
@@ -245,26 +383,177 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
     );
   }
 
+  // ==========================================
+  // TAB 1: DATA CUTI KARYAWAN
+  // ==========================================
   Widget _buildDataCutiTab() {
+    final bool hasActiveFilter = _selectedJabatan != null || _selectedCabangId != null;
+
     return Column(
       children: [
+        // Search Bar & Filter Button Row
         Padding(
-          padding: const EdgeInsets.all(16),
-          child: TextField(
-            onChanged: (val) {
-              _searchKaryawan = val;
-              _fetchKaryawans();
-            },
-            decoration: InputDecoration(
-              hintText: 'Cari nama atau jabatan...',
-              prefixIcon: const Icon(Icons.search, size: 20),
-              filled: true,
-              fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-            ),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  onChanged: (val) {
+                    _searchKaryawan = val;
+                    _fetchKaryawans();
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Cari nama atau jabatan...',
+                    hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
+                    prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF64748B)),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              InkWell(
+                onTap: _showFilterModal,
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: hasActiveFilter ? const Color(0xFF2563EB) : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: hasActiveFilter ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: hasActiveFilter
+                            ? const Color(0xFF2563EB).withValues(alpha: 0.25)
+                            : const Color(0xFF64748B).withValues(alpha: 0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Icon(
+                        Icons.tune_rounded,
+                        size: 22,
+                        color: hasActiveFilter ? Colors.white : const Color(0xFF334155),
+                      ),
+                      if (hasActiveFilter)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFF59E0B),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
+
+        // Active Filter Chips Bar (if any)
+        if (hasActiveFilter)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  if (_selectedJabatan != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Jabatan: $_selectedJabatan',
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF1D4ED8)),
+                            ),
+                            const SizedBox(width: 4),
+                            GestureDetector(
+                              onTap: () {
+                                setState(() => _selectedJabatan = null);
+                                _fetchKaryawans();
+                              },
+                              child: const Icon(Icons.close_rounded, size: 14, color: Color(0xFF1D4ED8)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (_selectedCabangId != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFA7F3D0)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Cabang: ${_getCabangName(_selectedCabangId)}',
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF059669)),
+                            ),
+                            const SizedBox(width: 4),
+                            GestureDetector(
+                              onTap: () {
+                                setState(() => _selectedCabangId = null);
+                                _fetchKaryawans();
+                              },
+                              child: const Icon(Icons.close_rounded, size: 14, color: Color(0xFF059669)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _selectedJabatan = null;
+                        _selectedCabangId = null;
+                      });
+                      _fetchKaryawans();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      child: Text(
+                        'Reset Filter',
+                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
         Expanded(
           child: _isLoadingKaryawan
               ? ListView.builder(
@@ -273,191 +562,426 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
                   itemBuilder: (_, __) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Shimmer.fromColors(
-                      baseColor: Colors.grey[300]!,
-                      highlightColor: Colors.grey[100]!,
+                      baseColor: Colors.grey[200]!,
+                      highlightColor: Colors.grey[50]!,
                       child: Container(
-                        height: 100,
+                        height: 120,
                         width: double.infinity,
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(18),
                         ),
                       ),
                     ),
                   ),
                 )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _karyawans.length,
-                  itemBuilder: (context, index) {
-                    final k = _karyawans[index];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
-                            blurRadius: 15,
-                            offset: const Offset(0, 8),
-                          ),
+              : _karyawans.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.person_search_rounded, size: 56, color: Colors.grey.shade300),
+                          const SizedBox(height: 12),
+                          Text('Tidak ada data karyawan.', style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B))),
+                          if (hasActiveFilter) ...[
+                            const SizedBox(height: 8),
+                            TextButton(
+                              onPressed: () {
+                                setState(() {
+                                  _selectedJabatan = null;
+                                  _selectedCabangId = null;
+                                });
+                                _fetchKaryawans();
+                              },
+                              child: const Text('Hapus Filter'),
+                            ),
+                          ],
                         ],
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(18),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    borderRadius: BorderRadius.circular(14),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFF1D4ED8).withValues(alpha: 0.2),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: _getFotoUrl(k['foto_profil']) != null 
-                                      ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(14),
-                                          child: Image.network(
-                                            _getFotoUrl(k['foto_profil'])!,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) => Center(
-                                              child: Text(
-                                                k['nama'] != null && k['nama'].toString().isNotEmpty ? k['nama'][0].toUpperCase() : 'K',
-                                                style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-                                              ),
-                                            ),
-                                          ),
-                                        )
-                                      : Center(
-                                          child: Text(
-                                            k['nama'] != null && k['nama'].toString().isNotEmpty ? k['nama'][0].toUpperCase() : 'K',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _fetchKaryawans,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                        itemCount: _karyawans.length,
+                        itemBuilder: (context, index) {
+                          final k = _karyawans[index];
+                          final namaJabatan = k['jabatan']?['nama_jabatan'] ?? '-';
+                          final namaCabang = k['cabang']?['nama_cabang'] ?? '-';
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF64748B).withValues(alpha: 0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
                                 ),
-                                const SizedBox(width: 14),
-                                Expanded(
+                              ],
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(18),
+                                onTap: () => _showRiwayat(k['id']),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(k['nama'] ?? '-', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textDark, letterSpacing: -0.2)),
-                                      const SizedBox(height: 2),
-                                      Text('${k['jabatan']?['nama_jabatan'] ?? '-'} • ${k['cabang']?['nama_cabang'] ?? '-'}', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13)),
+                                      Row(
+                                        children: [
+                                          _buildAvatar(k, size: 48, radius: 14),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  k['nama'] ?? '-',
+                                                  style: GoogleFonts.inter(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 15,
+                                                    color: const Color(0xFF0F172A),
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 3),
+                                                Row(
+                                                  children: [
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(0xFFEFF6FF),
+                                                        borderRadius: BorderRadius.circular(6),
+                                                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                                                      ),
+                                                      child: Text(
+                                                        namaJabatan,
+                                                        style: GoogleFonts.inter(
+                                                          fontSize: 11,
+                                                          fontWeight: FontWeight.w600,
+                                                          color: const Color(0xFF1D4ED8),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    Text(
+                                                      '• $namaCabang',
+                                                      style: GoogleFonts.inter(
+                                                        color: const Color(0xFF64748B),
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          InkWell(
+                                            onTap: () => _showEditCuti(k),
+                                            borderRadius: BorderRadius.circular(10),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFEFF6FF),
+                                                borderRadius: BorderRadius.circular(10),
+                                                border: Border.all(color: const Color(0xFFBFDBFE)),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.edit_outlined, size: 14, color: Color(0xFF1D4ED8)),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    'Edit',
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: const Color(0xFF1D4ED8),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 14),
+
+                                      // Stats Row
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF8FAFC),
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(color: const Color(0xFFF1F5F9)),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: _buildStatItem('Jatah Cuti', '${k['jatah_cuti'] ?? 0}', const Color(0xFF2563EB), const Color(0xFFEFF6FF)),
+                                            ),
+                                            Container(width: 1, height: 28, color: const Color(0xFFE2E8F0)),
+                                            Expanded(
+                                              child: _buildStatItem('Sisa Cuti', '${k['sisa_cuti'] ?? 0}', const Color(0xFF059669), const Color(0xFFECFDF5)),
+                                            ),
+                                            Container(width: 1, height: 28, color: const Color(0xFFE2E8F0)),
+                                            Expanded(
+                                              child: _buildStatItem('Total Izin', '${k['total_izin'] ?? 0} Hari', const Color(0xFFD97706), const Color(0xFFFFFBEB)),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+
+                                      // Frame Tap Indicator
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.touch_app_outlined, size: 13, color: Color(0xFF94A3B8)),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Ketuk kartu untuk riwayat izin & cuti',
+                                            style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF94A3B8)),
+                                          ),
+                                          const Spacer(),
+                                          const Icon(Icons.chevron_right_rounded, size: 16, color: Color(0xFF94A3B8)),
+                                        ],
+                                      ),
                                     ],
                                   ),
                                 ),
-                              ],
+                              ),
                             ),
-                            const SizedBox(height: 16),
-                            Container(height: 1, color: Colors.grey.withValues(alpha: 0.1)),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                _buildStatItem('Jatah', '${k['jatah_cuti']}', Colors.blue),
-                                Container(width: 1, height: 30, color: Colors.grey.withValues(alpha: 0.2)),
-                                _buildStatItem('Sisa', '${k['sisa_cuti']}', Colors.green),
-                                Container(width: 1, height: 30, color: Colors.grey.withValues(alpha: 0.2)),
-                                _buildStatItem('Izin', '${k['total_izin']} Hari', Colors.orange),
-                              ],
-                            ),
-                            const SizedBox(height: 18),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton(
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                      side: const BorderSide(color: AppColors.primary),
-                                      foregroundColor: AppColors.primary,
-                                    ),
-                                    onPressed: () => _showRiwayat(k['id']),
-                                    child: Text('Detail', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(colors: [Color(0xFF38BDF8), Color(0xFF0284C7)]),
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: [
-                                        BoxShadow(color: const Color(0xFF0284C7).withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4)),
-                                      ],
-                                    ),
-                                    child: ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        shadowColor: Colors.transparent,
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                      ),
-                                      onPressed: () => _showEditCuti(k),
-                                      child: Text('Edit', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white)),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
+                    ),
         ),
       ],
     );
   }
 
-  Widget _buildStatItem(String label, String value, Color color) {
+  Widget _buildStatItem(String label, String value, Color color, Color bgColor) {
     return Column(
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey)),
-        Text(value, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+        Text(label, style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B), fontWeight: FontWeight.w500)),
+        const SizedBox(height: 3),
+        Text(value, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: color)),
       ],
     );
   }
 
+  // ==========================================
+  // MODAL FILTER DATA CUTI
+  // ==========================================
+  void _showFilterModal() {
+    String? tempJabatan = _selectedJabatan;
+    String? tempCabangId = _selectedCabangId;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.75,
+            ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.tune_rounded, color: Color(0xFF2563EB), size: 18),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Filter Data Cuti',
+                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(color: Color(0xFFF1F5F9), shape: BoxShape.circle),
+                        child: const Icon(Icons.close_rounded, size: 16, color: Color(0xFF64748B)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                const SizedBox(height: 16),
+
+                // 1. Filter Jabatan
+                Text('Jabatan Karyawan', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF334155))),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    {'label': 'Semua Jabatan', 'value': null},
+                    {'label': 'Cleaner', 'value': 'Cleaner'},
+                    {'label': 'Customer Service (CS)', 'value': 'CS'},
+                  ].map((item) {
+                    final isSelected = tempJabatan == item['value'];
+                    return ChoiceChip(
+                      label: Text(
+                        item['label'] as String,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          color: isSelected ? Colors.white : const Color(0xFF475569),
+                        ),
+                      ),
+                      selected: isSelected,
+                      selectedColor: const Color(0xFF2563EB),
+                      backgroundColor: const Color(0xFFF8FAFC),
+                      side: BorderSide(color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      showCheckmark: false,
+                      onSelected: (val) {
+                        setModalState(() {
+                          tempJabatan = item['value'];
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+
+                // 2. Filter Cabang
+                Text('Cabang Karyawan', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF334155))),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String?>(
+                  value: tempCabangId,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  ),
+                  items: [
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('Semua Cabang', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                    ..._cabangs.map((c) => DropdownMenuItem<String?>(
+                          value: c.id.toString(),
+                          child: Text(c.namaCabang),
+                        )),
+                  ],
+                  onChanged: (val) {
+                    setModalState(() {
+                      tempCabangId = val;
+                    });
+                  },
+                ),
+                const SizedBox(height: 26),
+
+                // Action Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          side: const BorderSide(color: Color(0xFFCBD5E1)),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          setState(() {
+                            _selectedJabatan = null;
+                            _selectedCabangId = null;
+                          });
+                          _fetchKaryawans();
+                        },
+                        child: Text('Reset', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: const Color(0xFF64748B))),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2563EB),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          setState(() {
+                            _selectedJabatan = tempJabatan;
+                            _selectedCabangId = tempCabangId;
+                          });
+                          _fetchKaryawans();
+                        },
+                        child: Text('Terapkan Filter', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ==========================================
+  // TAB 2: PENGAJUAN IZIN & CUTI
+  // ==========================================
   Widget _buildPengajuanTab() {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
           child: Row(
             children: [
-              _buildStatCard('Pending', _pengajuanStats['pending'].toString(), const Color(0xFFF59E0B), Icons.pending_actions_rounded),
+              _buildStatCard('Pending', _pengajuanStats['pending'].toString(), const Color(0xFFD97706), const Color(0xFFFEF3C7), Icons.hourglass_top_rounded),
               const SizedBox(width: 8),
-              _buildStatCard('Disetujui', _pengajuanStats['disetujui'].toString(), const Color(0xFF10B981), Icons.check_circle_outline_rounded),
+              _buildStatCard('Disetujui', _pengajuanStats['disetujui'].toString(), const Color(0xFF059669), const Color(0xFFD1FAE5), Icons.check_circle_rounded),
               const SizedBox(width: 8),
-              _buildStatCard('Ditolak', _pengajuanStats['ditolak'].toString(), const Color(0xFFEF4444), Icons.cancel_outlined),
+              _buildStatCard('Ditolak', _pengajuanStats['ditolak'].toString(), const Color(0xFFDC2626), const Color(0xFFFEE2E2), Icons.cancel_rounded),
             ],
           ),
         ),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
             children: ['pending', 'disetujui', 'ditolak', 'semua'].map((status) {
               final isSelected = _statusFilter == status;
@@ -467,15 +991,17 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
                   label: Text(
                     status.toUpperCase(),
                     style: GoogleFonts.inter(
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      color: isSelected ? Colors.white : Colors.grey.shade700,
+                      fontSize: 12,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                      color: isSelected ? Colors.white : const Color(0xFF64748B),
                     ),
                   ),
                   selected: isSelected,
-                  selectedColor: AppColors.primary,
+                  selectedColor: const Color(0xFF2563EB),
                   backgroundColor: Colors.white,
-                  side: BorderSide(color: isSelected ? AppColors.primary : Colors.grey.shade300),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  side: BorderSide(color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  showCheckmark: false,
                   onSelected: (val) {
                     if (val) {
                       setState(() => _statusFilter = status);
@@ -487,7 +1013,7 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
             }).toList(),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         Expanded(
           child: _isLoadingPengajuan
               ? const Center(child: CircularProgressIndicator())
@@ -496,51 +1022,58 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.inbox_rounded, size: 64, color: Colors.grey.shade300),
-                          const SizedBox(height: 16),
+                          Icon(Icons.inbox_rounded, size: 56, color: Colors.grey.shade300),
+                          const SizedBox(height: 12),
                           Text(
                             'Belum ada pengajuan ${_statusFilter == 'semua' ? '' : _statusFilter}.',
-                            style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade600),
+                            style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B)),
                           ),
                         ],
                       ),
                     )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _pengajuan.length,
-                      itemBuilder: (context, index) {
-                        final p = _pengajuan[index];
-                        return _buildPengajuanCard(p);
-                      },
+                  : RefreshIndicator(
+                      onRefresh: _fetchPengajuan,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
+                        itemCount: _pengajuan.length,
+                        itemBuilder: (context, index) {
+                          final p = _pengajuan[index];
+                          return _buildPengajuanCard(p);
+                        },
+                      ),
                     ),
         ),
       ],
     );
   }
 
-  Widget _buildStatCard(String label, String value, Color color, IconData icon) {
+  Widget _buildStatCard(String label, String value, Color color, Color bg, IconData icon) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
           boxShadow: [
             BoxShadow(
-              color: color.withValues(alpha: 0.05),
-              blurRadius: 4,
+              color: const Color(0xFF64748B).withValues(alpha: 0.04),
+              blurRadius: 8,
               offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 8),
-            Text(label, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
-            const SizedBox(height: 4),
-            Text(value, style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.bold, color: color)),
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+              child: Icon(icon, color: color, size: 16),
+            ),
+            const SizedBox(height: 6),
+            Text(value, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w900, color: color)),
+            const SizedBox(height: 2),
+            Text(label, style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
           ],
         ),
       ),
@@ -549,784 +1082,1393 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
 
   Widget _buildPengajuanCard(Map<String, dynamic> p) {
     final k = p['karyawan'];
-    final tglMulai = DateTime.parse(p['tanggal_mulai']);
-    final tglSelesai = DateTime.parse(p['tanggal_selesai']);
-    final tglStr = DateFormat('dd MMM yyyy').format(tglMulai) + (tglMulai != tglSelesai ? ' - ${DateFormat('dd MMM yyyy').format(tglSelesai)}' : '');
+    final tglMulai = _formatDate(p['tanggal_mulai']);
+    final tglSelesai = _formatDate(p['tanggal_selesai']);
+    final tglStr = tglMulai == tglSelesai ? tglMulai : '$tglMulai s/d $tglSelesai';
 
     final isPending = p['status'] == 'pending';
     final isApproved = p['status'] == 'disetujui';
-    final statusColor = isPending ? const Color(0xFFF59E0B) : isApproved ? const Color(0xFF10B981) : const Color(0xFFEF4444);
-    final statusBg = isPending ? const Color(0xFFFEF3C7) : isApproved ? const Color(0xFFD1FAE5) : const Color(0xFFFEE2E2);
+    final isRejected = p['status'] == 'ditolak';
+
+    final statusColor = isPending ? const Color(0xFFD97706) : isApproved ? const Color(0xFF059669) : const Color(0xFFDC2626);
+    final statusBg = isPending ? const Color(0xFFFFFBEB) : isApproved ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2);
+    final statusBorder = isPending ? const Color(0xFFFDE68A) : isApproved ? const Color(0xFFA7F3D0) : const Color(0xFFFECACA);
+
+    final isCuti = (p['jenis']?.toString().toLowerCase() ?? '') == 'cuti';
+    final jenisColor = isCuti ? const Color(0xFF7E22CE) : const Color(0xFFD97706);
+    final jenisBg = isCuti ? const Color(0xFFFAF5FF) : const Color(0xFFFFFBEB);
+    final jenisBorder = isCuti ? const Color(0xFFE9D5FF) : const Color(0xFFFDE68A);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+            color: const Color(0xFF64748B).withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Status & Jenis
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: statusBg.withValues(alpha: 0.5),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              border: Border(bottom: BorderSide(color: statusColor.withValues(alpha: 0.2))),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      p['jenis'] == 'cuti' ? Icons.beach_access_rounded : Icons.sick_rounded,
-                      size: 16,
-                      color: statusColor,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      p['jenis'].toString().toUpperCase(),
-                      style: GoogleFonts.inter(color: statusColor, fontSize: 13, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: statusBg,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: statusColor.withValues(alpha: 0.5)),
-                  ),
-                  child: Text(
-                    p['status'].toString().toUpperCase(),
-                    style: GoogleFonts.inter(
-                      color: statusColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => _showDetailPengajuanModal(p),
+          child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // User Info
+                // Top Row: Jenis Badge & Status Badge
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: jenisBg,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: jenisBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(isCuti ? Icons.beach_access_rounded : Icons.sick_rounded, size: 14, color: jenisColor),
+                          const SizedBox(width: 5),
+                          Text(
+                            p['jenis'].toString().toUpperCase(),
+                            style: GoogleFonts.inter(color: jenisColor, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusBg,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: statusBorder),
+                      ),
+                      child: Text(
+                        isApproved ? 'DISETUJUI' : (isRejected ? 'DITOLAK' : 'PENDING'),
+                        style: GoogleFonts.inter(
+                          color: statusColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Karyawan Info
                 Row(
                   children: [
-                    _buildAvatar(k, radius: 20),
+                    _buildAvatar(k, size: 44, radius: 12),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(k['nama'] ?? '-', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textDark)),
-                          Text('${k['jabatan']?['nama_jabatan'] ?? '-'} • ${k['cabang']?['nama_cabang'] ?? '-'}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+                          Text(k?['nama'] ?? '-', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: const Color(0xFF0F172A))),
+                          const SizedBox(height: 2),
+                          Text('${k?['jabatan']?['nama_jabatan'] ?? '-'} • ${k?['cabang']?['nama_cabang'] ?? '-'}', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
                         ],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+
+                // Date & Reason Info Box
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
+                    color: const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
+                    border: Border.all(color: const Color(0xFFF1F5F9)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.calendar_month_rounded, size: 14, color: Colors.grey.shade600),
+                          const Icon(Icons.calendar_month_rounded, size: 14, color: Color(0xFF64748B)),
                           const SizedBox(width: 6),
-                          Text('Tanggal Pelaksanaan', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade600)),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(tglStr, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                      const SizedBox(height: 12),
-                      const Divider(height: 1),
-                      const SizedBox(height: 12),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.subject_rounded, size: 14, color: Colors.grey.shade600),
+                          Text('Pelaksanaan:', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B))),
                           const SizedBox(width: 6),
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Alasan Pengajuan', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade600)),
-                                const SizedBox(height: 4),
-                                Text(p['alasan'] ?? '-', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark)),
-                              ],
+                            child: Text(
+                              tglStr,
+                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
                             ),
                           ),
                         ],
                       ),
+                      if (p['alasan'] != null && p['alasan'].toString().isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.notes_rounded, size: 14, color: Color(0xFF64748B)),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                p['alasan'],
+                                style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF334155)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
+
                 if (isPending) ...[
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             side: const BorderSide(color: Color(0xFFEF4444)),
                             foregroundColor: const Color(0xFFEF4444),
                           ),
                           onPressed: () => _showRejectModal(p['id']),
-                          child: Text('Tolak', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                          child: Text('Tolak', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                       Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(colors: [Color(0xFF34D399), Color(0xFF059669)]),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(color: const Color(0xFF059669).withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4)),
-                            ],
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF059669),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                            onPressed: () => _showApproveConfirm(p['id']),
-                            child: Text('Setujui', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white)),
-                          ),
+                          onPressed: () => _showApproveConfirm(p['id']),
+                          child: Text('Setujui', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white)),
                         ),
                       ),
                     ],
                   ),
                 ],
-                const SizedBox(height: 12),
+
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Icon(Icons.touch_app_outlined, size: 13, color: Color(0xFF94A3B8)),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Ketuk kartu untuk detail pengajuan',
+                      style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF94A3B8)),
+                    ),
+                    const Spacer(),
+                    const Icon(Icons.chevron_right_rounded, size: 16, color: Color(0xFF94A3B8)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ==========================================
+  // TAB 3: PENGATURAN CUTI
+  // ==========================================
+  Widget _buildPengaturanTab() {
+    if (_isLoadingPengaturan) return const Center(child: CircularProgressIndicator());
+
+    return RefreshIndicator(
+      onRefresh: _fetchPengaturan,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF64748B).withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.settings_suggest_rounded, color: Color(0xFF2563EB), size: 18),
+                    ),
+                    const SizedBox(width: 10),
+                    Text('Pengaturan Cuti Karyawan', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                const SizedBox(height: 16),
+
+                Text('Default Jatah Cuti Tahunan', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF334155))),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 90,
+                      child: TextFormField(
+                        initialValue: _defaultJatahCuti.toString(),
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold),
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
+                        ),
+                        onChanged: (val) => _defaultJatahCuti = int.tryParse(val) ?? 0,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text('Hari / Tahun', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B))),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text('Diterapkan otomatis untuk karyawan baru yang terdaftar.', style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF94A3B8))),
+
+                const SizedBox(height: 22),
+                Text('Hari Kerja (Perhitungan Cuti)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF334155))),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _allDaysMap.map((dayMap) {
+                    final en = dayMap['en']!;
+                    final id = dayMap['id']!;
+                    final isSelected = _hariKerja.contains(en);
+                    return InkWell(
+                      onTap: () {
+                        setState(() {
+                          if (isSelected) {
+                            _hariKerja.remove(en);
+                          } else {
+                            _hariKerja.add(en);
+                          }
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: isSelected ? const Color(0xFF3B82F6) : const Color(0xFFE2E8F0)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                              color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF94A3B8),
+                              size: 16,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              id,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                color: isSelected ? const Color(0xFF1D4ED8) : const Color(0xFF475569),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Hari libur di luar hari kerja yang dipilih tidak akan memotong jatah cuti.',
+                  style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF94A3B8)),
+                ),
+
+                const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      side: BorderSide(color: Colors.grey.shade300),
+                      elevation: 0,
                     ),
-                    onPressed: () => _showDetailPengajuanModal(p),
-                    child: Text('Lihat Detail Lengkap', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    onPressed: _savePengaturan,
+                    child: Text('Simpan Pengaturan', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
                   ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildPengaturanTab() {
-    if (_isLoadingPengaturan) return const Center(child: CircularProgressIndicator());
+  // ==========================================
+  // MODAL BOTTOM SHEET: RIWAYAT IZIN & CUTI
+  // ==========================================
+  void _showRiwayat(int id) async {
+    showDialog(
+      context: context, 
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: Colors.white)),
+    );
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        await _fetchPengaturan();
-      },
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade200),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Text('Pengaturan Cuti', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-            ),
-            Divider(height: 1, color: Colors.grey.shade200),
-            Padding(
-              padding: const EdgeInsets.all(20),
+    try {
+      final data = await _service.fetchRiwayatKaryawan(id);
+      if (mounted) Navigator.pop(context); // Close loading dialog
+      if (mounted) {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (ctx) {
+            final pengajuans = List<Map<String, dynamic>>.from(data['pengajuan_izin_cutis'] ?? []);
+            final namaJabatan = data['jabatan']?['nama_jabatan'] ?? '-';
+            final namaCabang = data['cabang']?['nama_cabang'] ?? '-';
+
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+              ),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Default Jatah Cuti Tahunan', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: TextFormField(
-                          initialValue: _defaultJatahCuti.toString(),
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: AppColors.primary),
-                            ),
-                          ),
-                          onChanged: (val) => _defaultJatahCuti = int.tryParse(val) ?? 0,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text('Hari / Tahun', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
-                      const Spacer(flex: 3),
-                    ],
+                  // Drag Handle
+                  Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 6),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                  const SizedBox(height: 6),
-                  Text('Akan diterapkan otomatis untuk karyawan yang baru terdaftar.', style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey.shade500)),
-                  
-                  const SizedBox(height: 24),
-                  
-                  Text('Hari Kerja (Untuk Perhitungan Cuti)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: _allDaysMap.map((dayMap) {
-                      final en = dayMap['en']!;
-                      final id = dayMap['id']!;
-                      final isSelected = _hariKerja.contains(en);
-                      return Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            setState(() {
-                              if (isSelected) {
-                                _hariKerja.remove(en);
-                              } else {
-                                _hariKerja.add(en);
-                              }
-                            });
-                          },
-                          borderRadius: BorderRadius.circular(8),
+
+                  // Header Modal
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 14, 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Center(
+                            child: Icon(Icons.history_rounded, color: Colors.white, size: 20),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Riwayat Izin & Cuti',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF0F172A),
+                                ),
+                              ),
+                              Text(
+                                'Daftar pengajuan izin & cuti karyawan',
+                                style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => Navigator.pop(ctx),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFE2E8F0),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF64748B)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Profile Card (Matching Web Design)
+                          Container(
+                            padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: isSelected ? const Color(0xFF10B981) : Colors.grey.shade300,
-                                width: 1.5,
-                              ),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF64748B).withValues(alpha: 0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
                             ),
                             child: Row(
-                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
-                                  isSelected ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
-                                  color: isSelected ? AppColors.primary : Colors.grey.shade400,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  id,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                    color: AppColors.textDark,
+                                _buildAvatar(data, size: 64, radius: 16),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        data['nama'] ?? '-',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w800,
+                                          color: const Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFEFF6FF),
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                                            ),
+                                            child: Text(
+                                              namaJabatan,
+                                              style: GoogleFonts.inter(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: const Color(0xFF1D4ED8),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            '• $namaCabang',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 13,
+                                              color: const Color(0xFF64748B),
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 12),
-                  RichText(
-                    text: TextSpan(
-                      style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey.shade500, height: 1.4),
-                      children: const [
-                        TextSpan(text: 'Hari libur di luar hari kerja yang dipilih '),
-                        TextSpan(text: 'tidak akan memotong', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                        TextSpan(text: ' jatah cuti karyawan saat mereka mengajukan cuti di tanggal tersebut.'),
-                      ],
-                    ),
-                  ),
+                          const SizedBox(height: 20),
 
-                  const SizedBox(height: 24),
-                  Divider(height: 1, color: Colors.grey.shade200),
-                  const SizedBox(height: 16),
-                  
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        elevation: 0,
-                      ),
-                      onPressed: _savePengaturan,
-                      child: Text('Simpan Pengaturan', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    ));
-  }
-
-  // --- MODALS ---
-  void _showEditCuti(Map<String, dynamic> k) {
-    int jatah = k['jatah_cuti'];
-    int sisa = k['sisa_cuti'];
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Edit Cuti - ${k['nama']}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              initialValue: jatah.toString(),
-              decoration: const InputDecoration(labelText: 'Jatah Cuti Keseluruhan'),
-              keyboardType: TextInputType.number,
-              onChanged: (v) => jatah = int.tryParse(v) ?? jatah,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              initialValue: sisa.toString(),
-              decoration: const InputDecoration(labelText: 'Sisa Cuti Saat Ini'),
-              keyboardType: TextInputType.number,
-              onChanged: (v) => sisa = int.tryParse(v) ?? sisa,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _updateJatahCuti(k['id'], jatah, sisa);
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showRiwayat(int id) async {
-    showDialog(context: context, builder: (_) => const Center(child: CircularProgressIndicator()));
-    try {
-      final data = await _service.fetchRiwayatKaryawan(id);
-      if (mounted) Navigator.pop(context);
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            child: Container(
-              width: double.maxFinite,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Riwayat Izin & Cuti', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: const Icon(Icons.close_rounded, color: Colors.grey, size: 20),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Divider(height: 1),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: _getFotoUrl(data['foto_profil']) != null
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.network(
-                                  _getFotoUrl(data['foto_profil'])!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => Center(child: Text(data['nama'] != null && data['nama'].toString().isNotEmpty ? data['nama'][0].toUpperCase() : 'K', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 20))),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Seluruh Riwayat Pengajuan',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF0F172A),
                                 ),
-                              )
-                            : Center(child: Text(data['nama'] != null && data['nama'].toString().isNotEmpty ? data['nama'][0].toUpperCase() : 'K', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 20))),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(data['nama'] ?? '-', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                            const SizedBox(height: 2),
-                            Text('${data['jabatan']?['nama_jabatan'] ?? '-'} • ${data['cabang']?['nama_cabang'] ?? '-'}', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Text('Seluruh Riwayat Pengajuan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  Container(
-                    height: 250,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade200),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: (data['pengajuan_izin_cutis'] as List).isEmpty
-                        ? Center(child: Text('Belum ada riwayat pengajuan.', style: GoogleFonts.inter(color: Colors.grey, fontSize: 13)))
-                        : ListView.separated(
-                            padding: const EdgeInsets.all(12),
-                            shrinkWrap: true,
-                            itemCount: (data['pengajuan_izin_cutis'] as List).length,
-                            separatorBuilder: (context, index) => const Divider(height: 16),
-                            itemBuilder: (context, index) {
-                              final p = data['pengajuan_izin_cutis'][index];
-                              return Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE2E8F0),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '${pengajuans.length} Pengajuan',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF475569)),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          if (pengajuans.isEmpty)
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(32),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: Column(
                                 children: [
-                                  Expanded(
-                                    flex: 2,
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('TANGGAL', style: GoogleFonts.inter(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
-                                        const SizedBox(height: 4),
-                                        Text('${p['tanggal_mulai']}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
-                                      ],
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('JENIS', style: GoogleFonts.inter(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
-                                        const SizedBox(height: 4),
-                                        Text('${p['jenis'].toString().toUpperCase()}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
-                                      ],
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('STATUS', style: GoogleFonts.inter(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
-                                        const SizedBox(height: 4),
-                                        Text('${p['status'].toString().toUpperCase()}', style: GoogleFonts.inter(
-                                          fontSize: 12, 
-                                          fontWeight: FontWeight.w700, 
-                                          color: p['status'] == 'disetujui' ? Colors.green : (p['status'] == 'ditolak' ? Colors.red : Colors.orange)
-                                        )),
-                                      ],
-                                    ),
+                                  Icon(Icons.event_busy_rounded, size: 48, color: Colors.grey.shade300),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'Belum ada riwayat pengajuan cuti/izin.',
+                                    style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B)),
                                   ),
                                 ],
+                              ),
+                            )
+                          else
+                            ...pengajuans.map((p) {
+                              final tglPengajuan = _formatDate(p['created_at']);
+                              final tglMulai = _formatDate(p['tanggal_mulai']);
+                              final tglSelesai = _formatDate(p['tanggal_selesai']);
+                              
+                              int durasi = 1;
+                              try {
+                                final dMulai = DateTime.parse(p['tanggal_mulai'].toString());
+                                final dSelesai = DateTime.parse(p['tanggal_selesai'].toString());
+                                durasi = dSelesai.difference(dMulai).inDays + 1;
+                              } catch (_) {}
+
+                              final isApproved = (p['status']?.toString().toLowerCase() ?? '') == 'disetujui';
+                              final isRejected = (p['status']?.toString().toLowerCase() ?? '') == 'ditolak';
+
+                              final statusColor = isApproved 
+                                  ? const Color(0xFF059669) 
+                                  : (isRejected ? const Color(0xFFDC2626) : const Color(0xFFD97706));
+                              final statusBg = isApproved 
+                                  ? const Color(0xFFECFDF5) 
+                                  : (isRejected ? const Color(0xFFFEF2F2) : const Color(0xFFFFFBEB));
+                              final statusBorder = isApproved 
+                                  ? const Color(0xFFA7F3D0) 
+                                  : (isRejected ? const Color(0xFFFECACA) : const Color(0xFFFDE68A));
+
+                              final isCuti = (p['jenis']?.toString().toLowerCase() ?? '') == 'cuti';
+                              final jenisColor = isCuti ? const Color(0xFF7E22CE) : const Color(0xFFD97706);
+                              final jenisBg = isCuti ? const Color(0xFFFAF5FF) : const Color(0xFFFFFBEB);
+                              final jenisBorder = isCuti ? const Color(0xFFE9D5FF) : const Color(0xFFFDE68A);
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF64748B).withValues(alpha: 0.04),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: jenisBg,
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(color: jenisBorder),
+                                              ),
+                                              child: Text(
+                                                p['jenis'].toString().toUpperCase(),
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: jenisColor,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              tglPengajuan,
+                                              style: GoogleFonts.inter(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: const Color(0xFF64748B),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: statusBg,
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(color: statusBorder),
+                                          ),
+                                          child: Text(
+                                            isApproved ? 'Disetujui' : (isRejected ? 'Ditolak' : 'Pending'),
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: statusColor,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.date_range_rounded, size: 15, color: Color(0xFF64748B)),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            tglMulai == tglSelesai ? tglMulai : '$tglMulai s/d $tglSelesai',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                              color: const Color(0xFF0F172A),
+                                            ),
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF1F5F9),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            '$durasi Hari',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: const Color(0xFF334155),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (p['alasan'] != null && p['alasan'].toString().isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Alasan: ${p['alasan']}',
+                                        style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+                                      ),
+                                    ],
+                                  ],
+                                ),
                               );
-                            },
-                          ),
-                  ),
-                  const SizedBox(height: 20),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            }),
+                        ],
                       ),
-                      onPressed: () => Navigator.pop(context),
-                      child: Text('Tutup', style: GoogleFonts.inter(color: Colors.grey.shade700)),
+                    ),
+                  ),
+
+                  // Bottom Action Button
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          side: const BorderSide(color: Color(0xFFCBD5E1)),
+                        ),
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text('Tutup', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: const Color(0xFF475569))),
+                      ),
                     ),
                   ),
                 ],
               ),
-            ),
-          ),
+            );
+          },
         );
       }
     } catch (e) {
       if (mounted) Navigator.pop(context);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memuat riwayat: $e')));
     }
+  }
+
+  // ==========================================
+  // MODAL EDIT JATAH & SISA CUTI
+  // ==========================================
+  void _showEditCuti(Map<String, dynamic> k) {
+    int jatah = k['jatah_cuti'] ?? 0;
+    int sisa = k['sisa_cuti'] ?? 0;
+    final jatahCtrl = TextEditingController(text: jatah.toString());
+    final sisaCtrl = TextEditingController(text: sisa.toString());
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  _buildAvatar(k, size: 44, radius: 12),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Edit Cuti Karyawan', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                        Text(k['nama'] ?? '-', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B))),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              const Divider(height: 1, color: Color(0xFFF1F5F9)),
+              const SizedBox(height: 18),
+
+              Text('Jatah Cuti Keseluruhan', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF475569))),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: jatahCtrl,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  suffixText: 'Hari',
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              Text('Sisa Cuti Saat Ini', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF475569))),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: sisaCtrl,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  suffixText: 'Hari',
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 22),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      ),
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text('Batal', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: const Color(0xFF64748B))),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      onPressed: () {
+                        final newJatah = int.tryParse(jatahCtrl.text) ?? jatah;
+                        final newSisa = int.tryParse(sisaCtrl.text) ?? sisa;
+                        Navigator.pop(ctx);
+                        _updateJatahCuti(k['id'], newJatah, newSisa);
+                      },
+                      child: Text('Simpan Perubahan', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showApproveConfirm(int id) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Konfirmasi'),
-        content: const Text('Apakah Anda yakin ingin menyetujui pengajuan ini?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _approve(id);
-            },
-            child: const Text('Setujui'),
-          ),
-        ],
+      builder: (ctx) => AppConfirmationDialog(
+        title: 'Setujui Pengajuan Cuti',
+        message: 'Apakah Anda yakin ingin menyetujui pengajuan cuti ini?',
+        type: ConfirmationDialogType.success,
+        confirmText: 'Ya, Setujui',
+        cancelText: 'Batal',
+        onConfirm: () {
+          Navigator.pop(ctx);
+          _approve(id);
+        },
       ),
     );
   }
 
   void _showRejectModal(int id) {
     String catatan = '';
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Tolak Pengajuan'),
-        content: TextFormField(
-          decoration: const InputDecoration(labelText: 'Alasan penolakan', border: OutlineInputBorder()),
-          maxLines: 3,
-          onChanged: (v) => catatan = v,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              if (catatan.isEmpty) return;
-              Navigator.pop(context);
-              _reject(id, catatan);
-            },
-            child: const Text('Tolak'),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
-        ],
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text('Tolak Pengajuan', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626))),
+              const SizedBox(height: 4),
+              Text('Masukkan alasan penolakan untuk karyawan', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+              const SizedBox(height: 16),
+              TextFormField(
+                decoration: InputDecoration(
+                  hintText: 'Tulis alasan penolakan...',
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.5)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                ),
+                maxLines: 3,
+                onChanged: (v) => catatan = v,
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      ),
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text('Batal', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: const Color(0xFF64748B))),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFDC2626),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      onPressed: () {
+                        if (catatan.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wajib mengisi alasan penolakan')));
+                          return;
+                        }
+                        Navigator.pop(ctx);
+                        _reject(id, catatan.trim());
+                      },
+                      child: Text('Tolak Pengajuan', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
   void _showDetailPengajuanModal(Map<String, dynamic> p) {
     final k = p['karyawan'];
-    final tglMulai = DateTime.parse(p['tanggal_mulai']);
-    final tglSelesai = DateTime.parse(p['tanggal_selesai']);
-    final durasi = tglSelesai.difference(tglMulai).inDays + 1;
-    
-    final isPending = p['status'] == 'pending';
-    final isApproved = p['status'] == 'disetujui';
-    final statusColor = isPending ? const Color(0xFFF59E0B) : isApproved ? const Color(0xFF10B981) : const Color(0xFFEF4444);
-    final statusBg = isPending ? const Color(0xFFFEF3C7) : isApproved ? const Color(0xFFD1FAE5) : const Color(0xFFFEE2E2);
+    final tglMulai = _formatDate(p['tanggal_mulai']);
+    final tglSelesai = _formatDate(p['tanggal_selesai']);
+    final tglPengajuan = _formatDate(p['created_at']);
+    final namaJabatan = k?['jabatan']?['nama_jabatan'] ?? '-';
+    final namaCabang = k?['cabang']?['nama_cabang'] ?? '-';
 
-    String? lampiranUrl = p['lampiran_path'] ?? p['bukti_foto'] ?? p['bukti'] ?? p['lampiran'];
-    if (lampiranUrl != null && !lampiranUrl.startsWith('http')) {
-      lampiranUrl = lampiranUrl.replaceFirst(RegExp(r'^/?(storage/)?'), '');
-      final baseDomain = ApiClient.baseUrl.replaceAll(RegExp(r'/api/?$'), '');
-      lampiranUrl = '$baseDomain/storage/$lampiranUrl';
-    }
+    int durasi = 1;
+    try {
+      final dMulai = DateTime.parse(p['tanggal_mulai'].toString());
+      final dSelesai = DateTime.parse(p['tanggal_selesai'].toString());
+      durasi = dSelesai.difference(dMulai).inDays + 1;
+    } catch (_) {}
 
-    showDialog(
+    final isPending = (p['status']?.toString().toLowerCase() ?? '') == 'pending';
+    final isApproved = (p['status']?.toString().toLowerCase() ?? '') == 'disetujui';
+    final isRejected = (p['status']?.toString().toLowerCase() ?? '') == 'ditolak';
+
+    final statusColor = isApproved
+        ? const Color(0xFF059669)
+        : (isRejected ? const Color(0xFFDC2626) : const Color(0xFFD97706));
+    final statusBg = isApproved
+        ? const Color(0xFFECFDF5)
+        : (isRejected ? const Color(0xFFFEF2F2) : const Color(0xFFFFFBEB));
+    final statusBorder = isApproved
+        ? const Color(0xFFA7F3D0)
+        : (isRejected ? const Color(0xFFFECACA) : const Color(0xFFFDE68A));
+
+    final isCuti = (p['jenis']?.toString().toLowerCase() ?? '') == 'cuti';
+    final jenisColor = isCuti ? const Color(0xFF7E22CE) : const Color(0xFFD97706);
+    final jenisBg = isCuti ? const Color(0xFFFAF5FF) : const Color(0xFFFFFBEB);
+    final jenisBorder = isCuti ? const Color(0xFFE9D5FF) : const Color(0xFFFDE68A);
+
+    showModalBottomSheet(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          width: double.maxFinite,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Detail Pengajuan ${p['jenis'].toString().toUpperCase()}', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: const Icon(Icons.close_rounded, color: Colors.grey, size: 20),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+        ),
+        decoration: const BoxDecoration(
+          color: Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag Handle
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 6),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // Header Modal
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 14, 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                const Divider(height: 1),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    _buildAvatar(k, radius: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(k['nama'] ?? '-', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                          Text('${k['jabatan']?['nama_jabatan'] ?? '-'} • ${k['cabang']?['nama_cabang'] ?? '-'}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
-                        ],
+                    child: Center(
+                      child: Icon(
+                        isCuti ? Icons.beach_access_rounded : Icons.sick_rounded,
+                        color: Colors.white,
+                        size: 20,
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade200),
-                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Tanggal Mulai', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade600)),
-                                const SizedBox(height: 4),
-                                Text(DateFormat('dd MMM yyyy').format(tglMulai), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                              ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Detail Pengajuan',
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF0F172A),
+                              ),
                             ),
-                          ),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Tanggal Selesai', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade600)),
-                                const SizedBox(height: 4),
-                                Text(DateFormat('dd MMM yyyy').format(tglSelesai), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                              ],
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: jenisBg,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: jenisBorder),
+                              ),
+                              child: Text(
+                                p['jenis'].toString().toUpperCase(),
+                                style: GoogleFonts.inter(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: jenisColor,
+                                ),
+                              ),
                             ),
+                          ],
+                        ),
+                        Text(
+                          'Diajukan pada $tglPengajuan',
+                          style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(ctx),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE2E8F0),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF64748B)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Profile Header Card
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF64748B).withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      Row(
+                      child: Row(
                         children: [
+                          _buildAvatar(k, size: 60, radius: 16),
+                          const SizedBox(width: 16),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Durasi', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade600)),
-                                const SizedBox(height: 4),
-                                Text('$durasi Hari', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                              ],
-                            ),
-                          ),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Status', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade600)),
-                                const SizedBox(height: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: statusBg,
-                                    borderRadius: BorderRadius.circular(4),
+                                Text(
+                                  k?['nama'] ?? '-',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF0F172A),
                                   ),
-                                  child: Text(
-                                    p['status'].toString().toUpperCase(),
-                                    style: GoogleFonts.inter(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold),
-                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFEFF6FF),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                                      ),
+                                      child: Text(
+                                        namaJabatan,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFF1D4ED8),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '• $namaCabang',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        color: const Color(0xFF64748B),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text('Alasan', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade600)),
-                const SizedBox(height: 4),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade200),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(p['alasan'] ?? '-', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark)),
-                ),
-                if (lampiranUrl != null) ...[
-                  const SizedBox(height: 16),
-                  Text('Lampiran / Bukti', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade600)),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      lampiranUrl,
-                      height: 120,
-                      width: 120,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        height: 120,
-                        width: 120,
-                        color: Colors.grey.shade100,
-                        child: Icon(Icons.broken_image_rounded, color: Colors.grey.shade400),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Detail Information Card
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF64748B).withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Tanggal Mulai', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                                    const SizedBox(height: 4),
+                                    Text(tglMulai, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Tanggal Selesai', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                                    const SizedBox(height: 4),
+                                    Text(tglSelesai, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Durasi', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                                    const SizedBox(height: 4),
+                                    Text('$durasi Hari', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Status', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: statusBg,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: statusBorder),
+                                      ),
+                                      child: Text(
+                                        isApproved ? 'Disetujui' : (isRejected ? 'Ditolak' : 'Pending'),
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: statusColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                          const SizedBox(height: 16),
+
+                          Text('Alasan Pengajuan', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                          const SizedBox(height: 6),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: Text(
+                              (p['alasan'] != null && p['alasan'].toString().isNotEmpty) ? p['alasan'].toString() : '-',
+                              style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155), height: 1.4),
+                            ),
+                          ),
+
+                          if (p['catatan_hrd'] != null && p['catatan_hrd'].toString().isNotEmpty) ...[
+                            const SizedBox(height: 14),
+                            Text('Catatan HRD', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFFDC2626), fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 6),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF2F2),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFFECACA)),
+                              ),
+                              child: Text(
+                                p['catatan_hrd'].toString(),
+                                style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF991B1B)),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                  ),
-                ],
-                const SizedBox(height: 24),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                    child: Text('Tutup', style: GoogleFonts.inter(color: Colors.grey.shade700)),
-                  ),
+
+                    if (isPending) ...[
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 13),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                side: const BorderSide(color: Color(0xFFEF4444)),
+                                foregroundColor: const Color(0xFFEF4444),
+                              ),
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                _showRejectModal(p['id']);
+                              },
+                              child: Text('Tolak', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14)),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF059669),
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(vertical: 13),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                _showApproveConfirm(p['id']);
+                              },
+                              child: Text('Setujui Pengajuan', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+
+            // Bottom Tutup Button
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    side: const BorderSide(color: Color(0xFFCBD5E1)),
+                  ),
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text('Tutup', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: const Color(0xFF475569))),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

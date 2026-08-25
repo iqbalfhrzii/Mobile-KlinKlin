@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
+import '../../../core/widgets/app_confirmation_dialog.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -241,43 +242,13 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
   Future<void> _selesaikanSesi() async {
     if (_activeSession == null) return;
 
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(10)),
-              child: const Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 22),
-            ),
-            const SizedBox(width: 10),
-            Text('Selesaikan Sesi?', style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 16)),
-          ],
-        ),
-        content: Text(
-          'Setelah sesi opname diselesaikan, seluruh data checklist pada periode ini akan terkunci dan tidak dapat diubah.',
-          style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted, height: 1.4),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Batal', style: GoogleFonts.inter(color: AppColors.textMuted, fontWeight: FontWeight.w600)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF059669),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: Text('Selesaikan', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+    final confirm = await AppConfirmationDialog.show(
+      context,
+      title: 'Selesaikan Sesi Opname?',
+      message: 'Setelah sesi opname diselesaikan, seluruh data checklist pada periode ini akan terkunci dan tidak dapat diubah.',
+      type: ConfirmationDialogType.success,
+      confirmText: 'Selesaikan',
+      cancelText: 'Batal',
     );
 
     if (confirm == true) {

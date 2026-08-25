@@ -6,6 +6,7 @@ import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/api/api_client.dart';
+import '../../../core/widgets/app_confirmation_dialog.dart';
 import 'dart:io';
 import 'dart:convert';
 import '../../auth/screens/login_screen.dart';
@@ -658,42 +659,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _confirmLogout(BuildContext context) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text('Konfirmasi Keluar', style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
-        content: Text('Apakah kamu yakin ingin keluar dari akun ini?', style: GoogleFonts.inter(color: const Color(0xFF475569))),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Batal', style: GoogleFonts.inter(color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) => const Center(child: CircularProgressIndicator()),
-              );
+      builder: (_) => AppConfirmationDialog(
+        title: 'Konfirmasi Keluar',
+        message: 'Apakah kamu yakin ingin keluar dari akun ini?',
+        type: ConfirmationDialogType.danger,
+        customIcon: Icons.logout_rounded,
+        confirmText: 'Keluar',
+        cancelText: 'Batal',
+        isDestructive: true,
+        onConfirm: () async {
+          Navigator.pop(context);
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => const Center(child: CircularProgressIndicator()),
+          );
 
-              await AuthService.logout();
+          await AuthService.logout();
 
-              if (context.mounted) {
-                Navigator.pop(context);
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: Text('Keluar', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
-          ),
-        ],
+          if (context.mounted) {
+            Navigator.pop(context);
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
+              (route) => false,
+            );
+          }
+        },
       ),
     );
   }

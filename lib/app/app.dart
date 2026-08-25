@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import '../core/theme/app_theme.dart';
 import '../features/auth/screens/login_screen.dart';
-
-import '../core/services/auth_service.dart';
 import '../features/shell/main_shell.dart';
 import '../features/cleaner/shell/cleaner_main_shell.dart';
 import '../features/finance/shell/finance_main_shell.dart';

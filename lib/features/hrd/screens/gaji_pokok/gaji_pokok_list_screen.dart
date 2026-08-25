@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_confirmation_dialog.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../../../core/theme/app_colors.dart';
@@ -110,19 +111,15 @@ class _GajiPokokListScreenState extends State<GajiPokokListScreen> {
   }
 
   Future<void> _deleteGajiPokok(GajiPokokModel gaji) async {
-    final bool? confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Gaji Pokok?'),
-        content: Text('Apakah Anda yakin ingin menghapus data gaji pokok untuk ${gaji.jabatan?.namaJabatan ?? ''} (${gaji.statusKaryawan}) di cabang ${gaji.cabang?.namaCabang ?? ''}?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true), 
-            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+    final bool? confirm = await AppConfirmationDialog.show(
+      context,
+      title: 'Hapus Gaji Pokok?',
+      message: 'Apakah Anda yakin ingin menghapus data gaji pokok untuk ${gaji.jabatan?.namaJabatan ?? ''} (${gaji.statusKaryawan}) di cabang ${gaji.cabang?.namaCabang ?? ''}?',
+      type: ConfirmationDialogType.danger,
+      customIcon: Icons.delete_forever_rounded,
+      confirmText: 'Hapus',
+      cancelText: 'Batal',
+      isDestructive: true,
     );
 
     if (confirm == true) {

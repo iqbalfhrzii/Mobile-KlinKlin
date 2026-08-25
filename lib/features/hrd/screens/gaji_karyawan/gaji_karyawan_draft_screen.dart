@@ -5,7 +5,6 @@ import '../../../../../core/widgets/gradient_header.dart';
 import '../../../../../core/data/hrd_models.dart';
 import '../../services/hrd_service.dart';
 import 'gaji_karyawan_form_screen.dart';
-import 'package:intl/intl.dart';
 
 class GajiKaryawanDraftScreen extends StatefulWidget {
   const GajiKaryawanDraftScreen({super.key});
@@ -18,19 +17,19 @@ class _GajiKaryawanDraftScreenState extends State<GajiKaryawanDraftScreen> {
   final HrdService _hrdService = HrdService();
   final _formKey = GlobalKey<FormState>();
 
-  bool _isLoading = true;
+  bool _isLoadingMaster = true;
   bool _isGenerating = false;
 
   List<CabangModel> _cabangs = [];
   List<KaryawanModel> _karyawans = [];
   List<KaryawanModel> _filteredKaryawans = [];
 
-  int? _selectedCabangId;
-  int? _selectedKaryawanId;
   String _jenisGaji = 'bulanan';
-
   int _periodeBulan = DateTime.now().month;
   int _periodeTahun = DateTime.now().year;
+
+  int? _selectedCabangId;
+  int? _selectedKaryawanId;
 
   final TextEditingController _jumlahHariKerjaCtrl = TextEditingController();
 
@@ -54,13 +53,13 @@ class _GajiKaryawanDraftScreenState extends State<GajiKaryawanDraftScreen> {
         setState(() {
           _cabangs = cabangs;
           _karyawans = karyawans;
-          _isLoading = false;
+          _isLoadingMaster = false;
         });
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memuat data master: $e')));
-        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memuat master: $e')));
+        setState(() => _isLoadingMaster = false);
       }
     }
   }
@@ -79,15 +78,19 @@ class _GajiKaryawanDraftScreenState extends State<GajiKaryawanDraftScreen> {
 
   Future<void> _generateDraft() async {
     if (!_formKey.currentState!.validate()) return;
-    
+    if (_selectedKaryawanId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pilih karyawan terlebih dahulu')));
+      return;
+    }
+
     setState(() => _isGenerating = true);
-    
+
     try {
       final params = {
         'karyawan_id': _selectedKaryawanId,
+        'jenis_gaji': _jenisGaji,
         'periode_bulan': _periodeBulan,
         'periode_tahun': _periodeTahun,
-        'jenis_gaji': _jenisGaji,
       };
 
       if (_jenisGaji == 'harian') {
@@ -98,13 +101,11 @@ class _GajiKaryawanDraftScreenState extends State<GajiKaryawanDraftScreen> {
       
       if (mounted) {
         setState(() => _isGenerating = false);
-        final res = await Navigator.push(
+        final res = await showGajiKaryawanFormModal(
           context,
-          MaterialPageRoute(
-            builder: (_) => GajiKaryawanFormScreen(gajiToEdit: draft),
-          ),
+          gajiToEdit: draft,
         );
-        if (res == true) {
+        if (res == true && mounted) {
           Navigator.pop(context, true);
         }
       }
@@ -139,7 +140,7 @@ class _GajiKaryawanDraftScreenState extends State<GajiKaryawanDraftScreen> {
             ),
           ),
           Expanded(
-            child: _isLoading
+            child: _isLoadingMaster
                 ? const Center(child: CircularProgressIndicator())
                 : SingleChildScrollView(
                     padding: const EdgeInsets.all(20),
