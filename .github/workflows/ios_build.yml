@@ -27,12 +27,21 @@ jobs:
           flutter precache --ios
           flutter doctor -v
 
+      - name: Clean stale local iOS artifacts
+        run: |
+          rm -f ios/Flutter/Generated.xcconfig
+          rm -f ios/Flutter/flutter_export_environment.sh
+          rm -rf ios/Flutter/ephemeral
+          rm -rf ios/Pods
+          rm -f ios/Podfile.lock
+          rm -rf ios/.symlinks
+
       - name: Get Flutter dependencies
         run: flutter pub get
 
       - name: Build iOS (No Sign)
         run: |
-          flutter build ios --release --no-codesign
+          flutter build ios --release --no-codesign --verbose
 
       - name: Create Unsigned IPA
         run: |
