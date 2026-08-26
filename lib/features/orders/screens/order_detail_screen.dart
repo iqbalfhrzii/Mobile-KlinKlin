@@ -455,6 +455,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             ],
                           )
                           .take(o.cleaners.length * 2 - 1),
+                      if (!widget.isReadOnly &&
+                          o.status != OrderStatus.cancelled &&
+                          o.services.any((s) => s.bonusLayanan > 0)) ...[
+                        const SizedBox(height: 12),
+                        _buildAlokasiBonusButton(o),
+                      ],
                     ] else ...[
                       _buildEmptyCleanerCard(o),
                     ],
