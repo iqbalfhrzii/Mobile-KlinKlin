@@ -143,7 +143,7 @@ class PdfInvoiceService {
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
                           pw.Row(
-                            crossAxisAlignment: pw.CrossAxisAlignment.baseline,
+                            crossAxisAlignment: pw.CrossAxisAlignment.end,
                             children: [
                               pw.Text(
                                 'KLIN',
