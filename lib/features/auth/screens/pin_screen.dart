@@ -204,7 +204,6 @@ class _PinScreenState extends State<PinScreen> {
           ),
         ),
         child: SafeArea(
-          bottom: false,
           child: Column(
             children: [
               // Back button
@@ -289,7 +288,7 @@ class _PinScreenState extends State<PinScreen> {
                   physics: const NeverScrollableScrollPhysics(),
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 2.2,
+                  childAspectRatio: 1.6,
                   children: [
                     ...'123456789'.split('').map((d) => _NumKey(label: d, onTap: () => _onKeyPress(d))),
                     const SizedBox(), // empty cell
@@ -302,7 +301,7 @@ class _PinScreenState extends State<PinScreen> {
                 ),
               ),
 
-              const SizedBox(height: 8),
+              const SizedBox(height: 32),
             ],
           ),
         ),

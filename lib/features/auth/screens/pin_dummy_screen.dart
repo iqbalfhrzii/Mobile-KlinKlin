@@ -153,7 +153,7 @@ class _PinDummyScreenState extends State<PinDummyScreen> {
                   physics: const NeverScrollableScrollPhysics(),
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 2.2,
+                  childAspectRatio: 1.6,
                   children: [
                     ...'123456789'.split('').map((d) => _NumKey(label: d, onTap: () => _onKeyPress(d))),
                     const SizedBox(), // empty cell
@@ -166,7 +166,7 @@ class _PinDummyScreenState extends State<PinDummyScreen> {
                 ),
               ),
 
-              const SizedBox(height: 8),
+              const SizedBox(height: 32),
             ],
           ),
         ),
