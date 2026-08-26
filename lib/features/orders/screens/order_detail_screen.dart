@@ -349,6 +349,81 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   String _formatRupiah(int n) =>
       'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
+  Future<void> _toggleStatusBonus(OrderModel o) async {
+    final isSelesai = o.statusBonus.toLowerCase() == 'selesai';
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(
+              isSelesai ? Icons.help_outline_rounded : Icons.check_circle_outline_rounded,
+              color: isSelesai ? const Color(0xFFD97706) : const Color(0xFF059669),
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                isSelesai ? 'Batal Selesai Bonus?' : 'Selesai Input Bonus?',
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          isSelesai
+              ? 'Apakah Anda yakin ingin membatalkan status selesai bonus ini (menjadi belum selesai)?'
+              : 'Apakah Anda yakin sudah selesai menginput semua bonus cleaner untuk pesanan ini?',
+          style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Batal', style: GoogleFonts.inter(color: AppColors.textMuted)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isSelesai ? const Color(0xFFD97706) : const Color(0xFF059669),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              isSelesai ? 'Ya, Batalkan Selesai' : 'Ya, Selesai Input Bonus',
+              style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await _orderService.toggleStatusBonus(o.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isSelesai
+                ? 'Status bonus pesanan dibatalkan (Belum Selesai).'
+                : 'Status bonus pesanan berhasil diubah menjadi Selesai.',
+          ),
+          backgroundColor: isSelesai ? const Color(0xFFD97706) : const Color(0xFF059669),
+        ),
+      );
+      _fetchDetail();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final o = _o;
@@ -380,12 +455,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             ],
                           )
                           .take(o.cleaners.length * 2 - 1),
-                      if (_canEdit) ...[
-                        const SizedBox(height: 12),
-                        _buildAlokasiBonusButton(o),
-                        const SizedBox(height: 12),
-                        _buildSelesaiBonusButton(o),
-                      ],
                     ] else ...[
                       _buildEmptyCleanerCard(o),
                     ],
@@ -1286,10 +1355,39 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Widget _buildCleanerCard(OrderModel o, OrderCleaner cleaner) {
+    final isBonusSelesai = o.statusBonus.toLowerCase() == 'selesai';
     return _card(
       title: 'Petugas Kebersihan',
-      trailingAction: _canEdit
-          ? InkWell(
+      trailingAction: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: isBonusSelesai
+                  ? const Color(0xFFECFDF5)
+                  : const Color(0xFFFFFBEB),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isBonusSelesai
+                    ? const Color(0xFFA7F3D0)
+                    : const Color(0xFFFDE68A),
+              ),
+            ),
+            child: Text(
+              isBonusSelesai ? 'Bonus Selesai' : 'Bonus Pending',
+              style: GoogleFonts.inter(
+                fontSize: 10.5,
+                fontWeight: FontWeight.bold,
+                color: isBonusSelesai
+                    ? const Color(0xFF059669)
+                    : const Color(0xFFD97706),
+              ),
+            ),
+          ),
+          if (_canEdit) ...[
+            const SizedBox(width: 6),
+            InkWell(
               onTap: () {
                 final hasSchedule = o.services.isNotEmpty &&
                     o.services.first.tanggalPengerjaan.isNotEmpty &&
@@ -1338,8 +1436,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   ],
                 ),
               ),
-            )
-          : null,
+            ),
+          ],
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1584,7 +1684,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ),
             ),
           ],
-          if (_canEdit) ...[
+          if (!widget.isReadOnly && o.status != OrderStatus.cancelled) ...[
             const SizedBox(height: 12),
             const Divider(color: AppColors.border, height: 1),
             const SizedBox(height: 8),
@@ -1629,22 +1729,62 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             const SizedBox(height: 8),
             const Divider(color: AppColors.border, height: 1),
             const SizedBox(height: 10),
-            // Add Bonus Button (Full width)
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => _showAddBonusSheet(o, cleaner),
-                icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
-                label: const Text('Tambah Bonus'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+            // Action Buttons: Tambah Bonus & Selesai Input Bonus
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showAddBonusSheet(o, cleaner),
+                    icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
+                    label: Text(
+                      'Tambah Bonus',
+                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _toggleStatusBonus(o),
+                    icon: Icon(
+                      o.statusBonus.toLowerCase() == 'selesai'
+                          ? Icons.undo_rounded
+                          : Icons.check_circle_outline_rounded,
+                      size: 16,
+                    ),
+                    label: Text(
+                      o.statusBonus.toLowerCase() == 'selesai'
+                          ? 'Batal Selesai'
+                          : 'Selesai Bonus',
+                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: o.statusBonus.toLowerCase() == 'selesai'
+                          ? const Color(0xFFF1F5F9)
+                          : const Color(0xFF059669),
+                      foregroundColor: o.statusBonus.toLowerCase() == 'selesai'
+                          ? const Color(0xFF475569)
+                          : Colors.white,
+                      elevation: 0,
+                      side: o.statusBonus.toLowerCase() == 'selesai'
+                          ? const BorderSide(color: Color(0xFFCBD5E1))
+                          : null,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ],
