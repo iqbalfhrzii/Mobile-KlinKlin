@@ -6,6 +6,7 @@ import '../../../core/widgets/badges.dart';
 import '../../../core/widgets/whatsapp_icon.dart';
 import '../../../core/data/mock_data.dart';
 import '../../../core/data/order_model.dart';
+import '../../../core/services/pdf_invoice_service.dart';
 import '../../../core/widgets/weekly_date_picker.dart';
 import 'order_detail_screen.dart';
 import 'create_order_screen.dart';
@@ -1517,6 +1518,24 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
                   const SizedBox(height: 16),
                   Row(
                     children: [
+                      InkWell(
+                        onTap: () => PdfInvoiceService.showPrintDialog(context, o),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(9),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFBFDBFE)),
+                          ),
+                          child: const Icon(
+                            Icons.print_rounded,
+                            color: Color(0xFF0284C7),
+                            size: 19,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: _buildWAButton(
                           label: 'Chat Customer',

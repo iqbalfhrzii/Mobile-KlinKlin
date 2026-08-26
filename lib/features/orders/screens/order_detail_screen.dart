@@ -523,6 +523,40 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     ),
                   ),
                 ],
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () => PdfInvoiceService.showPrintDialog(context, o),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.print_rounded,
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Invoice',
+                          style: GoogleFonts.inter(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ],
           ),
@@ -2551,19 +2585,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           const SizedBox(height: 12),
           _buildBigActionBtn(
             isLoading: _isLoading,
-            title: 'Lihat PDF Invoice',
-            subtitle: 'Cetak atau simpan tagihan dalam format PDF',
+            title: 'Cetak / Lihat PDF Invoice',
+            subtitle: 'Pilih stempel & simpan tagihan dalam format PDF',
             icon: Icons.picture_as_pdf_rounded,
             color: const Color(0xFFE53935), // Red color for PDF
             isDone: false,
             enabled: true,
-            onTap: () async {
-              await Printing.layoutPdf(
-                name: 'KLINKLIN-${o.customer.name}-${o.customer.area}-${o.nomorPesanan}'
-                    .replaceAll(' ', '_'),
-                onLayout: (format) => PdfInvoiceService.generateInvoice(o),
-              );
-            },
+            onTap: () => PdfInvoiceService.showPrintDialog(context, o),
           ),
         ],
 
