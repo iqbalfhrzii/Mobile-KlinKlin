@@ -223,12 +223,22 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
     }
   }
 
-  String _formatCurrency(num value) {
+  double _toDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value.replaceAll(',', '')) ?? 0.0;
+    }
+    return 0.0;
+  }
+
+  String _formatCurrency(dynamic value) {
+    final numVal = _toDouble(value);
     return NumberFormat.currency(
       locale: 'id_ID',
       symbol: 'Rp ',
       decimalDigits: 0,
-    ).format(value);
+    ).format(numVal);
   }
 
   @override
@@ -2657,12 +2667,12 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
       'periode': _marketingPeriode,
     };
 
-    final sumGoogle = (summary['sum_google'] as num? ?? 0).toDouble();
-    final sumMeta = (summary['sum_meta'] as num? ?? 0).toDouble();
-    final sumTiktok = (summary['sum_tiktok'] as num? ?? 0).toDouble();
-    final totalSpend = (summary['total_spend'] as num? ?? 0).toDouble();
-    final pajak12 = (summary['pajak_12'] as num? ?? 0).toDouble();
-    final totalTermasukPajak = (summary['total_termasuk_pajak'] as num? ?? 0).toDouble();
+    final sumGoogle = _toDouble(summary['sum_google']);
+    final sumMeta = _toDouble(summary['sum_meta']);
+    final sumTiktok = _toDouble(summary['sum_tiktok']);
+    final totalSpend = _toDouble(summary['total_spend']);
+    final pajak12 = _toDouble(summary['pajak_12']);
+    final totalTermasukPajak = _toDouble(summary['total_termasuk_pajak']);
 
     DateTime parsedMonth;
     try {
@@ -3214,7 +3224,7 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
   Widget _buildSpendAdCard(dynamic ad) {
     final cabangName = ad['cabang']?['nama_cabang']?.toString().toUpperCase() ?? '-';
     final platform = (ad['platform']?.toString() ?? 'google').toLowerCase();
-    final nominal = (ad['nominal'] as num? ?? 0).toDouble();
+    final nominal = _toDouble(ad['nominal']);
     final periode = ad['periode']?.toString() ?? '';
 
     Color badgeBg;
