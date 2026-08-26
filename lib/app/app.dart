@@ -55,7 +55,7 @@ class _KlinklinAppState extends State<KlinklinApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'KlinKlin CS App',
+      title: 'KlinKlin',
       navigatorKey: globalNavigatorKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
