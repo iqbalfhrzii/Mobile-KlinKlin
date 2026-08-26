@@ -357,7 +357,7 @@ class _FinanceApprovalListScreenState extends State<FinanceApprovalListScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Order #${order.id}',
+                  order.nomorPesanan.isNotEmpty ? order.nomorPesanan : 'Order #${order.id}',
                   style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
                 ),
                 Container(

@@ -308,7 +308,7 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Order #${order.nomorPesanan}', style: GoogleFonts.inter(
+                Text(order.nomorPesanan.isNotEmpty ? order.nomorPesanan : 'Order #${order.id}', style: GoogleFonts.inter(
                   fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -379,7 +379,7 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Order #${order.nomorPesanan}', style: GoogleFonts.inter(
+                Text(order.nomorPesanan.isNotEmpty ? order.nomorPesanan : 'Order #${order.id}', style: GoogleFonts.inter(
                   fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -487,7 +487,7 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Order #${order.nomorPesanan}', style: GoogleFonts.inter(
+                Text(order.nomorPesanan.isNotEmpty ? order.nomorPesanan : 'Order #${order.id}', style: GoogleFonts.inter(
                   fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

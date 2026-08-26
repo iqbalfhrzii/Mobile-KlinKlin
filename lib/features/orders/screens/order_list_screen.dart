@@ -1376,6 +1376,19 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (o.nomorPesanan.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 2),
+                            child: Text(
+                              o.nomorPesanan,
+                              style: GoogleFonts.inter(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ),
                         Text(
                           o.customer.name,
                           style: GoogleFonts.inter(

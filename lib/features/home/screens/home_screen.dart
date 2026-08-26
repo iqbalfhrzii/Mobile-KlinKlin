@@ -1391,7 +1391,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          '#${o.id}',
+                          o.nomorPesanan.isNotEmpty ? o.nomorPesanan : '#${o.id}',
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
