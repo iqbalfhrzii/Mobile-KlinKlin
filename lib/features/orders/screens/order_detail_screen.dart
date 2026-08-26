@@ -237,77 +237,163 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     final reasonCtrl = TextEditingController();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Ajukan Edit Layanan',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppColors.primary),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Status pesanan sudah selesai/diproses. Silakan masukkan alasan pengajuan edit untuk disetujui Finance:',
-              style: GoogleFonts.inter(fontSize: 12, color: AppColors.textDark),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: reasonCtrl,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: 'Contoh: Maaf mbak ada salah input pembayaran / layanan...',
-                hintStyle: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        backgroundColor: Colors.white,
+        elevation: 10,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header Icon
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceBlue,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                    width: 2,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.edit_note_rounded,
+                  color: AppColors.primary,
+                  size: 28,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              // Title
+              Text(
+                'Ajukan Edit Layanan',
+                style: GoogleFonts.inter(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF0F172A),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              // Subtitle
+              Text(
+                'Status pesanan sudah selesai/diproses. Masukkan alasan pengajuan edit untuk disetujui Finance:',
+                style: GoogleFonts.inter(
+                  fontSize: 12.5,
+                  color: const Color(0xFF64748B),
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              // Input Area
+              TextField(
+                controller: reasonCtrl,
+                maxLines: 3,
+                style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
+                decoration: InputDecoration(
+                  hintText: 'Contoh: Maaf mbak ada salah input pembayaran / layanan...',
+                  hintStyle: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  contentPadding: const EdgeInsets.all(14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        backgroundColor: Colors.white,
+                      ),
+                      child: Text(
+                        'Batal',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final reason = reasonCtrl.text.trim();
+                        if (reason.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Alasan pengajuan edit harus diisi.')),
+                          );
+                          return;
+                        }
+                        Navigator.pop(ctx);
+                        setState(() => _isLoading = true);
+                        try {
+                          await _orderService.submitPengajuanEdit(widget.order.id, reason);
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Pengajuan edit layanan berhasil dikirim ke Finance!'),
+                              backgroundColor: Color(0xFF059669),
+                            ),
+                          );
+                          _fetchDetail();
+                        } catch (e) {
+                          if (!mounted) return;
+                          setState(() => _isLoading = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(e.toString()),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 2,
+                      ),
+                      child: Text(
+                        'Kirim Pengajuan',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final reason = reasonCtrl.text.trim();
-              if (reason.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Alasan pengajuan edit harus diisi.')),
-                );
-                return;
-              }
-              Navigator.pop(context); // Tutup dialog
-              
-              setState(() => _isLoading = true);
-              try {
-                await _orderService.submitPengajuanEdit(widget.order.id, reason);
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Pengajuan edit layanan berhasil dikirim ke Finance!'),
-                    backgroundColor: Color(0xFF059669),
-                  ),
-                );
-                _fetchDetail(); // Tarik ulang data dari server
-              } catch (e) {
-                if (!mounted) return;
-                setState(() => _isLoading = false);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(e.toString()),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Kirim Pengajuan'),
-          ),
-        ],
       ),
     );
   }
@@ -351,51 +437,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   Future<void> _toggleStatusBonus(OrderModel o) async {
     final isSelesai = o.statusBonus.toLowerCase() == 'selesai';
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(
-              isSelesai ? Icons.help_outline_rounded : Icons.check_circle_outline_rounded,
-              color: isSelesai ? const Color(0xFFD97706) : const Color(0xFF059669),
-              size: 24,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                isSelesai ? 'Batal Selesai Bonus?' : 'Selesai Input Bonus?',
-                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          isSelesai
-              ? 'Apakah Anda yakin ingin membatalkan status selesai bonus ini (menjadi belum selesai)?'
-              : 'Apakah Anda yakin sudah selesai menginput semua bonus cleaner untuk pesanan ini?',
-          style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, height: 1.4),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Batal', style: GoogleFonts.inter(color: AppColors.textMuted)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isSelesai ? const Color(0xFFD97706) : const Color(0xFF059669),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              isSelesai ? 'Ya, Batalkan Selesai' : 'Ya, Selesai Input Bonus',
-              style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
+    final confirm = await AppConfirmationDialog.show(
+      context,
+      title: isSelesai ? 'Batal Selesai Bonus?' : 'Selesai Input Bonus?',
+      message: isSelesai
+          ? 'Apakah Anda yakin ingin membatalkan status selesai bonus ini (menjadi belum selesai)?'
+          : 'Apakah Anda yakin sudah selesai menginput semua bonus cleaner untuk pesanan ini?',
+      type: isSelesai ? ConfirmationDialogType.warning : ConfirmationDialogType.success,
+      confirmText: isSelesai ? 'Ya, Batalkan' : 'Ya, Selesai',
+      cancelText: 'Batal',
     );
 
     if (confirm != true) return;
@@ -2583,7 +2633,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               (c) => c.statusPengerjaan == CleanerWorkStatus.assigned,
             ),
             enabled: isPriceQtyValid,
-            onTap: () {
+            onTap: () async {
               if (!isPriceQtyValid) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -2597,100 +2647,17 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               }
 
               if (!hasBonus) {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext ctx) {
-                    return AlertDialog(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      title: Row(
-                        children: [
-                          const Icon(
-                            Icons.info_outline_rounded,
-                            color: AppColors.primary,
-                            size: 28,
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            'Bonus Belum Diatur',
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                      content: Text(
-                        'Anda belum mengatur alokasi bonus cleaner.\n\nYakin mau memberitahu cleaner sekarang? (Bonus tetap bisa diatur nanti)',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: AppColors.textDark,
-                          height: 1.5,
-                        ),
-                      ),
-                      actionsPadding: const EdgeInsets.fromLTRB(
-                        16,
-                        0,
-                        16,
-                        16,
-                      ),
-                      actions: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextButton(
-                                style: TextButton.styleFrom(
-                                  backgroundColor: Colors.red.shade50,
-                                  foregroundColor: Colors.red.shade700,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                onPressed: () => Navigator.pop(ctx),
-                                child: Text(
-                                  'Batal',
-                                  style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                onPressed: () {
-                                  Navigator.pop(ctx);
-                                  _notifyCleaner();
-                                },
-                                child: Text(
-                                  'Yakin',
-                                  style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    );
-                  },
+                final confirm = await AppConfirmationDialog.show(
+                  context,
+                  title: 'Bonus Belum Diatur',
+                  message: 'Anda belum mengatur alokasi bonus cleaner.\n\nYakin mau memberitahu cleaner sekarang? (Bonus tetap bisa diatur nanti)',
+                  type: ConfirmationDialogType.warning,
+                  confirmText: 'Yakin',
+                  cancelText: 'Batal',
                 );
+                if (confirm == true) {
+                  _notifyCleaner();
+                }
               } else {
                 _notifyCleaner();
               }

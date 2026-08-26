@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/widgets/app_confirmation_dialog.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/payment_service.dart';
@@ -2179,23 +2180,13 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                   ); // close screen and trigger loadData
                                 } catch (e) {
                                   setModal(() => uploading = false);
-                                  showDialog(
-                                    context: ctx,
-                                    builder: (dCtx) => AlertDialog(
-                                      title: const Text('Gagal'),
-                                      content: Text(
-                                        e.toString().replaceFirst(
-                                          'Exception: ',
-                                          '',
-                                        ),
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(dCtx),
-                                          child: const Text('OK'),
-                                        ),
-                                      ],
-                                    ),
+                                  AppConfirmationDialog.show(
+                                    ctx,
+                                    title: 'Gagal',
+                                    message: e.toString().replaceFirst('Exception: ', ''),
+                                    type: ConfirmationDialogType.danger,
+                                    confirmText: 'Tutup',
+                                    cancelText: '',
                                   );
                                 }
                               }
@@ -2477,18 +2468,13 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      showDialog(
-        context: context,
-        builder: (dialogCtx) => AlertDialog(
-          title: const Text('Gagal'),
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogCtx),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
+      AppConfirmationDialog.show(
+        context,
+        title: 'Gagal',
+        message: e.toString().replaceFirst('Exception: ', ''),
+        type: ConfirmationDialogType.danger,
+        confirmText: 'Tutup',
+        cancelText: '',
       );
     }
   }

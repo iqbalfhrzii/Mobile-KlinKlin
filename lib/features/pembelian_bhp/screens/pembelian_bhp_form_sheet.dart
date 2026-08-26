@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../services/pembelian_bhp_service.dart';
 
 class PembelianBhpFormSheet extends StatefulWidget {
@@ -286,29 +287,13 @@ class _PembelianBhpFormSheetState extends State<PembelianBhpFormSheet> {
   }
 
   void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.error_outline_rounded, color: Colors.red, size: 22),
-            const SizedBox(width: 8),
-            Text('Perhatian', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Text(message, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, height: 1.4)),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryMid,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('OK', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+    AppConfirmationDialog.show(
+      context,
+      title: 'Perhatian',
+      message: message,
+      type: ConfirmationDialogType.danger,
+      confirmText: 'OK',
+      cancelText: '',
     );
   }
 

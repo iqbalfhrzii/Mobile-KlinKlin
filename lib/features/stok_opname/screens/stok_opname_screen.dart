@@ -281,39 +281,14 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
   }
 
   Future<void> _hapusDetail(int detailId, String confirmMessage) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Row(
-          children: [
-            const Icon(Icons.delete_outline_rounded, color: Color(0xFFDC2626), size: 22),
-            const SizedBox(width: 8),
-            Text('Konfirmasi Hapus', style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 16)),
-          ],
-        ),
-        content: Text(
-          confirmMessage,
-          style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted, height: 1.4),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Batal', style: GoogleFonts.inter(color: AppColors.textMuted, fontWeight: FontWeight.w600)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: Text('Ya, Hapus', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+    final confirm = await AppConfirmationDialog.show(
+      context,
+      title: 'Konfirmasi Hapus',
+      message: confirmMessage,
+      type: ConfirmationDialogType.danger,
+      confirmText: 'Hapus',
+      cancelText: 'Batal',
+      isDestructive: true,
     );
 
     if (confirm == true) {
@@ -321,6 +296,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
       try {
         final success = await StokOpnameService.deleteDetail(detailId);
         if (mounted) {
+          setState(() => _isLoading = false);
           if (success) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(

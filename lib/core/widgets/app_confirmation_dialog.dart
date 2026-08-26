@@ -111,6 +111,8 @@ class AppConfirmationDialog extends StatelessWidget {
       icon = customIcon!;
     }
 
+    final bool hasCancel = cancelText.trim().isNotEmpty;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       backgroundColor: Colors.white,
@@ -130,7 +132,7 @@ class AppConfirmationDialog extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: borderColor, width: 2),
               ),
-              child: Icon(icon, color: primaryColor, size: 30),
+              child: Icon(icon, color: primaryColor, size: 28),
             ),
             const SizedBox(height: 16),
 
@@ -144,18 +146,19 @@ class AppConfirmationDialog extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 6),
-
-            // Message
-            Text(
-              message,
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                color: const Color(0xFF64748B),
-                height: 1.4,
+            if (message.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              // Message
+              Text(
+                message,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: const Color(0xFF64748B),
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
+            ],
 
             if (contentWidget != null) ...[
               const SizedBox(height: 16),
@@ -167,33 +170,38 @@ class AppConfirmationDialog extends StatelessWidget {
             // Action Buttons Row
             Row(
               children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: onCancel ?? () => Navigator.pop(context, false),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      backgroundColor: Colors.white,
-                    ),
-                    child: Text(
-                      cancelText,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF64748B),
+                if (hasCancel) ...[
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: onCancel ?? () => Navigator.pop(context, false),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        backgroundColor: Colors.white,
+                      ),
+                      child: Text(
+                        cancelText,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF64748B),
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
+                  const SizedBox(width: 10),
+                ],
                 Expanded(
                   child: ElevatedButton(
                     onPressed: isLoading ? null : (onConfirm ?? () => Navigator.pop(context, true)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isDestructive ? const Color(0xFFDC2626) : primaryColor,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       elevation: 2,
                       shadowColor: (isDestructive ? const Color(0xFFDC2626) : primaryColor).withValues(alpha: 0.35),
@@ -211,6 +219,9 @@ class AppConfirmationDialog extends StatelessWidget {
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                   ),
                 ),

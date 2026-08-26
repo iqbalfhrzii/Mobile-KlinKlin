@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../core/widgets/app_confirmation_dialog.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
@@ -1914,58 +1915,20 @@ class _Step2Services extends StatelessWidget {
                                 Container(width: 1, height: 24, color: AppColors.border),
                                 Expanded(
                                   child: InkWell(
-                                    onTap: () {
-                                      showDialog(
-                                        context: context,
-                                        builder: (ctx) => AlertDialog(
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(16),
-                                          ),
-                                          title: Text(
-                                            'Hapus Layanan?',
-                                            style: GoogleFonts.inter(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                            ),
-                                          ),
-                                          content: Text(
-                                            'Apakah Anda yakin ingin menghapus layanan "${s.name}" dari pesanan?',
-                                            style: GoogleFonts.inter(fontSize: 13),
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => Navigator.pop(ctx),
-                                              child: Text(
-                                                'Batal',
-                                                style: GoogleFonts.inter(
-                                                  color: AppColors.textMuted,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ),
-                                            ElevatedButton(
-                                              onPressed: () {
-                                                Navigator.pop(ctx);
-                                                draft.services.removeAt(i);
-                                                onChanged();
-                                              },
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: AppColors.error,
-                                                foregroundColor: Colors.white,
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(8),
-                                                ),
-                                              ),
-                                              child: Text(
-                                                'Hapus',
-                                                style: GoogleFonts.inter(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                                    onTap: () async {
+                                      final confirm = await AppConfirmationDialog.show(
+                                        context,
+                                        title: 'Hapus Layanan?',
+                                        message: 'Apakah Anda yakin ingin menghapus layanan "${s.name}" dari pesanan?',
+                                        type: ConfirmationDialogType.danger,
+                                        confirmText: 'Hapus',
+                                        cancelText: 'Batal',
+                                        isDestructive: true,
                                       );
+                                      if (confirm == true) {
+                                        draft.services.removeAt(i);
+                                        onChanged();
+                                      }
                                     },
                                     borderRadius: const BorderRadius.only(bottomRight: Radius.circular(16)),
                                     child: Padding(
