@@ -37,8 +37,8 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
   final _kronologiCtrl = TextEditingController();
   final _peristiwaLainnyaCtrl = TextEditingController();
 
-  DateTime _selectedDate = DateTime.now();
-  TimeOfDay _selectedTime = TimeOfDay.now();
+  DateTime? _selectedDate;
+  TimeOfDay? _selectedTime;
 
   // Multi-select for Peristiwa
   final List<String> _peristiwaOptions = [
@@ -140,7 +140,7 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
   Future<void> _selectDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
+      initialDate: _selectedDate ?? DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 1)),
       builder: (context, child) {
@@ -164,7 +164,7 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
   Future<void> _selectTime() async {
     final picked = await showTimePicker(
       context: context,
-      initialTime: _selectedTime,
+      initialTime: _selectedTime ?? TimeOfDay.now(),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -184,6 +184,26 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
   }
 
   Future<void> _submitForm() async {
+    if (_selectedDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tanggal kejadian wajib dipilih'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    if (_selectedTime == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Jam kejadian wajib dipilih'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -247,8 +267,8 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
 
     setState(() => _isLoading = true);
 
-    final String tanggalStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
-    final String jamStr = '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
+    final String tanggalStr = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+    final String jamStr = '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}';
 
     final res = await _service.submitLaporan(
       cabangId: _cabangId > 0 ? _cabangId : 1,
@@ -358,7 +378,8 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
                                   child: _buildPickerButton(
                                     label: 'Tanggal Kejadian *',
                                     icon: Icons.calendar_today_rounded,
-                                    value: DateFormat('dd MMM yyyy').format(_selectedDate),
+                                    value: _selectedDate != null ? DateFormat('dd MMM yyyy').format(_selectedDate!) : null,
+                                    hint: 'Pilih Tanggal',
                                     onTap: _selectDate,
                                   ),
                                 ),
@@ -368,7 +389,10 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
                                   child: _buildPickerButton(
                                     label: 'Jam Kejadian *',
                                     icon: Icons.schedule_rounded,
-                                    value: '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')} WIB',
+                                    value: _selectedTime != null
+                                        ? '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')} WIB'
+                                        : null,
+                                    hint: 'Pilih Jam',
                                     onTap: _selectTime,
                                   ),
                                 ),
@@ -808,9 +832,11 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
   Widget _buildPickerButton({
     required String label,
     required IconData icon,
-    required String value,
+    required String? value,
+    required String hint,
     required VoidCallback onTap,
   }) {
+    final hasValue = value != null && value.isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -831,12 +857,16 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
             ),
             child: Row(
               children: [
-                Icon(icon, size: 16, color: const Color(0xFF64748B)),
+                Icon(icon, size: 16, color: hasValue ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    value,
-                    style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
+                    hasValue ? value : hint,
+                    style: GoogleFonts.inter(
+                      fontSize: 12.5,
+                      fontWeight: hasValue ? FontWeight.w600 : FontWeight.normal,
+                      color: hasValue ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
