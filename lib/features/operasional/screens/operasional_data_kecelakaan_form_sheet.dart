@@ -465,23 +465,36 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
                   // Peristiwa yang telah terjadi (Multiple Checkbox)
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFFBEB),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: const Color(0xFFFDE68A)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        RichText(
-                          text: TextSpan(
-                            text: 'Peristiwa yang Telah Terjadi',
-                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF92400E)),
-                            children: const [TextSpan(text: ' * (Bisa pilih lebih dari satu)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.normal, color: Color(0xFFB45309)))],
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Peristiwa yang Telah Terjadi *',
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF92400E)),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF3C7),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                'Bisa multi-pilih',
+                                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFFB45309)),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         ..._peristiwaOptions.map((opt) {
                           final isSelected = _selectedPeristiwa.contains(opt);
                           return InkWell(
@@ -494,21 +507,37 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
                                 }
                               });
                             },
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
+                            borderRadius: BorderRadius.circular(10),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              margin: const EdgeInsets.only(bottom: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: isSelected ? const Color(0xFFFEF2F2) : Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isSelected ? const Color(0xFFEF4444) : Colors.grey.shade200,
+                                  width: isSelected ? 1.5 : 1.0,
+                                ),
+                              ),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Icon(
                                     isSelected ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
-                                    size: 18,
+                                    size: 19,
                                     color: isSelected ? const Color(0xFFDC2626) : const Color(0xFF94A3B8),
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
                                       opt,
-                                      style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF1E293B)),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12.5,
+                                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                        color: isSelected ? const Color(0xFF991B1B) : const Color(0xFF1E293B),
+                                        height: 1.3,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -517,17 +546,17 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
                           );
                         }),
                         if (_selectedPeristiwa.contains('Lainnya')) ...[
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 6),
                           TextField(
                             controller: _peristiwaLainnyaController,
-                            style: GoogleFonts.inter(fontSize: 12),
+                            style: GoogleFonts.inter(fontSize: 12.5),
                             decoration: InputDecoration(
                               hintText: 'Tuliskan keterangan peristiwa lainnya...',
-                              hintStyle: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade400),
+                              hintStyle: GoogleFonts.inter(fontSize: 12.5, color: Colors.grey.shade400),
                               filled: true,
                               fillColor: Colors.white,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFFDE68A))),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFFDE68A))),
                             ),
                           ),
                         ],
@@ -536,55 +565,86 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
                   ),
                   const SizedBox(height: 16),
 
-                  // Akibat dari insiden tersebut (Multiple Chips)
+                  // Akibat dari insiden tersebut (Multiple Card Chips)
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFAF5FF),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: const Color(0xFFE9D5FF)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        RichText(
-                          text: TextSpan(
-                            text: 'Akibat dari Insiden Tersebut',
-                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF6B21A8)),
-                            children: const [TextSpan(text: ' * (Bisa pilih lebih dari satu)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.normal, color: Color(0xFF7E22CE)))],
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Akibat dari Insiden Tersebut *',
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF6B21A8)),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF3E8FF),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                'Bisa multi-pilih',
+                                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF7E22CE)),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: _akibatOptions.map((akb) {
                             final isSelected = _selectedAkibat.contains(akb);
-                            return FilterChip(
-                              label: Text(akb),
-                              selected: isSelected,
-                              labelStyle: GoogleFonts.inter(
-                                fontSize: 11.5,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                color: isSelected ? const Color(0xFF581C87) : const Color(0xFF475569),
-                              ),
-                              backgroundColor: Colors.white,
-                              selectedColor: const Color(0xFFE9D5FF),
-                              checkmarkColor: const Color(0xFF581C87),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                side: BorderSide(color: isSelected ? const Color(0xFFC084FC) : const Color(0xFFE2E8F0)),
-                              ),
-                              onSelected: (selected) {
+                            return InkWell(
+                              onTap: () {
                                 setState(() {
-                                  if (selected) {
-                                    _selectedAkibat.add(akb);
-                                  } else {
+                                  if (isSelected) {
                                     _selectedAkibat.remove(akb);
+                                  } else {
+                                    _selectedAkibat.add(akb);
                                   }
                                 });
                               },
+                              borderRadius: BorderRadius.circular(10),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 150),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? const Color(0xFFF3E8FF) : Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isSelected ? const Color(0xFFA855F7) : Colors.grey.shade200,
+                                    width: isSelected ? 1.5 : 1.0,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                                      size: 16,
+                                      color: isSelected ? const Color(0xFF9333EA) : const Color(0xFF94A3B8),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      akb,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                        color: isSelected ? const Color(0xFF6B21A8) : const Color(0xFF334155),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             );
                           }).toList(),
                         ),
