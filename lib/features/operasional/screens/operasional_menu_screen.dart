@@ -15,7 +15,6 @@ import 'operasional_arsip_penawaran_screen.dart';
 import 'operasional_evaluasi_rapat_screen.dart';
 import 'operasional_strategi_rapat_screen.dart';
 import 'operasional_data_kecelakaan_screen.dart';
-import 'operasional_laporan_lapangan_screen.dart';
 import 'operasional_kesehatan_berkala_screen.dart';
 import 'operasional_tanda_terima_apd_screen.dart';
 import 'operasional_layanan_kesehatan_screen.dart';
@@ -249,15 +248,6 @@ class OperasionalMenuScreen extends StatelessWidget {
             bgColor: const Color(0xFFFEE2E2),
             onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalDataKecelakaanScreen()));
-            },
-          ),
-          _MenuItem(
-            icon: Icons.assignment_turned_in_rounded,
-            title: 'Laporan Lapangan',
-            iconColor: const Color(0xFFD97706),
-            bgColor: const Color(0xFFFEF3C7),
-            onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalLaporanLapanganScreen()));
             },
           ),
           _MenuItem(

@@ -9,7 +9,6 @@ import '../../features/operasional/screens/operasional_approval_pengajuan_screen
 import '../../features/operasional/screens/operasional_permintaan_design_screen.dart';
 import '../../features/operasional/screens/operasional_data_kecelakaan_screen.dart';
 import '../../features/operasional/screens/monitoring_stok_opname_screen.dart';
-import '../../features/operasional/screens/operasional_laporan_lapangan_screen.dart';
 import '../../features/operasional/screens/operasional_quotation_screen.dart';
 import '../../features/operasional/screens/operasional_purchase_order_screen.dart';
 import '../../features/operasional/screens/tagihan_bulanan_screen.dart';
@@ -286,11 +285,11 @@ class FcmService {
       return;
     }
 
-    // 7. Laporan Lapangan
+    // 7. Laporan Lapangan / Kecelakaan
     if (type == 'laporan_lapangan' || screen == 'laporan_lapangan') {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => const OperasionalLaporanLapanganScreen(),
+          builder: (_) => const OperasionalDataKecelakaanScreen(),
         ),
       );
       return;
