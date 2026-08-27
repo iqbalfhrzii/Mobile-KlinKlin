@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import 'finance_cashflow_cabang_screen.dart';
 import 'finance_approval_kas_screen.dart';
 import 'finance_download_screen.dart';
 import '../../operasional/screens/operasional_permintaan_design_screen.dart';
 import '../../operasional/screens/operasional_pengumuman_screen.dart';
+import 'finance_pengaturan_ppn_screen.dart';
 
 class FinanceKeuanganMenuScreen extends StatelessWidget {
   const FinanceKeuanganMenuScreen({super.key});
@@ -70,7 +70,7 @@ class FinanceKeuanganMenuScreen extends StatelessWidget {
                   'Ajukan dan pantau permohonan materi desain marketing & operasional', 
                   Icons.palette_rounded, 
                   const Color(0xFF7C3AED),
-                  const OperasionalPermintaanDesignScreen(),
+                  const OperasionalPermintaanDesignScreen(department: 'finance'),
                 ),
                 const SizedBox(height: 12),
                 _buildMenuCard(
@@ -80,6 +80,15 @@ class FinanceKeuanganMenuScreen extends StatelessWidget {
                   Icons.notifications_active_rounded, 
                   const Color(0xFFEA580C),
                   const OperasionalPengumumanScreen(),
+                ),
+                const SizedBox(height: 12),
+                _buildMenuCard(
+                  context, 
+                  'Pengaturan PPN', 
+                  'Atur kewajiban penggunaan PPN (11%) untuk setiap cabang operasional', 
+                  Icons.receipt_long_rounded, 
+                  const Color(0xFF2563EB),
+                  const FinancePengaturanPpnScreen(),
                 ),
               ],
             ),

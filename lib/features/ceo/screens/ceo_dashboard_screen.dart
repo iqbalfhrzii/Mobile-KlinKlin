@@ -6,8 +6,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../services/ceo_service.dart';
 import '../../../core/widgets/gradient_header.dart';
+import '../../../core/widgets/animated_notification_bell.dart';
 import '../../operasional/screens/operasional_approval_pengajuan_screen.dart';
 import '../../operasional/screens/operasional_purchase_order_screen.dart';
+import '../../operasional/screens/monitoring_stok_opname_screen.dart';
+import '../../operasional/screens/operasional_cashflow_cabang_screen.dart';
 
 class CeoDashboardScreen extends StatefulWidget {
   const CeoDashboardScreen({super.key});
@@ -469,35 +472,42 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
                 ),
               ),
               const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.shield_rounded,
-                      color: Colors.white,
-                      size: 14,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const AnimatedNotificationBell(size: 24),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'CEO / Owner',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                     ),
-                  ],
-                ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.shield_rounded,
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'CEO',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -573,20 +583,20 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
 
                 const SizedBox(height: 12),
 
-                // Quick Navigation: Pengajuan Alat & Chemical (Executive Read-Only View)
+                // Menu Eksekutif: Kontrol Cabang & Pengadaan (Style Dashboard CS / Cleaner)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Container(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade200),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.02),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
@@ -601,49 +611,55 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
                                 Container(
                                   padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFEFF6FF),
+                                    color: AppColors.primary.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: const Icon(Icons.inventory_2_rounded, size: 16, color: AppColors.primary),
+                                  child: const Icon(Icons.grid_view_rounded, size: 16, color: AppColors.primary),
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Pengajuan Alat & Chemical',
+                                  'Kontrol Cabang & Pengadaan',
                                   style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w800,
                                     color: const Color(0xFF1E293B),
                                   ),
                                 ),
                               ],
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                'Read Only',
-                                style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w700, color: const Color(0xFF64748B)),
+                                'Executive Hub',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF64748B),
+                                ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 14),
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
-                              child: _buildExecutivePengajuanBtn(
-                                title: 'Approval Pengajuan',
-                                subtitle: 'Perlu Diproses & Riwayat',
-                                icon: Icons.assignment_turned_in_rounded,
-                                color: const Color(0xFF16A34A),
+                              child: _buildDashboardMenuIcon(
+                                title: 'Stok Opname',
+                                icon: Icons.fact_check_rounded,
+                                iconColor: const Color(0xFF6366F1),
+                                bgColor: const Color(0xFFEEF2FF),
                                 onTap: () {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => const OperasionalApprovalPengajuanScreen(isReadOnly: true),
+                                      builder: (context) => const MonitoringStokOpnameScreen(),
                                     ),
                                   );
                                 },
@@ -651,16 +667,50 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
                             ),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: _buildExecutivePengajuanBtn(
-                                title: 'Purchase Order',
-                                subtitle: 'PO Pembelian & Distribusi',
-                                icon: Icons.receipt_long_rounded,
-                                color: const Color(0xFF0284C7),
+                              child: _buildDashboardMenuIcon(
+                                title: 'Cashflow',
+                                icon: Icons.account_balance_wallet_rounded,
+                                iconColor: const Color(0xFF059669),
+                                bgColor: const Color(0xFFECFDF5),
                                 onTap: () {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => const OperasionalPurchaseOrderScreen(isReadOnly: true),
+                                      builder: (context) => const OperasionalCashflowCabangScreen(),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildDashboardMenuIcon(
+                                title: 'Pengajuan CS',
+                                icon: Icons.assignment_turned_in_rounded,
+                                iconColor: const Color(0xFFD97706),
+                                bgColor: const Color(0xFFFEF3C7),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const OperasionalApprovalPengajuanScreen(isReadOnly: false),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildDashboardMenuIcon(
+                                title: 'Pembelian / PO',
+                                icon: Icons.receipt_long_rounded,
+                                iconColor: const Color(0xFF8B5CF6),
+                                bgColor: const Color(0xFFF5F3FF),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const OperasionalPurchaseOrderScreen(isReadOnly: false),
                                     ),
                                   );
                                 },
@@ -740,69 +790,50 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
     );
   }
 
-  Widget _buildExecutivePengajuanBtn({
+  Widget _buildDashboardMenuIcon({
     required String title,
-    required String subtitle,
     required IconData icon,
-    required Color color,
+    required Color iconColor,
+    required Color bgColor,
     required VoidCallback onTap,
   }) {
-    return Material(
-      color: color.withValues(alpha: 0.06),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withValues(alpha: 0.2)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(9),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: iconColor.withValues(alpha: 0.15)),
+              boxShadow: [
+                BoxShadow(
+                  color: iconColor.withValues(alpha: 0.08),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
                 ),
-                child: Icon(icon, size: 18, color: color),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF1E293B),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        color: const Color(0xFF64748B),
-                        fontWeight: FontWeight.w500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 2),
-              Icon(Icons.chevron_right_rounded, size: 16, color: color),
-            ],
+              ],
+            ),
+            child: Icon(icon, color: iconColor, size: 24),
           ),
-        ),
+          const SizedBox(height: 6),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF334155),
+              height: 1.15,
+            ),
+          ),
+        ],
       ),
     );
   }

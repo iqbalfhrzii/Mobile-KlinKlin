@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -184,23 +185,7 @@ class KaryawanDetailSheet extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         // Avatar
-                        CircleAvatar(
-                          radius: 30,
-                          backgroundColor: const Color(0xFFDBEAFE),
-                          backgroundImage: (karyawan.fotoProfil != null && karyawan.fotoProfil!.isNotEmpty)
-                              ? NetworkImage(karyawan.fotoProfil!)
-                              : null,
-                          child: (karyawan.fotoProfil == null || karyawan.fotoProfil!.isEmpty)
-                              ? Text(
-                                  karyawan.nama.isNotEmpty ? karyawan.nama.substring(0, 1).toUpperCase() : 'K',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF1D4ED8),
-                                  ),
-                                )
-                              : null,
-                        ),
+                        _buildAvatar(karyawan, size: 60),
                         const SizedBox(width: 14),
 
                         // Name & Status
@@ -515,6 +500,62 @@ class KaryawanDetailSheet extends StatelessWidget {
           ),
           if (trailing != null) trailing,
         ],
+      ),
+    );
+  }
+
+  Widget _buildAvatar(KaryawanModel karyawan, {double size = 60}) {
+    final photoUrl = karyawan.fullFotoUrl;
+    final initial = karyawan.nama.isNotEmpty ? karyawan.nama.substring(0, 1).toUpperCase() : 'K';
+
+    Widget fallback() {
+      return Container(
+        width: size,
+        height: size,
+        decoration: const BoxDecoration(
+          color: Color(0xFFDBEAFE),
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          initial,
+          style: GoogleFonts.inter(
+            color: const Color(0xFF1D4ED8),
+            fontWeight: FontWeight.bold,
+            fontSize: size * 0.38,
+          ),
+        ),
+      );
+    }
+
+    if (photoUrl == null || photoUrl.isEmpty) {
+      return fallback();
+    }
+
+    if (photoUrl.startsWith('data:image')) {
+      try {
+        final base64Str = photoUrl.split(',').last;
+        return ClipOval(
+          child: Image.memory(
+            base64Decode(base64Str),
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => fallback(),
+          ),
+        );
+      } catch (_) {
+        return fallback();
+      }
+    }
+
+    return ClipOval(
+      child: Image.network(
+        photoUrl,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => fallback(),
       ),
     );
   }

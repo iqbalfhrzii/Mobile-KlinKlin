@@ -11,6 +11,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/api/api_client.dart';
 import '../services/stok_opname_service.dart';
+import '../../../core/utils/image_compress_helper.dart';
 
 class StokOpnameScreen extends StatefulWidget {
   const StokOpnameScreen({super.key});
@@ -405,12 +406,15 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
 
             Future<void> pickImage(ImageSource source) async {
               try {
-                final picked = await picker.pickImage(source: source, imageQuality: 80);
+                final picked = await picker.pickImage(source: source);
                 if (picked != null) {
-                  setStateModal(() {
-                    selectedFoto = File(picked.path);
-                    currentFotoUrl = null;
-                  });
+                  final compressed = await ImageCompressHelper.compressXFileIfNeeded(picked);
+                  if (compressed != null) {
+                    setStateModal(() {
+                      selectedFoto = compressed;
+                      currentFotoUrl = null;
+                    });
+                  }
                 }
               } catch (e) {
                 if (context.mounted) {

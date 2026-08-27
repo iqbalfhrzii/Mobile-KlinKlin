@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:printing/printing.dart';
@@ -48,6 +50,137 @@ class FileAttachmentPreview {
         lower.endsWith('.flv');
   }
 
+  /// Unduh dan simpan berkas langsung ke penyimpanan perangkat tanpa membuka browser web ERP.
+  static Future<void> downloadAndSaveFile({
+    required BuildContext context,
+    required String fileUrl,
+    required String fileName,
+    String? title,
+  }) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    scaffoldMessenger.showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+            ),
+            SizedBox(width: 12),
+            Text('Mengunduh berkas ke perangkat...'),
+          ],
+        ),
+        duration: Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    try {
+      final dio = Dio();
+      final res = await dio.get<List<int>>(
+        fileUrl,
+        options: Options(responseType: ResponseType.bytes),
+      );
+
+      if (res.data == null || res.data!.isEmpty) {
+        throw Exception('Berkas kosong atau tidak dapat diunduh');
+      }
+
+      final bytes = Uint8List.fromList(res.data!);
+      final rawExt = fileName.contains('.') ? fileName.split('.').last.toLowerCase().split('?').first : 'jpg';
+      final ext = rawExt.isEmpty ? 'jpg' : rawExt;
+      final cleanTitle = (title ?? fileName).replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+      final finalFileName = cleanTitle.toLowerCase().endsWith('.$ext')
+          ? cleanTitle
+          : '$cleanTitle.$ext';
+
+      bool savedDirectly = false;
+      String savedPath = '';
+
+      // 1. Coba simpan langsung ke folder Download publik Android (/storage/emulated/0/Download)
+      try {
+        final downloadDir = Directory('/storage/emulated/0/Download');
+        if (downloadDir.existsSync()) {
+          final targetFile = File('${downloadDir.path}/$finalFileName');
+          await targetFile.writeAsBytes(bytes);
+          savedDirectly = true;
+          savedPath = targetFile.path;
+        }
+      } catch (_) {
+        savedDirectly = false;
+      }
+
+      // 2. Jika tidak bisa simpan langsung (Scoped Storage), gunakan FilePicker save dialog
+      if (!savedDirectly) {
+        try {
+          final savedFilePath = await FilePicker.platform.saveFile(
+            dialogTitle: 'Pilih lokasi simpan berkas:',
+            fileName: finalFileName,
+            bytes: bytes,
+          );
+          if (savedFilePath != null) {
+            savedDirectly = true;
+            savedPath = savedFilePath;
+          }
+        } catch (_) {
+          savedDirectly = false;
+        }
+      }
+
+      // 3. Fallback jika kedua cara di atas belum menghasilkan path, gunakan Printing.sharePdf
+      if (!savedDirectly) {
+        await Printing.sharePdf(bytes: bytes, filename: finalFileName);
+        if (context.mounted) {
+          scaffoldMessenger.hideCurrentSnackBar();
+          scaffoldMessenger.showSnackBar(
+            const SnackBar(
+              content: Text('Berkas siap disimpan / dibagikan'),
+              backgroundColor: Color(0xFF10B981),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+
+      if (context.mounted) {
+        scaffoldMessenger.hideCurrentSnackBar();
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Berhasil disimpan ke $savedPath',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF10B981),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        scaffoldMessenger.hideCurrentSnackBar();
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengunduh berkas: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   static void showPreview(BuildContext context, {required String filePath, String? title}) {
     final fullUrl = getFullUrl(filePath);
     final isImg = isImageFile(filePath);
@@ -89,7 +222,7 @@ class FileAttachmentPreview {
       return;
     }
 
-    // Image Modal Preview with Pinch to zoom
+    // Image Modal Preview with Pinch to zoom & Download support
     showDialog(
       context: context,
       barrierColor: Colors.black87,
@@ -108,7 +241,7 @@ class FileAttachmentPreview {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.photo_library_rounded, color: Colors.white, size: 20),
+                  const Icon(Icons.image_rounded, color: Colors.white, size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -123,8 +256,18 @@ class FileAttachmentPreview {
                     ),
                   ),
                   IconButton(
+                    icon: const Icon(Icons.download_rounded, color: Colors.white, size: 22),
+                    tooltip: 'Unduh Gambar',
+                    onPressed: () => downloadAndSaveFile(
+                      context: context,
+                      fileUrl: fullUrl,
+                      fileName: filePath,
+                      title: displayTitle,
+                    ),
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.share_rounded, color: Colors.white, size: 20),
-                    tooltip: 'Bagikan Berkas',
+                    tooltip: 'Bagikan Gambar',
                     onPressed: () async {
                       try {
                         final dio = Dio();
@@ -134,41 +277,23 @@ class FileAttachmentPreview {
                         );
                         if (res.data != null) {
                           final bytes = Uint8List.fromList(res.data!);
-                          final ext = isImg ? 'jpg' : (isPdf ? 'pdf' : 'bin');
+                          final ext = filePath.split('.').last.toLowerCase();
                           final cleanTitle = displayTitle.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
                           await Printing.sharePdf(bytes: bytes, filename: '$cleanTitle.$ext');
                         }
                       } catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Gagal membagikan berkas: $e'), backgroundColor: Colors.red),
+                            SnackBar(content: Text('Gagal membagikan gambar: $e'), backgroundColor: Colors.red),
                           );
                         }
                       }
                     },
                   ),
                   IconButton(
-                    icon: const Icon(Icons.print_rounded, color: Colors.white, size: 20),
-                    tooltip: 'Cetak / Print',
-                    onPressed: () async {
-                      try {
-                        final dio = Dio();
-                        final res = await dio.get<List<int>>(
-                          fullUrl,
-                          options: Options(responseType: ResponseType.bytes),
-                        );
-                        if (res.data != null) {
-                          final bytes = Uint8List.fromList(res.data!);
-                          await Printing.layoutPdf(onLayout: (format) => bytes, name: displayTitle);
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Gagal mencetak berkas: $e'), backgroundColor: Colors.red),
-                          );
-                        }
-                      }
-                    },
+                    icon: const Icon(Icons.open_in_new_rounded, color: Colors.white70, size: 20),
+                    tooltip: 'Buka di Browser',
+                    onPressed: () => launchUrl(Uri.parse(fullUrl), mode: LaunchMode.externalApplication),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 22),
@@ -184,11 +309,10 @@ class FileAttachmentPreview {
             Flexible(
               child: Container(
                 constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.72,
+                  maxHeight: MediaQuery.of(context).size.height * 0.65,
                 ),
                 decoration: const BoxDecoration(
                   color: Color(0xFF0F172A),
-                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
                 ),
                 child: InteractiveViewer(
                   panEnabled: true,
@@ -232,6 +356,74 @@ class FileAttachmentPreview {
                     ),
                   ),
                 ),
+              ),
+            ),
+
+            // Bottom Action Bar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: const BoxDecoration(
+                color: Color(0xFF1E293B),
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => downloadAndSaveFile(
+                        context: context,
+                        fileUrl: fullUrl,
+                        fileName: filePath,
+                        title: displayTitle,
+                      ),
+                      icon: const Icon(Icons.download_rounded, size: 18, color: Colors.white),
+                      label: Text(
+                        'Unduh / Simpan Gambar',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12.5, color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      try {
+                        final dio = Dio();
+                        final res = await dio.get<List<int>>(
+                          fullUrl,
+                          options: Options(responseType: ResponseType.bytes),
+                        );
+                        if (res.data != null) {
+                          final bytes = Uint8List.fromList(res.data!);
+                          final ext = filePath.split('.').last.toLowerCase();
+                          final cleanTitle = displayTitle.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+                          await Printing.sharePdf(bytes: bytes, filename: '$cleanTitle.$ext');
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Gagal membagikan: $e'), backgroundColor: Colors.red),
+                          );
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.share_rounded, size: 16, color: Colors.white),
+                    label: Text(
+                      'Bagikan',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12.5, color: Colors.white),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.white24),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -529,6 +721,16 @@ class _PdfViewerScreenState extends State<_PdfViewerScreen> {
         ),
         actions: [
           if (_pdfBytes != null) ...[
+            IconButton(
+              icon: const Icon(Icons.download_rounded, color: Colors.white, size: 20),
+              tooltip: 'Unduh PDF',
+              onPressed: () => FileAttachmentPreview.downloadAndSaveFile(
+                context: context,
+                fileUrl: widget.pdfUrl,
+                fileName: '${widget.title}.pdf',
+                title: widget.title,
+              ),
+            ),
             IconButton(
               icon: const Icon(Icons.share_rounded, color: Colors.white, size: 20),
               tooltip: 'Bagikan PDF',
@@ -829,6 +1031,14 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
+                      if (_errorMessage.isNotEmpty) ...[
+                        Text(
+                          _errorMessage,
+                          style: GoogleFonts.inter(color: Colors.redAccent.shade100, fontSize: 11),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 6),
+                      ],
                       Text(
                         'Plugin video native baru saja ditambahkan ke proyek. Harap restart aplikasi (hentikan lalu jalankan "flutter run" kembali) agar modul native video terkompilasi ke dalam APK.',
                         style: GoogleFonts.inter(color: Colors.white70, fontSize: 12, height: 1.4),
@@ -923,6 +1133,16 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen> {
                                 onPressed: _toggleMute,
                               ),
                               IconButton(
+                                icon: const Icon(Icons.download_rounded, color: Colors.white),
+                                tooltip: 'Unduh Video',
+                                onPressed: () => FileAttachmentPreview.downloadAndSaveFile(
+                                  context: context,
+                                  fileUrl: widget.videoUrl,
+                                  fileName: widget.videoUrl,
+                                  title: widget.title,
+                                ),
+                              ),
+                              IconButton(
                                 icon: const Icon(Icons.share_rounded, color: Colors.white),
                                 tooltip: 'Bagikan Video',
                                 onPressed: () async {
@@ -945,6 +1165,11 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen> {
                                     }
                                   }
                                 },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.open_in_new_rounded, color: Colors.white),
+                                tooltip: 'Buka di Player Eksternal',
+                                onPressed: () => launchUrl(Uri.parse(widget.videoUrl), mode: LaunchMode.externalApplication),
                               ),
                             ],
                           ),

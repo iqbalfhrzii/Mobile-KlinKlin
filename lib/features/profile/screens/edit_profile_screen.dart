@@ -9,6 +9,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
+import '../../../core/utils/image_compress_helper.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -153,17 +154,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(
-      source: source,
-      imageQuality: 60,
-      maxWidth: 1024,
-      maxHeight: 1024,
-    );
+    final pickedFile = await picker.pickImage(source: source);
     if (pickedFile != null) {
-      setState(() {
-        _photoPath = pickedFile.path;
-        _isPhotoRemoved = false;
-      });
+      final compressed = await ImageCompressHelper.compressXFileIfNeeded(pickedFile);
+      if (compressed != null) {
+        setState(() {
+          _photoPath = compressed.path;
+          _isPhotoRemoved = false;
+        });
+      }
     }
   }
 

@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../../core/api/api_client.dart';
 import '../../../../../core/data/hrd_models.dart';
 import '../../services/hrd_service.dart';
+import '../../../../../core/utils/image_compress_helper.dart';
 
 class KaryawanFormSheet extends StatefulWidget {
   final KaryawanModel? karyawan;
@@ -173,17 +174,15 @@ class _KaryawanFormSheetState extends State<KaryawanFormSheet> {
 
   Future<void> _pickImage(ImageSource source) async {
     try {
-      final picked = await _picker.pickImage(
-        source: source,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
-      );
+      final picked = await _picker.pickImage(source: source);
       if (picked != null) {
-        setState(() {
-          _selectedPhotoPath = picked.path;
-          _removeExistingPhoto = false;
-        });
+        final compressed = await ImageCompressHelper.compressXFileIfNeeded(picked);
+        if (compressed != null) {
+          setState(() {
+            _selectedPhotoPath = compressed.path;
+            _removeExistingPhoto = false;
+          });
+        }
       }
     } catch (e) {
       if (mounted) {

@@ -929,8 +929,13 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
         ? DateFormat('dd/MM/yyyy').format(DateTime.tryParse(pembelianBhp['tanggal_pembelian'].toString()) ?? DateTime.now())
         : '-';
     final dynamic qtyBeli = pembelianBhp['qty'] ?? '-';
-    final dynamic sisaAkhir = item['sisa_akhir'] ?? item['jumlah_fisik'] ?? item['stok_aktual'] ?? '-';
+    final dynamic rawSisa = item['sisa_akhir'] ?? item['jumlah_fisik'] ?? item['stok_aktual'];
+    final bool isBelumDiinput = rawSisa == null ||
+        rawSisa.toString().trim().isEmpty ||
+        rawSisa.toString() == '-' ||
+        rawSisa.toString().toLowerCase() == 'null';
     final satuan = barang['satuan'] ?? pembelianBhp['satuan'] ?? 'pcs';
+    final String sisaDisplay = isBelumDiinput ? 'Belum diinput' : '$rawSisa $satuan';
 
     final String fotoBhp = _getImageUrl(
       item['foto_path'] ?? item['foto_kuantitas'] ?? item['foto'] ?? item['foto_url'] ?? barang['foto'],
@@ -941,7 +946,10 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFBAE6FD), width: 1.2),
+        border: Border.all(
+          color: isBelumDiinput ? const Color(0xFFE2E8F0) : const Color(0xFFBAE6FD),
+          width: 1.2,
+        ),
         boxShadow: [
           BoxShadow(color: const Color(0xFF1E293B).withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 2)),
         ],
@@ -1008,9 +1016,11 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFFF0F9FF),
+              color: isBelumDiinput ? const Color(0xFFF8FAFC) : const Color(0xFFF0F9FF),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFBAE6FD)),
+              border: Border.all(
+                color: isBelumDiinput ? const Color(0xFFE2E8F0) : const Color(0xFFBAE6FD),
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1023,29 +1033,42 @@ class _MonitoringStokOpnameScreenState extends State<MonitoringStokOpnameScreen>
                       style: GoogleFonts.inter(
                         fontSize: 9.5,
                         fontWeight: FontWeight.w800,
-                        color: const Color(0xFF0284C7),
+                        color: isBelumDiinput ? const Color(0xFF64748B) : const Color(0xFF0284C7),
                         letterSpacing: 0.5,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '$sisaAkhir $satuan',
+                      sisaDisplay,
                       style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF0369A1),
+                        fontSize: isBelumDiinput ? 12.5 : 14,
+                        fontWeight: isBelumDiinput ? FontWeight.w600 : FontWeight.w800,
+                        color: isBelumDiinput ? const Color(0xFF94A3B8) : const Color(0xFF0369A1),
+                        fontStyle: isBelumDiinput ? FontStyle.italic : FontStyle.normal,
                       ),
                     ),
                   ],
                 ),
                 if (fotoBhp.isNotEmpty) ...[
                   _buildSmallThumbnail(fotoBhp),
+                ] else ...[
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Center(
+                      child: Text('-', style: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.bold, fontSize: 16)),
+                    ),
+                  ),
                 ],
               ],
             ),
           ),
 
-          if (keterangan != '-' && keterangan.isNotEmpty) ...[
+          if (keterangan != '-' && keterangan.isNotEmpty && keterangan != 'Belum diinput') ...[
             const SizedBox(height: 6),
             Text('Catatan: $keterangan', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B), fontStyle: FontStyle.italic)),
           ],

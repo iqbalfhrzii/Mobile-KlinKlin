@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
+import '../../../core/widgets/animated_notification_bell.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/api/api_client.dart';
 import '../services/cleaner_job_service.dart';
@@ -18,6 +19,7 @@ import '../../attendance/screens/attendance_screen.dart';
 import '../../operasional/screens/operasional_pengumuman_screen.dart';
 import '../../stok_opname/screens/stok_opname_screen.dart';
 import '../../lapor_kecelakaan/screens/lapor_kecelakaan_screen.dart';
+import '../sim/screens/cleaner_sim_screen.dart';
 
 class CleanerDashboardScreen extends StatefulWidget {
   const CleanerDashboardScreen({super.key});
@@ -414,16 +416,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const OperasionalPengumumanScreen()),
-                    ),
-                    icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 22),
-                    tooltip: 'Pengumuman',
-                    padding: const EdgeInsets.all(6),
-                    constraints: const BoxConstraints(),
-                  ),
+                  const AnimatedNotificationBell(size: 22),
                   const SizedBox(width: 8),
                   _buildAvatar(),
                 ],
@@ -676,6 +669,13 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
         color: const Color(0xFFDC2626),
         bgColor: const Color(0xFFFEF2F2),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LaporKecelakaanScreen())),
+      ),
+      _QuickActionItem(
+        title: 'Data SIM',
+        icon: Icons.badge_outlined,
+        color: const Color(0xFF0284C7),
+        bgColor: const Color(0xFFE0F2FE),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CleanerSimScreen())),
       ),
     ];
 

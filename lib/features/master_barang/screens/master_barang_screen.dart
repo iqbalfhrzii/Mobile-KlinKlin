@@ -9,6 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/api/api_client.dart';
 import '../services/master_barang_service.dart';
+import '../../../core/utils/image_compress_helper.dart';
 
 class MasterBarangScreen extends StatefulWidget {
   const MasterBarangScreen({super.key});
@@ -508,9 +509,12 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
             Future<void> pickImage(ImageSource source) async {
               try {
                 final picker = ImagePicker();
-                final picked = await picker.pickImage(source: source, imageQuality: 80);
+                final picked = await picker.pickImage(source: source);
                 if (picked != null) {
-                  setStateDialog(() => selectedPhotoPath = picked.path);
+                  final compressed = await ImageCompressHelper.compressXFileIfNeeded(picked);
+                  if (compressed != null) {
+                    setStateDialog(() => selectedPhotoPath = compressed.path);
+                  }
                 }
               } catch (e) {
                 // Ignore

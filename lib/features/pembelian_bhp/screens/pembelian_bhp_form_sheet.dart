@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../services/pembelian_bhp_service.dart';
+import '../../../core/utils/image_compress_helper.dart';
 
 class PembelianBhpFormSheet extends StatefulWidget {
   final VoidCallback onSave;
@@ -108,9 +109,12 @@ class _PembelianBhpFormSheetState extends State<PembelianBhpFormSheet> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    final picked = await _picker.pickImage(source: source, imageQuality: 80);
+    final picked = await _picker.pickImage(source: source);
     if (picked != null) {
-      setState(() => _photo = File(picked.path));
+      final compressed = await ImageCompressHelper.compressXFileIfNeeded(picked);
+      if (compressed != null) {
+        setState(() => _photo = compressed);
+      }
     }
   }
 

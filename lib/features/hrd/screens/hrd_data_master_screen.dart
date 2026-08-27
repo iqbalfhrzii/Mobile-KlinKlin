@@ -223,7 +223,7 @@ class HrdDataMasterScreen extends StatelessWidget {
                       icon: Icons.brush_rounded,
                       color: const Color(0xFFEA580C),
                       bgColor: const Color(0xFFFFEDD5),
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPermintaanDesignScreen())),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPermintaanDesignScreen(department: 'hrd'))),
                     ),
                     _HrdMenuItem(
                       title: 'Pengumuman',

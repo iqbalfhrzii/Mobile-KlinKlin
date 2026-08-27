@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/api/api_client.dart';
 import '../services/operasional_tagihan_service.dart';
+import '../../../core/utils/image_compress_helper.dart';
 
 class TagihanBulananFormScreen extends StatefulWidget {
   final dynamic tagihan; // null for add, not null for edit
@@ -193,11 +194,14 @@ class _TagihanBulananFormScreenState extends State<TagihanBulananFormScreen> {
 
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: source, imageQuality: 80);
+    final pickedFile = await picker.pickImage(source: source);
     if (pickedFile != null) {
-      setState(() {
-        _buktiBayarFile = File(pickedFile.path);
-      });
+      final compressed = await ImageCompressHelper.compressXFileIfNeeded(pickedFile);
+      if (compressed != null) {
+        setState(() {
+          _buktiBayarFile = compressed;
+        });
+      }
     }
   }
 

@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/widgets/gradient_header.dart';
+import '../../../core/widgets/animated_notification_bell.dart';
 import '../services/marketing_service.dart';
 
 class MarketingSpendAdsScreen extends StatefulWidget {
@@ -260,56 +261,69 @@ class _MarketingSpendAdsScreenState extends State<MarketingSpendAdsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Image.asset('assets/images/logo.png', height: 22),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        _getFormattedDate(),
-                        style: GoogleFonts.inter(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white.withValues(alpha: 0.95),
-                        ),
-                      ),
+              Image.asset('assets/images/logo.png', height: 22),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const AnimatedNotificationBell(size: 24),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '${_getGreeting()},',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white.withValues(alpha: 0.9),
-                      ),
+                    child: const Icon(
+                      Icons.campaign_rounded,
+                      color: Colors.white,
+                      size: 20,
                     ),
-                    Text(
-                      '$_userName ✨',
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Kelola laporan spend ads & pengeluaran iklan cabang.',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.85),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              _getFormattedDate(),
+              style: GoogleFonts.inter(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: Colors.white.withValues(alpha: 0.95),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '${_getGreeting()},',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.white.withValues(alpha: 0.9),
+            ),
+          ),
+          Text(
+            '$_userName ✨',
+            style: GoogleFonts.inter(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Kelola laporan spend ads & pengeluaran iklan cabang.',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: Colors.white.withValues(alpha: 0.85),
+            ),
           ),
         ],
       ),
@@ -624,15 +638,18 @@ class _MarketingSpendAdsScreenState extends State<MarketingSpendAdsScreen> {
     Color badgeColor = const Color(0xFF059669);
     Color badgeBg = const Color(0xFFECFDF5);
     String platformLabel = 'GOOGLE';
+    IconData platformIcon = Icons.language_rounded;
 
     if (platform == 'meta') {
       badgeColor = const Color(0xFF2563EB);
       badgeBg = const Color(0xFFEFF6FF);
       platformLabel = 'META';
+      platformIcon = Icons.hub_rounded;
     } else if (platform == 'tiktok') {
       badgeColor = const Color(0xFF0F172A);
       badgeBg = const Color(0xFFF1F5F9);
       platformLabel = 'TIKTOK';
+      platformIcon = Icons.music_note_rounded;
     }
 
     String formattedPeriode = periode;
@@ -645,117 +662,170 @@ class _MarketingSpendAdsScreenState extends State<MarketingSpendAdsScreen> {
     } catch (_) {}
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.025),
-            blurRadius: 6,
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Row(
-        children: [
-          // Left: Cabang Info & Periode
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top Row: Cabang Name + Platform Badge & Nominal
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          cabangName,
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF0F172A),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                        decoration: BoxDecoration(
+                          color: badgeBg,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(platformIcon, size: 10, color: badgeColor),
+                            const SizedBox(width: 3),
+                            Text(
+                              platformLabel,
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: badgeColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  _currencyFormat.format(nominal),
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            const SizedBox(height: 10),
+
+            // Bottom Row: Periode on left, full Edit & Hapus Buttons on right
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
+                    const Icon(Icons.event_note_rounded, size: 14, color: Color(0xFF64748B)),
+                    const SizedBox(width: 5),
                     Text(
-                      cabangName,
+                      formattedPeriode,
                       style: GoogleFonts.inter(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF0F172A),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Edit Button
+                    InkWell(
+                      onTap: () => _openSpendAdFormSheet(item: item),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.edit_rounded, size: 13, color: Color(0xFF2563EB)),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Edit',
+                              style: GoogleFonts.inter(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF2563EB),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: badgeBg,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
-                      ),
-                      child: Text(
-                        platformLabel,
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: badgeColor,
+
+                    // Hapus Button
+                    InkWell(
+                      onTap: () => _confirmDelete(item),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFFECACA)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.delete_outline_rounded, size: 13, color: Color(0xFFDC2626)),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Hapus',
+                              style: GoogleFonts.inter(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFFDC2626),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.event_note_rounded, size: 12, color: Color(0xFF94A3B8)),
-                    const SizedBox(width: 4),
-                    Text(
-                      formattedPeriode,
-                      style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF64748B)),
-                    ),
-                  ],
-                ),
               ],
             ),
-          ),
-
-          // Right: Nominal & Actions
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                _currencyFormat.format(nominal),
-                style: GoogleFonts.inter(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF0F172A),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  InkWell(
-                    onTap: () => _openSpendAdFormSheet(item: item),
-                    borderRadius: BorderRadius.circular(6),
-                    child: Container(
-                      padding: const EdgeInsets.all(5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: const Icon(Icons.edit_outlined, size: 15, color: Color(0xFF2563EB)),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  InkWell(
-                    onTap: () => _confirmDelete(item),
-                    borderRadius: BorderRadius.circular(6),
-                    child: Container(
-                      padding: const EdgeInsets.all(5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: const Icon(Icons.delete_outline_rounded, size: 15, color: Color(0xFFDC2626)),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -7,12 +7,14 @@ class OperasionalPermintaanDesignService {
   Future<Map<String, dynamic>> getPermintaanDesign({
     String? search,
     String? status,
+    String? department,
     int page = 1,
   }) async {
     try {
       final queryParams = <String, dynamic>{'page': page};
       if (search != null && search.isNotEmpty) queryParams['search'] = search;
       if (status != null && status.isNotEmpty && status != 'all') queryParams['status'] = status;
+      if (department != null && department.isNotEmpty) queryParams['department'] = department;
 
       final response = await _apiClient.get(
         '/operasional/permintaan-design',

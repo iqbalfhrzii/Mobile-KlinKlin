@@ -9,7 +9,9 @@ import '../services/operasional_permintaan_design_service.dart';
 import 'operasional_permintaan_design_form_sheet.dart';
 
 class OperasionalPermintaanDesignScreen extends StatefulWidget {
-  const OperasionalPermintaanDesignScreen({super.key});
+  final String? department;
+
+  const OperasionalPermintaanDesignScreen({super.key, this.department});
 
   @override
   State<OperasionalPermintaanDesignScreen> createState() => _OperasionalPermintaanDesignScreenState();
@@ -58,6 +60,7 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
     final res = await _service.getPermintaanDesign(
       search: _searchController.text.trim(),
       status: _selectedStatus == 'all' ? null : _selectedStatus,
+      department: widget.department,
       page: page,
     );
 
@@ -66,11 +69,14 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
         _isLoading = false;
         if (res['status'] == true && res['data'] != null) {
           final data = res['data'];
+          List<dynamic> rawList = [];
           if (data is Map && data['data'] != null) {
-            _requests = data['data'];
+            rawList = data['data'];
           } else if (data is List) {
-            _requests = data;
+            rawList = data;
           }
+
+          _requests = rawList;
         } else {
           if (res['message'] != null && res['message'].toString().isNotEmpty && res['status'] == false) {
             _errorMessage = res['message'].toString();
@@ -517,28 +523,54 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
                               label: 'File Hasil Desain Final',
                             ),
                             const SizedBox(height: 10),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  FileAttachmentPreview.showPreview(
-                                    context,
-                                    filePath: lampiranDesigner,
-                                    title: 'Hasil Desain - ${data['judul'] ?? 'Desain'}',
-                                  );
-                                },
-                                icon: const Icon(Icons.photo_library_rounded, size: 18, color: Colors.white),
-                                label: Text(
-                                  'Lihat & Simpan Hasil Desain',
-                                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF16A34A),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  elevation: 0,
-                                ),
-                              ),
+                            Builder(
+                              builder: (ctx) {
+                                final isImg = FileAttachmentPreview.isImageFile(lampiranDesigner);
+                                final isPdf = FileAttachmentPreview.isPdfFile(lampiranDesigner);
+                                final isVid = FileAttachmentPreview.isVideoFile(lampiranDesigner);
+
+                                String btnLabel = 'Lihat & Unduh Hasil Desain';
+                                IconData btnIcon = Icons.download_rounded;
+                                Color btnBg = const Color(0xFF16A34A);
+
+                                if (isPdf) {
+                                  btnLabel = 'Buka & Cetak Dokumen PDF';
+                                  btnIcon = Icons.print_rounded;
+                                  btnBg = const Color(0xFFDC2626);
+                                } else if (isVid) {
+                                  btnLabel = 'Putar & Unduh Video Desain';
+                                  btnIcon = Icons.play_circle_fill_rounded;
+                                  btnBg = const Color(0xFF2563EB);
+                                } else if (isImg) {
+                                  btnLabel = 'Lihat & Unduh Foto Desain';
+                                  btnIcon = Icons.image_rounded;
+                                  btnBg = const Color(0xFF16A34A);
+                                }
+
+                                return SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      FileAttachmentPreview.showPreview(
+                                        context,
+                                        filePath: lampiranDesigner,
+                                        title: 'Hasil Desain - ${data['judul'] ?? 'Desain'}',
+                                      );
+                                    },
+                                    icon: Icon(btnIcon, size: 18, color: Colors.white),
+                                    label: Text(
+                                      btnLabel,
+                                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: btnBg,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      elevation: 0,
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ],
@@ -860,7 +892,7 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
                                       Icon(Icons.brush_outlined, size: 64, color: Colors.grey.shade300),
                                       const SizedBox(height: 16),
                                       Text(
-                                        'Anda belum pernah membuat permintaan design.',
+                                        'Belum ada permintaan design yang diajukan.',
                                         style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13),
                                         textAlign: TextAlign.center,
                                       ),

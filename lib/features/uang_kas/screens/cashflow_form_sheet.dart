@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../core/api/api_client.dart';
 import '../services/uang_kas_service.dart';
+import '../../../core/utils/image_compress_helper.dart';
 
 class CashflowFormSheet extends StatefulWidget {
   final dynamic item;
@@ -140,12 +141,15 @@ class _CashflowFormSheetState extends State<CashflowFormSheet> {
   }
 
   Future<void> _pickBukti(ImageSource source) async {
-    final picked = await _picker.pickImage(source: source, imageQuality: 80);
+    final picked = await _picker.pickImage(source: source);
     if (picked != null) {
-      setState(() {
-        _fileBukti = File(picked.path);
-        _existingBuktiUrl = null;
-      });
+      final compressed = await ImageCompressHelper.compressXFileIfNeeded(picked);
+      if (compressed != null) {
+        setState(() {
+          _fileBukti = compressed;
+          _existingBuktiUrl = null;
+        });
+      }
     }
   }
 

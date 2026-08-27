@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
+import '../../../core/widgets/animated_notification_bell.dart';
 import 'dart:io';
 import 'dart:convert';
 import '../../orders/screens/order_list_screen.dart';
@@ -376,16 +377,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const OperasionalPengumumanScreen()),
-                    ),
-                    icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 24),
-                    tooltip: 'Pengumuman & Notifikasi',
-                    padding: const EdgeInsets.all(6),
-                    constraints: const BoxConstraints(),
-                  ),
+                  const AnimatedNotificationBell(size: 24),
                   const SizedBox(width: 8),
                   _buildAvatar(),
                 ],
@@ -1159,7 +1151,7 @@ class _HomeScreenState extends State<HomeScreen> {
         icon: Icons.brush_outlined,
         iconColor: const Color(0xFFE11D48),
         bgColor: const Color(0xFFFFE4E6),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPermintaanDesignScreen())),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPermintaanDesignScreen(department: 'cs'))),
       ),
       _MenuGridItem(
         title: 'Penawaran',

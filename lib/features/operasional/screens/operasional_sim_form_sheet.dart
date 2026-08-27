@@ -448,7 +448,7 @@ class _OperasionalSimFormSheetState extends State<OperasionalSimFormSheet> {
                                     ),
                                     child: DropdownButtonHideUnderline(
                                       child: DropdownButton<String>(
-                                        value: const ['SIM A', 'SIM A Umum', 'SIM B I', 'SIM B II', 'SIM C', 'SIM D'].contains(_selectedJenisSim) ? _selectedJenisSim : null,
+                                        value: const ['SIM A', 'SIM A Umum', 'SIM B I', 'SIM B II', 'SIM C', 'SIM D', 'SIM Internasional'].contains(_selectedJenisSim) ? _selectedJenisSim : null,
                                         isExpanded: true,
                                         hint: Text('Pilih Jenis SIM', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade400)),
                                         items: const [
@@ -458,6 +458,7 @@ class _OperasionalSimFormSheetState extends State<OperasionalSimFormSheet> {
                                           DropdownMenuItem(value: 'SIM B II', child: Text('SIM B II')),
                                           DropdownMenuItem(value: 'SIM C', child: Text('SIM C')),
                                           DropdownMenuItem(value: 'SIM D', child: Text('SIM D')),
+                                          DropdownMenuItem(value: 'SIM Internasional', child: Text('SIM Internasional')),
                                         ],
                                         onChanged: (val) {
                                           setState(() => _selectedJenisSim = val);

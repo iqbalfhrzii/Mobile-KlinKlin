@@ -344,7 +344,7 @@ class OperasionalMenuScreen extends StatelessWidget {
             iconColor: const Color(0xFFEC4899),
             bgColor: const Color(0xFFFCE7F3),
             onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalPermintaanDesignScreen()));
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalPermintaanDesignScreen(department: 'operasional')));
             },
           ),
           _MenuItem(

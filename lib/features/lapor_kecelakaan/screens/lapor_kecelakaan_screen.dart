@@ -10,6 +10,7 @@ import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/api/api_client.dart';
 import '../services/lapor_kecelakaan_service.dart';
+import '../../../core/utils/image_compress_helper.dart';
 
 class LaporKecelakaanScreen extends StatefulWidget {
   const LaporKecelakaanScreen({super.key});
@@ -157,6 +158,20 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
         }
       }
 
+      // Filter to strictly cleaner roles (exclude CS, HRD, Finance, Admin, etc.)
+      list = list.where((c) {
+        final jab = (c['jabatan']?['nama_jabatan'] ?? c['jabatan_nama'] ?? c['jabatan']?.toString() ?? '').toLowerCase().trim();
+        final isExcluded = jab == 'cs' ||
+            jab.contains('customer service') ||
+            jab.contains('admin') ||
+            jab.contains('finance') ||
+            jab.contains('hrd') ||
+            jab.contains('ceo') ||
+            jab.contains('manager');
+        if (isExcluded) return false;
+        return jab.contains('cleaner') || jab.isEmpty;
+      }).toList();
+
       if (mounted) {
         setState(() {
           _cleanerList = list;
@@ -173,15 +188,14 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
 
   Future<void> _pickImage(ImageSource source) async {
     try {
-      final picked = await _picker.pickImage(
-        source: source,
-        imageQuality: 80,
-        maxWidth: 1400,
-      );
+      final picked = await _picker.pickImage(source: source);
       if (picked != null) {
-        setState(() {
-          _selectedImage = File(picked.path);
-        });
+        final compressed = await ImageCompressHelper.compressXFileIfNeeded(picked);
+        if (compressed != null) {
+          setState(() {
+            _selectedImage = compressed;
+          });
+        }
       }
     } catch (e) {
       if (!mounted) return;
@@ -983,14 +997,263 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
     );
   }
 
+  void _showCleanerPickerModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        String searchQuery = '';
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final Map<String, dynamic> uniqueCleaners = {};
+            for (var c in _cleanerList) {
+              if (c['id'] != null) {
+                final jab = (c['jabatan']?['nama_jabatan'] ?? c['jabatan_nama'] ?? c['jabatan']?.toString() ?? '').toLowerCase().trim();
+                final isExcluded = jab == 'cs' ||
+                    jab.contains('customer service') ||
+                    jab.contains('admin') ||
+                    jab.contains('finance') ||
+                    jab.contains('hrd') ||
+                    jab.contains('ceo') ||
+                    jab.contains('manager');
+                if (!isExcluded && (jab.contains('cleaner') || jab.isEmpty)) {
+                  uniqueCleaners[c['id'].toString()] = c;
+                }
+              }
+            }
+            final list = uniqueCleaners.values.where((c) {
+              final name = (c['nama'] ?? c['nama_karyawan'] ?? '').toString().toLowerCase();
+              final jab = (c['jabatan']?['nama_jabatan'] ?? c['jabatan_nama'] ?? c['jabatan']?.toString() ?? '').toLowerCase();
+              return name.contains(searchQuery.toLowerCase()) || jab.contains(searchQuery.toLowerCase());
+            }).toList();
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(top: 12, bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Pilih Rekan Kerja Korban',
+                              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Kantor Cabang: $_namaCabang',
+                              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          icon: const Icon(Icons.close, color: Color(0xFF64748B)),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
+                    child: Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: TextField(
+                        onChanged: (val) {
+                          setModalState(() {
+                            searchQuery = val;
+                          });
+                        },
+                        style: GoogleFonts.inter(fontSize: 13),
+                        decoration: InputDecoration(
+                          hintText: 'Cari nama rekan kerja...',
+                          hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
+                          prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF64748B)),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: _isLoadingCleaners
+                        ? const Center(child: CircularProgressIndicator(color: Color(0xFFDC2626)))
+                        : list.isEmpty
+                            ? Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFFFEF2F2),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(Icons.person_off_outlined, color: Color(0xFFDC2626), size: 32),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'Tidak ada data rekan kerja',
+                                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        'Anda dapat langsung mengetikkan nama korban di kolom isian manual di bawah.',
+                                        textAlign: TextAlign.center,
+                                        style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      ElevatedButton.icon(
+                                        onPressed: () => Navigator.pop(ctx),
+                                        icon: const Icon(Icons.edit_note_rounded, size: 18),
+                                        label: const Text('Input Nama Manual'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFFDC2626),
+                                          foregroundColor: Colors.white,
+                                          elevation: 0,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : ListView.separated(
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                itemCount: list.length,
+                                separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                                itemBuilder: (context, index) {
+                                  final item = list[index];
+                                  final idStr = item['id'].toString();
+                                  final name = item['nama'] ?? item['nama_karyawan'] ?? '-';
+                                  final jab = item['jabatan']?['nama_jabatan'] ?? item['jabatan_nama'] ?? item['jabatan']?.toString() ?? 'Cleaner';
+                                  final isSelected = _selectedCleanerId == idStr;
+
+                                  return InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedCleanerId = idStr;
+                                        _namaKorbanCtrl.text = name;
+                                      });
+                                      Navigator.pop(ctx);
+                                    },
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 38,
+                                            height: 38,
+                                            decoration: BoxDecoration(
+                                              color: isSelected ? const Color(0xFFDC2626) : const Color(0xFFEFF6FF),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: isSelected ? Colors.white : const Color(0xFF2563EB),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  name,
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 13.5,
+                                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                                    color: isSelected ? const Color(0xFFDC2626) : const Color(0xFF0F172A),
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFFEFF6FF),
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: Text(
+                                                    jab,
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: const Color(0xFF2563EB),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          if (isSelected)
+                                            const Icon(Icons.check_circle_rounded, color: Color(0xFFDC2626), size: 20),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildCleanerDropdown() {
-    final Map<String, dynamic> uniqueCleaners = {};
-    for (var c in _cleanerList) {
-      if (c['id'] != null) {
-        uniqueCleaners[c['id'].toString()] = c;
+    String displayName = '';
+    if (_selectedCleanerId != null && _cleanerList.isNotEmpty) {
+      final match = _cleanerList.firstWhere(
+        (c) => c['id'].toString() == _selectedCleanerId,
+        orElse: () => null,
+      );
+      if (match != null) {
+        final name = match['nama'] ?? match['nama_karyawan'] ?? '';
+        final jab = match['jabatan']?['nama_jabatan'] ?? match['jabatan_nama'] ?? match['jabatan']?.toString() ?? 'Cleaner';
+        displayName = '$name ($jab)';
       }
+    } else if (_namaKorbanCtrl.text.isNotEmpty) {
+      displayName = _namaKorbanCtrl.text;
     }
-    final cleanList = uniqueCleaners.values.toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1015,98 +1278,44 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
           ],
         ),
         const SizedBox(height: 6),
-        Container(
-          height: 48,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: cleanList.any((k) => k['id'].toString() == _selectedCleanerId) ? _selectedCleanerId : null,
-              isExpanded: true,
-              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
-              hint: Row(
-                children: [
-                  const Icon(Icons.people_outline_rounded, size: 18, color: Color(0xFF64748B)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _isLoadingCleaners
-                          ? 'Memuat rekan kerja...'
-                          : (cleanList.isEmpty
-                              ? 'Pilih rekan kerja / cleaner...'
-                              : 'Pilih rekan kerja korban...'),
-                      style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+        InkWell(
+          onTap: _showCleanerPickerModal,
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            height: 48,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.people_outline_rounded, size: 18, color: Color(0xFF64748B)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    displayName.isNotEmpty
+                        ? displayName
+                        : (_isLoadingCleaners
+                            ? 'Memuat rekan kerja...'
+                            : 'Pilih rekan kerja / cleaner...'),
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: displayName.isNotEmpty ? FontWeight.w600 : FontWeight.normal,
+                      color: displayName.isNotEmpty ? const Color(0xFF0F172A) : const Color(0xFF94A3B8)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ],
-              ),
-              items: cleanList.map((c) {
-                final idStr = c['id'].toString();
-                final name = c['nama'] ?? c['nama_karyawan'] ?? '-';
-                final jab = c['jabatan']?['nama_jabatan'] ?? c['jabatan_nama'] ?? c['jabatan']?.toString() ?? 'Cleaner';
-                return DropdownMenuItem<String>(
-                  value: idStr,
-                  child: Row(
-                    children: [
-                      const Icon(Icons.person_outline_rounded, size: 16, color: Color(0xFF64748B)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          name,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF0F172A),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEFF6FF),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: const Color(0xFFBFDBFE)),
-                        ),
-                        child: Text(
-                          jab,
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF2563EB),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-              onChanged: (val) {
-                setState(() {
-                  _selectedCleanerId = val;
-                  final match = cleanList.firstWhere(
-                    (c) => c['id'].toString() == val,
-                    orElse: () => null,
-                  );
-                  if (match != null) {
-                    _namaKorbanCtrl.text = match['nama'] ?? match['nama_karyawan'] ?? '';
-                  }
-                });
-              },
+                ),
+                const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+              ],
             ),
           ),
         ),
         const SizedBox(height: 4),
         Text(
-          'Otomatis mengisi nama di bawah (bisa diedit manual jika korban non-karyawan)',
+          'Ketuk untuk memilih rekan kerja (bisa juga diketik manual di kolom bawah)',
           style: GoogleFonts.inter(fontSize: 10.5, color: const Color(0xFF64748B), fontStyle: FontStyle.italic),
         ),
       ],

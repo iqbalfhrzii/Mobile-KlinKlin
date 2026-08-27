@@ -409,6 +409,7 @@ class OrderModel {
     this.statusPengerjaan = 'Ditugaskan',
     this.statusBonus = 'Pending',
     this.statusUtamaRaw,
+    this.isWajibPpn = false,
   });
 
   String id;
@@ -443,6 +444,7 @@ class OrderModel {
   String statusPengerjaan;
   String statusBonus;
   String? statusUtamaRaw;
+  bool isWajibPpn;
 
   String get statusPengerjaanLabel {
     if (status == OrderStatus.cancelled) return 'Dibatalkan';
@@ -620,6 +622,15 @@ class OrderModel {
         ? OrderPayment.fromJson(json['pembayaran'])
         : (json['pesanan'] != null && json['status_pembayaran'] != null ? OrderPayment.fromJson(json) : null);
 
+    final cabangData = orderJson['cabang'] ?? json['cabang'];
+    bool wajibPpn = false;
+    if (cabangData is Map) {
+      wajibPpn = cabangData['is_ppn_enabled'] == true ||
+                 cabangData['is_ppn_enabled'] == 1 ||
+                 cabangData['is_ppn_enabled']?.toString() == '1' ||
+                 cabangData['is_ppn_enabled']?.toString().toLowerCase() == 'true';
+    }
+
     return OrderModel(
       id: orderJson['id']?.toString() ?? json['pesanan_id']?.toString() ?? json['id']?.toString() ?? '',
       nomorPesanan: orderJson['nomor_pesanan']?.toString() ?? orderJson['id']?.toString() ?? '',
@@ -654,6 +665,7 @@ class OrderModel {
       waktuPengajuanEdit: wEdit,
       statusBonus: orderJson['status_bonus']?.toString() ?? json['status_bonus']?.toString() ?? 'Pending',
       statusUtamaRaw: orderJson['status_order_utama']?.toString() ?? json['status_order_utama']?.toString(),
+      isWajibPpn: wajibPpn,
     );
   }
 

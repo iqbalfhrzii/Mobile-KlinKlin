@@ -12,10 +12,10 @@ import 'dart:convert';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/change_pin_screen.dart';
 import 'edit_profile_screen.dart';
-import 'kpi_screen.dart';
-import '../../operasional/screens/operasional_pengumuman_screen.dart';
+import '../../../core/widgets/notification_list_sheet.dart';
 import '../../cleaner/tukar_libur/screens/tukar_libur_screen.dart';
 import '../../cleaner/tukar_libur/services/tukar_libur_service.dart';
+import '../../cleaner/sim/screens/cleaner_sim_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -145,17 +145,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 14),
                     ],
 
-                    _buildMenuSection('Kinerja', [
-                      _MenuItem(Icons.analytics_rounded, 'KPI & Evaluasi Kinerja', onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const KpiScreen()));
-                      }),
-                    ]),
-                    const SizedBox(height: 12),
-
                     _buildMenuSection('Akun', [
                       _MenuItem(Icons.lock_outline_rounded, 'Ganti PIN', onTap: () => _changePIN(context)),
+                      _MenuItem(Icons.badge_outlined, 'Surat Izin Mengemudi (SIM)', onTap: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const CleanerSimScreen()));
+                      }),
                       _MenuItem(Icons.notifications_outlined, 'Notifikasi / Pengumuman', onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPengumumanScreen()));
+                        NotificationListSheet.show(context);
                       }),
                       _MenuItem(Icons.language_outlined, 'Bahasa', trailing: 'Indonesia', onTap: () {}),
                     ]),

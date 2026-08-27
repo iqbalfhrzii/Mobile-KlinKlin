@@ -1,18 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
-import '../../konten_marketing/screens/konten_marketing_screen.dart';
-import '../../operasional/screens/operasional_pengumuman_screen.dart';
+import '../../../core/widgets/animated_notification_bell.dart';
 import '../services/designer_service.dart';
-import 'designer_aset_sosmed_screen.dart';
 
 class DesignerDashboardScreen extends StatefulWidget {
   const DesignerDashboardScreen({super.key});
@@ -173,10 +169,6 @@ class _DesignerDashboardScreenState extends State<DesignerDashboardScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
-                  // Quick Actions (Menu Pintas)
-                  _buildFastButtonsSection(context),
-                  const SizedBox(height: 16),
-
                   // Metrics Cards
                   _buildMetricsRow(),
                   const SizedBox(height: 18),
@@ -213,168 +205,76 @@ class _DesignerDashboardScreenState extends State<DesignerDashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Image.asset('assets/images/logo.png', height: 22),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        _getFormattedDate(),
-                        style: GoogleFonts.inter(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white.withValues(alpha: 0.95),
-                        ),
-                      ),
+              Image.asset('assets/images/logo.png', height: 22),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const AnimatedNotificationBell(size: 24),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '${_getGreeting()},',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white.withValues(alpha: 0.9),
-                      ),
+                    child: const Icon(
+                      Icons.palette_rounded,
+                      color: Colors.white,
+                      size: 20,
                     ),
-                    Text(
-                      '$_userName ✨',
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Kelola dan kerjakan seluruh materi kreatif & desain.',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.85),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              _getFormattedDate(),
+              style: GoogleFonts.inter(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: Colors.white.withValues(alpha: 0.95),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '${_getGreeting()},',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.white.withValues(alpha: 0.9),
+            ),
+          ),
+          Text(
+            '$_userName ✨',
+            style: GoogleFonts.inter(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Kelola dan kerjakan seluruh materi kreatif & desain.',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: Colors.white.withValues(alpha: 0.85),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // ================= 2. FAST BUTTONS =================
-  Widget _buildFastButtonsSection(BuildContext context) {
-    final items = [
-      _FastButtonItem(
-        title: 'Desain',
-        icon: Icons.brush_rounded,
-        color: const Color(0xFF2563EB),
-        bgColor: const Color(0xFFEFF6FF),
-        isActive: true,
-        onTap: () {},
-      ),
-      _FastButtonItem(
-        title: 'Konten',
-        icon: Icons.photo_library_rounded,
-        color: const Color(0xFF9333EA),
-        bgColor: const Color(0xFFFAF5FF),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KontenMarketingScreen())),
-      ),
-      _FastButtonItem(
-        title: 'Aset Sosmed',
-        icon: Icons.inventory_2_rounded,
-        color: const Color(0xFF0D9488),
-        bgColor: const Color(0xFFCCFBF1),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DesignerAsetSosmedScreen())),
-      ),
-      _FastButtonItem(
-        title: 'Pengumuman',
-        icon: Icons.campaign_rounded,
-        color: const Color(0xFFEA580C),
-        bgColor: const Color(0xFFFFEDD5),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPengumumanScreen())),
-      ),
-    ];
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(8, 14, 8, 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: items.map((item) => Expanded(child: _buildSingleFastButton(item))).toList(),
-      ),
-    );
-  }
-
-  Widget _buildSingleFastButton(_FastButtonItem item) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: item.onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: item.bgColor,
-                  borderRadius: BorderRadius.circular(16),
-                  border: item.isActive
-                      ? Border.all(color: item.color, width: 1.5)
-                      : Border.all(color: item.color.withValues(alpha: 0.2)),
-                  boxShadow: item.isActive
-                      ? [
-                          BoxShadow(
-                            color: item.color.withValues(alpha: 0.2),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          )
-                        ]
-                      : null,
-                ),
-                child: Icon(item.icon, color: item.color, size: 23),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                item.title,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: item.isActive ? FontWeight.bold : FontWeight.w600,
-                  color: item.isActive ? item.color : const Color(0xFF334155),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ================= 3. METRICS ROW =================
+  // ================= 2. METRICS ROW =================
   Widget _buildMetricsRow() {
     return Row(
       children: [
@@ -927,26 +827,7 @@ class _DesignerDashboardScreenState extends State<DesignerDashboardScreen> {
   }
 }
 
-// ================= FAST BUTTON DATA MODEL =================
-class _FastButtonItem {
-  final String title;
-  final IconData icon;
-  final Color color;
-  final Color bgColor;
-  final VoidCallback onTap;
-  final bool isActive;
-
-  _FastButtonItem({
-    required this.title,
-    required this.icon,
-    required this.color,
-    required this.bgColor,
-    required this.onTap,
-    this.isActive = false,
-  });
-}
-
-// ================= 7. DETAIL & ACTION BOTTOM SHEET =================
+// ================= 6. DETAIL & ACTION BOTTOM SHEET =================
 class _DesignerActionSheet extends StatefulWidget {
   final dynamic item;
   final VoidCallback onUpdated;
@@ -993,7 +874,7 @@ class _DesignerActionSheetState extends State<_DesignerActionSheet> {
     }
   }
 
-  Future<void> _updateStatus(String newStatus, {bool keepExistingNote = true}) async {
+  Future<void> _updateStatus(String newStatus) async {
     setState(() => _isSaving = true);
     final id = widget.item['id'];
     try {

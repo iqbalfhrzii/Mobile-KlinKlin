@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../services/pengadaan_barang_service.dart';
+import '../../../core/utils/image_compress_helper.dart';
 
 class PengadaanBarangFormSheet extends StatefulWidget {
   final VoidCallback onSave;
@@ -130,9 +131,12 @@ class _PengadaanBarangFormSheetState extends State<PengadaanBarangFormSheet> {
                 title: Text('Kamera', style: GoogleFonts.inter(fontSize: 14)),
                 onTap: () async {
                   Navigator.pop(ctx);
-                  final picked = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+                  final picked = await _picker.pickImage(source: ImageSource.camera);
                   if (picked != null) {
-                    setState(() => _photos[index] = File(picked.path));
+                    final compressed = await ImageCompressHelper.compressXFileIfNeeded(picked);
+                    if (compressed != null) {
+                      setState(() => _photos[index] = compressed);
+                    }
                   }
                 },
               ),
@@ -141,9 +145,12 @@ class _PengadaanBarangFormSheetState extends State<PengadaanBarangFormSheet> {
                 title: Text('Galeri', style: GoogleFonts.inter(fontSize: 14)),
                 onTap: () async {
                   Navigator.pop(ctx);
-                  final picked = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+                  final picked = await _picker.pickImage(source: ImageSource.gallery);
                   if (picked != null) {
-                    setState(() => _photos[index] = File(picked.path));
+                    final compressed = await ImageCompressHelper.compressXFileIfNeeded(picked);
+                    if (compressed != null) {
+                      setState(() => _photos[index] = compressed);
+                    }
                   }
                 },
               ),

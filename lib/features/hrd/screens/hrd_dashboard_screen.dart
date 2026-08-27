@@ -5,6 +5,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
+import '../../../core/widgets/animated_notification_bell.dart';
 import '../../attendance/screens/admin_attendance_list_screen.dart';
 import '../../attendance/services/attendance_service.dart';
 import '../../operasional/screens/operasional_pengumuman_screen.dart';
@@ -269,16 +270,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const OperasionalPengumumanScreen()),
-                    ),
-                    icon: const Icon(Icons.campaign_rounded, color: Colors.white, size: 24),
-                    tooltip: 'Pengumuman',
-                    padding: const EdgeInsets.all(6),
-                    constraints: const BoxConstraints(),
-                  ),
+                  const AnimatedNotificationBell(size: 24),
                   const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.all(10),
@@ -352,7 +344,7 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
         icon: Icons.brush_rounded,
         color: const Color(0xFFEA580C),
         bgColor: const Color(0xFFFFEDD5),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPermintaanDesignScreen())),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPermintaanDesignScreen(department: 'hrd'))),
       ),
       _FastButtonItem(
         title: 'Cabang',

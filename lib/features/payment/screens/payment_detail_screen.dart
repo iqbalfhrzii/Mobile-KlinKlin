@@ -1,7 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -13,6 +11,7 @@ import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
 import '../../../core/data/order_model.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/image_compress_helper.dart';
 
 class PaymentDetailScreen extends StatefulWidget {
   const PaymentDetailScreen({super.key, required this.order});
@@ -1052,7 +1051,8 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   void _showPaymentSheet(BuildContext context) {
     final noteCtrl = TextEditingController();
     final diskonCtrl = TextEditingController();
-    bool applyPpn = (_o.ppn ?? _o.pembayaran?.ppn ?? 0) > 0;
+    final bool isWajibPpn = _o.isWajibPpn;
+    bool applyPpn = isWajibPpn;
     bool applyPph = (_o.pph ?? _o.pembayaran?.pph ?? 0) > 0;
     File? selectedProof;
     bool isSubmitting = false;
@@ -1273,59 +1273,78 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                       Expanded(
                         child: Column(
                           children: [
-                            InkWell(
-                              onTap: () {
-                                setModal(() {
-                                  applyPpn = !applyPpn;
-                                });
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
+                            // PPN (11%) - Kontrol Penuh oleh Finance, CS Tidak Bisa Ubah
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: applyPpn
+                                    ? const Color(0xFFEFF6FF)
+                                    : const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: applyPpn
+                                      ? const Color(0xFFBFDBFE)
+                                      : const Color(0xFFE2E8F0),
+                                  width: 1.0,
                                 ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.surface,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: applyPpn
-                                        ? AppColors.primary
-                                        : AppColors.border,
-                                    width: applyPpn ? 1.5 : 1.0,
+                              ),
+                              child: Row(
+                                children: [
+                                  SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: Checkbox(
+                                      value: applyPpn,
+                                      onChanged: null, // Terkunci: CS tidak dapat mengubah
+                                      activeColor: const Color(0xFF2563EB),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: Checkbox(
-                                        value: applyPpn,
-                                        onChanged: (val) {
-                                          if (val != null)
-                                            setModal(() {
-                                              applyPpn = val;
-                                            });
-                                        },
-                                        activeColor: AppColors.primary,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(4),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text(
+                                              'PPN (11%)',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 12.5,
+                                                fontWeight: FontWeight.w600,
+                                                color: applyPpn
+                                                    ? const Color(0xFF1E293B)
+                                                    : const Color(0xFF94A3B8),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            const Icon(
+                                              Icons.lock_outline_rounded,
+                                              size: 12,
+                                              color: Color(0xFF94A3B8),
+                                            ),
+                                          ],
                                         ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        'PPN (11%)',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.textDark,
+                                        Text(
+                                          applyPpn ? 'Wajib Cabang' : 'Nonaktif Finance',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w500,
+                                            color: applyPpn
+                                                ? const Color(0xFF2563EB)
+                                                : const Color(0xFF94A3B8),
+                                          ),
                                         ),
-                                      ),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -1565,12 +1584,14 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                         : () async {
                             final picked = await picker.pickImage(
                               source: ImageSource.gallery,
-                              imageQuality: 70,
                             );
                             if (picked != null) {
-                              setModal(() {
-                                selectedProof = File(picked.path);
-                              });
+                              final compressed = await ImageCompressHelper.compressXFileIfNeeded(picked);
+                              if (compressed != null) {
+                                setModal(() {
+                                  selectedProof = compressed;
+                                });
+                              }
                             }
                           },
                     child: AnimatedContainer(
@@ -2032,14 +2053,14 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                       final picker = ImagePicker();
                       final pickedFile = await picker.pickImage(
                         source: ImageSource.gallery,
-                        imageQuality: 60,
-                        maxWidth: 1024,
-                        maxHeight: 1024,
                       );
                       if (pickedFile != null) {
-                        setModal(() {
-                          proofFile = File(pickedFile.path);
-                        });
+                        final compressed = await ImageCompressHelper.compressXFileIfNeeded(pickedFile);
+                        if (compressed != null) {
+                          setModal(() {
+                            proofFile = compressed;
+                          });
+                        }
                       }
                     },
                     child: AnimatedContainer(

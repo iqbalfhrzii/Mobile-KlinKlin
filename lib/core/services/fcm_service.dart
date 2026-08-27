@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'auth_service.dart';
+import 'notification_service.dart';
 import '../../features/cleaner/jobs/cleaner_job_detail_screen.dart';
 import '../../features/operasional/screens/operasional_pengumuman_screen.dart';
 import '../../features/operasional/screens/operasional_approval_pengajuan_screen.dart';
@@ -22,6 +23,9 @@ import '../../features/uang_kas/screens/uang_kas_screen.dart';
 import '../../features/konten_marketing/screens/konten_marketing_screen.dart';
 import '../../features/orders/screens/order_detail_screen.dart';
 import '../../features/orders/services/order_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../features/finance/screens/finance_approval_list_screen.dart';
+import '../../features/finance/screens/finance_approval_detail_screen.dart';
 
 // Top-level background message handler
 @pragma('vm:entry-point')
@@ -68,9 +72,59 @@ class FcmService {
       });
 
       // Handle foreground messages with rich floating SnackBar
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
         debugPrint('Got a message whilst in the foreground!');
         debugPrint('Message data: ${message.data}');
+
+        // Get currently logged-in user details
+        final prefs = await SharedPreferences.getInstance();
+        final currentKaryawanId = (prefs.getString('karyawan_id') ?? '').trim();
+        final currentUserName = (prefs.getString('user_name') ?? '').trim();
+        final currentRole = (prefs.getString('user_role') ?? '').trim().toLowerCase();
+        final isLoggedIn = prefs.getString('auth_token') != null;
+
+        if (!isLoggedIn) {
+          debugPrint('Ignoring FCM message: user not logged in');
+          return;
+        }
+
+        final targetKaryawanId = (message.data['target_karyawan_id'] ?? '').toString().trim();
+        final targetRole = (message.data['target_role'] ?? '').toString().trim().toLowerCase();
+        final type = (message.data['type'] ?? '').toString().toLowerCase();
+        final screen = (message.data['screen'] ?? '').toString().toLowerCase();
+
+        // 1. Validasi Akun Spesifik: Hanya pengguna yang akunnya sedang login yang boleh menerima notifikasi!
+        if (targetKaryawanId.isNotEmpty && currentKaryawanId.isNotEmpty) {
+          if (targetKaryawanId != currentKaryawanId) {
+            debugPrint('Silencing FCM notification: ditujukan untuk user ID $targetKaryawanId (${message.data['target_nama']}), sedangkan yang sedang login adalah $currentKaryawanId ($currentUserName)');
+            return;
+          }
+        }
+
+        // 2. Validasi Role: Role sesi aktif harus cocok
+        if (targetRole.isNotEmpty) {
+          if (!currentRole.contains(targetRole) && !currentRole.contains('admin') && !currentRole.contains('ceo')) {
+            debugPrint('Silencing FCM notification: target role $targetRole tidak cocok dengan role aktif $currentRole');
+            return;
+          }
+        }
+
+        // 3. Isolasi jenis layar khusus
+        if (type == 'pembayaran_pending' || screen == 'approval_pembayaran') {
+          if (!currentRole.contains('finance') && !currentRole.contains('admin') && !currentRole.contains('ceo')) {
+            debugPrint('Ignoring pembayaran_pending: user bukan finance');
+            return;
+          }
+        }
+        if (type == 'new_job' || type == 'cancel_job' || screen == 'detail_pesanan') {
+          if (!currentRole.contains('cleaner') && !currentRole.contains('admin') && !currentRole.contains('ceo')) {
+            debugPrint('Ignoring job notification: user bukan cleaner');
+            return;
+          }
+        }
+
+        // Realtime refresh bell badge and vibration
+        NotificationService.instance.refreshUnreadCount();
 
         if (message.notification != null && navigatorKey?.currentContext != null) {
           final type = (message.data['type'] ?? '').toString();
@@ -219,15 +273,96 @@ class FcmService {
 
   void _handleMessage(RemoteMessage message) async {
     debugPrint("Handling notification click: ${message.data}");
-    final context = navigatorKey?.currentContext;
-    if (context == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    final currentKaryawanId = (prefs.getString('karyawan_id') ?? '').trim();
+    final currentUserName = (prefs.getString('user_name') ?? '').trim();
+    final currentRole = (prefs.getString('user_role') ?? '').trim().toLowerCase();
+    final isLoggedIn = prefs.getString('auth_token') != null;
+
+    final navContext = navigatorKey?.currentContext;
+    final navState = navigatorKey?.currentState;
+    if (navContext == null || navState == null) return;
+
+    if (!isLoggedIn) {
+      if (navContext.mounted) {
+        ScaffoldMessenger.of(navContext).showSnackBar(
+          const SnackBar(content: Text('Silakan login terlebih dahulu.')),
+        );
+      }
+      return;
+    }
+
+    final targetKaryawanId = (message.data['target_karyawan_id'] ?? '').toString().trim();
+    final targetRole = (message.data['target_role'] ?? '').toString().trim().toLowerCase();
+    final targetNama = (message.data['target_nama'] ?? 'pengguna lain').toString();
+
+    // 1. Validasi Akun Pengguna: Tolak jika notifikasi ini dikirimkan untuk akun karyawan lain
+    if (targetKaryawanId.isNotEmpty && currentKaryawanId.isNotEmpty && targetKaryawanId != currentKaryawanId) {
+      if (navContext.mounted) {
+        ScaffoldMessenger.of(navContext).showSnackBar(
+          SnackBar(
+            content: Text('Notifikasi ini ditujukan untuk $targetNama. Anda saat ini sedang login sebagai $currentUserName.'),
+            backgroundColor: const Color(0xFFDC2626),
+          ),
+        );
+      }
+      return;
+    }
+
+    // 2. Validasi Role Pengguna
+    if (targetRole.isNotEmpty && !currentRole.contains(targetRole) && !currentRole.contains('admin') && !currentRole.contains('ceo')) {
+      if (navContext.mounted) {
+        ScaffoldMessenger.of(navContext).showSnackBar(
+          SnackBar(
+            content: Text('Notifikasi ini untuk role $targetRole. Anda saat ini login sebagai ${prefs.getString('user_role')}.'),
+            backgroundColor: const Color(0xFFDC2626),
+          ),
+        );
+      }
+      return;
+    }
 
     final type = (message.data['type'] ?? '').toString();
     final screen = (message.data['screen'] ?? '').toString();
 
+    // 0. Approval Pembayaran (Khusus Finance)
+    if (type == 'pembayaran_pending' || screen == 'approval_pembayaran') {
+      if (currentRole.contains('finance') || currentRole.contains('admin') || currentRole.contains('ceo')) {
+        final pesananId = message.data['pesanan_id'];
+        if (pesananId != null && pesananId.toString().isNotEmpty) {
+          try {
+            final order = await OrderService().fetchOrderDetail(pesananId.toString());
+            if (navigatorKey?.currentContext != null) {
+              Navigator.of(navigatorKey!.currentContext!).push(
+                MaterialPageRoute(
+                  builder: (_) => FinanceApprovalDetailScreen(order: order),
+                ),
+              );
+              return;
+            }
+          } catch (_) {}
+        }
+        navState.push(
+          MaterialPageRoute(
+            builder: (_) => const FinanceApprovalListScreen(),
+          ),
+        );
+      } else {
+        if (navContext.mounted) {
+          ScaffoldMessenger.of(navContext).showSnackBar(
+            SnackBar(
+              content: Text('Notifikasi ini untuk Finance. Anda saat ini login sebagai ${prefs.getString('user_role')}.'),
+              backgroundColor: const Color(0xFFDC2626),
+            ),
+          );
+        }
+      }
+      return;
+    }
+
     // 1. Pengumuman
     if (type == 'pengumuman' || screen == 'pengumuman') {
-      Navigator.of(context).push(
+      navState.push(
         MaterialPageRoute(
           builder: (_) => const OperasionalPengumumanScreen(),
         ),
@@ -237,7 +372,7 @@ class FcmService {
 
     // 2. Uang Kas Cabang / Pengajuan Kas
     if (type == 'pengajuan_kas' || type == 'cashflow' || screen == 'uang_kas') {
-      Navigator.of(context).push(
+      navState.push(
         MaterialPageRoute(
           builder: (_) => const UangKasScreen(),
         ),
@@ -247,7 +382,7 @@ class FcmService {
 
     // 3. Approval Pengajuan / Pembelian BHP / Pengadaan Alat
     if (type == 'approval_pengajuan' || type == 'pembelian_bhp' || screen == 'approval_pengajuan' || screen == 'pembelian_bhp') {
-      Navigator.of(context).push(
+      navState.push(
         MaterialPageRoute(
           builder: (_) => const OperasionalApprovalPengajuanScreen(),
         ),
@@ -257,7 +392,7 @@ class FcmService {
 
     // 4. Permintaan Desain Promo
     if (type == 'permintaan_design' || screen == 'permintaan_design') {
-      Navigator.of(context).push(
+      navState.push(
         MaterialPageRoute(
           builder: (_) => const OperasionalPermintaanDesignScreen(),
         ),
@@ -266,8 +401,8 @@ class FcmService {
     }
 
     // 5. Data Kecelakaan / Insiden Kerja
-    if (type == 'data_kecelakaan' || screen == 'data_kecelakaan') {
-      Navigator.of(context).push(
+    if (type.contains('kecelakaan') || screen.contains('kecelakaan') || type.contains('insiden') || screen.contains('insiden')) {
+      navState.push(
         MaterialPageRoute(
           builder: (_) => const OperasionalDataKecelakaanScreen(),
         ),
@@ -277,7 +412,7 @@ class FcmService {
 
     // 6. Stok Opname
     if (type == 'stok_opname' || screen == 'stok_opname') {
-      Navigator.of(context).push(
+      navState.push(
         MaterialPageRoute(
           builder: (_) => const MonitoringStokOpnameScreen(),
         ),
@@ -285,9 +420,9 @@ class FcmService {
       return;
     }
 
-    // 7. Laporan Lapangan / Kecelakaan
+    // 7. Laporan Lapangan
     if (type == 'laporan_lapangan' || screen == 'laporan_lapangan') {
-      Navigator.of(context).push(
+      navState.push(
         MaterialPageRoute(
           builder: (_) => const OperasionalDataKecelakaanScreen(),
         ),
@@ -297,7 +432,7 @@ class FcmService {
 
     // 8. Konten Marketing
     if (type == 'konten_marketing' || screen == 'konten_marketing') {
-      Navigator.of(context).push(
+      navState.push(
         MaterialPageRoute(
           builder: (_) => const KontenMarketingScreen(),
         ),
@@ -307,7 +442,7 @@ class FcmService {
 
     // 9. Quotation / Penawaran
     if (type == 'quotation' || screen == 'quotation') {
-      Navigator.of(context).push(
+      navState.push(
         MaterialPageRoute(
           builder: (_) => const OperasionalQuotationScreen(),
         ),
@@ -317,7 +452,7 @@ class FcmService {
 
     // 10. Purchase Order
     if (type == 'purchase_order' || screen == 'purchase_order') {
-      Navigator.of(context).push(
+      navState.push(
         MaterialPageRoute(
           builder: (_) => const OperasionalPurchaseOrderScreen(),
         ),
@@ -327,7 +462,7 @@ class FcmService {
 
     // 11. Tagihan Bulanan Kantor
     if (type == 'tagihan_bulanan' || screen == 'tagihan_bulanan') {
-      Navigator.of(context).push(
+      navState.push(
         MaterialPageRoute(
           builder: (_) => const TagihanBulananScreen(),
         ),
@@ -335,9 +470,9 @@ class FcmService {
       return;
     }
 
-    // 12. SIM Driver / Cleaner
-    if (type == 'sim_driver' || screen == 'sim_driver') {
-      Navigator.of(context).push(
+    // 12. SIM Driver / Cleaner / Karyawan
+    if (type.contains('sim') || screen.contains('sim')) {
+      navState.push(
         MaterialPageRoute(
           builder: (_) => const OperasionalSimScreen(),
         ),
@@ -347,7 +482,7 @@ class FcmService {
 
     // 13. HRD Cuti & Izin
     if (type == 'cuti_hrd' || screen == 'hrd_cuti' || type == 'cuti') {
-      Navigator.of(context).push(
+      navState.push(
         MaterialPageRoute(
           builder: (_) => const HrdCutiScreen(),
         ),
@@ -357,7 +492,7 @@ class FcmService {
 
     // 14. HRD Tukar Libur
     if (type == 'tukar_libur_hrd' || screen == 'hrd_tukar_libur' || type == 'tukar_libur') {
-      Navigator.of(context).push(
+      navState.push(
         MaterialPageRoute(
           builder: (_) => const HrdTukarLiburScreen(),
         ),
@@ -367,7 +502,7 @@ class FcmService {
 
     // 15. HRD Jadwal Libur
     if (type == 'jadwal_libur' || screen == 'jadwal_libur') {
-      Navigator.of(context).push(
+      navState.push(
         MaterialPageRoute(
           builder: (_) => const HrdJadwalLiburScreen(),
         ),
@@ -375,11 +510,12 @@ class FcmService {
       return;
     }
 
-    // 16. HRD Data Karyawan
-    if (type == 'karyawan' || screen == 'karyawan') {
-      Navigator.of(context).push(
+    // 16. HRD Data Karyawan & Acc Karyawan Baru
+    if (type.contains('karyawan') || screen.contains('karyawan') || type == 'karyawan_baru') {
+      final isAcc = message.data['action'] == 'acc' || type == 'karyawan_baru';
+      navState.push(
         MaterialPageRoute(
-          builder: (_) => const KaryawanListScreen(),
+          builder: (_) => KaryawanListScreen(initialTabIndex: isAcc ? 1 : 0),
         ),
       );
       return;
@@ -387,7 +523,7 @@ class FcmService {
 
     // 17. Designer Aset Sosmed
     if (type == 'aset_sosmed' || screen == 'aset_sosmed') {
-      Navigator.of(context).push(
+      navState.push(
         MaterialPageRoute(
           builder: (_) => const DesignerAsetSosmedScreen(),
         ),
@@ -397,32 +533,79 @@ class FcmService {
 
     // 9. Order Detail (Cleaner Start/Finish, Payment Verified, Cancellation/Edit Approval)
     if (type == 'order_detail' || screen == 'order_detail') {
-      final pesananId = message.data['pesanan_id'];
-      if (pesananId != null && pesananId.toString().isNotEmpty) {
-        try {
-          // Show quick loading or directly navigate
-          final order = await OrderService().fetchOrderDetail(pesananId.toString());
-          if (navigatorKey?.currentContext != null) {
-            Navigator.of(navigatorKey!.currentContext!).push(
-              MaterialPageRoute(
-                builder: (_) => OrderDetailScreen(order: order),
-              ),
-            );
-          }
-        } catch (e) {
-          debugPrint('Error fetching order detail from notification: $e');
+      // Jika yang login adalah Finance, arahkan ke layar persetujuan Finance, BUKAN ke detail CS!
+      if (currentRole.contains('finance')) {
+        final pesananId = message.data['pesanan_id'];
+        if (pesananId != null && pesananId.toString().isNotEmpty) {
+          try {
+            final order = await OrderService().fetchOrderDetail(pesananId.toString());
+            if (navigatorKey?.currentContext != null) {
+              Navigator.of(navigatorKey!.currentContext!).push(
+                MaterialPageRoute(
+                  builder: (_) => FinanceApprovalDetailScreen(order: order),
+                ),
+              );
+              return;
+            }
+          } catch (_) {}
         }
+        navState.push(
+          MaterialPageRoute(
+            builder: (_) => const FinanceApprovalListScreen(),
+          ),
+        );
+        return;
+      }
+
+      // Jika yang login adalah CS / Admin / CEO
+      if (currentRole.contains('cs') || currentRole.contains('customer service') || currentRole.contains('admin') || currentRole.contains('ceo')) {
+        final pesananId = message.data['pesanan_id'];
+        if (pesananId != null && pesananId.toString().isNotEmpty) {
+          try {
+            final order = await OrderService().fetchOrderDetail(pesananId.toString());
+            if (navigatorKey?.currentContext != null) {
+              Navigator.of(navigatorKey!.currentContext!).push(
+                MaterialPageRoute(
+                  builder: (_) => OrderDetailScreen(order: order),
+                ),
+              );
+            }
+          } catch (e) {
+            debugPrint('Error fetching order detail from notification: $e');
+          }
+        }
+        return;
+      }
+
+      if (navContext.mounted) {
+        ScaffoldMessenger.of(navContext).showSnackBar(
+          SnackBar(
+            content: Text('Notifikasi ini untuk Customer Service. Anda saat ini login sebagai ${prefs.getString('user_role')}.'),
+            backgroundColor: const Color(0xFFDC2626),
+          ),
+        );
       }
       return;
     }
 
-    // 10. Cleaner New Job
-    if (type == 'new_job' && screen == 'detail_pesanan') {
+    // 10. Cleaner New Job & Cancel Job
+    if ((type == 'new_job' && screen == 'detail_pesanan') || type == 'cancel_job') {
+      if (!currentRole.contains('cleaner') && !currentRole.contains('admin') && !currentRole.contains('ceo')) {
+        if (navContext.mounted) {
+          ScaffoldMessenger.of(navContext).showSnackBar(
+            SnackBar(
+              content: Text('Notifikasi tugas ini ditujukan untuk Cleaner ($targetNama). Anda saat ini login sebagai $currentUserName (${prefs.getString('user_role')}).'),
+              backgroundColor: const Color(0xFFDC2626),
+            ),
+          );
+        }
+        return;
+      }
       final String? cleanerIdStr = message.data['pesanan_cleaner_id'];
       if (cleanerIdStr != null) {
         final int? cleanerId = int.tryParse(cleanerIdStr);
         if (cleanerId != null) {
-          Navigator.of(context).push(
+          navState.push(
             MaterialPageRoute(
               builder: (_) => CleanerJobDetailScreen(
                 job: {'id': cleanerId, 'status_pengerjaan': 'notified'},

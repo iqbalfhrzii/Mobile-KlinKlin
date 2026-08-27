@@ -1,3 +1,5 @@
+import '../api/api_client.dart';
+
 class CabangModel {
   final int id;
   final String namaCabang;
@@ -115,6 +117,20 @@ class KaryawanModel {
       cabang: json['cabang'] != null && json['cabang'] is Map<String, dynamic> ? CabangModel.fromJson(json['cabang']) : null,
       jabatan: json['jabatan'] != null && json['jabatan'] is Map<String, dynamic> ? JabatanModel.fromJson(json['jabatan']) : null,
     );
+  }
+
+  String? get fullFotoUrl {
+    if (fotoProfil == null || fotoProfil!.trim().isEmpty) return null;
+    final p = fotoProfil!.trim();
+    if (p.startsWith('http://') || p.startsWith('https://') || p.startsWith('data:image')) {
+      return p;
+    }
+    final baseDomain = ApiClient.baseUrl.replaceAll(RegExp(r'/api/?$'), '');
+    final cleanPath = p.startsWith('/') ? p.substring(1) : p;
+    if (cleanPath.startsWith('storage/')) {
+      return '$baseDomain/$cleanPath';
+    }
+    return '$baseDomain/storage/$cleanPath';
   }
 }
 

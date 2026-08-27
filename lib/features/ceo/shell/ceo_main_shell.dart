@@ -4,10 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../auth/screens/change_pin_screen.dart';
 import '../../profile/screens/profile_screen.dart';
-import '../../operasional/screens/operasional_pengumuman_screen.dart';
 import '../screens/ceo_dashboard_screen.dart';
 import '../screens/ceo_grafik_screen.dart';
 import '../screens/ceo_data_chat_screen.dart';
+import '../screens/ceo_menu_screen.dart';
 
 class CeoMainShell extends StatefulWidget {
   const CeoMainShell({
@@ -39,7 +39,7 @@ class _CeoMainShellState extends State<CeoMainShell> {
     _NavItem(Icons.analytics_outlined, Icons.analytics_rounded, 'Capaian'),
     _NavItem(Icons.insert_chart_outlined_rounded, Icons.insert_chart_rounded, 'Grafik'),
     _NavItem(Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'Data Chat'),
-    _NavItem(Icons.campaign_outlined, Icons.campaign_rounded, 'Pengumuman'),
+    _NavItem(Icons.widgets_outlined, Icons.widgets_rounded, 'Menu'),
     _NavItem(Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
   ];
 
@@ -49,7 +49,7 @@ class _CeoMainShellState extends State<CeoMainShell> {
       CeoDashboardScreen(),
       CeoGrafikScreen(),
       CeoDataChatScreen(),
-      OperasionalPengumumanScreen(),
+      CeoMenuScreen(),
       ProfileScreen(),
     ];
 

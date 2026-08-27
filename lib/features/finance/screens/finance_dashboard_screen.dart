@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../services/finance_service.dart';
 import '../../operasional/services/operasional_service.dart';
 import '../../../core/widgets/gradient_header.dart';
+import '../../../core/widgets/animated_notification_bell.dart';
 import 'finance_cashflow_cabang_screen.dart';
 import 'finance_approval_kas_screen.dart';
 import 'finance_approval_list_screen.dart';
@@ -457,35 +458,42 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
                 ),
               ),
               const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.shield_rounded,
-                      color: Colors.white,
-                      size: 14,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const AnimatedNotificationBell(size: 24),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Finance',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                     ),
-                  ],
-                ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.shield_rounded,
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Finance',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -758,7 +766,7 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
                 bgColor: const Color(0xFFFFF1F2),
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const OperasionalPermintaanDesignScreen()),
+                  MaterialPageRoute(builder: (_) => const OperasionalPermintaanDesignScreen(department: 'finance')),
                 ),
               ),
               _buildQuickActionBtn(
