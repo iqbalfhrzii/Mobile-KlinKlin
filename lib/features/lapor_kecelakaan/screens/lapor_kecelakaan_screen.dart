@@ -71,6 +71,7 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
   final Set<String> _selectedAkibat = {};
 
   File? _selectedImage;
+  bool _isManualInput = false;
 
   @override
   void initState() {
@@ -94,7 +95,7 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       _namaCabang = prefs.getString('user_branch') ?? '-';
-      _cabangId = prefs.getInt('user_branch_id') ?? 0;
+      _cabangId = prefs.getInt('user_cabang_id') ?? prefs.getInt('user_branch_id') ?? 0;
       _namaPelaporCtrl.text = prefs.getString('user_name') ?? '';
 
       // Refresh from API
@@ -117,11 +118,7 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
       } catch (_) {}
 
       // Fetch cleaners for this branch
-      if (_cabangId > 0) {
-        _fetchCleaners(_cabangId);
-      } else {
-        _fetchCleaners(null);
-      }
+      await _fetchCleaners(_cabangId > 0 ? _cabangId : null);
     } finally {
       if (mounted) {
         setState(() => _isLoadingProfile = false);
@@ -132,11 +129,18 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
   Future<void> _fetchCleaners(int? cabangId) async {
     setState(() => _isLoadingCleaners = true);
     try {
-      final list = await _service.fetchCleaners(cabangId: cabangId);
+      var list = await _service.fetchCleaners(cabangId: (cabangId != null && cabangId > 0) ? cabangId : null);
+      if (list.isEmpty && cabangId != null && cabangId > 0) {
+        // Fallback fetch all cleaners if branch query returned empty
+        list = await _service.fetchCleaners(cabangId: null);
+      }
       if (mounted) {
         setState(() {
           _cleanerList = list;
           _isLoadingCleaners = false;
+          if (list.isEmpty) {
+            _isManualInput = true;
+          }
         });
       }
     } catch (e) {
@@ -950,6 +954,69 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
   }
 
   Widget _buildCleanerDropdown() {
+    if (_isManualInput) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Nama Korban (Cleaner) *',
+                style: GoogleFonts.inter(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF475569),
+                ),
+              ),
+              if (_cleanerList.isNotEmpty)
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _isManualInput = false;
+                    });
+                  },
+                  child: Text(
+                    'Pilih dari Daftar',
+                    style: GoogleFonts.inter(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF2563EB),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: _namaKorbanCtrl,
+            style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF0F172A)),
+            decoration: InputDecoration(
+              hintText: 'Ketik nama korban...',
+              hintStyle: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8)),
+              prefixIcon: const Icon(Icons.personal_injury_outlined, size: 18, color: Color(0xFF64748B)),
+              filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.5),
+              ),
+            ),
+            validator: (val) => val == null || val.trim().isEmpty ? 'Nama korban wajib diisi' : null,
+          ),
+        ],
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -964,22 +1031,44 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
                 color: const Color(0xFF475569),
               ),
             ),
-            if (_isLoadingCleaners)
-              const SizedBox(
-                width: 12,
-                height: 12,
-                child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFFDC2626)),
-              ),
+            Row(
+              children: [
+                if (_isLoadingCleaners)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 8),
+                    child: SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFFDC2626)),
+                    ),
+                  ),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _isManualInput = true;
+                    });
+                  },
+                  child: Text(
+                    'Input Manual',
+                    style: GoogleFonts.inter(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF2563EB),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          initialValue: _selectedCleanerId,
+          initialValue: _cleanerList.any((c) => c['id'].toString() == _selectedCleanerId) ? _selectedCleanerId : null,
           isExpanded: true,
           icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
           dropdownColor: Colors.white,
           decoration: InputDecoration(
-            hintText: _isLoadingCleaners ? 'Memuat cleaner...' : 'Pilih cleaner korban',
+            hintText: _isLoadingCleaners ? 'Memuat daftar cleaner...' : (_cleanerList.isEmpty ? 'Daftar cleaner kosong (Gunakan Input Manual)' : 'Pilih cleaner korban'),
             hintStyle: GoogleFonts.inter(fontSize: 12.5, color: const Color(0xFF94A3B8)),
             prefixIcon: const Icon(Icons.personal_injury_outlined, size: 18, color: Color(0xFF64748B)),
             filled: true,
@@ -1053,7 +1142,7 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
           },
           validator: (val) {
             if (_namaKorbanCtrl.text.trim().isEmpty) {
-              return 'Nama korban wajib dipilih';
+              return 'Nama korban wajib dipilih / diisi';
             }
             return null;
           },
