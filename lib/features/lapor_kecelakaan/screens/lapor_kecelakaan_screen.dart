@@ -128,11 +128,34 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
   Future<void> _fetchCleaners(int? cabangId) async {
     setState(() => _isLoadingCleaners = true);
     try {
-      var list = await _service.fetchCleaners(cabangId: (cabangId != null && cabangId > 0) ? cabangId : null);
-      if (list.isEmpty && cabangId != null && cabangId > 0) {
-        // Fallback fetch all cleaners if branch query returned empty
-        list = await _service.fetchCleaners(cabangId: null);
+      final url = (cabangId != null && cabangId > 0)
+          ? '/karyawans?cabang_id=$cabangId&all=true'
+          : '/karyawans?all=true';
+      final res = await ApiClient.instance.get(url);
+      List<dynamic> list = [];
+      if (res.data != null) {
+        if (res.data['data'] is List) {
+          list = res.data['data'];
+        } else if (res.data['data']?['data'] is List) {
+          list = res.data['data']['data'];
+        } else if (res.data is List) {
+          list = res.data;
+        }
       }
+
+      if (list.isEmpty && cabangId != null && cabangId > 0) {
+        final fallbackRes = await ApiClient.instance.get('/karyawans?all=true');
+        if (fallbackRes.data != null) {
+          if (fallbackRes.data['data'] is List) {
+            list = fallbackRes.data['data'];
+          } else if (fallbackRes.data['data']?['data'] is List) {
+            list = fallbackRes.data['data']['data'];
+          } else if (fallbackRes.data is List) {
+            list = fallbackRes.data;
+          }
+        }
+      }
+
       if (mounted) {
         setState(() {
           _cleanerList = list;
@@ -957,9 +980,15 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
         ),
       ],
     );
-  }
-
   Widget _buildCleanerDropdown() {
+    final Map<String, dynamic> uniqueCleaners = {};
+    for (var c in _cleanerList) {
+      if (c['id'] != null) {
+        uniqueCleaners[c['id'].toString()] = c;
+      }
+    }
+    final cleanList = uniqueCleaners.values.toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -983,96 +1012,94 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
           ],
         ),
         const SizedBox(height: 6),
-        DropdownButtonFormField<String>(
-          initialValue: _cleanerList.any((c) => c['id'].toString() == _selectedCleanerId) ? _selectedCleanerId : null,
-          isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
-          dropdownColor: Colors.white,
-          decoration: InputDecoration(
-            hintText: _isLoadingCleaners
-                ? 'Memuat rekan kerja cabang $_namaCabang...'
-                : (_cleanerList.isEmpty
-                    ? 'Belum ada data rekan kerja di cabang $_namaCabang'
-                    : 'Pilih rekan kerja / cleaner...'),
-            hintStyle: GoogleFonts.inter(fontSize: 12.5, color: const Color(0xFF94A3B8)),
-            prefixIcon: const Icon(Icons.people_outline_rounded, size: 18, color: Color(0xFF64748B)),
-            filled: true,
-            fillColor: const Color(0xFFF8FAFC),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.5),
+        Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: cleanList.any((k) => k['id'].toString() == _selectedCleanerId) ? _selectedCleanerId : null,
+              isExpanded: true,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+              hint: Row(
+                children: [
+                  const Icon(Icons.people_outline_rounded, size: 18, color: Color(0xFF64748B)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _isLoadingCleaners
+                          ? 'Memuat rekan kerja...'
+                          : (cleanList.isEmpty
+                              ? 'Pilih rekan kerja / cleaner...'
+                              : 'Pilih rekan kerja korban...'),
+                      style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              items: cleanList.map((c) {
+                final idStr = c['id'].toString();
+                final name = c['nama'] ?? c['nama_karyawan'] ?? '-';
+                final jab = c['jabatan']?['nama_jabatan'] ?? c['jabatan_nama'] ?? c['jabatan']?.toString() ?? 'Cleaner';
+                return DropdownMenuItem<String>(
+                  value: idStr,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.person_outline_rounded, size: 16, color: Color(0xFF64748B)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF0F172A),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                        ),
+                        child: Text(
+                          jab,
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF2563EB),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+              onChanged: (val) {
+                setState(() {
+                  _selectedCleanerId = val;
+                  final match = cleanList.firstWhere(
+                    (c) => c['id'].toString() == val,
+                    orElse: () => null,
+                  );
+                  if (match != null) {
+                    _namaKorbanCtrl.text = match['nama'] ?? match['nama_karyawan'] ?? '';
+                  }
+                });
+              },
             ),
           ),
-          items: () {
-            final Map<String, Map<String, dynamic>> uniqueCleaners = {};
-            for (var c in _cleanerList) {
-              if (c['id'] != null) {
-                uniqueCleaners[c['id'].toString()] = c;
-              }
-            }
-            return uniqueCleaners.values.map((c) {
-              final idStr = c['id'].toString();
-              final name = c['nama'] ?? c['nama_karyawan'] ?? '-';
-              final jabatan = c['jabatan']?['nama_jabatan'] ?? c['jabatan_nama'] ?? 'Cleaner';
-              return DropdownMenuItem<String>(
-                value: idStr,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        name,
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF0F172A),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: const Color(0xFFBFDBFE)),
-                      ),
-                      child: Text(
-                        jabatan,
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF2563EB),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList();
-          }(),
-          onChanged: (val) {
-            setState(() {
-              _selectedCleanerId = val;
-              final match = _cleanerList.firstWhere(
-                (c) => c['id'].toString() == val,
-                orElse: () => null,
-              );
-              if (match != null) {
-                _namaKorbanCtrl.text = match['nama'] ?? match['nama_karyawan'] ?? '';
-              }
-            });
-          },
         ),
         const SizedBox(height: 4),
         Text(
