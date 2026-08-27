@@ -71,7 +71,6 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
   final Set<String> _selectedAkibat = {};
 
   File? _selectedImage;
-  bool _isManualInput = false;
 
   @override
   void initState() {
@@ -138,9 +137,6 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
         setState(() {
           _cleanerList = list;
           _isLoadingCleaners = false;
-          if (list.isEmpty) {
-            _isManualInput = true;
-          }
         });
       }
     } catch (e) {
@@ -444,10 +440,6 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
                             ),
                             const SizedBox(height: 14),
 
-                            // Nama Korban (Cleaner Dropdown)
-                            _buildCleanerDropdown(),
-                            const SizedBox(height: 14),
-
                             // Saksi Di Tempat
                             _buildTextField(
                               controller: _saksiCtrl,
@@ -455,6 +447,20 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
                               hint: 'Nama rekan kerja / customer yang menyaksikan',
                               icon: Icons.visibility_outlined,
                               validator: (val) => val == null || val.trim().isEmpty ? 'Saksi di tempat wajib diisi' : null,
+                            ),
+                            const SizedBox(height: 14),
+
+                            // Pilih Korban Dari Rekan Kerja Cabang (Dropdown)
+                            _buildCleanerDropdown(),
+                            const SizedBox(height: 14),
+
+                            // Nama Korban (Bisa Input Manual)
+                            _buildTextField(
+                              controller: _namaKorbanCtrl,
+                              label: 'Nama Korban (Bisa Input Manual) *',
+                              hint: 'Nama korban kecelakaan / insiden...',
+                              icon: Icons.personal_injury_outlined,
+                              validator: (val) => val == null || val.trim().isEmpty ? 'Nama korban wajib diisi' : null,
                             ),
                           ],
                         ),
@@ -954,69 +960,6 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
   }
 
   Widget _buildCleanerDropdown() {
-    if (_isManualInput) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Nama Korban (Cleaner) *',
-                style: GoogleFonts.inter(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF475569),
-                ),
-              ),
-              if (_cleanerList.isNotEmpty)
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      _isManualInput = false;
-                    });
-                  },
-                  child: Text(
-                    'Pilih dari Daftar',
-                    style: GoogleFonts.inter(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF2563EB),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          TextFormField(
-            controller: _namaKorbanCtrl,
-            style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF0F172A)),
-            decoration: InputDecoration(
-              hintText: 'Ketik nama korban...',
-              hintStyle: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8)),
-              prefixIcon: const Icon(Icons.personal_injury_outlined, size: 18, color: Color(0xFF64748B)),
-              filled: true,
-              fillColor: const Color(0xFFF8FAFC),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.5),
-              ),
-            ),
-            validator: (val) => val == null || val.trim().isEmpty ? 'Nama korban wajib diisi' : null,
-          ),
-        ],
-      );
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1024,41 +967,19 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Nama Korban (Rekan Kerja) *',
+              'Pilih Korban Dari Rekan Kerja Cabang',
               style: GoogleFonts.inter(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF475569),
               ),
             ),
-            Row(
-              children: [
-                if (_isLoadingCleaners)
-                  const Padding(
-                    padding: EdgeInsets.only(right: 8),
-                    child: SizedBox(
-                      width: 12,
-                      height: 12,
-                      child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFFDC2626)),
-                    ),
-                  ),
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      _isManualInput = true;
-                    });
-                  },
-                  child: Text(
-                    'Input Manual',
-                    style: GoogleFonts.inter(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF2563EB),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            if (_isLoadingCleaners)
+              const SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFFDC2626)),
+              ),
           ],
         ),
         const SizedBox(height: 6),
@@ -1068,9 +989,13 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
           icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
           dropdownColor: Colors.white,
           decoration: InputDecoration(
-            hintText: _isLoadingCleaners ? 'Memuat rekan kerja...' : (_cleanerList.isEmpty ? 'Belum ada rekan kerja di cabang $_namaCabang' : 'Pilih rekan kerja korban ($_namaCabang)'),
+            hintText: _isLoadingCleaners
+                ? 'Memuat rekan kerja cabang $_namaCabang...'
+                : (_cleanerList.isEmpty
+                    ? 'Belum ada data rekan kerja di cabang $_namaCabang'
+                    : 'Pilih rekan kerja / cleaner...'),
             hintStyle: GoogleFonts.inter(fontSize: 12.5, color: const Color(0xFF94A3B8)),
-            prefixIcon: const Icon(Icons.personal_injury_outlined, size: 18, color: Color(0xFF64748B)),
+            prefixIcon: const Icon(Icons.people_outline_rounded, size: 18, color: Color(0xFF64748B)),
             filled: true,
             fillColor: const Color(0xFFF8FAFC),
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1140,12 +1065,11 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
               }
             });
           },
-          validator: (val) {
-            if (_namaKorbanCtrl.text.trim().isEmpty) {
-              return 'Nama korban wajib dipilih / diisi';
-            }
-            return null;
-          },
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Otomatis mengisi nama di bawah (bisa diedit manual jika korban non-karyawan)',
+          style: GoogleFonts.inter(fontSize: 10.5, color: const Color(0xFF64748B), fontStyle: FontStyle.italic),
         ),
       ],
     );
