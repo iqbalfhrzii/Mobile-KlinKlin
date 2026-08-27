@@ -29,6 +29,7 @@ import '../../uang_kas/screens/uang_kas_screen.dart';
 import '../../operasional/screens/operasional_quotation_screen.dart';
 import '../../konten_marketing/screens/konten_marketing_screen.dart';
 import '../../operasional/screens/operasional_pengumuman_screen.dart';
+import '../../lapor_kecelakaan/screens/lapor_kecelakaan_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -1187,6 +1188,13 @@ class _HomeScreenState extends State<HomeScreen> {
         iconColor: const Color(0xFFEA580C),
         bgColor: const Color(0xFFFFEDD5),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KpiScreen())),
+      ),
+      _MenuGridItem(
+        title: 'Lapor Insiden',
+        icon: Icons.healing_outlined,
+        iconColor: const Color(0xFFDC2626),
+        bgColor: const Color(0xFFFEF2F2),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LaporKecelakaanScreen())),
       ),
     ];
 

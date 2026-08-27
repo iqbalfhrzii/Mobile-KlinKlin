@@ -317,6 +317,10 @@ class _OperasionalDataKecelakaanScreenState extends State<OperasionalDataKecelak
     final tingkatColor = _getTingkatColor(tingkat);
     final tingkatBgColor = _getTingkatBgColor(tingkat);
 
+    final namaPelapor = data['nama_pelapor'] != null && data['nama_pelapor'].toString().trim().isNotEmpty ? data['nama_pelapor'].toString().trim() : null;
+    final saksi = data['saksi'] != null && data['saksi'].toString().trim().isNotEmpty ? data['saksi'].toString().trim() : null;
+    final peristiwa = data['peristiwa'] != null && data['peristiwa'].toString().trim().isNotEmpty ? data['peristiwa'].toString().trim() : null;
+    final akibat = data['akibat'] != null && data['akibat'].toString().trim().isNotEmpty ? data['akibat'].toString().trim() : null;
     final lokasi = data['lokasi'] ?? '-';
     final jam = data['jam'] ?? '-';
     final rincian = data['rincian'] != null && data['rincian'].toString().trim().isNotEmpty ? data['rincian'].toString().trim() : null;
@@ -506,10 +510,26 @@ class _OperasionalDataKecelakaanScreenState extends State<OperasionalDataKecelak
                             ),
                             const Divider(height: 1, color: Color(0xFFE2E8F0)),
                             _buildDetailRow(
-                              icon: Icons.person_outline_rounded,
-                              label: 'Nama Karyawan',
+                              icon: Icons.personal_injury_outlined,
+                              label: 'Nama Korban',
                               value: '$namaKaryawan ($jabatan)',
                             ),
+                            if (namaPelapor != null) ...[
+                              const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                              _buildDetailRow(
+                                icon: Icons.person_outline_rounded,
+                                label: 'Nama Pelapor',
+                                value: namaPelapor,
+                              ),
+                            ],
+                            if (saksi != null) ...[
+                              const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                              _buildDetailRow(
+                                icon: Icons.visibility_outlined,
+                                label: 'Saksi Di Tempat',
+                                value: saksi,
+                              ),
+                            ],
                             const Divider(height: 1, color: Color(0xFFE2E8F0)),
                             _buildDetailRow(
                               icon: Icons.access_time_rounded,
@@ -558,6 +578,90 @@ class _OperasionalDataKecelakaanScreenState extends State<OperasionalDataKecelak
                         ),
                       ),
                       const SizedBox(height: 14),
+
+                      // Peristiwa yang Telah Terjadi Section
+                      if (peristiwa != null) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFFBEB),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFFDE68A)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.warning_amber_rounded, size: 16, color: Color(0xFFD97706)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Peristiwa yang Telah Terjadi',
+                                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF92400E)),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                peristiwa,
+                                style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF78350F), height: 1.45, fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+
+                      // Akibat dari Insiden Section
+                      if (akibat != null) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.healing_rounded, size: 16, color: Color(0xFF7C3AED)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Akibat dari Insiden',
+                                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: akibat.split(',').map((a) {
+                                  final clean = a.trim();
+                                  if (clean.isEmpty) return const SizedBox();
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF3E8FF),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: const Color(0xFFDDD6FE)),
+                                    ),
+                                    child: Text(
+                                      clean,
+                                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF6D28D9)),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
 
                       // 3. Rincian Section
                       if (rincian != null) ...[

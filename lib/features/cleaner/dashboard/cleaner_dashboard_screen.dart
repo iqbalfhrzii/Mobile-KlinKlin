@@ -17,6 +17,7 @@ import '../tukar_libur/screens/tukar_libur_screen.dart';
 import '../../attendance/screens/attendance_screen.dart';
 import '../../operasional/screens/operasional_pengumuman_screen.dart';
 import '../../stok_opname/screens/stok_opname_screen.dart';
+import '../../lapor_kecelakaan/screens/lapor_kecelakaan_screen.dart';
 
 class CleanerDashboardScreen extends StatefulWidget {
   const CleanerDashboardScreen({super.key});
@@ -669,65 +670,14 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
         bgColor: const Color(0xFFFFF1F2),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPengumumanScreen())),
       ),
+      _QuickActionItem(
+        title: 'Lapor Insiden',
+        icon: Icons.healing_rounded,
+        color: const Color(0xFFDC2626),
+        bgColor: const Color(0xFFFEF2F2),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LaporKecelakaanScreen())),
+      ),
     ];
-
-    if (!_isKoor) {
-      // Non-Koor: 1 single clean row with all 5 items
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          children: actions.map((a) {
-            return Expanded(
-              child: InkWell(
-                onTap: a.onTap,
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: a.bgColor,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Icon(a.icon, size: 20, color: a.color),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        a.title,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF334155),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      );
-    }
 
     // Koor: 2 rows of 3 columns
     return Container(
