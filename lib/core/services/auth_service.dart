@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -148,25 +147,47 @@ class AuthService {
     await prefs.remove('user_photo');
   }
 
-  static Future<void> updateProfile(String name, String? photoPath) async {
+  static Future<void> deleteProfilePhoto() async {
     final prefs = await SharedPreferences.getInstance();
 
     try {
-      if (photoPath != null && photoPath.isNotEmpty) {
+      await _dio.delete('/me/foto-profil');
+      await prefs.remove('user_photo');
+      profileUpdateNotifier.value++;
+    } on DioException catch (e) {
+      throw Exception(
+        e.response?.data['message'] ?? 'Gagal menghapus foto profil',
+      );
+    }
+  }
+
+  static Future<void> updateProfile(String name, String? photoPath, {bool isPhotoRemoved = false}) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    try {
+      if (isPhotoRemoved) {
+        try {
+          await _dio.delete('/me/foto-profil');
+        } catch (_) {}
+        await prefs.remove('user_photo');
+      } else if (photoPath != null && photoPath.isNotEmpty && !photoPath.startsWith('http') && !photoPath.startsWith('data:')) {
         final formData = FormData.fromMap({
           'foto_profil': await MultipartFile.fromFile(
             photoPath,
             filename: photoPath.split('/').last,
           )
         });
-        await _dio.post('/me/foto-profil', data: formData);
+        final res = await _dio.post('/me/foto-profil', data: formData);
+        final newPhoto = res.data?['data']?['foto_profil'];
+        if (newPhoto != null) {
+          await prefs.setString('user_photo', newPhoto.toString());
+        } else {
+          await prefs.setString('user_photo', photoPath);
+        }
       }
       
       // Update local storage
       await prefs.setString('user_name', name);
-      if (photoPath != null && photoPath.isNotEmpty) {
-        await prefs.setString('user_photo', photoPath);
-      }
       profileUpdateNotifier.value++;
     } on DioException catch (e) {
       throw Exception(
@@ -177,7 +198,7 @@ class AuthService {
 
   static Future<void> changePin(String oldPin, String newPin) async {
     try {
-      final response = await _dio.post(
+      await _dio.post(
         '/change-pin',
         data: {
           'pin_lama': oldPin,
