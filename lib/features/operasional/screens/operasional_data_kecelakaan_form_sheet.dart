@@ -37,14 +37,6 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
   final _jabatanController = TextEditingController();
   final _kronologiController = TextEditingController();
   final _peristiwaLainnyaController = TextEditingController();
-  final _rincianController = TextEditingController();
-  final _penyebabController = TextEditingController();
-  final _bagianTubuhController = TextEditingController();
-  final _penangananController = TextEditingController();
-  final _dirujukKeController = TextEditingController();
-  final _hkhController = TextEditingController();
-  final _biayaController = TextEditingController();
-  final _tindakanController = TextEditingController();
 
   final List<String> _peristiwaOptions = [
     'Kecelakaan di perjalanan ( berangkat dan pulang dari kantor, berangkat dan pulang dari rumah customer )',
@@ -70,7 +62,6 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
   final Set<String> _selectedAkibat = {};
   
   String? _selectedCabangId;
-  String? _selectedTingkat;
   String? _selectedFilePath;
   String? _existingFilePath;
 
@@ -94,7 +85,6 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
       _lokasiController.text = data['lokasi'] ?? '';
       _namaKaryawanController.text = data['nama_karyawan'] ?? '';
       _jabatanController.text = data['jabatan'] ?? '';
-      _selectedTingkat = data['tingkat'] ?? 'Ringan';
       _kronologiController.text = data['kronologi'] ?? '';
 
       if (data['peristiwa'] != null) {
@@ -118,21 +108,11 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
         }
       }
 
-      _rincianController.text = data['rincian'] ?? '';
-      _penyebabController.text = data['penyebab'] ?? '';
-      _bagianTubuhController.text = data['bagian_tubuh_terluka'] ?? '';
-      _penangananController.text = data['penanganan'] ?? '';
-      _dirujukKeController.text = data['dirujuk_ke'] ?? '';
-      _hkhController.text = data['hari_kerja_hilang']?.toString() ?? '';
-      _biayaController.text = data['biaya_pengobatan']?.toString() ?? '';
-      _tindakanController.text = data['tindakan_pencegahan'] ?? '';
       _existingFilePath = data['foto_kejadian'];
       
       if (_selectedCabangId != null) {
         _fetchKaryawan(_selectedCabangId!);
       }
-    } else {
-      _selectedTingkat = 'Ringan';
     }
   }
 
@@ -147,14 +127,6 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
     _jabatanController.dispose();
     _kronologiController.dispose();
     _peristiwaLainnyaController.dispose();
-    _rincianController.dispose();
-    _penyebabController.dispose();
-    _bagianTubuhController.dispose();
-    _penangananController.dispose();
-    _dirujukKeController.dispose();
-    _hkhController.dispose();
-    _biayaController.dispose();
-    _tindakanController.dispose();
     super.dispose();
   }
 
@@ -230,10 +202,18 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
   }
 
   Future<void> _save() async {
-    if (_tanggalController.text.isEmpty || _selectedCabangId == null || _lokasiController.text.isEmpty || 
-        _namaKaryawanController.text.isEmpty || _selectedTingkat == null || _kronologiController.text.isEmpty) {
+    if (_selectedCabangId == null ||
+        _tanggalController.text.isEmpty ||
+        _jamController.text.isEmpty ||
+        _namaPelaporController.text.isEmpty ||
+        _namaKaryawanController.text.isEmpty ||
+        _lokasiController.text.isEmpty ||
+        _saksiController.text.isEmpty ||
+        _selectedPeristiwa.isEmpty ||
+        _selectedAkibat.isEmpty ||
+        _kronologiController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Harap lengkapi field yang wajib (*)'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Harap lengkapi semua kolom bertanda bintang (*)'), backgroundColor: Colors.red),
       );
       return;
     }
@@ -247,26 +227,18 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
     }
 
     final data = {
+      'cabang_id': _selectedCabangId,
       'tanggal': _tanggalController.text,
       'jam': _jamController.text,
-      'cabang_id': _selectedCabangId,
       'nama_pelapor': _namaPelaporController.text,
-      'saksi': _saksiController.text,
       'nama_karyawan': _namaKaryawanController.text,
       'jabatan': _jabatanController.text.isNotEmpty ? _jabatanController.text : 'Cleaner',
       'lokasi': _lokasiController.text,
+      'saksi': _saksiController.text,
       'peristiwa': peristiwaList.join(', '),
       'akibat': _selectedAkibat.join(', '),
-      'tingkat': _selectedTingkat ?? 'Ringan',
-      'rincian': _rincianController.text,
       'kronologi': _kronologiController.text,
-      'penyebab': _penyebabController.text,
-      'bagian_tubuh_terluka': _bagianTubuhController.text,
-      'penanganan': _penangananController.text,
-      'dirujuk_ke': _dirujukKeController.text,
-      'hari_kerja_hilang': _hkhController.text.isNotEmpty ? _hkhController.text : null,
-      'biaya_pengobatan': _biayaController.text.isNotEmpty ? _biayaController.text : null,
-      'tindakan_pencegahan': _tindakanController.text,
+      'tingkat': 'Ringan',
     };
 
     Map<String, dynamic> res;
@@ -276,6 +248,7 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
       res = await _service.storeDataKecelakaan(data, filePath: _selectedFilePath);
     }
 
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (res['status'] == true) {
@@ -387,68 +360,61 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  // 1. Kantor Cabang
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: _buildTextField('Tanggal', _tanggalController, required: true, readOnly: true, onTap: () => _selectDate(_tanggalController)),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildTextField('Jam Kejadian', _jamController, readOnly: true, onTap: () => _selectTime()),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            RichText(
-                              text: TextSpan(
-                                text: 'Cabang',
-                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                                children: const [TextSpan(text: ' *', style: TextStyle(color: Colors.red))],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              height: 48,
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: Colors.grey.shade300),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  value: widget.cabangList.any((c) => c['id'].toString() == _selectedCabangId) ? _selectedCabangId : null,
-                                  isExpanded: true,
-                                  hint: Text('Pilih Cabang', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade400)),
-                                  items: widget.cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama_cabang'] ?? c['nama'] ?? ''))).toList(),
-                                  onChanged: (val) {
-                                    setState(() {
-                                      _selectedCabangId = val;
-                                      _selectedKaryawanId = null;
-                                      if (val != null) _fetchKaryawan(val);
-                                    });
-                                  },
-                                ),
-                              ),
-                            ),
-                          ],
+                      RichText(
+                        text: TextSpan(
+                          text: 'Kantor Cabang',
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                          children: const [TextSpan(text: ' *', style: TextStyle(color: Colors.red))],
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildTextField('Lokasi Detail Kejadian', _lokasiController, required: true, hint: 'Lokasi kejadian...'),
+                      const SizedBox(height: 8),
+                      Container(
+                        height: 48,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: widget.cabangList.any((c) => c['id'].toString() == _selectedCabangId) ? _selectedCabangId : null,
+                            isExpanded: true,
+                            hint: Text('Pilih Kantor Cabang', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade400)),
+                            items: widget.cabangList.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['nama_cabang'] ?? c['nama'] ?? ''))).toList(),
+                            onChanged: (val) {
+                              setState(() {
+                                _selectedCabangId = val;
+                                _selectedKaryawanId = null;
+                                if (val != null) _fetchKaryawan(val);
+                              });
+                            },
+                          ),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
 
+                  // 2. Tanggal Kejadian & Jam Kejadian
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildTextField('Tanggal Kejadian', _tanggalController, required: true, readOnly: true, onTap: () => _selectDate(_tanggalController), hint: 'Pilih Tanggal'),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildTextField('Jam Kejadian', _jamController, required: true, readOnly: true, onTap: () => _selectTime(), hint: 'Pilih Jam'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 3. Nama Pelapor & Saksi Di Tempat
                   Row(
                     children: [
                       Expanded(
@@ -462,7 +428,59 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
                   ),
                   const SizedBox(height: 16),
                   
-                  // Peristiwa yang telah terjadi (Multiple Checkbox)
+                  // 4. Pilih Korban Dari Karyawan Cabang
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Pilih Korban Dari Karyawan Cabang', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                      const SizedBox(height: 8),
+                      Container(
+                        height: 48,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: _selectedCabangId == null ? Colors.grey.shade100 : Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _karyawanList.any((k) => k['id'].toString() == _selectedKaryawanId) ? _selectedKaryawanId : null,
+                            isExpanded: true,
+                            hint: Text(_selectedCabangId == null ? 'Pilih cabang terlebih dahulu' : 'Pilih karyawan...', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade400)),
+                            items: _karyawanList.map((k) {
+                              final name = k['nama'] ?? k['nama_karyawan'] ?? '';
+                              final jab = k['jabatan']?['nama_jabatan'] ?? k['jabatan']?.toString() ?? '';
+                              final display = jab.isNotEmpty ? '$name ($jab)' : name;
+                              return DropdownMenuItem(value: k['id'].toString(), child: Text(display, style: GoogleFonts.inter(fontSize: 13)));
+                            }).toList(),
+                            onChanged: _selectedCabangId == null ? null : (val) {
+                              setState(() {
+                                _selectedKaryawanId = val;
+                                final k = _karyawanList.firstWhere((element) => element['id'].toString() == val, orElse: () => null);
+                                if (k != null) {
+                                  _namaKaryawanController.text = k['nama'] ?? k['nama_karyawan'] ?? '';
+                                  _jabatanController.text = k['jabatan']?['nama_jabatan'] ?? k['jabatan']?.toString() ?? '';
+                                }
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text('Otomatis mengisi nama & jabatan (bisa diedit manual jika korban non-karyawan)', style: GoogleFonts.inter(fontSize: 10, color: Colors.grey.shade500, fontStyle: FontStyle.italic)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // 5. Nama Korban (Bisa Input Manual)
+                  _buildTextField('Nama Korban (Bisa Input Manual)', _namaKaryawanController, required: true, hint: 'Nama korban kecelakaan / insiden...'),
+                  const SizedBox(height: 16),
+
+                  // 6. Lokasi Detail Kejadian
+                  _buildTextField('Lokasi Detail Kejadian', _lokasiController, required: true, hint: 'Contoh: Rumah Customer Jl. Darmo Permai No. 12, Lantai 2'),
+                  const SizedBox(height: 16),
+
+                  // 7. Peristiwa yang telah terjadi (Multiple Checkbox Cards)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -565,7 +583,7 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
                   ),
                   const SizedBox(height: 16),
 
-                  // Akibat dari insiden tersebut (Multiple Card Chips)
+                  // 8. Akibat dari insiden tersebut (Multiple Card Chips)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -653,148 +671,12 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
                   ),
                   const SizedBox(height: 16),
                   
-                  const SizedBox(height: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Pilih Dari Data Karyawan', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                      const SizedBox(height: 8),
-                      Container(
-                        height: 48,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: _selectedCabangId == null ? Colors.grey.shade100 : Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: _karyawanList.any((k) => k['id'].toString() == _selectedKaryawanId) ? _selectedKaryawanId : null,
-                            isExpanded: true,
-                            hint: Text(_selectedCabangId == null ? 'Pilih cabang terlebih dahulu' : 'Pilih karyawan...', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade400)),
-                            items: _karyawanList.map((k) {
-                              final name = k['nama'] ?? k['nama_karyawan'] ?? '';
-                              final jab = k['jabatan']?['nama_jabatan'] ?? k['jabatan']?.toString() ?? '';
-                              final display = jab.isNotEmpty ? '$name ($jab)' : name;
-                              return DropdownMenuItem(value: k['id'].toString(), child: Text(display, style: GoogleFonts.inter(fontSize: 13)));
-                            }).toList(),
-                            onChanged: _selectedCabangId == null ? null : (val) {
-                              setState(() {
-                                _selectedKaryawanId = val;
-                                final k = _karyawanList.firstWhere((element) => element['id'].toString() == val, orElse: () => null);
-                                if (k != null) {
-                                  _namaKaryawanController.text = k['nama'] ?? k['nama_karyawan'] ?? '';
-                                  _jabatanController.text = k['jabatan']?['nama_jabatan'] ?? k['jabatan']?.toString() ?? '';
-                                }
-                              });
-                            },
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text('Otomatis mengisi Nama & Jabatan (bisa diedit manual jika tidak ada)', style: GoogleFonts.inter(fontSize: 10, color: Colors.grey.shade500, fontStyle: FontStyle.italic)),
-                    ],
-                  ),
+                  // 9. Detail Peristiwa / Kronologi
+                  _buildTextField('Detail Peristiwa (Kronologi Lengkap)', _kronologiController, required: true, maxLines: 4, hint: 'Ceritakan kronologi kejadian secara runtut...'),
                   const SizedBox(height: 16),
                   
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildTextField('Nama Karyawan', _namaKaryawanController, required: true, hint: 'Nama lengkap...'),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildTextField('Jabatan', _jabatanController, hint: 'Jabatan...'),
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      RichText(
-                        text: TextSpan(
-                          text: 'Tingkat',
-                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                          children: const [TextSpan(text: ' *', style: TextStyle(color: Colors.red))],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        height: 48,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: const ['Ringan', 'Sedang', 'Berat', 'Fatal'].contains(_selectedTingkat) ? _selectedTingkat : null,
-                            isExpanded: true,
-                            hint: Text('Pilih Tingkat', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade400)),
-                            items: const [
-                              DropdownMenuItem(value: 'Ringan', child: Text('Ringan')),
-                              DropdownMenuItem(value: 'Sedang', child: Text('Sedang')),
-                              DropdownMenuItem(value: 'Berat', child: Text('Berat')),
-                              DropdownMenuItem(value: 'Fatal', child: Text('Fatal')),
-                            ],
-                            onChanged: (val) {
-                              setState(() => _selectedTingkat = val);
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  _buildTextField('Kronologi', _kronologiController, required: true, maxLines: 3, hint: 'Ceritakan kronologi singkat kejadian...'),
-                  const SizedBox(height: 16),
-                  _buildTextField('Rincian Tambahan', _rincianController, maxLines: 2, hint: 'Rincian lainnya yang diperlukan...'),
-                  const SizedBox(height: 16),
-                  
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildTextField('Penyebab', _penyebabController, hint: 'Penyebab kejadian...'),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildTextField('Bagian Tubuh Terluka', _bagianTubuhController, hint: 'Contoh: Tangan kanan, Kaki kiri...'),
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  _buildTextField('Penanganan', _penangananController, maxLines: 2, hint: 'Pertolongan pertama atau penanganan yang dilakukan...'),
-                  const SizedBox(height: 16),
-                  
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: _buildTextField('Dirujuk Ke', _dirujukKeController, hint: 'Rumah Sakit / Klinik'),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 1,
-                        child: _buildTextField('Hari Kerja Hilang', _hkhController, hint: '0', keyboardType: TextInputType.number),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: _buildTextField('Biaya Pengobatan', _biayaController, hint: 'Rp 0', keyboardType: TextInputType.number),
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  _buildTextField('Tindakan Pencegahan', _tindakanController, maxLines: 2, hint: 'Langkah pencegahan agar tidak terulang...'),
-                  
-                  const SizedBox(height: 16),
-                  Text('Foto Kejadian', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                  // 10. Foto Kejadian
+                  Text('Foto Kejadian / Kondisi', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                   const SizedBox(height: 8),
                   Container(
                     decoration: BoxDecoration(
@@ -857,24 +739,24 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
                 OutlinedButton(
                   onPressed: _isLoading ? null : () => Navigator.pop(context),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                     side: BorderSide(color: Colors.grey.shade300),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: Text('Batal', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                  child: Text('Batal', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _save,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                    backgroundColor: const Color(0xFFDC2626),
                     elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: _isLoading
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : Text('Simpan Data', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white)),
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Text('Simpan Data', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ],
             ),
