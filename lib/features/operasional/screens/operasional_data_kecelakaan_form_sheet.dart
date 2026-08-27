@@ -30,10 +30,13 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
   // Controllers
   final _tanggalController = TextEditingController();
   final _jamController = TextEditingController();
+  final _namaPelaporController = TextEditingController();
+  final _saksiController = TextEditingController();
   final _lokasiController = TextEditingController();
   final _namaKaryawanController = TextEditingController();
   final _jabatanController = TextEditingController();
   final _kronologiController = TextEditingController();
+  final _peristiwaLainnyaController = TextEditingController();
   final _rincianController = TextEditingController();
   final _penyebabController = TextEditingController();
   final _bagianTubuhController = TextEditingController();
@@ -42,6 +45,29 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
   final _hkhController = TextEditingController();
   final _biayaController = TextEditingController();
   final _tindakanController = TextEditingController();
+
+  final List<String> _peristiwaOptions = [
+    'Kecelakaan di perjalanan ( berangkat dan pulang dari kantor, berangkat dan pulang dari rumah customer )',
+    'Terjatuh atau tergelincir saat pengerjaan di rumah customer',
+    'Terjatuh dari ketinggian',
+    'Ergonomi ( posisi tubuh yang tidak sesuai saat mengangkat/mengerjakan sesuatu )',
+    'Terjepit saat pengerjaan di ruang terbatas ( tandon, lorong, kolong tidur/meja )',
+    'Terkena chemical ( kerak, HF, HCL, H2O2/PN )',
+    'Pingsan atau tidak sadar diri',
+    'Sesak nafas',
+    'Tertusuk benda tajam',
+    'Lainnya',
+  ];
+  final Set<String> _selectedPeristiwa = {};
+
+  final List<String> _akibatOptions = [
+    'Kerugian Waktu',
+    'Kerugian Fisik',
+    'Cedera Fisik',
+    'Kerugian Finansial',
+    'Cancel Customer',
+  ];
+  final Set<String> _selectedAkibat = {};
   
   String? _selectedCabangId;
   String? _selectedTingkat;
@@ -62,12 +88,36 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
       final data = widget.initialData;
       _tanggalController.text = data['tanggal']?.toString().split(' ')[0] ?? '';
       _jamController.text = data['jam'] ?? '';
+      _namaPelaporController.text = data['nama_pelapor'] ?? '';
+      _saksiController.text = data['saksi'] ?? '';
       _selectedCabangId = data['cabang_id']?.toString();
       _lokasiController.text = data['lokasi'] ?? '';
       _namaKaryawanController.text = data['nama_karyawan'] ?? '';
       _jabatanController.text = data['jabatan'] ?? '';
-      _selectedTingkat = data['tingkat'];
+      _selectedTingkat = data['tingkat'] ?? 'Ringan';
       _kronologiController.text = data['kronologi'] ?? '';
+
+      if (data['peristiwa'] != null) {
+        final raw = data['peristiwa'].toString().split(',');
+        for (var p in raw) {
+          final clean = p.trim();
+          if (clean.startsWith('Lainnya:')) {
+            _selectedPeristiwa.add('Lainnya');
+            _peristiwaLainnyaController.text = clean.substring(8).trim();
+          } else if (clean.isNotEmpty) {
+            _selectedPeristiwa.add(clean);
+          }
+        }
+      }
+
+      if (data['akibat'] != null) {
+        final raw = data['akibat'].toString().split(',');
+        for (var a in raw) {
+          final clean = a.trim();
+          if (clean.isNotEmpty) _selectedAkibat.add(clean);
+        }
+      }
+
       _rincianController.text = data['rincian'] ?? '';
       _penyebabController.text = data['penyebab'] ?? '';
       _bagianTubuhController.text = data['bagian_tubuh_terluka'] ?? '';
@@ -82,8 +132,7 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
         _fetchKaryawan(_selectedCabangId!);
       }
     } else {
-      _tanggalController.text = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      _jamController.text = DateFormat('HH:mm').format(DateTime.now());
+      _selectedTingkat = 'Ringan';
     }
   }
 
@@ -91,10 +140,13 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
   void dispose() {
     _tanggalController.dispose();
     _jamController.dispose();
+    _namaPelaporController.dispose();
+    _saksiController.dispose();
     _lokasiController.dispose();
     _namaKaryawanController.dispose();
     _jabatanController.dispose();
     _kronologiController.dispose();
+    _peristiwaLainnyaController.dispose();
     _rincianController.dispose();
     _penyebabController.dispose();
     _bagianTubuhController.dispose();
@@ -188,14 +240,24 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
 
     setState(() => _isLoading = true);
 
+    final peristiwaList = _selectedPeristiwa.toList();
+    if (_selectedPeristiwa.contains('Lainnya') && _peristiwaLainnyaController.text.trim().isNotEmpty) {
+      final idx = peristiwaList.indexOf('Lainnya');
+      peristiwaList[idx] = 'Lainnya: ${_peristiwaLainnyaController.text.trim()}';
+    }
+
     final data = {
       'tanggal': _tanggalController.text,
       'jam': _jamController.text,
       'cabang_id': _selectedCabangId,
+      'nama_pelapor': _namaPelaporController.text,
+      'saksi': _saksiController.text,
       'nama_karyawan': _namaKaryawanController.text,
-      'jabatan': _jabatanController.text,
+      'jabatan': _jabatanController.text.isNotEmpty ? _jabatanController.text : 'Cleaner',
       'lokasi': _lokasiController.text,
-      'tingkat': _selectedTingkat,
+      'peristiwa': peristiwaList.join(', '),
+      'akibat': _selectedAkibat.join(', '),
+      'tingkat': _selectedTingkat ?? 'Ringan',
       'rincian': _rincianController.text,
       'kronologi': _kronologiController.text,
       'penyebab': _penyebabController.text,
@@ -381,10 +443,155 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: _buildTextField('Lokasi', _lokasiController, required: true, hint: 'Lokasi kejadian...'),
+                        child: _buildTextField('Lokasi Detail Kejadian', _lokasiController, required: true, hint: 'Lokasi kejadian...'),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 16),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildTextField('Nama Pelapor', _namaPelaporController, required: true, hint: 'Nama lengkap pelapor...'),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildTextField('Saksi Di Tempat', _saksiController, required: true, hint: 'Nama saksi kejadian...'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Peristiwa yang telah terjadi (Multiple Checkbox)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFFBEB),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFFDE68A)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        RichText(
+                          text: TextSpan(
+                            text: 'Peristiwa yang Telah Terjadi',
+                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF92400E)),
+                            children: const [TextSpan(text: ' * (Bisa pilih lebih dari satu)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.normal, color: Color(0xFFB45309)))],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        ..._peristiwaOptions.map((opt) {
+                          final isSelected = _selectedPeristiwa.contains(opt);
+                          return InkWell(
+                            onTap: () {
+                              setState(() {
+                                if (isSelected) {
+                                  _selectedPeristiwa.remove(opt);
+                                } else {
+                                  _selectedPeristiwa.add(opt);
+                                }
+                              });
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    isSelected ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+                                    size: 18,
+                                    color: isSelected ? const Color(0xFFDC2626) : const Color(0xFF94A3B8),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      opt,
+                                      style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF1E293B)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
+                        if (_selectedPeristiwa.contains('Lainnya')) ...[
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _peristiwaLainnyaController,
+                            style: GoogleFonts.inter(fontSize: 12),
+                            decoration: InputDecoration(
+                              hintText: 'Tuliskan keterangan peristiwa lainnya...',
+                              hintStyle: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade400),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFFDE68A))),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Akibat dari insiden tersebut (Multiple Chips)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFAF5FF),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE9D5FF)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        RichText(
+                          text: TextSpan(
+                            text: 'Akibat dari Insiden Tersebut',
+                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF6B21A8)),
+                            children: const [TextSpan(text: ' * (Bisa pilih lebih dari satu)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.normal, color: Color(0xFF7E22CE)))],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _akibatOptions.map((akb) {
+                            final isSelected = _selectedAkibat.contains(akb);
+                            return FilterChip(
+                              label: Text(akb),
+                              selected: isSelected,
+                              labelStyle: GoogleFonts.inter(
+                                fontSize: 11.5,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected ? const Color(0xFF581C87) : const Color(0xFF475569),
+                              ),
+                              backgroundColor: Colors.white,
+                              selectedColor: const Color(0xFFE9D5FF),
+                              checkmarkColor: const Color(0xFF581C87),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                side: BorderSide(color: isSelected ? const Color(0xFFC084FC) : const Color(0xFFE2E8F0)),
+                              ),
+                              onSelected: (selected) {
+                                setState(() {
+                                  if (selected) {
+                                    _selectedAkibat.add(akb);
+                                  } else {
+                                    _selectedAkibat.remove(akb);
+                                  }
+                                });
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   
                   const SizedBox(height: 16),
                   Column(
