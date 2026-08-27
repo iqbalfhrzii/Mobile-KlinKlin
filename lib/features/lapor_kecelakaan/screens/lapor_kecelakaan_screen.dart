@@ -1012,47 +1012,55 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
               borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.5),
             ),
           ),
-          items: _cleanerList.map((c) {
-            final idStr = c['id'].toString();
-            final name = c['nama'] ?? c['nama_karyawan'] ?? '-';
-            final jabatan = c['jabatan']?['nama_jabatan'] ?? c['jabatan_nama'] ?? 'Cleaner';
-            return DropdownMenuItem<String>(
-              value: idStr,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      name,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF0F172A),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: const Color(0xFFBFDBFE)),
-                    ),
-                    child: Text(
-                      jabatan,
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF2563EB),
+          items: () {
+            final Map<String, Map<String, dynamic>> uniqueCleaners = {};
+            for (var c in _cleanerList) {
+              if (c['id'] != null) {
+                uniqueCleaners[c['id'].toString()] = c;
+              }
+            }
+            return uniqueCleaners.values.map((c) {
+              final idStr = c['id'].toString();
+              final name = c['nama'] ?? c['nama_karyawan'] ?? '-';
+              final jabatan = c['jabatan']?['nama_jabatan'] ?? c['jabatan_nama'] ?? 'Cleaner';
+              return DropdownMenuItem<String>(
+                value: idStr,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF0F172A),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                      ),
+                      child: Text(
+                        jabatan,
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF2563EB),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList();
+          }(),
           onChanged: (val) {
             setState(() {
               _selectedCleanerId = val;

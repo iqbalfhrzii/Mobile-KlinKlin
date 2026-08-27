@@ -100,20 +100,32 @@ class LaporKecelakaanService {
 
   Future<List<Map<String, dynamic>>> fetchCleaners({int? cabangId}) async {
     try {
-      final queryParams = <String, dynamic>{'all': 1};
+      final queryParams = <String, dynamic>{'all': 'true'};
       if (cabangId != null && cabangId > 0) {
-        queryParams['cabang_id'] = cabangId;
+        queryParams['cabang_id'] = cabangId.toString();
       }
       final res = await _dio.get('/karyawans', queryParameters: queryParams);
-      var rawData = res.data['data'] ?? res.data;
+      var rawData = res.data != null ? (res.data['data'] ?? res.data) : null;
       if (rawData is Map && rawData.containsKey('data')) {
         rawData = rawData['data'];
       }
-      if (rawData is List) {
+      if (rawData is List && rawData.isNotEmpty) {
         return rawData.map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e as Map)).toList();
       }
+
+      // Fallback: If empty, try fetching all
+      if (cabangId != null && cabangId > 0) {
+        final fallbackRes = await _dio.get('/karyawans', queryParameters: {'all': 'true'});
+        var fallbackData = fallbackRes.data != null ? (fallbackRes.data['data'] ?? fallbackRes.data) : null;
+        if (fallbackData is Map && fallbackData.containsKey('data')) {
+          fallbackData = fallbackData['data'];
+        }
+        if (fallbackData is List) {
+          return fallbackData.map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e as Map)).toList();
+        }
+      }
       return [];
-    } catch (_) {
+    } catch (e) {
       return [];
     }
   }
