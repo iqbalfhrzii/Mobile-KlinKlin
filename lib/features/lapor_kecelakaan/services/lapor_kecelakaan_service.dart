@@ -92,12 +92,29 @@ class LaporKecelakaanService {
         '/operasional/kecelakaan',
         queryParameters: queryParams,
       );
-      return response.data;
+      return response.data['data'] ?? response.data;
     } catch (e) {
-      return {
-        'status': false,
-        'message': e.toString(),
-      };
+      throw Exception('Gagal memuat riwayat laporan: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchCleaners({int? cabangId}) async {
+    try {
+      final queryParams = <String, dynamic>{'all': 1};
+      if (cabangId != null && cabangId > 0) {
+        queryParams['cabang_id'] = cabangId;
+      }
+      final res = await _dio.get('/karyawans', queryParameters: queryParams);
+      var rawData = res.data['data'] ?? res.data;
+      if (rawData is Map && rawData.containsKey('data')) {
+        rawData = rawData['data'];
+      }
+      if (rawData is List) {
+        return rawData.map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e as Map)).toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
     }
   }
 }

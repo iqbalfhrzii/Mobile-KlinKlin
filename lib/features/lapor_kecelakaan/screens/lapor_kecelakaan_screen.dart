@@ -29,6 +29,11 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
   int _cabangId = 0;
   String _namaCabang = '-';
 
+  // Cleaners list for dropdown
+  List<dynamic> _cleanerList = [];
+  bool _isLoadingCleaners = false;
+  String? _selectedCleanerId;
+
   // Form Controllers
   final _namaPelaporCtrl = TextEditingController();
   final _namaKorbanCtrl = TextEditingController();
@@ -110,9 +115,34 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
           });
         }
       } catch (_) {}
+
+      // Fetch cleaners for this branch
+      if (_cabangId > 0) {
+        _fetchCleaners(_cabangId);
+      } else {
+        _fetchCleaners(null);
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoadingProfile = false);
+      }
+    }
+  }
+
+  Future<void> _fetchCleaners(int? cabangId) async {
+    setState(() => _isLoadingCleaners = true);
+    try {
+      final list = await _service.fetchCleaners(cabangId: cabangId);
+      if (mounted) {
+        setState(() {
+          _cleanerList = list;
+          _isLoadingCleaners = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching cleaners: $e");
+      if (mounted) {
+        setState(() => _isLoadingCleaners = false);
       }
     }
   }
@@ -410,14 +440,8 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
                             ),
                             const SizedBox(height: 14),
 
-                            // Nama Korban
-                            _buildTextField(
-                              controller: _namaKorbanCtrl,
-                              label: 'Nama Korban *',
-                              hint: 'Nama korban kecelakaan / insiden',
-                              icon: Icons.personal_injury_outlined,
-                              validator: (val) => val == null || val.trim().isEmpty ? 'Nama korban wajib diisi' : null,
-                            ),
+                            // Nama Korban (Cleaner Dropdown)
+                            _buildCleanerDropdown(),
                             const SizedBox(height: 14),
 
                             // Saksi Di Tempat
@@ -920,6 +944,119 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
             ),
           ),
           validator: validator,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCleanerDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Nama Korban (Cleaner) *',
+              style: GoogleFonts.inter(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF475569),
+              ),
+            ),
+            if (_isLoadingCleaners)
+              const SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFFDC2626)),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          initialValue: _selectedCleanerId,
+          isExpanded: true,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+          dropdownColor: Colors.white,
+          decoration: InputDecoration(
+            hintText: _isLoadingCleaners ? 'Memuat cleaner...' : 'Pilih cleaner korban',
+            hintStyle: GoogleFonts.inter(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+            prefixIcon: const Icon(Icons.personal_injury_outlined, size: 18, color: Color(0xFF64748B)),
+            filled: true,
+            fillColor: const Color(0xFFF8FAFC),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.5),
+            ),
+          ),
+          items: _cleanerList.map((c) {
+            final idStr = c['id'].toString();
+            final name = c['nama'] ?? c['nama_karyawan'] ?? '-';
+            final jabatan = c['jabatan']?['nama_jabatan'] ?? c['jabatan_nama'] ?? 'Cleaner';
+            return DropdownMenuItem<String>(
+              value: idStr,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      name,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF0F172A),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                    ),
+                    child: Text(
+                      jabatan,
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF2563EB),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+          onChanged: (val) {
+            setState(() {
+              _selectedCleanerId = val;
+              final match = _cleanerList.firstWhere(
+                (c) => c['id'].toString() == val,
+                orElse: () => null,
+              );
+              if (match != null) {
+                _namaKorbanCtrl.text = match['nama'] ?? match['nama_karyawan'] ?? '';
+              }
+            });
+          },
+          validator: (val) {
+            if (_namaKorbanCtrl.text.trim().isEmpty) {
+              return 'Nama korban wajib dipilih';
+            }
+            return null;
+          },
         ),
       ],
     );
