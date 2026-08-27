@@ -256,22 +256,28 @@ class _OperasionalPengumumanScreenState extends State<OperasionalPengumumanScree
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: _primaryEmerald,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
                                   'PENGUMUMAN RESMI',
-                                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
+                                  style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
                                 ),
                               ),
-                              const Spacer(),
-                              Text(
-                                formattedDate,
-                                style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w500, color: const Color(0xFF065F46)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  formattedDate,
+                                  textAlign: TextAlign.end,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF065F46)),
+                                ),
                               ),
                             ],
                           ),

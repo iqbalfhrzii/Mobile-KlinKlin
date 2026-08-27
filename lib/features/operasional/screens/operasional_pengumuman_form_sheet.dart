@@ -44,6 +44,29 @@ class _OperasionalPengumumanFormSheetState extends State<OperasionalPengumumanFo
 
   final Color _primaryThemeColor = const Color(0xFF059669); // Emerald green for announcements
 
+  /// Returns true if only HQ-level roles (CEO, Designer, Finance, HRD, Marketing, Operasional) are selected
+  bool get _isOnlyHqRolesSelected {
+    if (_selectedRoles.isEmpty) return false;
+    return _selectedRoles.every((role) {
+      final r = role.toLowerCase().trim();
+      return !r.contains('cleaner') && !r.contains('cs') && !r.contains('customer service');
+    });
+  }
+
+  void _syncCabangWithSelectedRoles() {
+    if (_isOnlyHqRolesSelected) {
+      final kp = _cabangList.firstWhere(
+        (c) => (c['nama_cabang'] ?? c['nama'] ?? '').toString().toLowerCase().contains('pusat'),
+        orElse: () => _cabangList.isNotEmpty ? _cabangList.first : null,
+      );
+      if (kp != null) {
+        final int kpId = int.parse(kp['id'].toString());
+        _selectedCabangIds.clear();
+        _selectedCabangIds.add(kpId);
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -74,6 +97,7 @@ class _OperasionalPengumumanFormSheetState extends State<OperasionalPengumumanFo
               _jabatanList = fetched;
             }
           }
+          _syncCabangWithSelectedRoles();
         }
       });
     }
@@ -113,7 +137,16 @@ class _OperasionalPengumumanFormSheetState extends State<OperasionalPengumumanFo
     if (_selectedRoles.isNotEmpty) {
       data['target_roles'] = _selectedRoles.toList();
     }
-    if (_selectedCabangIds.isNotEmpty) {
+
+    if (_isOnlyHqRolesSelected) {
+      final kp = _cabangList.firstWhere(
+        (c) => (c['nama_cabang'] ?? c['nama'] ?? '').toString().toLowerCase().contains('pusat'),
+        orElse: () => null,
+      );
+      if (kp != null) {
+        data['target_cabangs'] = [int.parse(kp['id'].toString())];
+      }
+    } else if (_selectedCabangIds.isNotEmpty) {
       data['target_cabangs'] = _selectedCabangIds.toList();
     }
 
@@ -288,6 +321,7 @@ class _OperasionalPengumumanFormSheetState extends State<OperasionalPengumumanFo
                                         } else {
                                           _selectedRoles.addAll(_jabatanList);
                                         }
+                                        _syncCabangWithSelectedRoles();
                                       });
                                     },
                                     child: Text(
@@ -322,6 +356,7 @@ class _OperasionalPengumumanFormSheetState extends State<OperasionalPengumumanFo
                                         } else {
                                           _selectedRoles.remove(role);
                                         }
+                                        _syncCabangWithSelectedRoles();
                                       });
                                     },
                                   );
@@ -337,21 +372,42 @@ class _OperasionalPengumumanFormSheetState extends State<OperasionalPengumumanFo
                                     'Berdasarkan Cabang (Opsional)',
                                     style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF475569)),
                                   ),
-                                  InkWell(
-                                    onTap: () {
-                                      setState(() {
-                                        if (_selectedCabangIds.length == _cabangList.length) {
-                                          _selectedCabangIds.clear();
-                                        } else {
-                                          _selectedCabangIds.addAll(_cabangList.map((c) => int.parse(c['id'].toString())));
-                                        }
-                                      });
-                                    },
-                                    child: Text(
-                                      _selectedCabangIds.length == _cabangList.length ? 'Batal Semua' : 'Pilih Semua',
-                                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: _primaryThemeColor),
+                                  if (_isOnlyHqRolesSelected)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFD1FAE5),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: const Color(0xFF6EE7B7)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.lock_rounded, size: 11, color: Color(0xFF065F46)),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Terkunci ke Kantor Pusat',
+                                            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF065F46)),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  else
+                                    InkWell(
+                                      onTap: () {
+                                        setState(() {
+                                          if (_selectedCabangIds.length == _cabangList.length) {
+                                            _selectedCabangIds.clear();
+                                          } else {
+                                            _selectedCabangIds.addAll(_cabangList.map((c) => int.parse(c['id'].toString())));
+                                          }
+                                        });
+                                      },
+                                      child: Text(
+                                        _selectedCabangIds.length == _cabangList.length ? 'Batal Semua' : 'Pilih Semua',
+                                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: _primaryThemeColor),
+                                      ),
                                     ),
-                                  ),
                                 ],
                               ),
                               const SizedBox(height: 8),
@@ -361,29 +417,61 @@ class _OperasionalPengumumanFormSheetState extends State<OperasionalPengumumanFo
                                 children: _cabangList.map((c) {
                                   final int cId = int.parse(c['id'].toString());
                                   final String cName = c['nama_cabang'] ?? c['nama'] ?? 'Cabang';
-                                  final isSelected = _selectedCabangIds.contains(cId);
+                                  final bool isPusat = cName.toLowerCase().contains('pusat');
+                                  final bool isLocked = _isOnlyHqRolesSelected;
+                                  final bool isSelected = isLocked ? isPusat : _selectedCabangIds.contains(cId);
 
-                                  return FilterChip(
-                                    label: Text(cName),
-                                    selected: isSelected,
-                                    selectedColor: _primaryThemeColor.withValues(alpha: 0.15),
-                                    backgroundColor: Colors.white,
-                                    side: BorderSide(color: isSelected ? _primaryThemeColor : const Color(0xFFCBD5E1)),
-                                    labelStyle: GoogleFonts.inter(
-                                      fontSize: 11.5,
-                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                      color: isSelected ? _primaryThemeColor : const Color(0xFF334155),
+                                  return Opacity(
+                                    opacity: isLocked && !isPusat ? 0.38 : 1.0,
+                                    child: FilterChip(
+                                      label: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(cName),
+                                          if (isLocked && isPusat) ...[
+                                            const SizedBox(width: 4),
+                                            const Icon(Icons.lock_rounded, size: 12, color: Color(0xFF059669)),
+                                          ],
+                                        ],
+                                      ),
+                                      selected: isSelected,
+                                      selectedColor: _primaryThemeColor.withValues(alpha: 0.15),
+                                      backgroundColor: Colors.white,
+                                      side: BorderSide(
+                                        color: isSelected
+                                            ? _primaryThemeColor
+                                            : (isLocked && !isPusat ? const Color(0xFFE2E8F0) : const Color(0xFFCBD5E1)),
+                                      ),
+                                      labelStyle: GoogleFonts.inter(
+                                        fontSize: 11.5,
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                        color: isSelected
+                                            ? _primaryThemeColor
+                                            : (isLocked && !isPusat ? const Color(0xFF94A3B8) : const Color(0xFF334155)),
+                                      ),
+                                      checkmarkColor: _primaryThemeColor,
+                                      onSelected: isLocked && !isPusat
+                                          ? (_) {
+                                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text('Jabatan yang dipilih (${_selectedRoles.join(', ')}) hanya berlokasi di Kantor Pusat.'),
+                                                  duration: const Duration(seconds: 2),
+                                                  backgroundColor: const Color(0xFF0F172A),
+                                                ),
+                                              );
+                                            }
+                                          : (selected) {
+                                              if (isLocked && isPusat) return;
+                                              setState(() {
+                                                if (selected) {
+                                                  _selectedCabangIds.add(cId);
+                                                } else {
+                                                  _selectedCabangIds.remove(cId);
+                                                }
+                                              });
+                                            },
                                     ),
-                                    checkmarkColor: _primaryThemeColor,
-                                    onSelected: (selected) {
-                                      setState(() {
-                                        if (selected) {
-                                          _selectedCabangIds.add(cId);
-                                        } else {
-                                          _selectedCabangIds.remove(cId);
-                                        }
-                                      });
-                                    },
                                   );
                                 }).toList(),
                               ),
@@ -393,19 +481,31 @@ class _OperasionalPengumumanFormSheetState extends State<OperasionalPengumumanFo
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: Colors.blue.shade50,
+                                  color: _isOnlyHqRolesSelected ? const Color(0xFFECFDF5) : Colors.blue.shade50,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.blue.shade200),
+                                  border: Border.all(color: _isOnlyHqRolesSelected ? const Color(0xFFA7F3D0) : Colors.blue.shade200),
                                 ),
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Icon(Icons.info_outline_rounded, size: 15, color: Colors.blue.shade700),
+                                    Icon(
+                                      _isOnlyHqRolesSelected ? Icons.verified_user_rounded : Icons.info_outline_rounded,
+                                      size: 15,
+                                      color: _isOnlyHqRolesSelected ? const Color(0xFF059669) : Colors.blue.shade700,
+                                    ),
                                     const SizedBox(width: 6),
                                     Expanded(
                                       child: Text(
-                                        'Jika jabatan dan cabang tidak ada yang dicentang, maka pesan akan dikirim ke Semua Karyawan.',
-                                        style: GoogleFonts.inter(fontSize: 11, color: Colors.blue.shade800, height: 1.3),
+                                        _isOnlyHqRolesSelected
+                                            ? 'Jabatan yang dipilih (${_selectedRoles.join(', ')}) merupakan divisi Kantor Pusat, sehingga target cabang otomatis dikunci ke Kantor Pusat.'
+                                            : (_selectedRoles.isEmpty && _selectedCabangIds.isEmpty
+                                                ? 'Jika jabatan dan cabang tidak ada yang dicentang, maka pesan akan dikirim ke Semua Karyawan.'
+                                                : 'Pengumuman akan dikirimkan kepada karyawan yang sesuai dengan kombinasi jabatan dan cabang yang dipilih.'),
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          color: _isOnlyHqRolesSelected ? const Color(0xFF065F46) : Colors.blue.shade800,
+                                          height: 1.35,
+                                        ),
                                       ),
                                     ),
                                   ],

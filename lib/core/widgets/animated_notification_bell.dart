@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/notification_service.dart';
@@ -22,13 +23,15 @@ class AnimatedNotificationBell extends StatefulWidget {
 }
 
 class _AnimatedNotificationBellState extends State<AnimatedNotificationBell>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _controller;
   late Animation<double> _animation;
+  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     // Subtle vibration / wiggling animation
     _controller = AnimationController(
@@ -49,11 +52,25 @@ class _AnimatedNotificationBellState extends State<AnimatedNotificationBell>
     // Initial fetch of notifications
     NotificationService.instance.refreshUnreadCount();
 
+    // Periodic check every 25 seconds
+    _pollingTimer = Timer.periodic(const Duration(seconds: 25), (_) {
+      if (mounted) {
+        NotificationService.instance.refreshUnreadCount();
+      }
+    });
+
     // Listen to changes in unread count to start/stop shake animation
     NotificationService.unreadCountNotifier.addListener(_onUnreadCountChanged);
 
     if (NotificationService.unreadCountNotifier.value > 0) {
       _controller.repeat();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      NotificationService.instance.refreshUnreadCount();
     }
   }
 
@@ -71,6 +88,8 @@ class _AnimatedNotificationBellState extends State<AnimatedNotificationBell>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _pollingTimer?.cancel();
     NotificationService.unreadCountNotifier.removeListener(_onUnreadCountChanged);
     _controller.dispose();
     super.dispose();
@@ -91,6 +110,9 @@ class _AnimatedNotificationBellState extends State<AnimatedNotificationBell>
         return InkWell(
           onTap: () async {
             await NotificationListSheet.show(context);
+            if (mounted) {
+              NotificationService.instance.refreshUnreadCount();
+            }
           },
           borderRadius: BorderRadius.circular(20),
           child: Container(

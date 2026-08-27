@@ -17,9 +17,12 @@ import '../../features/hrd/screens/tukar_libur/hrd_tukar_libur_screen.dart';
 import '../../features/hrd/screens/jadwal_libur/hrd_jadwal_libur_screen.dart';
 import '../../features/uang_kas/screens/uang_kas_screen.dart';
 import '../../features/konten_marketing/screens/konten_marketing_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/orders/screens/order_detail_screen.dart';
 import '../../features/orders/services/order_service.dart';
 import '../../features/cleaner/jobs/cleaner_job_detail_screen.dart';
+import '../../features/finance/screens/finance_approval_list_screen.dart';
+import '../../features/finance/screens/finance_approval_detail_screen.dart';
 
 class NotificationListSheet extends StatefulWidget {
   const NotificationListSheet({super.key});
@@ -72,6 +75,8 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
   }
 
   void _onNotificationTap(NotificationItem notification) async {
+    final nav = Navigator.of(context, rootNavigator: true);
+
     // 1. Mark as read in background
     if (!notification.isRead) {
       _service.markAsRead(notification.id);
@@ -93,14 +98,40 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
     final message = notification.message.toLowerCase();
     final data = notification.data;
 
+    final prefs = await SharedPreferences.getInstance();
+    final currentRole = (prefs.getString('user_role') ?? '').toLowerCase();
+
+    // 0. Approval Pembayaran (Khusus Finance)
+    if (type.contains('pembayaran') || screen.contains('approval_pembayaran')) {
+      if (currentRole.contains('finance') || currentRole.contains('admin') || currentRole.contains('ceo')) {
+        final pesananId = data['pesanan_id'] ?? data['id'];
+        if (pesananId != null) {
+          try {
+            final order = await OrderService().fetchOrderDetail(pesananId.toString());
+            nav.push(
+              MaterialPageRoute(
+                builder: (_) => FinanceApprovalDetailScreen(order: order),
+              ),
+            );
+            return;
+          } catch (_) {}
+        }
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => const FinanceApprovalListScreen(),
+          ),
+        );
+        return;
+      }
+    }
+
     // A. Karyawan Baru / Acc Karyawan
     if (type.contains('karyawan') ||
         screen.contains('karyawan') ||
         title.contains('karyawan baru') ||
         message.contains('karyawan baru') ||
         data['action'] == 'acc') {
-      Navigator.push(
-        context,
+      nav.push(
         MaterialPageRoute(
           builder: (_) => const KaryawanListScreen(initialTabIndex: 1),
         ),
@@ -110,8 +141,7 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
 
     // B. Pengumuman
     if (type.contains('pengumuman') || screen.contains('pengumuman')) {
-      Navigator.push(
-        context,
+      nav.push(
         MaterialPageRoute(
           builder: (_) => const OperasionalPengumumanScreen(),
         ),
@@ -121,8 +151,7 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
 
     // C. Uang Kas / Cashflow
     if (type.contains('kas') || type.contains('cashflow') || screen.contains('uang_kas')) {
-      Navigator.push(
-        context,
+      nav.push(
         MaterialPageRoute(
           builder: (_) => const UangKasScreen(),
         ),
@@ -132,8 +161,7 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
 
     // D. Approval Pengajuan / BHP
     if (type.contains('approval') || type.contains('pengajuan') || type.contains('bhp')) {
-      Navigator.push(
-        context,
+      nav.push(
         MaterialPageRoute(
           builder: (_) => const OperasionalApprovalPengajuanScreen(),
         ),
@@ -143,8 +171,7 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
 
     // E. Permintaan Design
     if (type.contains('design')) {
-      Navigator.push(
-        context,
+      nav.push(
         MaterialPageRoute(
           builder: (_) => const OperasionalPermintaanDesignScreen(),
         ),
@@ -154,8 +181,7 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
 
     // F. Data Kecelakaan / Insiden
     if (type.contains('kecelakaan') || type.contains('insiden') || screen.contains('kecelakaan')) {
-      Navigator.push(
-        context,
+      nav.push(
         MaterialPageRoute(
           builder: (_) => const OperasionalDataKecelakaanScreen(),
         ),
@@ -165,8 +191,7 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
 
     // G. Stok Opname
     if (type.contains('stok') || screen.contains('stok')) {
-      Navigator.push(
-        context,
+      nav.push(
         MaterialPageRoute(
           builder: (_) => const MonitoringStokOpnameScreen(),
         ),
@@ -176,8 +201,7 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
 
     // H. Quotation / Penawaran
     if (type.contains('quotation') || screen.contains('quotation')) {
-      Navigator.push(
-        context,
+      nav.push(
         MaterialPageRoute(
           builder: (_) => const OperasionalQuotationScreen(),
         ),
@@ -187,8 +211,7 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
 
     // I. Purchase Order
     if (type.contains('purchase_order') || type.contains('po')) {
-      Navigator.push(
-        context,
+      nav.push(
         MaterialPageRoute(
           builder: (_) => const OperasionalPurchaseOrderScreen(),
         ),
@@ -198,8 +221,7 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
 
     // J. Tagihan Bulanan
     if (type.contains('tagihan')) {
-      Navigator.push(
-        context,
+      nav.push(
         MaterialPageRoute(
           builder: (_) => const TagihanBulananScreen(),
         ),
@@ -209,8 +231,7 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
 
     // K. SIM
     if (type.contains('sim')) {
-      Navigator.push(
-        context,
+      nav.push(
         MaterialPageRoute(
           builder: (_) => const OperasionalSimScreen(),
         ),
@@ -220,8 +241,7 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
 
     // L. Cuti & Izin
     if (type.contains('cuti') || type.contains('izin')) {
-      Navigator.push(
-        context,
+      nav.push(
         MaterialPageRoute(
           builder: (_) => const HrdCutiScreen(),
         ),
@@ -231,8 +251,7 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
 
     // M. Tukar Libur
     if (type.contains('tukar_libur')) {
-      Navigator.push(
-        context,
+      nav.push(
         MaterialPageRoute(
           builder: (_) => const HrdTukarLiburScreen(),
         ),
@@ -242,8 +261,7 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
 
     // N. Jadwal Libur
     if (type.contains('jadwal_libur')) {
-      Navigator.push(
-        context,
+      nav.push(
         MaterialPageRoute(
           builder: (_) => const HrdJadwalLiburScreen(),
         ),
@@ -253,8 +271,7 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
 
     // O. Marketing
     if (type.contains('marketing') || type.contains('konten')) {
-      Navigator.push(
-        context,
+      nav.push(
         MaterialPageRoute(
           builder: (_) => const KontenMarketingScreen(),
         ),
@@ -264,20 +281,25 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
 
     // P. Order Detail
     if (type.contains('order') || screen.contains('order')) {
+      if (currentRole.contains('finance')) {
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => const FinanceApprovalListScreen(),
+          ),
+        );
+        return;
+      }
       final pesananId = data['pesanan_id'] ?? data['id'];
       if (pesananId != null) {
         final id = int.tryParse(pesananId.toString()) ?? 0;
         if (id > 0) {
           try {
             final order = await OrderService().fetchOrderDetail(id.toString());
-            if (mounted) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => OrderDetailScreen(order: order),
-                ),
-              );
-            }
+            nav.push(
+              MaterialPageRoute(
+                builder: (_) => OrderDetailScreen(order: order),
+              ),
+            );
           } catch (_) {}
           return;
         }
@@ -290,8 +312,7 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
       if (cleanerJobId != null) {
         final id = int.tryParse(cleanerJobId.toString()) ?? 0;
         if (id > 0) {
-          Navigator.push(
-            context,
+          nav.push(
             MaterialPageRoute(
               builder: (_) => CleanerJobDetailScreen(
                 job: {'id': id, 'status_pengerjaan': 'notified'},
