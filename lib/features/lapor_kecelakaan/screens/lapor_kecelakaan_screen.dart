@@ -1024,7 +1024,7 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Nama Korban (Cleaner) *',
+              'Nama Korban (Rekan Kerja) *',
               style: GoogleFonts.inter(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
@@ -1068,7 +1068,7 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
           icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
           dropdownColor: Colors.white,
           decoration: InputDecoration(
-            hintText: _isLoadingCleaners ? 'Memuat daftar cleaner...' : (_cleanerList.isEmpty ? 'Daftar cleaner kosong (Gunakan Input Manual)' : 'Pilih cleaner korban'),
+            hintText: _isLoadingCleaners ? 'Memuat rekan kerja...' : (_cleanerList.isEmpty ? 'Belum ada rekan kerja di cabang $_namaCabang' : 'Pilih rekan kerja korban ($_namaCabang)'),
             hintStyle: GoogleFonts.inter(fontSize: 12.5, color: const Color(0xFF94A3B8)),
             prefixIcon: const Icon(Icons.personal_injury_outlined, size: 18, color: Color(0xFF64748B)),
             filled: true,
