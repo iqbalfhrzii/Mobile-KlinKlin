@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/api/api_client.dart';
 import '../services/lapor_kecelakaan_service.dart';
 
 class LaporKecelakaanScreen extends StatefulWidget {
@@ -980,6 +981,8 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
         ),
       ],
     );
+  }
+
   Widget _buildCleanerDropdown() {
     final Map<String, dynamic> uniqueCleaners = {};
     for (var c in _cleanerList) {
