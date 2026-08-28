@@ -14,6 +14,8 @@ import '../../features/operasional/screens/tagihan_bulanan_screen.dart';
 import '../../features/operasional/screens/operasional_sim_screen.dart';
 import '../../features/hrd/screens/cuti/hrd_cuti_screen.dart';
 import '../../features/hrd/screens/tukar_libur/hrd_tukar_libur_screen.dart';
+import '../../features/profile/screens/leave_history_screen.dart';
+import '../../features/cleaner/tukar_libur/screens/tukar_libur_screen.dart';
 import '../../features/hrd/screens/jadwal_libur/hrd_jadwal_libur_screen.dart';
 import '../../features/uang_kas/screens/uang_kas_screen.dart';
 import '../../features/konten_marketing/screens/konten_marketing_screen.dart';
@@ -131,11 +133,13 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
         title.contains('karyawan baru') ||
         message.contains('karyawan baru') ||
         data['action'] == 'acc') {
-      nav.push(
-        MaterialPageRoute(
-          builder: (_) => const KaryawanListScreen(initialTabIndex: 1),
-        ),
-      );
+      if (currentRole.contains('hrd') || currentRole.contains('admin') || currentRole.contains('ceo')) {
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => const KaryawanListScreen(initialTabIndex: 1),
+          ),
+        );
+      }
       return;
     }
 
@@ -240,32 +244,62 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
     }
 
     // L. Cuti & Izin
-    if (type.contains('cuti') || type.contains('izin')) {
-      nav.push(
-        MaterialPageRoute(
-          builder: (_) => const HrdCutiScreen(),
-        ),
-      );
+    if (type.contains('cuti') || type.contains('izin') || screen.contains('cuti')) {
+      final isHrd = currentRole.contains('hrd') || currentRole.contains('admin') || currentRole.contains('ceo');
+      final isApprovalResult = title.contains('disetujui') ||
+          title.contains('ditolak') ||
+          message.contains('disetujui') ||
+          message.contains('ditolak');
+
+      if (isHrd && !isApprovalResult && (type.contains('cuti_hrd') || screen.contains('hrd_cuti'))) {
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => const HrdCutiScreen(),
+          ),
+        );
+      } else {
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => const LeaveHistoryScreen(),
+          ),
+        );
+      }
       return;
     }
 
     // M. Tukar Libur
-    if (type.contains('tukar_libur')) {
-      nav.push(
-        MaterialPageRoute(
-          builder: (_) => const HrdTukarLiburScreen(),
-        ),
-      );
+    if (type.contains('tukar_libur') || screen.contains('tukar_libur')) {
+      final isHrd = currentRole.contains('hrd') || currentRole.contains('admin') || currentRole.contains('ceo');
+      final isApprovalResult = title.contains('disetujui') ||
+          title.contains('ditolak') ||
+          message.contains('disetujui') ||
+          message.contains('ditolak');
+
+      if (isHrd && !isApprovalResult && (type.contains('tukar_libur_hrd') || screen.contains('hrd_tukar_libur'))) {
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => const HrdTukarLiburScreen(),
+          ),
+        );
+      } else {
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => const TukarLiburScreen(),
+          ),
+        );
+      }
       return;
     }
 
     // N. Jadwal Libur
     if (type.contains('jadwal_libur')) {
-      nav.push(
-        MaterialPageRoute(
-          builder: (_) => const HrdJadwalLiburScreen(),
-        ),
-      );
+      if (currentRole.contains('hrd') || currentRole.contains('admin') || currentRole.contains('ceo')) {
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => const HrdJadwalLiburScreen(),
+          ),
+        );
+      }
       return;
     }
 

@@ -726,7 +726,16 @@ class _LeaveHistoryScreenState extends State<LeaveHistoryScreen> {
     final alasan = item['alasan']?.toString() ?? '-';
     final adminNote = item['catatan_admin']?.toString();
     final photoUrl = item['bukti_foto_url'] ?? item['bukti_foto'];
-    final createdAt = item['created_at']?.toString();
+    
+    String? formattedCreatedAt;
+    if (item['created_at'] != null) {
+      try {
+        final dt = DateTime.parse(item['created_at'].toString()).toLocal();
+        formattedCreatedAt = DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(dt);
+      } catch (_) {
+        formattedCreatedAt = item['created_at'].toString();
+      }
+    }
 
     final statusColor = _getStatusColor(status);
     final statusBgColor = _getStatusBgColor(status);
@@ -868,9 +877,9 @@ class _LeaveHistoryScreenState extends State<LeaveHistoryScreen> {
                 _buildDetailRow('Catatan Admin / HRD', adminNote, isWarning: true),
               ],
 
-              if (createdAt != null) ...[
+              if (formattedCreatedAt != null) ...[
                 const SizedBox(height: 10),
-                _buildDetailRow('Waktu Pengajuan', createdAt),
+                _buildDetailRow('Waktu Pengajuan', formattedCreatedAt),
               ],
 
               if (photoUrl != null && photoUrl.toString().isNotEmpty) ...[

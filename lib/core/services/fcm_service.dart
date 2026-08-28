@@ -16,6 +16,8 @@ import '../../features/operasional/screens/tagihan_bulanan_screen.dart';
 import '../../features/operasional/screens/operasional_sim_screen.dart';
 import '../../features/hrd/screens/cuti/hrd_cuti_screen.dart';
 import '../../features/hrd/screens/tukar_libur/hrd_tukar_libur_screen.dart';
+import '../../features/profile/screens/leave_history_screen.dart';
+import '../../features/cleaner/tukar_libur/screens/tukar_libur_screen.dart';
 import '../../features/hrd/screens/jadwal_libur/hrd_jadwal_libur_screen.dart';
 import '../../features/hrd/screens/karyawan/karyawan_list_screen.dart';
 import '../../features/designer/screens/designer_aset_sosmed_screen.dart';
@@ -324,6 +326,8 @@ class FcmService {
 
     final type = (message.data['type'] ?? '').toString();
     final screen = (message.data['screen'] ?? '').toString();
+    final title = (message.notification?.title ?? message.data['title'] ?? '').toString();
+    final body = (message.notification?.body ?? message.data['body'] ?? message.data['message'] ?? '').toString();
 
     // 0. Approval Pembayaran (Khusus Finance)
     if (type == 'pembayaran_pending' || screen == 'approval_pembayaran') {
@@ -480,44 +484,76 @@ class FcmService {
       return;
     }
 
-    // 13. HRD Cuti & Izin
-    if (type == 'cuti_hrd' || screen == 'hrd_cuti' || type == 'cuti') {
-      navState.push(
-        MaterialPageRoute(
-          builder: (_) => const HrdCutiScreen(),
-        ),
-      );
+    // 13. Cuti & Izin
+    if (type == 'cuti_hrd' || screen == 'hrd_cuti' || type == 'cuti' || screen == 'cuti' || type.contains('cuti') || type.contains('izin')) {
+      final isHrd = currentRole.contains('hrd') || currentRole.contains('admin') || currentRole.contains('ceo');
+      final isApprovalResult = title.toLowerCase().contains('disetujui') ||
+          title.toLowerCase().contains('ditolak') ||
+          body.toLowerCase().contains('disetujui') ||
+          body.toLowerCase().contains('ditolak');
+
+      if (isHrd && !isApprovalResult && (type == 'cuti_hrd' || screen == 'hrd_cuti')) {
+        navState.push(
+          MaterialPageRoute(
+            builder: (_) => const HrdCutiScreen(),
+          ),
+        );
+      } else {
+        navState.push(
+          MaterialPageRoute(
+            builder: (_) => const LeaveHistoryScreen(),
+          ),
+        );
+      }
       return;
     }
 
-    // 14. HRD Tukar Libur
-    if (type == 'tukar_libur_hrd' || screen == 'hrd_tukar_libur' || type == 'tukar_libur') {
-      navState.push(
-        MaterialPageRoute(
-          builder: (_) => const HrdTukarLiburScreen(),
-        ),
-      );
+    // 14. Tukar Libur
+    if (type == 'tukar_libur_hrd' || screen == 'hrd_tukar_libur' || type == 'tukar_libur' || screen == 'tukar_libur' || type.contains('tukar_libur')) {
+      final isHrd = currentRole.contains('hrd') || currentRole.contains('admin') || currentRole.contains('ceo');
+      final isApprovalResult = title.toLowerCase().contains('disetujui') ||
+          title.toLowerCase().contains('ditolak') ||
+          body.toLowerCase().contains('disetujui') ||
+          body.toLowerCase().contains('ditolak');
+
+      if (isHrd && !isApprovalResult && (type == 'tukar_libur_hrd' || screen == 'hrd_tukar_libur')) {
+        navState.push(
+          MaterialPageRoute(
+            builder: (_) => const HrdTukarLiburScreen(),
+          ),
+        );
+      } else {
+        navState.push(
+          MaterialPageRoute(
+            builder: (_) => const TukarLiburScreen(),
+          ),
+        );
+      }
       return;
     }
 
     // 15. HRD Jadwal Libur
     if (type == 'jadwal_libur' || screen == 'jadwal_libur') {
-      navState.push(
-        MaterialPageRoute(
-          builder: (_) => const HrdJadwalLiburScreen(),
-        ),
-      );
+      if (currentRole.contains('hrd') || currentRole.contains('admin') || currentRole.contains('ceo')) {
+        navState.push(
+          MaterialPageRoute(
+            builder: (_) => const HrdJadwalLiburScreen(),
+          ),
+        );
+      }
       return;
     }
 
     // 16. HRD Data Karyawan & Acc Karyawan Baru
     if (type.contains('karyawan') || screen.contains('karyawan') || type == 'karyawan_baru') {
-      final isAcc = message.data['action'] == 'acc' || type == 'karyawan_baru';
-      navState.push(
-        MaterialPageRoute(
-          builder: (_) => KaryawanListScreen(initialTabIndex: isAcc ? 1 : 0),
-        ),
-      );
+      if (currentRole.contains('hrd') || currentRole.contains('admin') || currentRole.contains('ceo')) {
+        final isAcc = message.data['action'] == 'acc' || type == 'karyawan_baru';
+        navState.push(
+          MaterialPageRoute(
+            builder: (_) => KaryawanListScreen(initialTabIndex: isAcc ? 1 : 0),
+          ),
+        );
+      }
       return;
     }
 
