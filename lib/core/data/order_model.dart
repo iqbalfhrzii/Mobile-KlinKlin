@@ -655,7 +655,13 @@ class OrderModel {
       waktuBatal: orderJson['waktu_batal'] != null 
           ? DateTime.tryParse(orderJson['waktu_batal']) 
           : (orderJson['pembatalan']?['waktu_batal'] != null ? DateTime.tryParse(orderJson['pembatalan']['waktu_batal']) : (orderJson['pembatalan']?['created_at'] != null ? DateTime.tryParse(orderJson['pembatalan']['created_at']) : (json['created_at'] != null ? DateTime.tryParse(json['created_at']) : null))),
-      ppn: orderJson['pembayaran']?['ppn'] != null ? (double.tryParse(orderJson['pembayaran']['ppn'].toString())?.toInt()) : (orderJson['ppn'] != null ? (double.tryParse(orderJson['ppn'].toString())?.toInt()) : (json['pembayaran']?['ppn'] != null ? double.tryParse(json['pembayaran']['ppn'].toString())?.toInt() : (json['ppn'] != null ? double.tryParse(json['ppn'].toString())?.toInt() : null))),
+      ppn: () {
+        final raw = orderJson['pembayaran']?['ppn'] ?? orderJson['ppn'] ?? json['pembayaran']?['ppn'] ?? json['ppn'];
+        if (raw != null) {
+          return double.tryParse(raw.toString())?.toInt();
+        }
+        return wajibPpn ? 11 : null;
+      }(),
       pph: orderJson['pembayaran']?['pph'] != null ? (double.tryParse(orderJson['pembayaran']['pph'].toString())?.toInt()) : (orderJson['pph'] != null ? (double.tryParse(orderJson['pph'].toString())?.toInt()) : (json['pembayaran']?['pph'] != null ? double.tryParse(json['pembayaran']['pph'].toString())?.toInt() : (json['pph'] != null ? double.tryParse(json['pph'].toString())?.toInt() : null))),
       discount: orderJson['pembayaran']?['diskon_persen'] != null ? (double.tryParse(orderJson['pembayaran']['diskon_persen'].toString())?.toInt()) : (orderJson['diskon_persen'] != null ? (double.tryParse(orderJson['diskon_persen'].toString())?.toInt()) : (json['pembayaran']?['diskon_persen'] != null ? double.tryParse(json['pembayaran']['diskon_persen'].toString())?.toInt() : (json['diskon_persen'] != null ? double.tryParse(json['diskon_persen'].toString())?.toInt() : 0))),
       hasPendingEditRequest: hasPendingEdit,

@@ -170,7 +170,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     final double diskonPersen = o.pembayaran?.diskonPersen ?? 0.0;
     final int diskonValue = (o.total * (diskonPersen / 100)).round();
     final int totalSetelahDiskon = o.total - diskonValue;
-    final int ppnPersen = o.ppn ?? o.pembayaran?.ppn ?? 0;
+    final int ppnPersen = o.ppn ?? (o.pembayaran?.ppn ?? (o.isWajibPpn ? 11 : 0));
     final int ppnValue = (o.pembayaran != null || o.ppn != null)
         ? (totalSetelahDiskon * (ppnPersen / 100)).round()
         : 0;
@@ -867,7 +867,7 @@ class _PaymentCard extends StatelessWidget {
     final double diskonPersen = o.pembayaran?.diskonPersen ?? 0.0;
     final int diskonValue = (o.total * (diskonPersen / 100)).round();
     final int totalSetelahDiskon = o.total - diskonValue;
-    final int ppnPersen = o.ppn ?? o.pembayaran?.ppn ?? 0;
+    final int ppnPersen = o.ppn ?? (o.pembayaran?.ppn ?? (o.isWajibPpn ? 11 : 0));
     final int ppnValue = (o.pembayaran != null || o.ppn != null)
         ? (totalSetelahDiskon * (ppnPersen / 100)).round()
         : 0;

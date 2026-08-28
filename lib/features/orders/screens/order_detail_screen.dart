@@ -33,16 +33,19 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   late OrderModel _o;
   bool _isLoading = false;
 
-  bool get _canEdit {
-    if (widget.isReadOnly) return false;
-    return _o.statusUtamaLabel != 'Done' &&
-        _o.status != OrderStatus.completed &&
-        _o.status != OrderStatus.cancelled;
-  }
-
   bool get _isPaid {
     final s = _o.paymentStatus.toLowerCase();
-    return s == 'paid' || s == 'lunas' || s == 'settlement';
+    return s == 'paid' || s == 'lunas' || s == 'settlement' || s == 'approved' || s == 'disetujui' || _o.status == OrderStatus.completed;
+  }
+
+  bool get _canEdit {
+    if (widget.isReadOnly) return false;
+    if (_o.status == OrderStatus.cancelled || _o.paymentStatus.toLowerCase() == 'cancelled') return false;
+    // Jika cleaner sudah selesai pengerjaan atau sudah dibayar, alihkan ke "Ajukan Edit"
+    return _o.status != OrderStatus.finishedByCleaner &&
+        _o.status != OrderStatus.completed &&
+        _o.statusUtamaLabel != 'Done' &&
+        !_isPaid;
   }
 
   @override
@@ -69,7 +72,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   Future<void> _togglePpn() async {
     if (_isPaid) return;
 
-    final bool currentPpnStatus = (_o.ppn ?? _o.pembayaran?.ppn ?? 0) > 0;
+    final bool currentPpnStatus = (_o.ppn ?? _o.pembayaran?.ppn ?? (_o.isWajibPpn ? 11 : 0)) > 0;
     final int newPpn = currentPpnStatus ? 0 : 11;
 
     setState(() {
@@ -1103,7 +1106,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               final int diskonValue = (o.total * (diskonPersen / 100)).round();
               final int totalSetelahDiskon = o.total - diskonValue;
 
-              final int ppnPersen = o.ppn ?? o.pembayaran?.ppn ?? 0;
+              final int ppnPersen = o.ppn ?? (o.pembayaran?.ppn ?? (o.isWajibPpn ? 11 : 0));
               final int ppnValue = (totalSetelahDiskon * (ppnPersen / 100))
                   .round();
               final int pphPersen = o.pph ?? o.pembayaran?.pph ?? 0;
@@ -1160,63 +1163,69 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      InkWell(
-                        onTap: () {
-                          if (!_isPaid) {
-                            _togglePpn();
-                          }
-                        },
-                        borderRadius: BorderRadius.circular(4),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 4,
-                            horizontal: 2,
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                ppnPersen > 0
-                                    ? Icons.check_box_rounded
-                                    : Icons.check_box_outline_blank_rounded,
-                                size: 18,
-                                color: ppnPersen > 0
-                                    ? AppColors.primary
-                                    : AppColors.textMuted,
-                              ),
-                              const SizedBox(width: 8),
-                              Row(
-                                children: [
-                                  Text(
-                                    'PPN (11%)',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      color: ppnPersen > 0 ? AppColors.textDark : AppColors.textMuted,
-                                    ),
-                                  ),
-                                  if (_o.isWajibPpn) ...[
-                                    const SizedBox(width: 5),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFDBEAFE),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        'Default Cabang',
+                      Expanded(
+                        child: InkWell(
+                          onTap: () {
+                            if (!_isPaid) {
+                              _togglePpn();
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(4),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 4,
+                              horizontal: 2,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  ppnPersen > 0
+                                      ? Icons.check_box_rounded
+                                      : Icons.check_box_outline_blank_rounded,
+                                  size: 18,
+                                  color: ppnPersen > 0
+                                      ? AppColors.primary
+                                      : AppColors.textMuted,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Wrap(
+                                    spacing: 4,
+                                    runSpacing: 2,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    children: [
+                                      Text(
+                                        'PPN (11%)',
                                         style: GoogleFonts.inter(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w600,
-                                          color: const Color(0xFF1E40AF),
+                                          fontSize: 13,
+                                          color: ppnPersen > 0 ? AppColors.textDark : AppColors.textMuted,
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ],
+                                      if (_o.isWajibPpn)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFDBEAFE),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            'Default Cabang',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w600,
+                                              color: const Color(0xFF1E40AF),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         _formatRupiah(ppnValue),
                         style: GoogleFonts.inter(

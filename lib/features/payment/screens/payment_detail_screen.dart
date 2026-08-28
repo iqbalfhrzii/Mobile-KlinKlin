@@ -1763,6 +1763,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Expanded(
+                        flex: 5,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -1814,8 +1815,9 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                       Expanded(
+                        flex: 6,
                         child: Column(
                           children: [
                             // PPN (11%) - Auto centang jika cabang wajib PPN, namun dapat diuncentang/diubah bebas oleh CS
@@ -1828,8 +1830,8 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                               borderRadius: BorderRadius.circular(12),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
+                                  horizontal: 8,
+                                  vertical: 7,
                                 ),
                                 decoration: BoxDecoration(
                                   color: applyPpn
@@ -1846,8 +1848,8 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                 child: Row(
                                   children: [
                                     SizedBox(
-                                      width: 24,
-                                      height: 24,
+                                      width: 20,
+                                      height: 20,
                                       child: Checkbox(
                                         value: applyPpn,
                                         onChanged: (v) {
@@ -1859,53 +1861,56 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 6),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Row(
+                                          Wrap(
+                                            spacing: 4,
+                                            runSpacing: 2,
+                                            crossAxisAlignment: WrapCrossAlignment.center,
                                             children: [
                                               Text(
                                                 'PPN (11%)',
                                                 style: GoogleFonts.inter(
-                                                  fontSize: 12.5,
+                                                  fontSize: 11.5,
                                                   fontWeight: FontWeight.w600,
                                                   color: applyPpn
                                                       ? const Color(0xFF1E293B)
                                                       : const Color(0xFF94A3B8),
                                                 ),
                                               ),
-                                              if (isWajibPpn) ...[
-                                                const SizedBox(width: 5),
+                                              if (isWajibPpn)
                                                 Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                                                   decoration: BoxDecoration(
                                                     color: const Color(0xFFDBEAFE),
                                                     borderRadius: BorderRadius.circular(4),
                                                   ),
                                                   child: Text(
-                                                    'Default Cabang',
+                                                    'Default',
                                                     style: GoogleFonts.inter(
-                                                      fontSize: 9,
-                                                      fontWeight: FontWeight.w600,
+                                                      fontSize: 8.5,
+                                                      fontWeight: FontWeight.w700,
                                                       color: const Color(0xFF1E40AF),
                                                     ),
                                                   ),
                                                 ),
-                                              ],
                                             ],
                                           ),
                                           Text(
-                                            applyPpn ? 'Dikenakan PPN 11%' : 'Tanpa PPN (Bisa Dicentang)',
+                                            applyPpn ? 'Dikenakan PPN' : 'Tanpa PPN',
                                             style: GoogleFonts.inter(
-                                              fontSize: 10,
+                                              fontSize: 9.5,
                                               fontWeight: FontWeight.w500,
                                               color: applyPpn
                                                   ? const Color(0xFF2563EB)
                                                   : const Color(0xFF94A3B8),
                                             ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ],
                                       ),
@@ -1914,17 +1919,18 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 6),
                             InkWell(
                               onTap: () {
                                 setModal(() {
                                   applyPph = !applyPph;
                                 });
                               },
+                              borderRadius: BorderRadius.circular(12),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
+                                  horizontal: 8,
+                                  vertical: 7,
                                 ),
                                 decoration: BoxDecoration(
                                   color: AppColors.surface,
@@ -1939,15 +1945,16 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                 child: Row(
                                   children: [
                                     SizedBox(
-                                      width: 24,
-                                      height: 24,
+                                      width: 20,
+                                      height: 20,
                                       child: Checkbox(
                                         value: applyPph,
                                         onChanged: (val) {
-                                          if (val != null)
+                                          if (val != null) {
                                             setModal(() {
                                               applyPph = val;
                                             });
+                                          }
                                         },
                                         activeColor: AppColors.primary,
                                         shape: RoundedRectangleBorder(
@@ -1955,15 +1962,17 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 6),
                                     Expanded(
                                       child: Text(
                                         'PPh (2%)',
                                         style: GoogleFonts.inter(
-                                          fontSize: 13,
+                                          fontSize: 12,
                                           fontWeight: FontWeight.w600,
                                           color: AppColors.textDark,
                                         ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ],

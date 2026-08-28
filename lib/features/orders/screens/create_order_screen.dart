@@ -3050,71 +3050,79 @@ class _Step4SummaryState extends State<_Step4Summary> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: Checkbox(
-                            value: widget.draft.applyPpn,
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() {
-                                  widget.draft.applyPpn = val;
-                                });
-                              }
-                            },
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: Checkbox(
+                              value: widget.draft.applyPpn,
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setState(() {
+                                    widget.draft.applyPpn = val;
+                                  });
+                                }
+                              },
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              activeColor: AppColors.primary,
                             ),
-                            activeColor: AppColors.primary,
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'PPN (11%)',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: widget.draft.applyPpn ? AppColors.textDark : AppColors.textMuted,
-                                  ),
-                                ),
-                                if (widget.isBranchWajibPpn) ...[
-                                  const SizedBox(width: 5),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFDBEAFE),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      'Default Cabang',
+                                Wrap(
+                                  spacing: 4,
+                                  runSpacing: 2,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Text(
+                                      'PPN (11%)',
                                       style: GoogleFonts.inter(
-                                        fontSize: 9,
+                                        fontSize: 12.5,
                                         fontWeight: FontWeight.w600,
-                                        color: const Color(0xFF1E40AF),
+                                        color: widget.draft.applyPpn ? AppColors.textDark : AppColors.textMuted,
                                       ),
                                     ),
+                                    if (widget.isBranchWajibPpn)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFDBEAFE),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          'Default Cabang',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w600,
+                                            color: const Color(0xFF1E40AF),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                Text(
+                                  widget.draft.applyPpn ? 'Dikenakan PPN 11%' : 'Tanpa PPN',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    color: widget.draft.applyPpn ? const Color(0xFF2563EB) : AppColors.textMuted,
                                   ),
-                                ],
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ],
                             ),
-                            Text(
-                              widget.draft.applyPpn ? 'Dikenakan PPN 11%' : 'Tanpa PPN (Bisa Dicentang)',
-                              style: GoogleFonts.inter(
-                                fontSize: 10,
-                                color: widget.draft.applyPpn ? const Color(0xFF2563EB) : AppColors.textMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
                       'Rp ${CurrencyInputFormatter.format(ppn)}',
                       style: GoogleFonts.inter(
