@@ -25,6 +25,22 @@ class NotificationItem {
 
   bool get isRead => readAt != null;
 
+  String get displayTitle {
+    final nomorPesanan = data['nomor_pesanan']?.toString().trim();
+    if (nomorPesanan != null && nomorPesanan.isNotEmpty && !nomorPesanan.startsWith('#')) {
+      return title.replaceAll(RegExp(r'pesanan\s*#\d+', caseSensitive: false), 'pesanan $nomorPesanan');
+    }
+    return title;
+  }
+
+  String get displayMessage {
+    final nomorPesanan = data['nomor_pesanan']?.toString().trim();
+    if (nomorPesanan != null && nomorPesanan.isNotEmpty && !nomorPesanan.startsWith('#')) {
+      return message.replaceAll(RegExp(r'pesanan\s*#\d+', caseSensitive: false), 'pesanan $nomorPesanan');
+    }
+    return message;
+  }
+
   factory NotificationItem.fromJson(Map<String, dynamic> json) {
     return NotificationItem(
       id: json['id']?.toString() ?? '',

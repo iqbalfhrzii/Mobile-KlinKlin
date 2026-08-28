@@ -312,7 +312,8 @@ class _OperasionalDataKecelakaanScreenState extends State<OperasionalDataKecelak
 
     final cabangName = data['cabang']?['nama_cabang'] ?? data['cabang']?['nama'] ?? '-';
     final namaKaryawan = data['nama_karyawan'] ?? '-';
-    final jabatan = data['jabatan'] ?? '-';
+    final rawJabatan = (data['jabatan']?.toString() ?? '').trim();
+    final jabatan = (rawJabatan.isNotEmpty && rawJabatan != '-' && rawJabatan != 'null') ? rawJabatan : 'Cleaner';
     final tingkat = data['tingkat'] ?? 'Ringan';
     final tingkatColor = _getTingkatColor(tingkat);
     final tingkatBgColor = _getTingkatBgColor(tingkat);
@@ -1130,7 +1131,8 @@ class _OperasionalDataKecelakaanScreenState extends State<OperasionalDataKecelak
 
         final cabangName = item['cabang']?['nama_cabang'] ?? item['cabang']?['nama'] ?? '-';
         final namaKaryawan = item['nama_karyawan'] ?? '-';
-        final jabatan = item['jabatan'] ?? '-';
+        final rawJabatan = (item['jabatan']?.toString() ?? '').trim();
+        final jabatan = (rawJabatan.isNotEmpty && rawJabatan != '-' && rawJabatan != 'null') ? rawJabatan : 'Cleaner';
         final tingkat = item['tingkat'] ?? 'Ringan';
         final tingkatColor = _getTingkatColor(tingkat);
         final tingkatBgColor = _getTingkatBgColor(tingkat);

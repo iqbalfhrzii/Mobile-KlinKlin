@@ -374,7 +374,7 @@ class OrderService {
             'status_pengerjaan': 'free',
             'rating': 5.0,
             'orders': 0,
-            'foto_profil': e['foto_profil'] ?? e['foto'] ?? (e['user'] != null && e['user'] is Map ? e['user']['foto_profil'] : null),
+            'foto_profil': e['foto_profil'] ?? e['foto'] ?? e['foto_url'] ?? e['foto_profil_url'] ?? e['profile_photo_url'] ?? (e['user'] != null && e['user'] is Map ? (e['user']['foto_profil'] ?? e['user']['foto_url'] ?? e['user']['foto'] ?? e['user']['profile_photo_url']) : null),
           };
         }).toList();
 
@@ -465,6 +465,29 @@ class OrderService {
         throw Exception(errMsg);
       }
       throw Exception('Gagal membatalkan pesanan: $e');
+    }
+  }
+
+  /// Hapus pesanan secara permanen
+  Future<bool> deleteOrder(String id) async {
+    try {
+      final response = await _dio.delete('/pesanan/$id');
+      if (response.data is Map && response.data['status'] == false) {
+        throw Exception(response.data['message'] ?? 'Gagal menghapus pesanan');
+      }
+      return true;
+    } catch (e) {
+      if (e is DioException) {
+        final data = e.response?.data;
+        String errMsg = e.message ?? 'Terjadi kesalahan koneksi';
+        if (data is Map<String, dynamic>) {
+          errMsg = data['message'] ?? data.toString();
+        } else if (data != null) {
+          errMsg = data.toString();
+        }
+        throw Exception(errMsg);
+      }
+      throw Exception('Gagal menghapus pesanan: $e');
     }
   }
 }

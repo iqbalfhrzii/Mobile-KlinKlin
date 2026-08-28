@@ -23,6 +23,21 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
   String _error = '';
   Map<String, dynamic>? _data;
 
+  // Sorting for KPI Tab (Matching Web Livewire ReportKpiPage)
+  String _sortField = 'kpi_omzet';
+  bool _sortAsc = false;
+
+  void _onSort(String field) {
+    setState(() {
+      if (_sortField == field) {
+        _sortAsc = !_sortAsc;
+      } else {
+        _sortField = field;
+        _sortAsc = false; // Default desc for new field like in Web
+      }
+    });
+  }
+
   // Filters for KPI Tab
   String _selectedFilter = 'Bulan Ini';
   final List<String> _filters = ['Bulan Ini', 'Kemarin', 'Hari Ini', 'Besok', 'Kustom Tanggal'];
@@ -538,7 +553,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
                         children: [
                           _buildIndicatorPill(
                             label: 'Hijau',
-                            range: '≥ ${targetAmanGlobal.toStringAsFixed(0)}%',
+                            range: '≥ ${targetAmanGlobal.toStringAsFixed(1)}%',
                             bgColor: const Color(0xFFECFDF5),
                             borderColor: const Color(0xFFA7F3D0),
                             textColor: const Color(0xFF059669),
@@ -546,7 +561,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
                           const SizedBox(width: 6),
                           _buildIndicatorPill(
                             label: 'Kuning',
-                            range: '${kuningMin.toStringAsFixed(0)}% - ${(targetAmanGlobal - 1).clamp(0, 100).toStringAsFixed(0)}%',
+                            range: '≥ ${kuningMin.toStringAsFixed(1)}%',
                             bgColor: const Color(0xFFFFFBEB),
                             borderColor: const Color(0xFFFDE68A),
                             textColor: const Color(0xFFD97706),
@@ -554,7 +569,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
                           const SizedBox(width: 6),
                           _buildIndicatorPill(
                             label: 'Merah',
-                            range: '< ${kuningMin.toStringAsFixed(0)}%',
+                            range: '< ${kuningMin.toStringAsFixed(1)}%',
                             bgColor: const Color(0xFFFFF1F2),
                             borderColor: const Color(0xFFFECDD3),
                             textColor: const Color(0xFFE11D48),
@@ -568,6 +583,10 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
             },
           ),
 
+        // Sort Bar (Matching Web Livewire ReportKpiPage)
+        if (!_isLoading && _error.isEmpty && _data != null)
+          _buildSortChips(),
+
         // Table
         Expanded(
           child: _isLoading
@@ -580,9 +599,112 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
     );
   }
 
+  Widget _buildSortChips() {
+    final sortOptions = [
+      {'field': 'kpi_omzet', 'label': 'KPI Omzet'},
+      {'field': 'cabang_nama', 'label': 'Cabang'},
+      {'field': 'target_aman', 'label': 'Target Aman'},
+      {'field': 'growth', 'label': 'Growth'},
+      {'field': 'omzet_dicapai', 'label': 'Omzet Dicapai'},
+      {'field': 'target_omzet', 'label': 'Target Omzet'},
+    ];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: Colors.white,
+      child: Row(
+        children: [
+          const Icon(Icons.sort_rounded, size: 16, color: Color(0xFF64748B)),
+          const SizedBox(width: 6),
+          Text(
+            'Urutkan:',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF475569),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: sortOptions.map((opt) {
+                  final field = opt['field']!;
+                  final label = opt['label']!;
+                  final isSelected = _sortField == field;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: InkWell(
+                      onTap: () => _onSort(field),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: isSelected ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                            width: isSelected ? 1.5 : 1.0,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              label,
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                color: isSelected ? const Color(0xFF1D4ED8) : const Color(0xFF64748B),
+                              ),
+                            ),
+                            if (isSelected) ...[
+                              const SizedBox(width: 4),
+                              Icon(
+                                _sortAsc ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                                size: 12,
+                                color: const Color(0xFF1D4ED8),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildKpiTable() {
-    final list = _data!['kpi_per_cabang'] as List;
-    if (list.isEmpty) return const Center(child: Text('Tidak ada data'));
+    final rawList = List<Map<String, dynamic>>.from(_data!['kpi_per_cabang'] ?? []);
+    if (rawList.isEmpty) return const Center(child: Text('Tidak ada data'));
+
+    rawList.sort((a, b) {
+      dynamic valA = a[_sortField] ?? a['nama_cabang'] ?? 0;
+      dynamic valB = b[_sortField] ?? b['nama_cabang'] ?? 0;
+
+      if (_sortField == 'cabang_nama' || _sortField == 'nama_cabang') {
+        valA = (a['nama_cabang'] ?? '').toString().toLowerCase();
+        valB = (b['nama_cabang'] ?? '').toString().toLowerCase();
+      }
+
+      int comparison;
+      if (valA is num && valB is num) {
+        comparison = valA.compareTo(valB);
+      } else {
+        comparison = valA.toString().compareTo(valB.toString());
+      }
+      return _sortAsc ? comparison : -comparison;
+    });
+
+    final list = rawList;
 
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
@@ -759,7 +881,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
                         ),
                       ),
                       Text(
-                        '${item['target_aman']}%',
+                        '${(item['target_aman'] as num).toDouble().toStringAsFixed(1)}%',
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,

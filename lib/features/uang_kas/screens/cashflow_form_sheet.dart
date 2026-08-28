@@ -389,7 +389,7 @@ class _CashflowFormSheetState extends State<CashflowFormSheet> {
                             borderRadius: BorderRadius.circular(9),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 180),
-                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
                               decoration: BoxDecoration(
                                 color: _arus == 'Masuk' ? const Color(0xFF16A34A) : Colors.transparent,
                                 borderRadius: BorderRadius.circular(9),
@@ -402,14 +402,20 @@ class _CashflowFormSheetState extends State<CashflowFormSheet> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.arrow_downward_rounded, size: 16, color: _arus == 'Masuk' ? Colors.white : const Color(0xFF64748B)),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Kas Masuk (Pemasukan)',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: _arus == 'Masuk' ? FontWeight.bold : FontWeight.w600,
-                                      color: _arus == 'Masuk' ? Colors.white : const Color(0xFF64748B),
+                                  Icon(Icons.arrow_downward_rounded, size: 15, color: _arus == 'Masuk' ? Colors.white : const Color(0xFF16A34A)),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        'Kas Masuk (Pemasukan)',
+                                        maxLines: 1,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11.5,
+                                          fontWeight: _arus == 'Masuk' ? FontWeight.bold : FontWeight.w600,
+                                          color: _arus == 'Masuk' ? Colors.white : const Color(0xFF64748B),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -423,7 +429,7 @@ class _CashflowFormSheetState extends State<CashflowFormSheet> {
                             borderRadius: BorderRadius.circular(9),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 180),
-                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
                               decoration: BoxDecoration(
                                 color: _arus == 'Keluar' ? const Color(0xFFDC2626) : Colors.transparent,
                                 borderRadius: BorderRadius.circular(9),
@@ -436,14 +442,20 @@ class _CashflowFormSheetState extends State<CashflowFormSheet> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.arrow_upward_rounded, size: 16, color: _arus == 'Keluar' ? Colors.white : const Color(0xFF64748B)),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Kas Keluar (Pengeluaran)',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: _arus == 'Keluar' ? FontWeight.bold : FontWeight.w600,
-                                      color: _arus == 'Keluar' ? Colors.white : const Color(0xFF64748B),
+                                  Icon(Icons.arrow_upward_rounded, size: 15, color: _arus == 'Keluar' ? Colors.white : const Color(0xFFDC2626)),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        'Kas Keluar (Pengeluaran)',
+                                        maxLines: 1,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11.5,
+                                          fontWeight: _arus == 'Keluar' ? FontWeight.bold : FontWeight.w600,
+                                          color: _arus == 'Keluar' ? Colors.white : const Color(0xFF64748B),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -575,7 +587,7 @@ class _CashflowFormSheetState extends State<CashflowFormSheet> {
                           onTap: () => setState(() => _metode = 'cash'),
                           borderRadius: BorderRadius.circular(10),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
                             decoration: BoxDecoration(
                               color: _metode == 'cash' ? AppColors.primaryMid.withValues(alpha: 0.1) : const Color(0xFFF8FAFC),
                               borderRadius: BorderRadius.circular(10),
@@ -585,13 +597,19 @@ class _CashflowFormSheetState extends State<CashflowFormSheet> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(Icons.payments_outlined, size: 16, color: _metode == 'cash' ? AppColors.primaryMid : const Color(0xFF64748B)),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Tunai (Cash)',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    fontWeight: _metode == 'cash' ? FontWeight.bold : FontWeight.w500,
-                                    color: _metode == 'cash' ? AppColors.primaryMid : const Color(0xFF64748B),
+                                const SizedBox(width: 5),
+                                Flexible(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      'Tunai (Cash)',
+                                      maxLines: 1,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: _metode == 'cash' ? FontWeight.bold : FontWeight.w500,
+                                        color: _metode == 'cash' ? AppColors.primaryMid : const Color(0xFF64748B),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -605,7 +623,7 @@ class _CashflowFormSheetState extends State<CashflowFormSheet> {
                           onTap: () => setState(() => _metode = 'transfer'),
                           borderRadius: BorderRadius.circular(10),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
                             decoration: BoxDecoration(
                               color: _metode == 'transfer' ? AppColors.primaryMid.withValues(alpha: 0.1) : const Color(0xFFF8FAFC),
                               borderRadius: BorderRadius.circular(10),
@@ -615,13 +633,19 @@ class _CashflowFormSheetState extends State<CashflowFormSheet> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(Icons.account_balance_outlined, size: 16, color: _metode == 'transfer' ? AppColors.primaryMid : const Color(0xFF64748B)),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Transfer Bank',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    fontWeight: _metode == 'transfer' ? FontWeight.bold : FontWeight.w500,
-                                    color: _metode == 'transfer' ? AppColors.primaryMid : const Color(0xFF64748B),
+                                const SizedBox(width: 5),
+                                Flexible(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      'Transfer Bank',
+                                      maxLines: 1,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: _metode == 'transfer' ? FontWeight.bold : FontWeight.w500,
+                                        color: _metode == 'transfer' ? AppColors.primaryMid : const Color(0xFF64748B),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],

@@ -48,13 +48,18 @@ class AttendanceHistoryItem {
   final int id;
   final String? namaCleaner;
   final String? cabangName;
-  final String type; // 'check_in' or 'check_out'
+  final String type; // 'check_in' or 'check_out' / 'masuk' or 'pulang'
   final String time;
   final String status;
   final double distanceMeter;
   final String? selfieViewUrl;
   final int? karyawanId;
   final String? tanggal;
+  final double? latitude;
+  final double? longitude;
+  final String? rawWaktuServer;
+  final String? deviceInfo;
+  final String? catatan;
 
   AttendanceHistoryItem({
     required this.id,
@@ -67,7 +72,22 @@ class AttendanceHistoryItem {
     this.selfieViewUrl,
     this.karyawanId,
     this.tanggal,
+    this.latitude,
+    this.longitude,
+    this.rawWaktuServer,
+    this.deviceInfo,
+    this.catatan,
   });
+
+  bool get isCheckIn {
+    final t = type.toLowerCase();
+    return t == 'check_in' || t == 'masuk';
+  }
+
+  bool get isCheckOut {
+    final t = type.toLowerCase();
+    return t == 'check_out' || t == 'pulang';
+  }
 
   factory AttendanceHistoryItem.fromJson(Map<String, dynamic> json) {
     String? cName;
@@ -79,19 +99,31 @@ class AttendanceHistoryItem {
       cName = json['karyawan']['cabang']['nama_cabang']?.toString();
     }
 
+    final rawTanggal = json['tanggal']?.toString();
+    final normalizedTanggal = rawTanggal != null && rawTanggal.length >= 10
+        ? rawTanggal.substring(0, 10)
+        : rawTanggal;
+
+    final rawServer = json['waktu_server'] ?? json['created_at'] ?? '';
+
     return AttendanceHistoryItem(
       id: json['id'] ?? 0,
       namaCleaner: json['nama_cleaner'] ?? (json['karyawan'] != null ? json['karyawan']['nama'] : null),
       cabangName: cName,
       type: json['tipe'] ?? json['type'] ?? 'unknown',
-      time: _formatTime(json['waktu_server'] ?? json['created_at'] ?? ''),
+      time: _formatTime(rawServer.toString()),
       status: json['status'] ?? 'unknown',
       distanceMeter: json['jarak_ke_cabang_meter'] != null 
           ? double.tryParse(json['jarak_ke_cabang_meter'].toString()) ?? 0.0 
           : (json['distance_meter'] != null ? double.tryParse(json['distance_meter'].toString()) ?? 0.0 : 0.0),
       selfieViewUrl: json['selfie_view_url'] ?? '${AppConstants.baseUrl}/absensi/${json['id'] ?? 0}/selfie',
       karyawanId: json['karyawan_id'],
-      tanggal: json['tanggal'],
+      tanggal: normalizedTanggal,
+      latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
+      longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
+      rawWaktuServer: rawServer.toString().isNotEmpty ? rawServer.toString() : null,
+      deviceInfo: json['device_info']?.toString(),
+      catatan: json['alasan_penolakan']?.toString() ?? json['catatan']?.toString(),
     );
   }
 

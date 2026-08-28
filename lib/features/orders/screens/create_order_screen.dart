@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/data/order_model.dart';
 import '../../../core/data/customer_model.dart';
 import '../../../core/services/customer_service.dart';
@@ -29,6 +30,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   int _step = 0; // 0=info, 1=services, 2=cleaners, 3=summary
   final _draft = OrderDraft();
   bool _isSaving = false;
+  bool _isBranchWajibPpn = false;
 
   static const _steps = [
     'Info Pesanan',
@@ -47,6 +49,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   @override
   void initState() {
     super.initState();
+    _checkBranchPpn();
     if (widget.existingOrder != null) {
       final o = widget.existingOrder!;
       _draft.customer = o.customer;
@@ -80,6 +83,35 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         _draft.chatDari = ChatSource.organik;
       }
     }
+  }
+
+  Future<void> _checkBranchPpn() async {
+    final prefs = await SharedPreferences.getInstance();
+    final branchName = prefs.getString('user_branch') ?? '-';
+    try {
+      final response = await ApiClient.instance.get('/cabangs');
+      if (response.data != null && response.data['data'] != null) {
+        final List list = response.data['data'];
+        final matched = list.firstWhere(
+          (c) => (c['nama_cabang']?.toString().toLowerCase() == branchName.toLowerCase()),
+          orElse: () => null,
+        );
+        if (matched != null) {
+          final isPpn = matched['is_ppn_enabled'] == true ||
+              matched['is_ppn_enabled'] == 1 ||
+              matched['is_ppn_enabled']?.toString() == '1' ||
+              matched['is_ppn_enabled']?.toString().toLowerCase() == 'true';
+          if (mounted) {
+            setState(() {
+              _isBranchWajibPpn = isPpn;
+              if (widget.existingOrder == null) {
+                _draft.applyPpn = isPpn;
+              }
+            });
+          }
+        }
+      }
+    } catch (_) {}
   }
 
   void _next() => setState(() => _step = (_step + 1).clamp(0, 3));
@@ -301,7 +333,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       case 2:
         return _Step3Cleaner(draft: _draft, onChanged: () => setState(() {}));
       case 3:
-        return _Step4Summary(draft: _draft);
+        return _Step4Summary(draft: _draft, isBranchWajibPpn: _isBranchWajibPpn);
       default:
         return const SizedBox();
     }
@@ -713,6 +745,7 @@ class _Step1InfoState extends State<_Step1Info> {
                       rating: (cl['rating'] != null ? double.tryParse(cl['rating'].toString()) : null) ?? 5.0,
                       phone: cl['no_wa']?.toString() ?? '',
                       statusPengerjaan: CleanerWorkStatus.assigned,
+                      fotoProfil: cl['foto_profil'] ?? cl['foto'] ?? cl['foto_url'] ?? cl['foto_profil_url'] ?? (cl['user'] != null && cl['user'] is Map ? (cl['user']['foto_profil'] ?? cl['user']['foto_url']) : null),
                     ),
                   );
                 }
@@ -2654,7 +2687,6 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
                     final bool isFree = statusStr == 'free';
 
                     final String? foto = c['foto_profil']?.toString().replaceAll('\\', '/').trim();
-                    final bool hasFoto = foto != null && foto.isNotEmpty && foto != 'null';
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 10),
@@ -2691,44 +2723,20 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
                                   statusPengerjaan: CleanerWorkStatus.assigned,
                                   totalBonus: 0,
                                   bonuses: [],
+                                  fotoProfil: foto,
                                 ),
                               );
                             }
                             widget.onChanged();
                           });
                         },
-                        leading: Builder(
-                          builder: (context) {
-                            if (hasFoto) {
-                              final String fullUrl = foto.startsWith('http')
-                                  ? foto
-                                  : '${ApiClient.baseUrl.replaceAll('/api', '')}/storage/${foto.replaceFirst(RegExp(r'^/?storage/'), '')}';
-                              return Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: isSelected ? AppColors.primary : Colors.transparent, width: 2),
-                                ),
-                                child: ClipOval(
-                                  child: Image.network(
-                                    Uri.encodeFull(fullUrl),
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => CircleAvatar(
-                                      backgroundColor: isSelected ? AppColors.primary.withValues(alpha: 0.1) : AppColors.surfaceBlue,
-                                      child: Icon(Icons.person, color: isSelected ? AppColors.primary : AppColors.textMuted),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }
-                            return InitialsAvatar(
-                              name: c['name'] ?? c['nama'] ?? 'C',
-                              size: 44,
-                              backgroundColor: isSelected ? AppColors.primary : AppColors.surfaceBlue,
-                              textColor: isSelected ? Colors.white : AppColors.primary,
-                            );
-                          },
+                        leading: AppAvatar(
+                          photoUrl: foto,
+                          name: c['name'] ?? c['nama'] ?? 'C',
+                          size: 44,
+                          borderColor: isSelected ? AppColors.primary : null,
+                          backgroundColor: isSelected ? AppColors.primary.withValues(alpha: 0.1) : AppColors.surfaceBlue,
+                          textColor: isSelected ? AppColors.primary : AppColors.primary,
                         ),
                         title: Text(
                           c['name'] ?? c['nama'] ?? '-',
@@ -2806,8 +2814,9 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
 
 // ─── Step 4: Ringkasan ─────────────────────────────────────────────────────
 class _Step4Summary extends StatefulWidget {
-  const _Step4Summary({required this.draft});
+  const _Step4Summary({required this.draft, this.isBranchWajibPpn = false});
   final OrderDraft draft;
+  final bool isBranchWajibPpn;
 
   @override
   State<_Step4Summary> createState() => _Step4SummaryState();
@@ -2986,7 +2995,12 @@ class _Step4SummaryState extends State<_Step4Summary> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.person_rounded, size: 14, color: AppColors.primary),
+                        AppAvatar(
+                          photoUrl: c.fotoProfil,
+                          name: c.name,
+                          size: 20,
+                          borderWidth: 1,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           c.name,
@@ -3057,12 +3071,47 @@ class _Step4SummaryState extends State<_Step4Summary> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          'PPN (11%)',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            color: AppColors.textMuted,
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'PPN (11%)',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: widget.draft.applyPpn ? AppColors.textDark : AppColors.textMuted,
+                                  ),
+                                ),
+                                if (widget.isBranchWajibPpn) ...[
+                                  const SizedBox(width: 5),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFDBEAFE),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'Default Cabang',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFF1E40AF),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            Text(
+                              widget.draft.applyPpn ? 'Dikenakan PPN 11%' : 'Tanpa PPN (Bisa Dicentang)',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                color: widget.draft.applyPpn ? const Color(0xFF2563EB) : AppColors.textMuted,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

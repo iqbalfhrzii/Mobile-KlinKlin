@@ -10,11 +10,17 @@ import '../services/attendance_service.dart';
 class SelfieViewerScreen extends StatefulWidget {
   final int attendanceId;
   final String initialUrl;
+  final String? title;
+  final AttendanceHistoryItem? item;
+  final Uint8List? imageBytes;
 
   const SelfieViewerScreen({
     super.key,
     required this.attendanceId,
     required this.initialUrl,
+    this.title,
+    this.item,
+    this.imageBytes,
   });
 
   @override
@@ -33,8 +39,16 @@ class _SelfieViewerScreenState extends State<SelfieViewerScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchDetailBackground();
-    _loadImage();
+    _detailData = widget.item;
+    if (widget.imageBytes != null && widget.imageBytes!.isNotEmpty) {
+      _imageBytes = widget.imageBytes;
+      _isLoadingImage = false;
+    } else {
+      _loadImage();
+    }
+    if (_detailData == null && widget.attendanceId > 0) {
+      _fetchDetailBackground();
+    }
   }
 
   Future<void> _fetchDetailBackground() async {
@@ -106,10 +120,15 @@ class _SelfieViewerScreenState extends State<SelfieViewerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    String pageTitle = widget.title ?? 'Detail Selfie Absensi';
+    if (widget.title == null && _detailData != null) {
+      pageTitle = _detailData!.isCheckIn ? 'Foto Selfie Masuk (Check-In)' : 'Foto Selfie Pulang (Check-Out)';
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text('Detail Selfie Absensi', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
+        title: Text(pageTitle, style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
         backgroundColor: Colors.black,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -201,8 +220,12 @@ class _SelfieViewerScreenState extends State<SelfieViewerScreen> {
   }
 
   Widget _buildDetailSheet() {
+    final isCheckIn = _detailData!.isCheckIn;
+    final sessionColor = isCheckIn ? const Color(0xFF059669) : const Color(0xFF2563EB);
+    final sessionBg = isCheckIn ? const Color(0xFFECFDF5) : const Color(0xFFEFF6FF);
+
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -211,27 +234,76 @@ class _SelfieViewerScreenState extends State<SelfieViewerScreen> {
         top: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              _detailData!.namaCleaner ?? 'Cleaner',
-              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _detailData!.namaCleaner ?? 'Karyawan',
+                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                      ),
+                      if (_detailData!.cabangName != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          _detailData!.cabangName!,
+                          style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: sessionBg,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    isCheckIn ? 'Absen Masuk' : 'Absen Pulang',
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: sessionColor),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
+            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildInfoColumn('Tipe', _detailData!.type == 'check_in' || _detailData!.type == 'masuk' ? 'Masuk' : 'Pulang'),
                 _buildInfoColumn('Waktu', _detailData!.time),
-                _buildInfoColumn('Jarak', '${_detailData!.distanceMeter.toStringAsFixed(1)}m'),
+                _buildInfoColumn('Jarak ke Kantor', '${_detailData!.distanceMeter.toStringAsFixed(1)} m'),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text('Status', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                    const SizedBox(height: 3),
+                    _buildStatusBadge(_detailData!.status),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Text('Status: ', style: GoogleFonts.inter(color: AppColors.textMuted)),
-                _buildStatusBadge(_detailData!.status),
-              ],
-            ),
+            if (_detailData!.deviceInfo != null && _detailData!.deviceInfo!.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Icon(Icons.phone_android_rounded, size: 13, color: Color(0xFF64748B)),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      'Perangkat: ${_detailData!.deviceInfo}',
+                      style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

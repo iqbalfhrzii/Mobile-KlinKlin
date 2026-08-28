@@ -3,19 +3,16 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
-import '../../../core/widgets/badges.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/services/auth_service.dart';
-import '../../../core/api/api_client.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
-import 'dart:io';
-import 'dart:convert';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/change_pin_screen.dart';
 import 'edit_profile_screen.dart';
 import '../../../core/widgets/notification_list_sheet.dart';
 import '../../cleaner/tukar_libur/screens/tukar_libur_screen.dart';
 import '../../cleaner/tukar_libur/services/tukar_libur_service.dart';
-import '../../cleaner/sim/screens/cleaner_sim_screen.dart';
+import '../../finance/screens/finance_pengaturan_ppn_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -76,6 +73,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   bool _isCleanerRole() {
     return _userRole.toLowerCase().contains('cleaner');
+  }
+
+  bool _isFinanceOrAdmin() {
+    final r = _userRole.toLowerCase();
+    return r.contains('finance') || r.contains('admin') || r.contains('ceo') || r.contains('owner');
   }
 
   Future<void> _loadJadwalLibur() async {
@@ -147,9 +149,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     _buildMenuSection('Akun', [
                       _MenuItem(Icons.lock_outline_rounded, 'Ganti PIN', onTap: () => _changePIN(context)),
-                      _MenuItem(Icons.badge_outlined, 'Surat Izin Mengemudi (SIM)', onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const CleanerSimScreen()));
-                      }),
+                      if (_isFinanceOrAdmin())
+                        _MenuItem(Icons.percent_rounded, 'Pengaturan PPN Cabang', onTap: () {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const FinancePengaturanPpnScreen()));
+                        }),
                       _MenuItem(Icons.notifications_outlined, 'Notifikasi / Pengumuman', onTap: () {
                         NotificationListSheet.show(context);
                       }),
@@ -260,59 +263,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildAvatar() {
-    if (_userPhoto == null || _userPhoto!.isEmpty) {
-      return InitialsAvatar(
-        name: _userName,
-        size: 76,
-        backgroundColor: Colors.white.withValues(alpha: 0.2),
-        textColor: Colors.white,
-        borderColor: Colors.white.withValues(alpha: 0.35),
-      );
-    }
-
-    if (_userPhoto!.startsWith('data:image')) {
-      try {
-        final base64Str = _userPhoto!.split(',').last;
-        return ClipOval(child: Image.memory(base64Decode(base64Str), width: 76, height: 76, fit: BoxFit.cover));
-      } catch (_) {
-        return InitialsAvatar(name: _userName, size: 76, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35));
-      }
-    }
-
-    if (_userPhoto!.startsWith('http')) {
-      return ClipOval(
-        child: Image.network(
-          _userPhoto!,
-          width: 76,
-          height: 76,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 76, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35)),
-        ),
-      );
-    }
-
-    if (_userPhoto!.startsWith('/')) {
-      return ClipOval(
-        child: Image.file(
-          File(_userPhoto!),
-          width: 76,
-          height: 76,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 76, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35)),
-        ),
-      );
-    }
-
-    final baseDomain = ApiClient.baseUrl.replaceAll(RegExp(r'/api/?$'), '');
-    final url = '$baseDomain/storage/$_userPhoto';
-    return ClipOval(
-      child: Image.network(
-        url,
-        width: 76,
-        height: 76,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => InitialsAvatar(name: _userName, size: 76, backgroundColor: Colors.white.withValues(alpha: 0.2), textColor: Colors.white, borderColor: Colors.white.withValues(alpha: 0.35)),
-      ),
+    return AppAvatar(
+      photoUrl: _userPhoto,
+      name: _userName,
+      size: 76,
+      backgroundColor: Colors.white.withValues(alpha: 0.2),
+      textColor: Colors.white,
+      borderColor: Colors.white.withValues(alpha: 0.35),
+      borderWidth: 2,
     );
   }
 

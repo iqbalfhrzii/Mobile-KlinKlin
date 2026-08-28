@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/data/hrd_models.dart';
 import '../../../../core/widgets/gradient_header.dart';
+import '../../../../core/widgets/app_confirmation_dialog.dart';
 import '../../services/hrd_service.dart';
 import '../../services/hrd_tukar_libur_service.dart';
 
@@ -140,76 +141,82 @@ class _HrdTukarLiburScreenState extends State<HrdTukarLiburScreen> {
     final tglA = _formatDate(item['tanggal_pengaju']);
     final tglB = _formatDate(item['tanggal_target']);
 
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Color(0xFFECFDF5),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 24),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Setujui Tukar Libur',
-                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
+    final confirm = await AppConfirmationDialog.show(
+      context,
+      title: 'Setujui Tukar Libur',
+      message: 'Apakah Anda yakin ingin menyetujui pertukaran libur ini?',
+      type: ConfirmationDialogType.success,
+      confirmText: 'Setujui & Tukar',
+      cancelText: 'Batal',
+      contentWidget: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Apakah Anda yakin ingin menyetujui pertukaran libur ini?',
-              style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155)),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('• ', style: TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold, fontSize: 13)),
+                Expanded(
+                  child: Text(
+                    '$pengajuNama akan libur pada $tglB',
+                    style: GoogleFonts.inter(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('• ', style: TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold, fontSize: 13)),
+                Expanded(
+                  child: Text(
+                    '$targetNama akan libur pada $tglA',
+                    style: GoogleFonts.inter(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Text('• $pengajuNama akan libur pada $tglB', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
-                  const SizedBox(height: 4),
-                  Text('• $targetNama akan libur pada $tglA', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Jadwal libur di sistem absensi akan otomatis ditukar.',
-                    style: GoogleFonts.inter(fontSize: 11, fontStyle: FontStyle.italic, color: const Color(0xFF059669)),
+                  const Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFF059669)),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Jadwal libur di sistem absensi akan otomatis ditukar.',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF047857),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Batal', style: GoogleFonts.inter(color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF059669),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              elevation: 0,
-            ),
-            child: Text('Setujui & Tukar', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
       ),
     );
 
@@ -246,49 +253,14 @@ class _HrdTukarLiburScreenState extends State<HrdTukarLiburScreen> {
   }
 
   Future<void> _handleReject(dynamic item) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Color(0xFFFEF2F2),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.cancel_rounded, color: Color(0xFFDC2626), size: 24),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Tolak Tukar Libur',
-                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          'Apakah Anda yakin ingin menolak pengajuan pertukaran libur ini?',
-          style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Batal', style: GoogleFonts.inter(color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              elevation: 0,
-            ),
-            child: Text('Tolak Pengajuan', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+    final confirm = await AppConfirmationDialog.show(
+      context,
+      title: 'Tolak Tukar Libur',
+      message: 'Apakah Anda yakin ingin menolak pengajuan pertukaran libur ini?',
+      type: ConfirmationDialogType.danger,
+      confirmText: 'Tolak Pengajuan',
+      cancelText: 'Batal',
+      isDestructive: true,
     );
 
     if (confirm != true) return;

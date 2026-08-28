@@ -271,6 +271,8 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                                               builder: (_) => SelfieViewerScreen(
                                                 attendanceId: item.id,
                                                 initialUrl: item.selfieViewUrl!,
+                                                title: isCheckIn ? 'Foto Selfie Masuk' : 'Foto Selfie Pulang',
+                                                item: item,
                                               ),
                                             ),
                                           );

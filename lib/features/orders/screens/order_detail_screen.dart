@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
 import 'package:flutter/services.dart';
-import 'dart:convert';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/data/order_model.dart';
 import '../services/order_service.dart';
 import 'create_order_screen.dart';
@@ -1184,12 +1184,34 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                     : AppColors.textMuted,
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                'PPN (11%)',
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: AppColors.textMuted,
-                                ),
+                              Row(
+                                children: [
+                                  Text(
+                                    'PPN (11%)',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      color: ppnPersen > 0 ? AppColors.textDark : AppColors.textMuted,
+                                    ),
+                                  ),
+                                  if (_o.isWajibPpn) ...[
+                                    const SizedBox(width: 5),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFDBEAFE),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        'Default Cabang',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF1E40AF),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ],
                           ),
@@ -1501,65 +1523,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         children: [
           Row(
             children: [
-              Builder(
-                builder: (context) {
-                  final String? foto = cleaner.fotoProfil
-                      ?.replaceAll('\\', '/')
-                      .trim();
-                  final bool hasFoto =
-                      foto != null && foto.isNotEmpty && foto != 'null';
-
-                  Widget avatarContent = const Icon(
-                    Icons.cleaning_services_rounded,
-                    color: AppColors.primary,
-                    size: 20,
-                  );
-
-                  if (hasFoto) {
-                    if (foto.startsWith('data:image')) {
-                      try {
-                        final base64Str = foto.split(',').last;
-                        avatarContent = Image.memory(
-                          base64Decode(base64Str),
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.cleaning_services_rounded,
-                            color: AppColors.primary,
-                            size: 20,
-                          ),
-                        );
-                      } catch (_) {}
-                    } else {
-                      final String fullUrl = foto.startsWith('http')
-                          ? foto
-                          : '${ApiClient.baseUrl.replaceAll('/api', '')}/storage/${foto.replaceFirst(RegExp(r'^/?storage/'), '')}';
-                      avatarContent = Image.network(
-                        Uri.encodeFull(fullUrl),
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.cleaning_services_rounded,
-                          color: AppColors.primary,
-                          size: 20,
-                        ),
-                      );
-                    }
-                  }
-
-                  return Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceBlue,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: hasFoto
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: avatarContent,
-                          )
-                        : avatarContent,
-                  );
-                },
+              AppAvatar(
+                photoUrl: cleaner.fotoProfil,
+                name: cleaner.name,
+                size: 44,
+                shape: BoxShape.rectangle,
+                borderRadius: BorderRadius.circular(12),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -3782,88 +3751,12 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
                                     opacity: isBusy ? 0.5 : 1.0,
                                     child: Row(
                                       children: [
-                                        Builder(
-                                          builder: (context) {
-                                            final String? foto =
-                                                c['foto_profil']
-                                                    ?.toString()
-                                                    .replaceAll('\\', '/')
-                                                    .trim();
-                                            final bool hasFoto =
-                                                foto != null &&
-                                                foto.isNotEmpty &&
-                                                foto != 'null';
-
-                                            Widget avatarContent = const Icon(
-                                              Icons.cleaning_services_rounded,
-                                              color: AppColors.primary,
-                                              size: 20,
-                                            );
-
-                                            if (hasFoto) {
-                                              if (foto.startsWith(
-                                                'data:image',
-                                              )) {
-                                                try {
-                                                  final base64Str = foto
-                                                      .split(',')
-                                                      .last;
-                                                  avatarContent = Image.memory(
-                                                    base64Decode(base64Str),
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder:
-                                                        (
-                                                          _,
-                                                          __,
-                                                          ___,
-                                                        ) => const Icon(
-                                                          Icons
-                                                              .cleaning_services_rounded,
-                                                          color:
-                                                              AppColors.primary,
-                                                          size: 20,
-                                                        ),
-                                                  );
-                                                } catch (_) {}
-                                              } else {
-                                                final String fullUrl =
-                                                    foto.startsWith('http')
-                                                    ? foto
-                                                    : '${ApiClient.baseUrl.replaceAll('/api', '')}/storage/${foto.replaceFirst(RegExp(r'^/?storage/'), '')}';
-                                                avatarContent = Image.network(
-                                                  Uri.encodeFull(fullUrl),
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (_, __, ___) =>
-                                                      const Icon(
-                                                        Icons
-                                                            .cleaning_services_rounded,
-                                                        color:
-                                                            AppColors.primary,
-                                                        size: 20,
-                                                      ),
-                                                );
-                                              }
-                                            }
-
-                                            return Container(
-                                              width: 44,
-                                              height: 44,
-                                              decoration: BoxDecoration(
-                                                color: AppColors.surfaceBlue,
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                              ),
-                                              child: hasFoto
-                                                  ? ClipRRect(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            12,
-                                                          ),
-                                                      child: avatarContent,
-                                                    )
-                                                  : avatarContent,
-                                            );
-                                          },
+                                        AppAvatar(
+                                          photoUrl: c['foto_profil']?.toString(),
+                                          name: (c['name'] ?? c['nama'] ?? 'Cleaner').toString(),
+                                          size: 44,
+                                          shape: BoxShape.rectangle,
+                                          borderRadius: BorderRadius.circular(12),
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(

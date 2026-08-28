@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/whatsapp_icon.dart';
 import '../../../core/data/mock_data.dart';
 import '../../../core/data/order_model.dart';
@@ -1143,15 +1144,10 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
               const SizedBox(height: 8),
               ...o.cleaners.map((c) {
                 return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                    child: Text(
-                      c.name.isNotEmpty ? c.name[0].toUpperCase() : '?',
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                    ),
+                  leading: AppAvatar(
+                    photoUrl: c.fotoProfil,
+                    name: c.name,
+                    size: 40,
                   ),
                   title: Text(
                     c.name,

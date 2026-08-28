@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -9,6 +8,9 @@ import '../../hrd/services/hrd_service.dart';
 import '../data/attendance_model.dart';
 import '../services/attendance_service.dart';
 import 'selfie_viewer_screen.dart';
+import 'admin_attendance_detail_screen.dart';
+import '../widgets/attendance_day_detail_sheet.dart';
+import '../../../../core/widgets/app_avatar.dart';
 
 class EmployeeAttendanceSummary {
   final KaryawanModel karyawan;
@@ -1130,58 +1132,10 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
   }
 
   Widget _buildAvatar(KaryawanModel karyawan, {double size = 42}) {
-    final photoUrl = karyawan.fullFotoUrl;
-    final initial = karyawan.nama.isNotEmpty ? karyawan.nama.substring(0, 1).toUpperCase() : 'K';
-
-    Widget fallback() {
-      return Container(
-        width: size,
-        height: size,
-        decoration: const BoxDecoration(
-          color: Color(0xFFEFF6FF),
-          shape: BoxShape.circle,
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          initial,
-          style: GoogleFonts.inter(
-            color: const Color(0xFF2563EB),
-            fontWeight: FontWeight.bold,
-            fontSize: size * 0.38,
-          ),
-        ),
-      );
-    }
-
-    if (photoUrl == null || photoUrl.isEmpty) {
-      return fallback();
-    }
-
-    if (photoUrl.startsWith('data:image')) {
-      try {
-        final base64Str = photoUrl.split(',').last;
-        return ClipOval(
-          child: Image.memory(
-            base64Decode(base64Str),
-            width: size,
-            height: size,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => fallback(),
-          ),
-        );
-      } catch (_) {
-        return fallback();
-      }
-    }
-
-    return ClipOval(
-      child: Image.network(
-        photoUrl,
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => fallback(),
-      ),
+    return AppAvatar(
+      photoUrl: karyawan.fullFotoUrl,
+      name: karyawan.nama,
+      size: size,
     );
   }
 }
@@ -1280,7 +1234,59 @@ class _EmployeeDetailModal extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
+          // Action Bar to Open Full Calendar History
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            child: Material(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AdminAttendanceDetailScreen(
+                        item: GroupedAttendanceItem(
+                          tanggal: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+                          karyawanId: k.id,
+                          namaCleaner: k.nama,
+                          cabangName: k.cabang?.namaCabang,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.calendar_month_rounded, size: 15, color: Color(0xFF2563EB)),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Buka Riwayat Kalender Lengkap',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF2563EB),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 11, color: Color(0xFF2563EB)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
           const Divider(height: 1, color: Color(0xFFF1F5F9)),
 
           // Daily Logs List
@@ -1347,115 +1353,216 @@ class _EmployeeDetailModal extends StatelessWidget {
 
     final inTime = log.checkIn?.time ?? '--:--';
     final outTime = log.checkOut?.time ?? '--:--';
+    final k = summary.karyawan;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        children: [
-          // Date Column
-          Container(
-            width: 48,
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  DateFormat('dd').format(log.date),
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF0F172A),
-                  ),
-                ),
-                Text(
-                  DateFormat('E', 'id_ID').format(log.date),
-                  style: GoogleFonts.inter(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF64748B),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // Hours Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(log.date),
-                  style: GoogleFonts.inter(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF0F172A),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    const Icon(Icons.login_rounded, size: 12, color: Color(0xFF16A34A)),
-                    const SizedBox(width: 4),
-                    Text(
-                      inTime,
-                      style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF64748B)),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          AttendanceDayDetailSheet.show(
+            context,
+            employeeName: k.nama,
+            jabatanName: k.jabatan?.namaJabatan,
+            cabangName: k.cabang?.namaCabang,
+            date: log.date,
+            dateStr: log.dateStr,
+            status: log.status,
+            checkIn: log.checkIn,
+            checkOut: log.checkOut,
+            onOpenFullHistory: () {
+              Navigator.pop(context); // close sheet
+              Navigator.pop(context); // close modal
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AdminAttendanceDetailScreen(
+                    item: GroupedAttendanceItem(
+                      tanggal: log.dateStr,
+                      karyawanId: k.id,
+                      namaCleaner: k.nama,
+                      cabangName: k.cabang?.namaCabang,
+                      checkIn: log.checkIn,
+                      checkOut: log.checkOut,
                     ),
-                    const SizedBox(width: 10),
-                    const Icon(Icons.logout_rounded, size: 12, color: Color(0xFFDC2626)),
-                    const SizedBox(width: 4),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+          child: Row(
+            children: [
+              // Date Column
+              Container(
+                width: 48,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  children: [
                     Text(
-                      outTime,
-                      style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF64748B)),
+                      DateFormat('dd').format(log.date),
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
+                    Text(
+                      DateFormat('E', 'id_ID').format(log.date),
+                      style: GoogleFonts.inter(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF64748B),
+                      ),
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-
-          // Status Badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: statusBg,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              status,
-              style: GoogleFonts.inter(
-                fontSize: 10.5,
-                fontWeight: FontWeight.bold,
-                color: statusText,
               ),
-            ),
-          ),
+              const SizedBox(width: 12),
 
-          if (log.checkIn?.selfieViewUrl != null && log.checkIn!.selfieViewUrl!.isNotEmpty) ...[
-            const SizedBox(width: 6),
-            IconButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => SelfieViewerScreen(
-                      attendanceId: log.checkIn!.id,
-                      initialUrl: log.checkIn!.selfieViewUrl!,
+              // Hours Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(log.date),
+                      style: GoogleFonts.inter(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        const Icon(Icons.login_rounded, size: 12, color: Color(0xFF16A34A)),
+                        const SizedBox(width: 4),
+                        Text(
+                          inTime,
+                          style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF64748B)),
+                        ),
+                        const SizedBox(width: 10),
+                        const Icon(Icons.logout_rounded, size: 12, color: Color(0xFFDC2626)),
+                        const SizedBox(width: 4),
+                        Text(
+                          outTime,
+                          style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Status Badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusBg,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  status,
+                  style: GoogleFonts.inter(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                    color: statusText,
+                  ),
+                ),
+              ),
+
+              // Check-In Photo Badge/Button
+              if (log.checkIn?.selfieViewUrl != null && log.checkIn!.selfieViewUrl!.isNotEmpty) ...[
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SelfieViewerScreen(
+                          attendanceId: log.checkIn!.id,
+                          initialUrl: log.checkIn!.selfieViewUrl!,
+                          title: 'Foto Selfie Masuk',
+                          item: log.checkIn,
+                        ),
+                      ),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDCFCE7),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFF86EFAC)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.photo_camera_rounded, size: 11, color: Color(0xFF16A34A)),
+                        const SizedBox(width: 2),
+                        Text(
+                          'In',
+                          style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.bold, color: const Color(0xFF16A34A)),
+                        ),
+                      ],
                     ),
                   ),
-                );
-              },
-              icon: const Icon(Icons.photo_camera_rounded, size: 16, color: Color(0xFF2563EB)),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-          ],
-        ],
+                ),
+              ],
+
+              // Check-Out Photo Badge/Button
+              if (log.checkOut?.selfieViewUrl != null && log.checkOut!.selfieViewUrl!.isNotEmpty) ...[
+                const SizedBox(width: 4),
+                InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SelfieViewerScreen(
+                          attendanceId: log.checkOut!.id,
+                          initialUrl: log.checkOut!.selfieViewUrl!,
+                          title: 'Foto Selfie Pulang',
+                          item: log.checkOut,
+                        ),
+                      ),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFF93C5FD)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.photo_camera_rounded, size: 11, color: Color(0xFF2563EB)),
+                        const SizedBox(width: 2),
+                        Text(
+                          'Out',
+                          style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.bold, color: const Color(0xFF2563EB)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right_rounded, size: 16, color: Color(0xFF94A3B8)),
+            ],
+          ),
+        ),
       ),
     );
   }

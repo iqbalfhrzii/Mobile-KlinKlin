@@ -48,6 +48,8 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
   bool _isLoading = true;
   List<NotificationItem> _notifications = [];
 
+  static final Map<String, String> _orderNumberCache = {};
+
   @override
   void initState() {
     super.initState();
@@ -62,33 +64,104 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
         _notifications = list;
         _isLoading = false;
       });
+      _resolveMissingOrderNumbers(list);
     }
   }
 
-  Future<void> _markAllAsRead() async {
-    final success = await _service.markAllAsRead();
-    if (success && mounted) {
-      setState(() {
-        _notifications = _notifications
-            .map((n) => n.copyWith(readAt: DateTime.now()))
-            .toList();
-      });
+  Future<void> _resolveMissingOrderNumbers(List<NotificationItem> items) async {
+    final Set<String> idsToFetch = {};
+    final idRegex = RegExp(r'pesanan\s*#(\d+)', caseSensitive: false);
+
+    for (final item in items) {
+      final explicitNomor = item.data['nomor_pesanan']?.toString().trim();
+      final pesananId = item.data['pesanan_id']?.toString().trim();
+      if (pesananId != null && explicitNomor != null && explicitNomor.isNotEmpty && !explicitNomor.startsWith('#')) {
+        _orderNumberCache[pesananId] = explicitNomor;
+      }
+
+      final match = idRegex.firstMatch(item.message) ?? idRegex.firstMatch(item.title);
+      if (match != null) {
+        final orderId = match.group(1)!;
+        if (!_orderNumberCache.containsKey(orderId)) {
+          idsToFetch.add(orderId);
+        }
+      } else if (pesananId != null && !_orderNumberCache.containsKey(pesananId)) {
+        idsToFetch.add(pesananId);
+      }
     }
+
+    if (idsToFetch.isEmpty) return;
+
+    final orderService = OrderService();
+    bool hasUpdates = false;
+
+    for (final orderId in idsToFetch) {
+      try {
+        final order = await orderService.fetchOrderDetail(orderId);
+        if (order.nomorPesanan.isNotEmpty && !order.nomorPesanan.startsWith('#')) {
+          _orderNumberCache[orderId] = order.nomorPesanan;
+          hasUpdates = true;
+        }
+      } catch (_) {}
+    }
+
+    if (hasUpdates && mounted) {
+      setState(() {});
+    }
+  }
+
+  String _formatNotificationText(String rawText, NotificationItem item) {
+    String text = rawText;
+
+    // 1. Cek nomor_pesanan eksplisit dari payload backend
+    final explicitNomor = item.data['nomor_pesanan']?.toString().trim();
+    final pesananId = item.data['pesanan_id']?.toString().trim();
+
+    if (explicitNomor != null && explicitNomor.isNotEmpty && !explicitNomor.startsWith('#')) {
+      return text.replaceAll(RegExp(r'pesanan\s*#?\d+', caseSensitive: false), 'pesanan $explicitNomor');
+    }
+
+    // 2. Cek apakah ada di cache berdasarkan pesanan_id
+    if (pesananId != null && _orderNumberCache.containsKey(pesananId)) {
+      final cached = _orderNumberCache[pesananId]!;
+      return text.replaceAll(RegExp(r'pesanan\s*#?\d+', caseSensitive: false), 'pesanan $cached');
+    }
+
+    // 3. Cek regex pesanan #123
+    final idRegex = RegExp(r'pesanan\s*#(\d+)', caseSensitive: false);
+    final match = idRegex.firstMatch(text);
+    if (match != null) {
+      final orderId = match.group(1)!;
+      if (_orderNumberCache.containsKey(orderId)) {
+        final cached = _orderNumberCache[orderId]!;
+        return text.replaceAll(match.group(0)!, 'pesanan $cached');
+      }
+    }
+
+    return text;
+  }
+
+  Future<void> _markAllAsRead() async {
+    // Langsung bersihkan/hilangkan semua notifikasi dari tampilan
+    setState(() {
+      _notifications.clear();
+    });
+    NotificationService.unreadCountNotifier.value = 0;
+
+    // Bersihkan di database backend
+    try {
+      await _service.markAllAsRead();
+    } catch (_) {}
   }
 
   void _onNotificationTap(NotificationItem notification) async {
     final nav = Navigator.of(context, rootNavigator: true);
 
-    // 1. Mark as read in background
-    if (!notification.isRead) {
-      _service.markAsRead(notification.id);
-      setState(() {
-        final index = _notifications.indexWhere((n) => n.id == notification.id);
-        if (index != -1) {
-          _notifications[index] = notification.copyWith(readAt: DateTime.now());
-        }
-      });
-    }
+    // 1. Mark as read & hilangkan notifikasi dari tampilan
+    _service.markAsRead(notification.id);
+    setState(() {
+      _notifications.removeWhere((n) => n.id == notification.id);
+    });
 
     // 2. Dismiss modal
     Navigator.pop(context);
@@ -551,7 +624,7 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
                       children: [
                         Expanded(
                           child: Text(
-                            item.title,
+                            _formatNotificationText(item.title, item),
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
@@ -575,7 +648,7 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      item.message,
+                      _formatNotificationText(item.message, item),
                       style: GoogleFonts.inter(
                         fontSize: 12.5,
                         color: isUnread ? const Color(0xFF334155) : const Color(0xFF64748B),

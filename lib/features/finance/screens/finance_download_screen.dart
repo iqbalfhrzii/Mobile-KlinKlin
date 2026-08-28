@@ -948,19 +948,37 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
           // Download Buttons
           SizedBox(
             width: double.infinity,
-            height: 44,
-            child: ElevatedButton.icon(
+            height: 46,
+            child: ElevatedButton(
               onPressed: _isDownloading || _isLoading ? null : _downloadExcel,
-              icon: _isDownloading
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.table_chart_rounded, size: 16, color: Colors.white),
-              label: Text('Unduh Excel (.xls)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF059669),
                 foregroundColor: Colors.white,
                 elevation: 1,
+                padding: EdgeInsets.zero,
                 shadowColor: const Color(0xFF059669).withValues(alpha: 0.3),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  if (_isDownloading)
+                    const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  else
+                    const Icon(Icons.table_chart_rounded, size: 18, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Unduh Excel (.xls)',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      height: 1.0,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -969,15 +987,32 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
             children: [
               Expanded(
                 child: SizedBox(
-                  height: 42,
-                  child: OutlinedButton.icon(
+                  height: 44,
+                  child: OutlinedButton(
                     onPressed: _isDownloading || _isLoading ? null : _downloadCsv,
-                    icon: const Icon(Icons.description_rounded, size: 16, color: Color(0xFF0F172A)),
-                    label: Text('Unduh CSV', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Color(0xFFCBD5E1)),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       backgroundColor: Colors.white,
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.description_rounded, size: 16, color: Color(0xFF0F172A)),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Unduh CSV',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF0F172A),
+                            height: 1.0,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -985,17 +1020,35 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: SizedBox(
-                  height: 42,
-                  child: OutlinedButton.icon(
+                  height: 44,
+                  child: OutlinedButton(
                     onPressed: _isLoading ? null : _fetchData,
-                    icon: _isLoading
-                        ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.refresh_rounded, size: 16, color: Color(0xFF0F172A)),
-                    label: Text('Muat Ulang', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Color(0xFFCBD5E1)),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       backgroundColor: Colors.white,
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (_isLoading)
+                          const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                        else
+                          const Icon(Icons.refresh_rounded, size: 16, color: Color(0xFF0F172A)),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Muat Ulang',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF0F172A),
+                            height: 1.0,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

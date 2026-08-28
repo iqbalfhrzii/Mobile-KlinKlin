@@ -11,6 +11,7 @@ import '../../hrd/services/hrd_service.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/services/customer_service.dart';
 import '../../../core/data/customer_model.dart';
+import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../services/finance_service.dart';
 class FinanceAuditScreen extends StatefulWidget {
   const FinanceAuditScreen({super.key});
@@ -54,6 +55,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
   int _limitAuditDone = 5;
   int _limitApproveEdit = 5;
   int _limitEditOrderBebas = 5;
+  int _limitTotalPesanan = 10;
 
   final NumberFormat _currencyFormat = NumberFormat.currency(
     locale: 'id_ID',
@@ -161,6 +163,8 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                       _buildEditOrderBebasContent()
                     else if (_auditTab == 'hasil-audit')
                       _buildHasilAuditContent()
+                    else if (_auditTab == 'total-pesanan')
+                      _buildTotalPesananContent()
                     else
                       _buildComingSoonTab(_auditTab),
                   ],
@@ -481,10 +485,10 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     );
   }
 
-  // --- Main Audit Sub-Tabs Bar ---
+  // --- Main Audit Sub-Tabs Bar (2 Baris Rapi Tanpa Geser ke Kanan) ---
   Widget _buildAuditTabBar() {
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -497,35 +501,54 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
           ),
         ],
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _buildAuditTabButton('Audit Order', 'audit-order', isPrimary: true),
-            _buildAuditTabButton('Approve Edit', 'approve-edit'),
-            _buildAuditTabButton('Edit Order', 'edit-order'),
-            _buildAuditTabButton('Hasil Audit', 'hasil-audit'),
-          ],
-        ),
+      child: Column(
+        children: [
+          // Baris 1: 3 Tab Utama
+          Row(
+            children: [
+              Expanded(child: _buildAuditTabButton('Audit Order', 'audit-order')),
+              const SizedBox(width: 4),
+              Expanded(child: _buildAuditTabButton('Approve Edit', 'approve-edit')),
+              const SizedBox(width: 4),
+              Expanded(child: _buildAuditTabButton('Hasil Audit', 'hasil-audit')),
+            ],
+          ),
+          const SizedBox(height: 5),
+          // Baris 2: Edit Order & Total Pesanan
+          Row(
+            children: [
+              Expanded(child: _buildAuditTabButton('Edit Order', 'edit-order')),
+              const SizedBox(width: 4),
+              Expanded(child: _buildAuditTabButton('Total Pesanan', 'total-pesanan')),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildAuditTabButton(String label, String tabKey, {bool isPrimary = false}) {
+  Widget _buildAuditTabButton(String label, String tabKey) {
     final bool isActive = _auditTab == tabKey;
     return GestureDetector(
       onTap: () => setState(() => _auditTab = tabKey),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isActive ? AppColors.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          color: isActive ? AppColors.primary : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isActive ? AppColors.primary : Colors.grey.shade200,
+          ),
         ),
         child: Text(
           label,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: GoogleFonts.inter(
-            fontSize: 12,
+            fontSize: 11.5,
             fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
             color: isActive ? Colors.white : AppColors.textDark,
           ),
@@ -3886,10 +3909,24 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0F52BA),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     elevation: 0,
                     textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: () => _confirmDeleteOrder(order),
+                  icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFDC2626)),
+                  label: Text('Hapus', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626))),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFDC2626),
+                    side: const BorderSide(color: Color(0xFFFCA5A5)),
+                    backgroundColor: const Color(0xFFFEF2F2),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
                   ),
                 ),
               ],
@@ -3906,8 +3943,198 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
   }
 
   // ===========================================================================
-  // HASIL AUDIT CONTENT (Pembatalan - Matching Web tab=hasil-audit)
+  // TOTAL PESANAN CONTENT (Matching Web tab=total-pesanan)
   // ===========================================================================
+  Widget _buildTotalPesananContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0FDF4),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFBBF7D0)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.inventory_2_outlined, size: 18, color: Color(0xFF16A34A)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Daftar semua pesanan dari seluruh cabang. Anda dapat mengedit atau menghapus pesanan.',
+                  style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF15803D), fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        _buildProMaxSearchAndFilterBar(showStatusFilter: true),
+        const SizedBox(height: 4),
+        _buildTotalPesananList(),
+      ],
+    );
+  }
+
+  Widget _buildTotalPesananList() {
+    List<OrderModel> displayOrders = List.from(_orders);
+
+    final filtered = displayOrders.where((o) {
+      if (!_matchesDateFilter(o.tanggalInput)) return false;
+      if (_selectedCabangName != null) {
+        final matchCabang = o.customer.area.toUpperCase().contains(_selectedCabangName!) ||
+            (_cabangs.any((c) => c.namaCabang.toUpperCase() == _selectedCabangName && o.cabangId == c.id.toString()));
+        if (!matchCabang) return false;
+      }
+      if (_selectedStatusUtama != null) {
+        if (o.statusUtamaLabel.toLowerCase() != _selectedStatusUtama!.toLowerCase()) return false;
+      }
+      if (_searchQuery.isNotEmpty) {
+        final q = _searchQuery.toLowerCase();
+        final matchCust = o.customer.name.toLowerCase().contains(q);
+        final matchId = o.nomorPesanan.toLowerCase().contains(q);
+        final matchPhone = o.customer.phone.contains(q);
+        if (!matchCust && !matchId && !matchPhone) return false;
+      }
+      return true;
+    }).toList();
+
+    if (filtered.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.inventory_2_outlined, size: 36, color: AppColors.textMuted),
+            const SizedBox(height: 10),
+            Text(
+              'Tidak ada pesanan ditemukan',
+              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Coba sesuaikan kata kunci pencarian atau filter di atas.',
+              style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    final totalCount = filtered.length;
+    final displayedList = filtered.take(_limitTotalPesanan).toList();
+
+    return Column(
+      children: [
+        ...displayedList.map((order) => Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: _buildProMaxOrderCard(
+            order,
+            customAction: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => _openFinanceEditOrderBebasModal(order),
+                  icon: const Icon(Icons.edit_note_rounded, size: 16),
+                  label: const Text('Edit'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F52BA),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                    textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: () => _confirmDeleteOrder(order),
+                  icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFDC2626)),
+                  label: Text('Hapus', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626))),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFDC2626),
+                    side: const BorderSide(color: Color(0xFFFCA5A5)),
+                    backgroundColor: const Color(0xFFFEF2F2),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        )),
+        _buildLoadMoreButton(
+          currentCount: displayedList.length,
+          totalCount: totalCount,
+          onTap: () => setState(() => _limitTotalPesanan += 10),
+        ),
+      ],
+    );
+  }
+
+  // --- Confirm Delete Order Action ---
+  Future<void> _confirmDeleteOrder(OrderModel order) async {
+    final orderDisplay = order.nomorPesanan.isNotEmpty ? order.nomorPesanan : '#${order.id}';
+    final confirmed = await AppConfirmationDialog.show(
+      context,
+      title: 'Hapus Pesanan?',
+      message: 'Apakah Anda yakin ingin menghapus pesanan $orderDisplay (${order.customer.name}) secara permanen? Data yang dihapus tidak dapat dikembalikan.',
+      type: ConfirmationDialogType.danger,
+      confirmText: 'Ya, Hapus',
+      cancelText: 'Batal',
+      isDestructive: true,
+    );
+
+    if (confirmed != true) return;
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+            const SizedBox(width: 12),
+            Text('Sedang menghapus pesanan $orderDisplay...', style: GoogleFonts.inter(color: Colors.white)),
+          ],
+        ),
+        backgroundColor: const Color(0xFF1E293B),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    try {
+      await _orderService.deleteOrder(order.id);
+      if (!mounted) return;
+      setState(() {
+        _orders.removeWhere((o) => o.id == order.id);
+      });
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Pesanan $orderDisplay berhasil dihapus.', style: GoogleFonts.inter(color: Colors.white)),
+          backgroundColor: const Color(0xFF16A34A),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', ''), style: GoogleFonts.inter(color: Colors.white)),
+          backgroundColor: const Color(0xFFDC2626),
+        ),
+      );
+    }
+  }
+
   Widget _buildHasilAuditContent() {
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
@@ -4440,7 +4667,21 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
   void _openFinanceEditOrderBebasModal(OrderModel order) {
     String selectedCabang = order.customer.area.isNotEmpty ? order.customer.area.toUpperCase() : 'SURABAYA';
     String csName = order.createdByName.isNotEmpty ? order.createdByName : 'Joko';
-    String statusPengerjaan = order.statusPengerjaanLabel;
+
+    String pengerjaanDisplay(String raw) {
+      final s = raw.toLowerCase().trim();
+      if (s == 'completed' || s == 'selesai') return 'Completed (Selesai)';
+      if (s == 'finished_by_cleaner' || s == 'selesai cleaner') return 'Finished by Cleaner';
+      if (s == 'in_progress' || s == 'dikerjakan') return 'In Progress (Dikerjakan)';
+      if (s == 'assigned' || s == 'ditugaskan') return 'Assigned (Ditugaskan)';
+      if (s == 'draft') return 'Draft';
+      if (s == 'cancelled' || s == 'dibatalkan' || s == 'batal') return 'Cancelled (Batal)';
+      if (s == 'waiting_payment_approval') return 'Waiting Payment Approval';
+      if (s == 'waiting_cancel_approval') return 'Waiting Cancel Approval';
+      return 'Assigned (Ditugaskan)';
+    }
+
+    String statusPengerjaan = pengerjaanDisplay(order.statusPesananRaw.isNotEmpty ? order.statusPesananRaw : order.statusPengerjaanLabel);
     String statusPembayaran = order.statusPembayaranLabel;
     String statusBonus = order.statusBonusLabel;
 
@@ -4455,25 +4696,39 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
         builder: (context, setModalState) {
           // Compute Status Utama Live
           String liveStatusUtama = 'Process';
-          Color statusUtamaColor = const Color(0xFFD97706);
-          Color statusUtamaBg = const Color(0xFFFEF3C7);
-          IconData statusUtamaIcon = Icons.hourglass_top_rounded;
+          Color statusUtamaColor = const Color(0xFF2563EB);
+          Color statusUtamaBg = const Color(0xFFEFF6FF);
+          IconData statusUtamaIcon = Icons.sync_rounded;
 
-          if (statusPengerjaan == 'Dibatalkan' || statusPembayaran == 'Dibatalkan' || statusPembayaran == 'Ditolak' || order.status == OrderStatus.cancelled) {
+          final isPengerjaanDone = statusPengerjaan == 'Completed (Selesai)' || statusPengerjaan == 'Finished by Cleaner';
+          final isPembayaranApproved = statusPembayaran == 'Disetujui' || statusPembayaran == 'Approved' || statusPembayaran == 'Approved (Disetujui)';
+          final isBonusSelesai = statusBonus.toLowerCase() == 'selesai';
+
+          if (statusPengerjaan == 'Cancelled (Batal)' || statusPembayaran == 'Dibatalkan' || statusPembayaran == 'Ditolak' || statusPembayaran == 'Batal' || order.status == OrderStatus.cancelled) {
             liveStatusUtama = 'Dibatalkan';
             statusUtamaColor = const Color(0xFFDC2626);
             statusUtamaBg = const Color(0xFFFEE2E2);
             statusUtamaIcon = Icons.cancel_rounded;
-          } else if ((statusPengerjaan == 'Selesai' || statusPengerjaan == 'Selesai Cleaner') && (statusPembayaran == 'Disetujui' || statusPembayaran == 'Approved') && statusBonus == 'Selesai') {
+          } else if (statusPengerjaan == 'Completed (Selesai)' && isPembayaranApproved && isBonusSelesai) {
             liveStatusUtama = 'Done';
             statusUtamaColor = const Color(0xFF059669);
             statusUtamaBg = const Color(0xFFDCFCE7);
             statusUtamaIcon = Icons.check_circle_rounded;
+          } else if (isPengerjaanDone) {
+            liveStatusUtama = 'Pending';
+            statusUtamaColor = const Color(0xFFD97706);
+            statusUtamaBg = const Color(0xFFFEF3C7);
+            statusUtamaIcon = Icons.hourglass_top_rounded;
           } else if (statusPengerjaan == 'Draft') {
             liveStatusUtama = 'Draft';
             statusUtamaColor = const Color(0xFF64748B);
             statusUtamaBg = const Color(0xFFF1F5F9);
             statusUtamaIcon = Icons.edit_note_rounded;
+          } else {
+            liveStatusUtama = 'Process';
+            statusUtamaColor = const Color(0xFF2563EB);
+            statusUtamaBg = const Color(0xFFEFF6FF);
+            statusUtamaIcon = Icons.sync_rounded;
           }
 
           final orderDisplayId = order.nomorPesanan.isNotEmpty ? order.nomorPesanan : 'Order #${order.id}';
@@ -4727,7 +4982,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                                 ),
                                 const SizedBox(height: 12),
 
-                                // Card 3: Status Administratif (RESTRUCTURED FOR MOBILE: 2 ROWS NO OVERFLOW)
+                                // Card 3: Status Administratif
                                 _buildFormCard(
                                   title: 'Status Administratif',
                                   icon: Icons.tune_rounded,
@@ -4739,7 +4994,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                                         label: 'Status Pengerjaan Layanan',
                                         value: statusPengerjaan,
                                         icon: Icons.engineering_rounded,
-                                        items: {
+                                        items: const [
                                           'Draft',
                                           'Assigned (Ditugaskan)',
                                           'In Progress (Dikerjakan)',
@@ -4748,8 +5003,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                                           'Waiting Cancel Approval',
                                           'Completed (Selesai)',
                                           'Cancelled (Batal)',
-                                          statusPengerjaan
-                                        }.toList(),
+                                        ],
                                         onChanged: (v) => setModalState(() => statusPengerjaan = v!),
                                       ),
                                       const SizedBox(height: 10),
@@ -5447,20 +5701,22 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                             );
 
                             String backendStatusPesanan = 'assigned';
-                            if (liveStatusUtama == 'Done') {
+                            if (statusPengerjaan == 'Completed (Selesai)') {
                               backendStatusPesanan = 'completed';
-                            } else if (liveStatusUtama == 'Dibatalkan') {
-                              backendStatusPesanan = 'cancelled';
-                            } else if (liveStatusUtama == 'Draft') {
-                              backendStatusPesanan = 'draft';
-                            } else if (statusPengerjaan == 'In Progress (Dikerjakan)') {
-                              backendStatusPesanan = 'in_progress';
                             } else if (statusPengerjaan == 'Finished by Cleaner') {
                               backendStatusPesanan = 'finished_by_cleaner';
+                            } else if (statusPengerjaan == 'In Progress (Dikerjakan)') {
+                              backendStatusPesanan = 'in_progress';
+                            } else if (statusPengerjaan == 'Draft') {
+                              backendStatusPesanan = 'draft';
+                            } else if (statusPengerjaan == 'Cancelled (Batal)') {
+                              backendStatusPesanan = 'cancelled';
                             } else if (statusPengerjaan == 'Waiting Payment Approval') {
                               backendStatusPesanan = 'waiting_payment_approval';
                             } else if (statusPengerjaan == 'Waiting Cancel Approval') {
                               backendStatusPesanan = 'waiting_cancel_approval';
+                            } else {
+                              backendStatusPesanan = 'assigned';
                             }
 
                             String backendStatusPembayaran = 'pending';

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/widgets/gradient_header.dart';
+import '../../../../core/widgets/app_confirmation_dialog.dart';
 import '../../services/hrd_jadwal_libur_service.dart';
 
 class HrdJadwalLiburScreen extends StatefulWidget {
@@ -157,49 +158,14 @@ class _HrdJadwalLiburScreenState extends State<HrdJadwalLiburScreen> {
       formattedDate = '$dayName, ${dt.day} ${_monthName(dt.month)} ${dt.year}';
     } catch (_) {}
 
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Color(0xFFFEF2F2),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.delete_outline_rounded, color: Color(0xFFDC2626), size: 22),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Hapus Jadwal Libur',
-                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          'Apakah Anda yakin ingin menghapus jadwal libur untuk $nama pada tanggal $formattedDate?',
-          style: GoogleFonts.inter(fontSize: 13, height: 1.4, color: const Color(0xFF334155)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Batal', style: GoogleFonts.inter(color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              elevation: 0,
-            ),
-            child: Text('Ya, Hapus', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+    final confirm = await AppConfirmationDialog.show(
+      context,
+      title: 'Hapus Jadwal Libur',
+      message: 'Apakah Anda yakin ingin menghapus jadwal libur untuk $nama pada tanggal $formattedDate?',
+      type: ConfirmationDialogType.danger,
+      confirmText: 'Ya, Hapus',
+      cancelText: 'Batal',
+      isDestructive: true,
     );
 
     if (confirm == true) {
@@ -217,76 +183,34 @@ class _HrdJadwalLiburScreenState extends State<HrdJadwalLiburScreen> {
 
     final monthNameStr = '${_monthName(_selectedMonth.month)} ${_selectedMonth.year}';
 
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Color(0xFFEFF6FF),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF2563EB), size: 24),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Generate Pola Libur',
-                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
+    final confirm = await AppConfirmationDialog.show(
+      context,
+      title: 'Generate Pola Libur',
+      message: 'Anda yakin ingin men-generate jadwal libur dari pola bulan sebelumnya? Jadwal libur yang sudah ada di bulan $monthNameStr akan tertimpa!',
+      type: ConfirmationDialogType.info,
+      confirmText: 'Ya, Generate Pola',
+      cancelText: 'Batal',
+      customIcon: Icons.auto_awesome_rounded,
+      contentWidget: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF2F2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFECACA)),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Anda yakin ingin men-generate jadwal libur dari pola bulan sebelumnya? Jadwal libur yang sudah ada di bulan $monthNameStr akan tertimpa!',
-              style: GoogleFonts.inter(fontSize: 13, height: 1.4, color: const Color(0xFF334155)),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFFECACA)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.warning_amber_rounded, size: 18, color: Color(0xFFDC2626)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Semua jadwal libur pada periode $monthNameStr akan ditimpa dengan rotasi pola baru.',
-                      style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF991B1B)),
-                    ),
-                  ),
-                ],
+            const Icon(Icons.warning_amber_rounded, size: 18, color: Color(0xFFDC2626)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Semua jadwal libur pada periode $monthNameStr akan ditimpa dengan rotasi pola baru.',
+                style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF991B1B)),
               ),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Batal', style: GoogleFonts.inter(color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              elevation: 0,
-            ),
-            child: Text('Ya, Generate Pola', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
       ),
     );
 

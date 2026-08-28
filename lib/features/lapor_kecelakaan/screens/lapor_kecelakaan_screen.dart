@@ -35,6 +35,7 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
   List<dynamic> _cleanerList = [];
   bool _isLoadingCleaners = false;
   String? _selectedCleanerId;
+  String? _selectedCleanerJabatan;
 
   // Form Controllers
   final _namaPelaporCtrl = TextEditingController();
@@ -344,6 +345,7 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
       jam: jamStr,
       namaPelapor: _namaPelaporCtrl.text.trim(),
       namaKorban: _namaKorbanCtrl.text.trim(),
+      jabatan: _selectedCleanerJabatan ?? 'Cleaner',
       lokasi: _lokasiCtrl.text.trim(),
       saksi: _saksiCtrl.text.trim(),
       peristiwaList: _selectedPeristiwa.toList(),
@@ -1163,6 +1165,7 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
                                       setState(() {
                                         _selectedCleanerId = idStr;
                                         _namaKorbanCtrl.text = name;
+                                        _selectedCleanerJabatan = jab;
                                       });
                                       Navigator.pop(ctx);
                                     },

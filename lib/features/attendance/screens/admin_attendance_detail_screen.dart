@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/widgets/gradient_header.dart';
 import '../data/attendance_model.dart';
 import '../services/attendance_service.dart';
-import 'selfie_viewer_screen.dart';
+import '../widgets/attendance_selfie_thumbnail.dart';
 
 class AdminAttendanceDetailScreen extends StatefulWidget {
   final GroupedAttendanceItem item;
@@ -23,7 +22,6 @@ class AdminAttendanceDetailScreen extends StatefulWidget {
 
 class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScreen> {
   final AttendanceService _service = AttendanceService();
-  String? _token;
 
   late DateTime _selectedMonth;
   late String _inspectedDateStr;
@@ -46,7 +44,6 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
   @override
   void initState() {
     super.initState();
-    _loadToken();
     _currentDayItem = widget.item;
     _inspectedDateStr = widget.item.tanggal;
 
@@ -57,15 +54,6 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
     }
 
     _loadMonthlyAttendance();
-  }
-
-  Future<void> _loadToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) {
-      setState(() {
-        _token = prefs.getString('auth_token');
-      });
-    }
   }
 
   Future<void> _loadMonthlyAttendance() async {
@@ -82,7 +70,8 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
       final grouped = <String, GroupedAttendanceItem>{};
       for (var item in historyList) {
         if (item.tanggal == null) continue;
-        final key = item.tanggal!;
+        final rawKey = item.tanggal!;
+        final key = rawKey.length >= 10 ? rawKey.substring(0, 10) : rawKey;
 
         if (!grouped.containsKey(key)) {
           grouped[key] = GroupedAttendanceItem(
@@ -96,19 +85,19 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
         final type = item.type.toLowerCase();
         if (type == 'check_in' || type == 'masuk') {
           grouped[key] = GroupedAttendanceItem(
-            tanggal: grouped[key]!.tanggal,
-            karyawanId: grouped[key]!.karyawanId,
-            namaCleaner: grouped[key]!.namaCleaner,
-            cabangName: grouped[key]!.cabangName,
+            tanggal: key,
+            karyawanId: widget.item.karyawanId,
+            namaCleaner: widget.item.namaCleaner,
+            cabangName: widget.item.cabangName,
             checkIn: item,
             checkOut: grouped[key]!.checkOut,
           );
         } else if (type == 'check_out' || type == 'pulang') {
           grouped[key] = GroupedAttendanceItem(
-            tanggal: grouped[key]!.tanggal,
-            karyawanId: grouped[key]!.karyawanId,
-            namaCleaner: grouped[key]!.namaCleaner,
-            cabangName: grouped[key]!.cabangName,
+            tanggal: key,
+            karyawanId: widget.item.karyawanId,
+            namaCleaner: widget.item.namaCleaner,
+            cabangName: widget.item.cabangName,
             checkIn: grouped[key]!.checkIn,
             checkOut: item,
           );
@@ -117,7 +106,8 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
 
       // If initial item was passed, ensure it is in grouped map
       if (widget.item.checkIn != null || widget.item.checkOut != null) {
-        final key = widget.item.tanggal;
+        final rawInit = widget.item.tanggal;
+        final key = rawInit.length >= 10 ? rawInit.substring(0, 10) : rawInit;
         if (!grouped.containsKey(key)) {
           grouped[key] = widget.item;
         } else {
@@ -748,56 +738,28 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                           // Right Photo Preview (if any)
                           if (item.selfieViewUrl != null && item.selfieViewUrl!.isNotEmpty && widget.showPhoto) ...[
                             const SizedBox(width: 12),
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => SelfieViewerScreen(
-                                      attendanceId: item.id,
-                                      initialUrl: item.selfieViewUrl!,
-                                    ),
+                            Column(
+                              children: [
+                                AttendanceSelfieThumbnail(
+                                  attendanceId: item.id,
+                                  selfieUrl: item.selfieViewUrl!,
+                                  title: isCheckIn ? 'Foto Selfie Masuk' : 'Foto Selfie Pulang',
+                                  item: item,
+                                  badgeLabel: isCheckIn ? 'Masuk' : 'Pulang',
+                                  accentColor: accentColor,
+                                  width: 86,
+                                  height: 106,
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  'Ketuk zoom',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 9,
+                                    color: const Color(0xFF64748B),
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                );
-                              },
-                              child: Stack(
-                                children: [
-                                  Container(
-                                    width: 80,
-                                    height: 96,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                                      color: const Color(0xFFF1F5F9),
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: _token != null
-                                          ? Image.network(
-                                              item.selfieViewUrl!,
-                                              headers: {'Authorization': 'Bearer $_token'},
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (_, __, ___) => const Center(
-                                                child: Icon(Icons.broken_image_rounded, size: 24, color: Color(0xFF94A3B8)),
-                                              ),
-                                            )
-                                          : const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    bottom: 4,
-                                    right: 4,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withValues(alpha: 0.6),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(Icons.zoom_in_rounded, size: 12, color: Colors.white),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ],
                         ],

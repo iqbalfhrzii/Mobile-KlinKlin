@@ -320,7 +320,7 @@ class OrderCleaner {
       statusPengerjaan: _parseCleanerWorkStatus(json['status_pengerjaan']),
       bonuses: parsedBonuses,
       totalBonus: totalB,
-      fotoProfil: cleaner['foto_profil'] ?? cleaner['foto'] ?? (cleaner['user'] != null && cleaner['user'] is Map ? cleaner['user']['foto_profil'] : null),
+      fotoProfil: cleaner['foto_profil'] ?? cleaner['foto'] ?? cleaner['foto_url'] ?? cleaner['foto_profil_url'] ?? cleaner['profile_photo_url'] ?? (cleaner['user'] != null && cleaner['user'] is Map ? (cleaner['user']['foto_profil'] ?? cleaner['user']['foto_url'] ?? cleaner['user']['foto'] ?? cleaner['user']['profile_photo_url']) : null),
       showWa: json['show_wa'] == true || json['show_wa'] == 1 || json['show_wa'] == '1',
       phone: cleaner['no_wa']?.toString() ?? cleaner['no_hp']?.toString() ?? cleaner['phone']?.toString() ?? '',
       fotosStart: (fotosStartData).map((e) => CleanerFoto.fromJson(e)).toList(),

@@ -87,24 +87,69 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
       _jabatanController.text = data['jabatan'] ?? '';
       _kronologiController.text = data['kronologi'] ?? '';
 
-      if (data['peristiwa'] != null) {
-        final raw = data['peristiwa'].toString().split(',');
-        for (var p in raw) {
-          final clean = p.trim();
-          if (clean.startsWith('Lainnya:')) {
+      final rawPeristiwaStr = (data['peristiwa'] ?? data['penyebab'] ?? '').toString().trim();
+      if (rawPeristiwaStr.isNotEmpty) {
+        // 1. Split by semicolon first (standard separator), fallback to comma if no semicolon
+        List<String> rawParts = rawPeristiwaStr.contains(';')
+            ? rawPeristiwaStr.split(';').map((s) => s.trim()).toList()
+            : [rawPeristiwaStr];
+
+        for (final part in rawParts) {
+          if (part.startsWith('Lainnya:')) {
             _selectedPeristiwa.add('Lainnya');
-            _peristiwaLainnyaController.text = clean.substring(8).trim();
-          } else if (clean.isNotEmpty) {
-            _selectedPeristiwa.add(clean);
+            _peristiwaLainnyaController.text = part.substring(8).trim();
+          } else if (part == 'Lainnya') {
+            _selectedPeristiwa.add('Lainnya');
+          }
+        }
+
+        // Helper to normalize string for resilient matching across slight whitespace/punctuation differences
+        String norm(String s) => s.replaceAll(RegExp(r'\s+'), ' ').replaceAll('/ ', '/').replaceAll(' /', '/').trim().toLowerCase();
+        final normalizedFullStr = norm(rawPeristiwaStr);
+
+        for (final opt in _peristiwaOptions) {
+          if (opt == 'Lainnya') continue;
+          final normOpt = norm(opt);
+
+          // Check if opt is in rawParts OR if normalizedFullStr contains normalizedOpt
+          bool matched = rawParts.any((p) => norm(p) == normOpt);
+          if (!matched && normalizedFullStr.contains(normOpt)) {
+            matched = true;
+          }
+
+          // Fallback: If option text has parenthesis, match by the distinct prefix before parenthesis
+          if (!matched && opt.contains('(')) {
+            final parenIdx = opt.indexOf('(');
+            final prefix = norm(opt.substring(0, parenIdx));
+            if (prefix.isNotEmpty && normalizedFullStr.contains(prefix)) {
+              matched = true;
+            }
+          }
+
+          if (matched) {
+            _selectedPeristiwa.add(opt);
+          }
+        }
+
+        // If 'Lainnya:' was embedded without semicolon
+        if (!_selectedPeristiwa.contains('Lainnya') && normalizedFullStr.contains('lainnya:')) {
+          _selectedPeristiwa.add('Lainnya');
+          final idx = rawPeristiwaStr.toLowerCase().indexOf('lainnya:');
+          if (idx != -1) {
+            _peristiwaLainnyaController.text = rawPeristiwaStr.substring(idx + 8).trim();
           }
         }
       }
 
       if (data['akibat'] != null) {
-        final raw = data['akibat'].toString().split(',');
+        final raw = data['akibat'].toString().split(RegExp(r'[,;]'));
         for (var a in raw) {
-          final clean = a.trim();
-          if (clean.isNotEmpty) _selectedAkibat.add(clean);
+          final clean = a.trim().toLowerCase();
+          for (var opt in _akibatOptions) {
+            if (clean == opt.toLowerCase()) {
+              _selectedAkibat.add(opt);
+            }
+          }
         }
       }
 
@@ -235,7 +280,8 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
       'jabatan': _jabatanController.text.isNotEmpty ? _jabatanController.text : 'Cleaner',
       'lokasi': _lokasiController.text,
       'saksi': _saksiController.text,
-      'peristiwa': peristiwaList.join(', '),
+      'peristiwa': peristiwaList.join('; '),
+      'penyebab': peristiwaList.join('; '),
       'akibat': _selectedAkibat.join(', '),
       'kronologi': _kronologiController.text,
       'tingkat': 'Ringan',
@@ -474,6 +520,10 @@ class _OperasionalDataKecelakaanFormSheetState extends State<OperasionalDataKece
                   
                   // 5. Nama Korban (Bisa Input Manual)
                   _buildTextField('Nama Korban (Bisa Input Manual)', _namaKaryawanController, required: true, hint: 'Nama korban kecelakaan / insiden...'),
+                  const SizedBox(height: 16),
+
+                  // 5b. Jabatan Korban
+                  _buildTextField('Jabatan Korban', _jabatanController, required: false, hint: 'Contoh: Cleaner, Driver, Leader (Default: Cleaner)'),
                   const SizedBox(height: 16),
 
                   // 6. Lokasi Detail Kejadian

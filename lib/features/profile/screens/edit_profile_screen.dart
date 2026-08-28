@@ -1,14 +1,12 @@
-import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/services/auth_service.dart';
-import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/utils/image_compress_helper.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -380,28 +378,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Widget _buildAvatar() {
     final nameFallback = _nameController.text.isEmpty ? 'CS' : _nameController.text;
-    if (_isPhotoRemoved || _photoPath == null || _photoPath!.isEmpty) {
+    if (_isPhotoRemoved) {
       return InitialsAvatar(name: nameFallback, size: 100);
     }
-    
-    if (_photoPath!.startsWith('data:image')) {
-      try {
-        final base64Str = _photoPath!.split(',').last;
-        return ClipOval(child: Image.memory(base64Decode(base64Str), width: 100, height: 100, fit: BoxFit.cover));
-      } catch (_) {
-        return InitialsAvatar(name: nameFallback, size: 100);
-      }
-    }
-    
-    if (_photoPath!.startsWith('http')) {
-      return ClipOval(child: Image.network(_photoPath!, width: 100, height: 100, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: nameFallback, size: 100)));
-    }
-    
-    if (_photoPath!.startsWith('/')) {
-      return ClipOval(child: Image.file(File(_photoPath!), width: 100, height: 100, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: nameFallback, size: 100)));
-    }
-    
-    final baseDomain = ApiClient.baseUrl.replaceAll(RegExp(r'/api/?$'), '');
-    return ClipOval(child: Image.network('$baseDomain/storage/$_photoPath', width: 100, height: 100, fit: BoxFit.cover, errorBuilder: (_, __, ___) => InitialsAvatar(name: nameFallback, size: 100)));
+    return AppAvatar(
+      photoUrl: _photoPath,
+      name: nameFallback,
+      size: 100,
+    );
   }
 }

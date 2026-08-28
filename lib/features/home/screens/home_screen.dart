@@ -4,12 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/animated_notification_bell.dart';
-import 'dart:io';
-import 'dart:convert';
 import '../../orders/screens/order_list_screen.dart';
 import '../../../core/services/auth_service.dart';
-import '../../../core/api/api_client.dart';
 import '../../orders/screens/create_order_screen.dart';
 import '../../customers/screens/customer_list_screen.dart';
 import '../../orders/services/order_service.dart';
@@ -443,89 +441,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildAvatar() {
-    if (_userPhoto == null || _userPhoto!.isEmpty) {
-      return InitialsAvatar(
-        name: _userName,
-        size: 48,
-        backgroundColor: Colors.white.withValues(alpha: 0.2),
-        textColor: Colors.white,
-        borderColor: Colors.white.withValues(alpha: 0.35),
-      );
-    }
-
-    if (_userPhoto!.startsWith('data:image')) {
-      try {
-        final base64Str = _userPhoto!.split(',').last;
-        return ClipOval(
-          child: Image.memory(
-            base64Decode(base64Str),
-            width: 48,
-            height: 48,
-            fit: BoxFit.cover,
-          ),
-        );
-      } catch (_) {
-        return InitialsAvatar(
-          name: _userName,
-          size: 48,
-          backgroundColor: Colors.white.withValues(alpha: 0.2),
-          textColor: Colors.white,
-          borderColor: Colors.white.withValues(alpha: 0.35),
-        );
-      }
-    }
-
-    if (_userPhoto!.startsWith('http')) {
-      return ClipOval(
-        child: Image.network(
-          _userPhoto!,
-          width: 48,
-          height: 48,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => InitialsAvatar(
-            name: _userName,
-            size: 48,
-            backgroundColor: Colors.white.withValues(alpha: 0.2),
-            textColor: Colors.white,
-            borderColor: Colors.white.withValues(alpha: 0.35),
-          ),
-        ),
-      );
-    }
-
-    if (_userPhoto!.startsWith('/')) {
-      return ClipOval(
-        child: Image.file(
-          File(_userPhoto!),
-          width: 48,
-          height: 48,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => InitialsAvatar(
-            name: _userName,
-            size: 48,
-            backgroundColor: Colors.white.withValues(alpha: 0.2),
-            textColor: Colors.white,
-            borderColor: Colors.white.withValues(alpha: 0.35),
-          ),
-        ),
-      );
-    }
-
-    final baseDomain = ApiClient.baseUrl.replaceAll(RegExp(r'/api/?$'), '');
-    return ClipOval(
-      child: Image.network(
-        '$baseDomain/storage/$_userPhoto',
-        width: 48,
-        height: 48,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => InitialsAvatar(
-          name: _userName,
-          size: 48,
-          backgroundColor: Colors.white.withValues(alpha: 0.2),
-          textColor: Colors.white,
-          borderColor: Colors.white.withValues(alpha: 0.35),
-        ),
-      ),
+    return AppAvatar(
+      photoUrl: _userPhoto,
+      name: _userName,
+      size: 48,
+      backgroundColor: Colors.white.withValues(alpha: 0.2),
+      textColor: Colors.white,
+      borderColor: Colors.white.withValues(alpha: 0.35),
+      borderWidth: 1.5,
     );
   }
 

@@ -1,10 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/api/api_client.dart';
 import '../../../../core/data/hrd_models.dart';
 import '../../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../../core/widgets/gradient_header.dart';
+import '../../../../core/widgets/app_avatar.dart';
 import '../../services/hrd_cuti_service.dart';
 import '../../services/hrd_service.dart';
 import 'package:shimmer/shimmer.dart';
@@ -67,108 +66,13 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
 
   Widget _buildAvatar(Map<String, dynamic>? k, {double size = 48, double radius = 14}) {
     final name = k?['nama']?.toString() ?? '';
-    final initial = name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'K';
     final rawPhoto = (k?['foto_profil'] ?? k?['foto'] ?? k?['foto_url'] ?? k?['profile_photo_url'])?.toString().trim();
-
-    Widget fallback = Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(radius),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1D4ED8).withValues(alpha: 0.2),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Text(
-          initial,
-          style: GoogleFonts.inter(
-            fontSize: size * 0.42,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-      ),
-    );
-
-    if (rawPhoto == null || rawPhoto.isEmpty || rawPhoto == 'null') {
-      return fallback;
-    }
-
-    // 1. Base64 Data URI decoding (e.g. data:image/jpeg;base64,...)
-    if (rawPhoto.startsWith('data:image')) {
-      try {
-        final base64Content = rawPhoto.contains(',') ? rawPhoto.split(',').last : rawPhoto;
-        final bytes = base64Decode(base64Content);
-        return Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(radius),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(radius),
-            child: Image.memory(
-              bytes,
-              width: size,
-              height: size,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => fallback,
-            ),
-          ),
-        );
-      } catch (_) {
-        return fallback;
-      }
-    }
-
-    // 2. HTTP / Storage URL
-    String fotoUrl = rawPhoto;
-    if (!fotoUrl.startsWith('http://') && !fotoUrl.startsWith('https://')) {
-      final cleanPath = fotoUrl.replaceFirst(RegExp(r'^/?(storage/)?'), '');
-      final baseDomain = ApiClient.baseUrl.replaceAll(RegExp(r'/api/?$'), '');
-      fotoUrl = '$baseDomain/storage/$cleanPath';
-    }
-
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radius),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(radius),
-        child: Image.network(
-          fotoUrl,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => fallback,
-        ),
-      ),
+    return AppAvatar(
+      photoUrl: rawPhoto,
+      name: name,
+      size: size,
+      shape: BoxShape.rectangle,
+      borderRadius: BorderRadius.circular(radius),
     );
   }
 

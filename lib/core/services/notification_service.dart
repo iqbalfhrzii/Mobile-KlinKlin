@@ -16,9 +16,22 @@ class NotificationService {
         final unreadCount = data['unread_count'] as int? ?? 0;
         unreadCountNotifier.value = unreadCount;
 
-        final rawList = data['data'] as List? ?? [];
+        List<dynamic> rawList = [];
+        final dynamic rawData = data['data'];
+        if (rawData is List) {
+          rawList = rawData;
+        } else if (rawData is Map) {
+          rawList = rawData.values.toList();
+        }
+
         return rawList
-            .map((item) => NotificationItem.fromJson(item as Map<String, dynamic>))
+            .map((item) {
+              if (item is Map) {
+                return NotificationItem.fromJson(Map<String, dynamic>.from(item));
+              }
+              return null;
+            })
+            .whereType<NotificationItem>()
             .toList();
       }
       return [];

@@ -54,8 +54,12 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   String _fmt(int n) =>
       'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
-  bool get _isPaid =>
-      _o.paymentStatus == 'paid' || _o.paymentStatus == 'approved';
+  bool get _isPaid {
+    final ps = _o.paymentStatus.toLowerCase();
+    final pSub = _o.pembayaran?.statusPembayaran.toLowerCase() ?? '';
+    return ps == 'paid' || ps == 'approved' || ps == 'lunas' || pSub == 'approved' || pSub == 'paid';
+  }
+
   bool get _isWaitingCancel => _o.status == OrderStatus.waitingCancelApproval;
   bool get _isPending =>
       _o.paymentStatus == 'pending' ||
@@ -65,12 +69,9 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
       _o.status == OrderStatus.cancelled;
 
   bool get _canAct {
-    if (_o.paymentStatus == 'pending') return false;
     if (_isWaitingCancel || _isCancelled) return false;
-    if (_o.paymentStatus == 'rejected') return true;
-    if (_o.hasPendingEditRequest) return true;
-    if (_o.status == OrderStatus.waitingPaymentApproval || _o.status == OrderStatus.finishedByCleaner) return true;
-    return !_isPaid;
+    if (_isPending) return false;
+    return true;
   }
 
   @override
@@ -933,8 +934,315 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
     );
   }
 
+  void _showRequestEditDialog() {
+    if (_o.hasPendingEditRequest) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Pengajuan edit pembayaran sudah dikirim dan sedang menunggu persetujuan Finance.',
+          ),
+          backgroundColor: Color(0xFFD97706),
+        ),
+      );
+      return;
+    }
+
+    final reasonCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        backgroundColor: Colors.white,
+        elevation: 10,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header Icon
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFFDE68A),
+                    width: 2,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.edit_note_rounded,
+                  color: Color(0xFFD97706),
+                  size: 28,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Title
+              Text(
+                'Ajukan Edit Pembayaran',
+                style: GoogleFonts.inter(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF0F172A),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              // Subtitle
+              Text(
+                'Pembayaran ini sudah diverifikasi & disetujui. Masukkan alasan pengajuan edit untuk ditinjau oleh Finance:',
+                style: GoogleFonts.inter(
+                  fontSize: 12.5,
+                  color: const Color(0xFF64748B),
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              // Input Area
+              TextField(
+                controller: reasonCtrl,
+                maxLines: 3,
+                style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark),
+                decoration: InputDecoration(
+                  hintText: 'Contoh: Maaf ada kesalahan nominal bayar / bukti transfer salah...',
+                  hintStyle: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  contentPadding: const EdgeInsets.all(14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFD97706), width: 1.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        backgroundColor: Colors.white,
+                      ),
+                      child: Text(
+                        'Batal',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final reason = reasonCtrl.text.trim();
+                        if (reason.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Alasan pengajuan edit harus diisi.')),
+                          );
+                          return;
+                        }
+                        Navigator.pop(ctx);
+                        setState(() => _isLoading = true);
+                        try {
+                          await OrderService().submitPengajuanEdit(_o.id, reason);
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Pengajuan edit pembayaran berhasil dikirim ke Finance!'),
+                              backgroundColor: Color(0xFF059669),
+                            ),
+                          );
+                          _refreshOrder();
+                        } catch (e) {
+                          if (!mounted) return;
+                          setState(() => _isLoading = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(e.toString()),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFD97706),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 2,
+                      ),
+                      child: Text(
+                        'Kirim Pengajuan',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // ─── STICKY BOTTOM BAR ──────────────────────────────────────────────────
   Widget _buildBottomBar(BuildContext context) {
+    // If payment is already approved / paid, CS cannot directly edit or cancel.
+    // They can submit an edit request to Finance for approval.
+    if (_isPaid) {
+      if (_o.hasPendingEditRequest) {
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            border: Border(top: BorderSide(color: AppColors.border)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 16,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            12,
+            16,
+            MediaQuery.of(context).padding.bottom + 12,
+          ),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF3C7),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFFDE68A)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.hourglass_top_rounded,
+                  color: Color(0xFFD97706),
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    'Pengajuan Edit Pending (Menunggu Finance)',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFD97706),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      return Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          border: Border(top: BorderSide(color: AppColors.border)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 16,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          12,
+          16,
+          MediaQuery.of(context).padding.bottom + 12,
+        ),
+        child: GestureDetector(
+          onTap: () => _showRequestEditDialog(),
+          child: Container(
+            width: double.infinity,
+            height: 52,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFD97706), Color(0xFFB45309)],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFD97706).withValues(alpha: 0.35),
+                  blurRadius: 14,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.edit_note_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ajukan Edit ke Finance',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      'Pembayaran telah disetujui, edit butuh persetujuan',
+                      style: GoogleFonts.inter(
+                        fontSize: 10.5,
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final isRejected = _o.paymentStatus == 'rejected';
+    final buttonLabel = isRejected ? 'Revisi Bukti Bayar' : 'Upload Bukti Bayar';
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -958,7 +1266,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
         children: [
           // Primary CTA — Pay
           GestureDetector(
-            onTap: () => _showPaymentSheet(context),
+            onTap: () => _showPpnSelectionModal(context),
             child: Container(
               width: double.infinity,
               height: 52,
@@ -989,7 +1297,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _isPaid ? 'Edit Pembayaran' : 'Upload Bukti Bayar',
+                        buttonLabel,
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
@@ -1047,12 +1355,249 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
     );
   }
 
+  // ─── PPN SELECTION MODAL (Matching Web CS PesananDetailPage) ───────────
+  void _showPpnSelectionModal(BuildContext context) {
+    final int subtotal = _o.total;
+    final int nominalPpn = (subtotal * 0.11).round();
+    final int totalDenganPpn = subtotal + nominalPpn;
+    final bool isWajibPpn = _o.isWajibPpn;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Pilih Opsi PPN',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+                InkWell(
+                  onTap: () => Navigator.pop(ctx),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(Icons.close_rounded, size: 20, color: Colors.grey.shade500),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Apakah pembayaran ini menggunakan PPN (11%) atau tidak?',
+              style: GoogleFonts.inter(
+                fontSize: 12.5,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Card 1: Pakai PPN
+            InkWell(
+              onTap: () {
+                Navigator.pop(ctx);
+                _showPaymentSheet(context, initialPpn: true);
+              },
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isWajibPpn ? const Color(0xFFF0FDF4) : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isWajibPpn ? const Color(0xFF16A34A) : const Color(0xFFE2E8F0),
+                    width: isWajibPpn ? 1.5 : 1.0,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Pakai PPN (11%)',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF0F172A),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (isWajibPpn)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Default Cabang',
+                              style: GoogleFonts.inter(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF15803D),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Subtotal', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                        Text(_fmt(subtotal), style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('PPN (11%)', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                        Text('+${_fmt(nominalPpn)}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF16A34A))),
+                      ],
+                    ),
+                    const Divider(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Total', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                        Text(_fmt(totalDenganPpn), style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF16A34A))),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Card 2: Tanpa PPN
+            InkWell(
+              onTap: () {
+                Navigator.pop(ctx);
+                _showPaymentSheet(context, initialPpn: false);
+              },
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: !isWajibPpn ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                    width: !isWajibPpn ? 1.5 : 1.0,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.remove_circle_outline_rounded, color: Color(0xFF64748B), size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Tanpa PPN',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF0F172A),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (!isWajibPpn)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Default Cabang',
+                              style: GoogleFonts.inter(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF2563EB),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Subtotal', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                        Text(_fmt(subtotal), style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('PPN (11%)', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                        Text('+Rp 0', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                      ],
+                    ),
+                    const Divider(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Total', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                        Text(_fmt(subtotal), style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ─── PAYMENT SHEET ──────────────────────────────────────────────────────
-  void _showPaymentSheet(BuildContext context) {
+  void _showPaymentSheet(BuildContext context, {bool? initialPpn}) {
     final noteCtrl = TextEditingController();
     final diskonCtrl = TextEditingController();
     final bool isWajibPpn = _o.isWajibPpn;
-    bool applyPpn = isWajibPpn;
+    bool applyPpn = initialPpn ?? isWajibPpn;
     bool applyPph = (_o.pph ?? _o.pembayaran?.pph ?? 0) > 0;
     File? selectedProof;
     bool isSubmitting = false;
@@ -1273,78 +1818,100 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                       Expanded(
                         child: Column(
                           children: [
-                            // PPN (11%) - Kontrol Penuh oleh Finance, CS Tidak Bisa Ubah
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: applyPpn
-                                    ? const Color(0xFFEFF6FF)
-                                    : const Color(0xFFF8FAFC),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: applyPpn
-                                      ? const Color(0xFFBFDBFE)
-                                      : const Color(0xFFE2E8F0),
-                                  width: 1.0,
+                            // PPN (11%) - Auto centang jika cabang wajib PPN, namun dapat diuncentang/diubah bebas oleh CS
+                            InkWell(
+                              onTap: () {
+                                setModal(() {
+                                  applyPpn = !applyPpn;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
                                 ),
-                              ),
-                              child: Row(
-                                children: [
-                                  SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: Checkbox(
-                                      value: applyPpn,
-                                      onChanged: null, // Terkunci: CS tidak dapat mengubah
-                                      activeColor: const Color(0xFF2563EB),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(4),
+                                decoration: BoxDecoration(
+                                  color: applyPpn
+                                      ? const Color(0xFFEFF6FF)
+                                      : const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: applyPpn
+                                        ? const Color(0xFFBFDBFE)
+                                        : const Color(0xFFE2E8F0),
+                                    width: 1.0,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: Checkbox(
+                                        value: applyPpn,
+                                        onChanged: (v) {
+                                          setModal(() => applyPpn = v ?? false);
+                                        },
+                                        activeColor: const Color(0xFF2563EB),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Text(
-                                              'PPN (11%)',
-                                              style: GoogleFonts.inter(
-                                                fontSize: 12.5,
-                                                fontWeight: FontWeight.w600,
-                                                color: applyPpn
-                                                    ? const Color(0xFF1E293B)
-                                                    : const Color(0xFF94A3B8),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(
+                                                'PPN (11%)',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 12.5,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: applyPpn
+                                                      ? const Color(0xFF1E293B)
+                                                      : const Color(0xFF94A3B8),
+                                                ),
                                               ),
-                                            ),
-                                            const SizedBox(width: 4),
-                                            const Icon(
-                                              Icons.lock_outline_rounded,
-                                              size: 12,
-                                              color: Color(0xFF94A3B8),
-                                            ),
-                                          ],
-                                        ),
-                                        Text(
-                                          applyPpn ? 'Wajib Cabang' : 'Nonaktif Finance',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w500,
-                                            color: applyPpn
-                                                ? const Color(0xFF2563EB)
-                                                : const Color(0xFF94A3B8),
+                                              if (isWajibPpn) ...[
+                                                const SizedBox(width: 5),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFFDBEAFE),
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: Text(
+                                                    'Default Cabang',
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 9,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: const Color(0xFF1E40AF),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
                                           ),
-                                        ),
-                                      ],
+                                          Text(
+                                            applyPpn ? 'Dikenakan PPN 11%' : 'Tanpa PPN (Bisa Dicentang)',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w500,
+                                              color: applyPpn
+                                                  ? const Color(0xFF2563EB)
+                                                  : const Color(0xFF94A3B8),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -1744,6 +2311,18 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                               );
                               return;
                             }
+
+                            // Alert Konfirmasi Pembayaran (Sesuai Web Custom Confirm Modal)
+                            final confirmed = await AppConfirmationDialog.show(
+                              ctx,
+                              title: 'Konfirmasi Pembayaran',
+                              message: 'Apakah Anda yakin dengan pilihan ${applyPpn ? "PPN (11%)" : "Tanpa PPN"} dan Metode Pembayaran ($selectedMethod) ini?',
+                              confirmText: 'Ya, Yakin',
+                              cancelText: 'Kembali',
+                              type: ConfirmationDialogType.info,
+                            );
+                            if (confirmed != true) return;
+
                             setModal(() {
                               isSubmitting = true;
                               errorMsg = null;
