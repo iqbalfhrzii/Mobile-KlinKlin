@@ -1016,9 +1016,22 @@ class _OrderCard extends StatelessWidget {
     final hari = dateFmt[0];
     final tanggal = dateFmt.length > 1 ? dateFmt[1] : '-';
 
-    final subtotal = o.total;
-    final ppn = (subtotal * 0.11).round();
-    final totalAkhir = subtotal + ppn;
+    final int baseSubtotal = (o.subtotal > 0)
+        ? o.subtotal
+        : (o.services.isNotEmpty
+            ? o.services.fold(0, (sum, s) => sum + s.subtotal)
+            : o.total);
+    final double diskonPersen = o.pembayaran?.diskonPersen ?? 0.0;
+    final int diskonValue = (baseSubtotal * (diskonPersen / 100)).round();
+    final int totalSetelahDiskon = baseSubtotal - diskonValue;
+
+    final int ppnPersen = o.ppn ?? (o.pembayaran?.ppn ?? (o.isWajibPpn ? 11 : 0));
+    final int ppnValue = (o.pembayaran != null || o.ppn != null || o.isWajibPpn)
+        ? (totalSetelahDiskon * (ppnPersen / 100)).round()
+        : 0;
+    final int pphPersen = o.pph ?? o.pembayaran?.pph ?? 0;
+    final int pphValue = (totalSetelahDiskon * (pphPersen / 100)).round();
+    final int totalAkhir = totalSetelahDiskon + ppnValue - pphValue;
 
     return '''Halo Kak $customerName
 Terimakasih sudah melakukan pemesanan di Klinklin $branchName, Berikut Rinciannya :
@@ -1036,9 +1049,9 @@ Hari : $hari
 Waktu : $waktu
 Tanggal : $tanggal
 --------------------------------
-Total Awal : ${_fmt(subtotal).replaceAll('Rp ', '')}
-Diskon : 0
-PPn : ${_fmt(ppn).replaceAll('Rp ', '')}
+Total Awal : ${_fmt(baseSubtotal).replaceAll('Rp ', '')}
+Diskon : ${diskonValue > 0 ? _fmt(diskonValue).replaceAll('Rp ', '') : '0'}
+PPn : ${_fmt(ppnValue).replaceAll('Rp ', '')}
 *TOTAL BAYAR : ${_fmt(totalAkhir).replaceAll(' ', '')}*
 --------------------------------
 
@@ -1311,9 +1324,14 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
     final isCancelled = o.status == OrderStatus.cancelled;
 
     // Calculate total price accurately
+    final int baseSubtotal = (o.subtotal > 0)
+        ? o.subtotal
+        : (o.services.isNotEmpty
+            ? o.services.fold(0, (sum, s) => sum + s.subtotal)
+            : o.total);
     final double diskonPersen = o.pembayaran?.diskonPersen ?? 0.0;
-    final int diskonValue = (o.total * (diskonPersen / 100)).round();
-    final int totalSetelahDiskon = o.total - diskonValue;
+    final int diskonValue = (baseSubtotal * (diskonPersen / 100)).round();
+    final int totalSetelahDiskon = baseSubtotal - diskonValue;
     final int ppnPersen = o.ppn ?? o.pembayaran?.ppn ?? 0;
     final int ppnValue = (o.pembayaran != null || o.ppn != null)
         ? (totalSetelahDiskon * (ppnPersen / 100)).round()

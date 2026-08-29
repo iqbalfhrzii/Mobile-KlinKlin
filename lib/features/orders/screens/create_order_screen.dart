@@ -104,7 +104,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           if (mounted) {
             setState(() {
               _isBranchWajibPpn = isPpn;
-              if (widget.existingOrder == null) {
+              if (widget.existingOrder == null && !_draft.hasUserToggledPpn) {
                 _draft.applyPpn = isPpn;
               }
             });
@@ -327,7 +327,11 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   Widget _buildStep() {
     switch (_step) {
       case 0:
-        return _Step1Info(draft: _draft, onChanged: () => setState(() {}));
+        return _Step1Info(
+          draft: _draft,
+          isBranchWajibPpn: _isBranchWajibPpn,
+          onChanged: () => setState(() {}),
+        );
       case 1:
         return _Step2Services(draft: _draft, onChanged: () => setState(() {}));
       case 2:
@@ -489,7 +493,12 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           );
         }
       } else {
-        await _orderService.updateOrder(widget.existingOrder!.id, _draft);
+        final int? origCabang = int.tryParse(widget.existingOrder!.cabangId.replaceAll(RegExp(r'[^0-9]'), ''));
+        await _orderService.updateOrder(
+          widget.existingOrder!.id,
+          _draft,
+          originalCabangId: origCabang,
+        );
         if (_draft.cleaners.isNotEmpty) {
           await _orderService.assignCleaner(
             widget.existingOrder!.id,
@@ -558,9 +567,11 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 class _Step1Info extends StatefulWidget {
   const _Step1Info({
     required this.draft,
+    this.isBranchWajibPpn = false,
     required this.onChanged,
   });
   final OrderDraft draft;
+  final bool isBranchWajibPpn;
   final VoidCallback onChanged;
 
   @override
@@ -726,9 +737,13 @@ class _Step1InfoState extends State<_Step1Info> {
               widget.draft.notes = prevNotes;
             }
 
-            // Copy PPN
-            final ppnVal = lastOrder['ppn'] ?? lastOrder['pembayaran']?['ppn'] ?? 0;
-            widget.draft.applyPpn = (double.tryParse(ppnVal.toString()) ?? 0) > 0;
+            // Copy PPN: Cabang Wajib PPN wajib default true
+            if (widget.isBranchWajibPpn) {
+              widget.draft.applyPpn = true;
+            } else {
+              final ppnVal = lastOrder['ppn'] ?? lastOrder['pembayaran']?['ppn'] ?? 0;
+              widget.draft.applyPpn = (double.tryParse(ppnVal.toString()) ?? 0) > 0;
+            }
 
             // Copy cleaners if any
             final cleaners = (lastOrder['cleaners'] as List?) ?? [];
@@ -2824,6 +2839,22 @@ class _Step4Summary extends StatefulWidget {
 
 class _Step4SummaryState extends State<_Step4Summary> {
   @override
+  void initState() {
+    super.initState();
+    if (widget.isBranchWajibPpn && !widget.draft.hasUserToggledPpn) {
+      widget.draft.applyPpn = true;
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _Step4Summary oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isBranchWajibPpn && !widget.draft.hasUserToggledPpn) {
+      widget.draft.applyPpn = true;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final int subtotal = widget.draft.total;
     final int ppn = widget.draft.applyPpn ? (subtotal * 0.11).round() : 0;
@@ -3061,6 +3092,7 @@ class _Step4SummaryState extends State<_Step4Summary> {
                               onChanged: (val) {
                                 if (val != null) {
                                   setState(() {
+                                    widget.draft.hasUserToggledPpn = true;
                                     widget.draft.applyPpn = val;
                                   });
                                 }

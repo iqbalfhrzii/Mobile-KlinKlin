@@ -19,31 +19,33 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.background,
     );
 
+    final baseTextTheme = GoogleFonts.interTextTheme(base.textTheme);
+
     return base.copyWith(
-      textTheme: GoogleFonts.interTextTheme(base.textTheme).copyWith(
-        bodyLarge: GoogleFonts.inter(
+      textTheme: baseTextTheme.copyWith(
+        bodyLarge: baseTextTheme.bodyLarge?.copyWith(
           color: AppColors.textDark,
           fontSize: 16,
         ),
-        bodyMedium: GoogleFonts.inter(
+        bodyMedium: baseTextTheme.bodyMedium?.copyWith(
           color: AppColors.textDark,
           fontSize: 14,
         ),
-        bodySmall: GoogleFonts.inter(
+        bodySmall: baseTextTheme.bodySmall?.copyWith(
           color: AppColors.textMuted,
           fontSize: 12,
         ),
-        titleLarge: GoogleFonts.inter(
+        titleLarge: baseTextTheme.titleLarge?.copyWith(
           color: AppColors.textDark,
           fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
-        titleMedium: GoogleFonts.inter(
+        titleMedium: baseTextTheme.titleMedium?.copyWith(
           color: AppColors.textDark,
           fontSize: 16,
           fontWeight: FontWeight.w600,
         ),
-        labelSmall: GoogleFonts.inter(
+        labelSmall: baseTextTheme.labelSmall?.copyWith(
           color: AppColors.textMuted,
           fontSize: 10,
         ),

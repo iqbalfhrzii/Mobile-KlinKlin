@@ -618,9 +618,10 @@ class OrderModel {
       return computedTotal;
     }
 
-    final paymentObj = json['pembayaran'] != null && json['pembayaran'] is Map
-        ? OrderPayment.fromJson(json['pembayaran'])
-        : (json['pesanan'] != null && json['status_pembayaran'] != null ? OrderPayment.fromJson(json) : null);
+    final rawPayment = orderJson['pembayaran'] ?? json['pembayaran'];
+    final paymentObj = rawPayment != null && rawPayment is Map
+        ? OrderPayment.fromJson(Map<String, dynamic>.from(rawPayment))
+        : (json['status_pembayaran'] != null ? OrderPayment.fromJson(json) : null);
 
     final cabangData = orderJson['cabang'] ?? json['cabang'];
     bool wajibPpn = false;
@@ -698,6 +699,7 @@ class OrderDraft {
     List<OrderCleaner>? cleaners,
     this.notes = '',
     this.applyPpn = false,
+    this.hasUserToggledPpn = false,
     this.applyPph = false,
     this.tanggalPengerjaan = '',
     this.waktuPengerjaan = '',
@@ -712,6 +714,7 @@ class OrderDraft {
   String notes;
   String? paymentMethod;
   bool applyPpn;
+  bool hasUserToggledPpn;
   bool applyPph;
   String tanggalPengerjaan;
   String waktuPengerjaan;

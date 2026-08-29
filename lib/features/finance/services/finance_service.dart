@@ -5,7 +5,7 @@ import '../../../core/data/order_model.dart';
 class FinanceService {
   final Dio _dio = ApiClient.instance;
 
-  Future<void> approvePembayaran(int pembayaranId, String status, {String? alasan}) async {
+  Future<void> approvePembayaran(dynamic pembayaranId, String status, {String? alasan}) async {
     try {
       final data = {
         'status_approval': status,

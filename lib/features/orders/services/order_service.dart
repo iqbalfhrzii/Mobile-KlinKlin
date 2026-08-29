@@ -34,31 +34,44 @@ class OrderService {
       if (tipeCustomer != null) queryParams['tipe_customer'] = tipeCustomer;
 
       final List<dynamic> allRawOrders = [];
-      int currentPage = 1;
       int lastPage = 1;
+      final Map<String, dynamic> firstParams = Map<String, dynamic>.from(queryParams);
+      if (fetchAllPages) {
+        firstParams['page'] = 1;
+      }
 
-      do {
-        final params = Map<String, dynamic>.from(queryParams);
-        if (fetchAllPages) {
-          params['page'] = currentPage;
+      final response = await _dio.get('/pesanan', queryParameters: firstParams);
+      final rawBody = response.data;
+      var responseData = rawBody['data'] ?? rawBody;
+
+      if (responseData is Map && responseData.containsKey('data') && responseData['data'] is List) {
+        final List pageItems = responseData['data'] as List;
+        allRawOrders.addAll(pageItems);
+        lastPage = responseData['last_page'] is int ? responseData['last_page'] : 1;
+
+        if (fetchAllPages && lastPage > 1) {
+          // Fetch remaining pages in parallel with Future.wait to avoid slow sequential roundtrips
+          final targetLastPage = lastPage > 8 ? 8 : lastPage;
+          final futures = <Future<Response>>[];
+          for (int p = 2; p <= targetLastPage; p++) {
+            final pParams = Map<String, dynamic>.from(queryParams);
+            pParams['page'] = p;
+            futures.add(_dio.get('/pesanan', queryParameters: pParams));
+          }
+          final pageResponses = await Future.wait(futures);
+          for (final pageRes in pageResponses) {
+            final pBody = pageRes.data;
+            final pData = pBody['data'] ?? pBody;
+            if (pData is Map && pData.containsKey('data') && pData['data'] is List) {
+              allRawOrders.addAll(pData['data'] as List);
+            } else if (pData is List) {
+              allRawOrders.addAll(pData);
+            }
+          }
         }
-
-        final response = await _dio.get('/pesanan', queryParameters: params);
-        final rawBody = response.data;
-        var responseData = rawBody['data'] ?? rawBody;
-
-        if (responseData is Map && responseData.containsKey('data') && responseData['data'] is List) {
-          final List pageItems = responseData['data'] as List;
-          allRawOrders.addAll(pageItems);
-          lastPage = responseData['last_page'] is int ? responseData['last_page'] : 1;
-          currentPage++;
-        } else if (responseData is List) {
-          allRawOrders.addAll(responseData);
-          break;
-        } else {
-          break;
-        }
-      } while (fetchAllPages && currentPage <= lastPage);
+      } else if (responseData is List) {
+        allRawOrders.addAll(responseData);
+      }
 
       return allRawOrders.map((json) => OrderModel.fromJson(json)).toList();
     } catch (e) {

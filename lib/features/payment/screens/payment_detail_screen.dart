@@ -243,11 +243,16 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                       const SizedBox(height: 2),
                       Builder(
                         builder: (context) {
+                          final int baseSubtotal = (_o.subtotal > 0)
+                              ? _o.subtotal
+                              : (_o.services.isNotEmpty
+                                  ? _o.services.fold(0, (sum, s) => sum + s.subtotal)
+                                  : _o.total);
                           final double diskonPersen =
                               _o.pembayaran?.diskonPersen ?? 0.0;
                           final int diskonValue =
-                              (_o.total * (diskonPersen / 100)).round();
-                          final int totalSetelahDiskon = _o.total - diskonValue;
+                              (baseSubtotal * (diskonPersen / 100)).round();
+                          final int totalSetelahDiskon = baseSubtotal - diskonValue;
                           final int ppnPersen =
                               _o.ppn ?? _o.pembayaran?.ppn ?? 0;
                           final int ppnValue =
@@ -534,9 +539,14 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
           const SizedBox(height: 10),
           Builder(
             builder: (context) {
+              final int baseSubtotal = (_o.subtotal > 0)
+                  ? _o.subtotal
+                  : (_o.services.isNotEmpty
+                      ? _o.services.fold(0, (sum, s) => sum + s.subtotal)
+                      : _o.total);
               final double diskonPersen = _o.pembayaran?.diskonPersen ?? 0.0;
-              final int diskonValue = (_o.total * (diskonPersen / 100)).round();
-              final int totalSetelahDiskon = _o.total - diskonValue;
+              final int diskonValue = (baseSubtotal * (diskonPersen / 100)).round();
+              final int totalSetelahDiskon = baseSubtotal - diskonValue;
               final int ppnPersen = _o.ppn ?? _o.pembayaran?.ppn ?? 0;
               final int ppnValue = (totalSetelahDiskon * (ppnPersen / 100))
                   .round();
@@ -555,7 +565,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                         ),
                       ),
                       Text(
-                        _fmt(_o.total),
+                        _fmt(baseSubtotal),
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
@@ -1305,7 +1315,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                         ),
                       ),
                       Text(
-                        _fmt((_o.total * 1.11).round()),
+                        _fmt(_o.total),
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           color: Colors.white.withValues(alpha: 0.8),
@@ -1641,11 +1651,16 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModal) {
+          final int baseSubtotal = (_o.subtotal > 0)
+              ? _o.subtotal
+              : (_o.services.isNotEmpty
+                  ? _o.services.fold(0, (sum, s) => sum + s.subtotal)
+                  : _o.total);
           int diskonPersen = int.tryParse(diskonCtrl.text) ?? 0;
           int ppnPersen = applyPpn ? 11 : 0;
           int pphPersen = applyPph ? 2 : 0;
-          int diskonNominal = (_o.total * diskonPersen / 100).round();
-          int setelahDiskon = _o.total - diskonNominal;
+          int diskonNominal = (baseSubtotal * diskonPersen / 100).round();
+          int setelahDiskon = baseSubtotal - diskonNominal;
           int ppnNominal = (setelahDiskon * ppnPersen / 100).round();
           int pphNominal = (setelahDiskon * pphPersen / 100).round();
           int totalAkhir = setelahDiskon + ppnNominal - pphNominal;
@@ -2534,7 +2549,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                 ),
                               ),
                               Text(
-                                '${_o.nomorPesanan} · ${_fmt((_o.total * 1.11).round())}',
+                                '${_o.nomorPesanan} · ${_fmt(_o.total)}',
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
                                   color: AppColors.textMuted,

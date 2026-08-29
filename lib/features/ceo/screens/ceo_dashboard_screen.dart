@@ -52,6 +52,7 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
     'Bulan Ini',
     'Kemarin',
     'Hari Ini',
+    'Besok',
     'Kustom Tanggal',
   ];
 
@@ -120,7 +121,7 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
         ).format(DateTime(now.year, now.month, 1));
         end = DateFormat(
           'yyyy-MM-dd',
-        ).format(DateTime(now.year, now.month + 1, 0));
+        ).format(now);
       } else if (_selectedFilter == 'Hari Ini') {
         start = DateFormat('yyyy-MM-dd').format(now);
         end = DateFormat('yyyy-MM-dd').format(now);
@@ -128,6 +129,10 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
         final yesterday = now.subtract(const Duration(days: 1));
         start = DateFormat('yyyy-MM-dd').format(yesterday);
         end = DateFormat('yyyy-MM-dd').format(yesterday);
+      } else if (_selectedFilter == 'Besok') {
+        final tomorrow = now.add(const Duration(days: 1));
+        start = DateFormat('yyyy-MM-dd').format(tomorrow);
+        end = DateFormat('yyyy-MM-dd').format(tomorrow);
       } else if (_selectedFilter == 'Kustom Tanggal') {
         if (_customStartDate != null && _customEndDate != null) {
           start = DateFormat('yyyy-MM-dd').format(_customStartDate!);
@@ -138,7 +143,7 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
           ).format(DateTime(now.year, now.month, 1));
           end = DateFormat(
             'yyyy-MM-dd',
-          ).format(DateTime(now.year, now.month + 1, 0));
+          ).format(now);
         }
       }
 
@@ -1341,35 +1346,90 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
     final list = (_data?['ringkasan_layanan'] as List?) ?? [];
     if (list.isEmpty) return const Center(child: Text('Tidak ada data'));
 
+    final detailList = (_data?['detail_layanan'] as List?) ?? [];
+    final Map<String, double> nasionalOmzet = {};
+    final Map<String, int> nasionalTrx = {};
+
+    for (var item in detailList) {
+      final lMap = item['layanan'] as Map? ?? {};
+      lMap.forEach((k, v) {
+        final name = k.toString();
+        nasionalOmzet[name] = (nasionalOmzet[name] ?? 0.0) + _getLayananOmzet(v);
+        nasionalTrx[name] = (nasionalTrx[name] ?? 0) + _getLayananTrx(v);
+      });
+    }
+
     Map<String, dynamic>? overallHighest;
     Map<String, dynamic>? overallLowest;
     Map<String, dynamic>? overallMost;
     Map<String, dynamic>? overallLeast;
 
-    for (var item in list) {
-      final h = item['omzet_tertinggi'];
-      if (h != null &&
-          (overallHighest == null ||
-              _parseDouble(h['total']) > _parseDouble(overallHighest['total']))) {
-        overallHighest = h;
-      }
-      final l = item['omzet_terendah'];
-      if (l != null &&
-          (overallLowest == null ||
-              _parseDouble(l['total']) < _parseDouble(overallLowest['total']))) {
-        overallLowest = l;
-      }
-      final m = item['trx_terbanyak'];
-      if (m != null &&
-          (overallMost == null ||
-              _parseInt(m['trx']) > _parseInt(overallMost['trx']))) {
-        overallMost = m;
-      }
-      final le = item['trx_tersedikit'];
-      if (le != null &&
-          (overallLeast == null ||
-              _parseInt(le['trx']) < _parseInt(overallLeast['trx']))) {
-        overallLeast = le;
+    if (nasionalOmzet.isNotEmpty) {
+      final sortedByOmzet = nasionalOmzet.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+
+      final highestEntry = sortedByOmzet.first;
+      overallHighest = {
+        'nama_layanan': highestEntry.key,
+        'total': highestEntry.value,
+        'trx': nasionalTrx[highestEntry.key] ?? 0,
+      };
+
+      final activeByOmzet = sortedByOmzet.where((e) => e.value > 0).toList();
+      final lowestEntry = activeByOmzet.isNotEmpty ? activeByOmzet.last : sortedByOmzet.last;
+      overallLowest = {
+        'nama_layanan': lowestEntry.key,
+        'total': lowestEntry.value,
+        'trx': nasionalTrx[lowestEntry.key] ?? 0,
+      };
+    }
+
+    if (nasionalTrx.isNotEmpty) {
+      final sortedByTrx = nasionalTrx.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+
+      final mostEntry = sortedByTrx.first;
+      overallMost = {
+        'nama_layanan': mostEntry.key,
+        'trx': mostEntry.value,
+        'total': nasionalOmzet[mostEntry.key] ?? 0.0,
+      };
+
+      final activeByTrx = sortedByTrx.where((e) => e.value > 0).toList();
+      final leastEntry = activeByTrx.isNotEmpty ? activeByTrx.last : sortedByTrx.last;
+      overallLeast = {
+        'nama_layanan': leastEntry.key,
+        'trx': leastEntry.value,
+        'total': nasionalOmzet[leastEntry.key] ?? 0.0,
+      };
+    }
+
+    if (overallHighest == null) {
+      for (var item in list) {
+        final h = item['omzet_tertinggi'];
+        if (h != null &&
+            (overallHighest == null ||
+                _parseDouble(h['total']) > _parseDouble(overallHighest['total']))) {
+          overallHighest = h;
+        }
+        final l = item['omzet_terendah'];
+        if (l != null &&
+            (overallLowest == null ||
+                _parseDouble(l['total']) < _parseDouble(overallLowest['total']))) {
+          overallLowest = l;
+        }
+        final m = item['trx_terbanyak'];
+        if (m != null &&
+            (overallMost == null ||
+                _parseInt(m['trx']) > _parseInt(overallMost['trx']))) {
+          overallMost = m;
+        }
+        final le = item['trx_tersedikit'];
+        if (le != null &&
+            (overallLeast == null ||
+                _parseInt(le['trx']) < _parseInt(overallLeast['trx']))) {
+          overallLeast = le;
+        }
       }
     }
 

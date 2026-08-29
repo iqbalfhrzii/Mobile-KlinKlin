@@ -41,11 +41,19 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   bool get _canEdit {
     if (widget.isReadOnly) return false;
     if (_o.status == OrderStatus.cancelled || _o.paymentStatus.toLowerCase() == 'cancelled') return false;
-    // Jika cleaner sudah selesai pengerjaan atau sudah dibayar, alihkan ke "Ajukan Edit"
-    return _o.status != OrderStatus.finishedByCleaner &&
-        _o.status != OrderStatus.completed &&
-        _o.statusUtamaLabel != 'Done' &&
-        !_isPaid;
+    if (_o.status == OrderStatus.completed || _o.statusUtamaLabel == 'Done') return false;
+
+    // Patokan murni di status pembayaran (status cleaner dan status bonus tidak berpengaruh):
+    // Jika pembayaran sudah approved / disetujui / lunas / paid ATAU masih pending verifikasi Finance,
+    // maka pesanan terkunci dan CS harus mengajukan edit ke Finance terlebih dahulu.
+    final s = _o.paymentStatus.toLowerCase();
+    final bool isPaymentLocked = (s == 'pending' || s == 'approved' || s == 'disetujui' || s == 'paid' || s == 'lunas');
+    if (isPaymentLocked) return false;
+
+    // Jika CS sedang menunggu approval pengajuan edit dari Finance, tidak bisa edit langsung
+    if (_o.hasPendingEditRequest) return false;
+
+    return true;
   }
 
   @override
@@ -941,6 +949,40 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
     return _card(
       title: 'Detail Layanan',
+      trailingAction: _canEdit
+          ? InkWell(
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CreateOrderScreen(existingOrder: o),
+                  ),
+                );
+                if (result == true) {
+                  _fetchDetail();
+                }
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.edit_rounded, size: 14, color: AppColors.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Edit Layanan',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1102,9 +1144,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           const Divider(height: 12, color: AppColors.border),
           Builder(
             builder: (context) {
+              final int baseSubtotal = (o.subtotal > 0)
+                  ? o.subtotal
+                  : (o.services.isNotEmpty
+                      ? o.services.fold(0, (sum, s) => sum + s.subtotal)
+                      : o.total);
               final double diskonPersen = o.pembayaran?.diskonPersen ?? 0.0;
-              final int diskonValue = (o.total * (diskonPersen / 100)).round();
-              final int totalSetelahDiskon = o.total - diskonValue;
+              final int diskonValue = (baseSubtotal * (diskonPersen / 100)).round();
+              final int totalSetelahDiskon = baseSubtotal - diskonValue;
 
               final int ppnPersen = o.ppn ?? (o.pembayaran?.ppn ?? (o.isWajibPpn ? 11 : 0));
               final int ppnValue = (totalSetelahDiskon * (ppnPersen / 100))
@@ -1127,7 +1174,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         ),
                       ),
                       Text(
-                        _formatRupiah(o.total),
+                        _formatRupiah(baseSubtotal),
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
@@ -2760,9 +2807,22 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     final hari = dateFmt[0];
     final tanggal = dateFmt.length > 1 ? dateFmt[1] : '-';
 
-    final subtotal = o.total;
-    final ppn = (subtotal * 0.11).round();
-    final totalAkhir = subtotal + ppn;
+    final int baseSubtotal = (o.subtotal > 0)
+        ? o.subtotal
+        : (o.services.isNotEmpty
+            ? o.services.fold(0, (sum, s) => sum + s.subtotal)
+            : o.total);
+    final double diskonPersen = o.pembayaran?.diskonPersen ?? 0.0;
+    final int diskonValue = (baseSubtotal * (diskonPersen / 100)).round();
+    final int totalSetelahDiskon = baseSubtotal - diskonValue;
+
+    final int ppnPersen = o.ppn ?? (o.pembayaran?.ppn ?? (o.isWajibPpn ? 11 : 0));
+    final int ppnValue = (o.pembayaran != null || o.ppn != null || o.isWajibPpn)
+        ? (totalSetelahDiskon * (ppnPersen / 100)).round()
+        : 0;
+    final int pphPersen = o.pph ?? o.pembayaran?.pph ?? 0;
+    final int pphValue = (totalSetelahDiskon * (pphPersen / 100)).round();
+    final int totalAkhir = totalSetelahDiskon + ppnValue - pphValue;
 
     final message =
         '''Halo Kak $customerName
@@ -2781,9 +2841,9 @@ Hari : $hari
 Waktu : $waktu
 Tanggal : $tanggal
 --------------------------------
-Total Awal : ${_formatRupiah(subtotal).replaceAll('Rp ', '')}
-Diskon : 0
-PPn : ${_formatRupiah(ppn).replaceAll('Rp ', '')}
+Total Awal : ${_formatRupiah(baseSubtotal).replaceAll('Rp ', '')}
+Diskon : ${diskonValue > 0 ? _formatRupiah(diskonValue).replaceAll('Rp ', '') : '0'}
+PPn : ${_formatRupiah(ppnValue).replaceAll('Rp ', '')}
 *TOTAL BAYAR : ${_formatRupiah(totalAkhir).replaceAll(' ', '')}*
 --------------------------------
 

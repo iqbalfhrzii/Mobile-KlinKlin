@@ -76,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
       bool isThisMonth = (o.scheduleDateTime.year == now.year && o.scheduleDateTime.month == now.month) ||
           (o.tanggalInput.year == now.year && o.tanggalInput.month == now.month);
       if (isThisMonth) {
-        final int val = o.total > 0 ? o.total : o.subtotal;
+        final int val = o.subtotal;
         omzetBulan += val;
         countThisMonth++;
       }
@@ -127,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
           bool isThisMonth = (o.scheduleDateTime.year == now.year && o.scheduleDateTime.month == now.month) ||
               (o.tanggalInput.year == now.year && o.tanggalInput.month == now.month);
           
-          final int val = o.total > 0 ? o.total : o.subtotal;
+          final int val = o.subtotal;
           
           if (isThisMonth) {
             if (_omzetStatusFilter == null || o.status == _omzetStatusFilter) {
