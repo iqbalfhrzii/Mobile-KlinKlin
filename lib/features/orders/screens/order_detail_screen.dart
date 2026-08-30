@@ -38,9 +38,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     return s == 'paid' || s == 'lunas' || s == 'settlement' || s == 'approved' || s == 'disetujui' || _o.status == OrderStatus.completed;
   }
 
+  bool get _isCancelled =>
+      _o.status == OrderStatus.cancelled ||
+      _o.status == OrderStatus.waitingCancelApproval ||
+      _o.paymentStatus.toLowerCase() == 'cancelled' ||
+      _o.statusUtamaLabel == 'Dibatalkan' ||
+      _o.pembatalanId != null;
+
   bool get _canEdit {
     if (widget.isReadOnly) return false;
-    if (_o.status == OrderStatus.cancelled || _o.paymentStatus.toLowerCase() == 'cancelled') return false;
+    if (_isCancelled) return false;
     if (_o.status == OrderStatus.completed || _o.statusUtamaLabel == 'Done') return false;
 
     // Patokan murni di status pembayaran (status cleaner dan status bonus tidak berpengaruh):
@@ -503,6 +510,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                 child: Column(
                   children: [
+                    if (_isCancelled)
+                      _buildCancellationBanner(o),
                     _buildCustomerCard(o),
                     const SizedBox(height: 12),
                     _buildServicesCard(o),
@@ -517,7 +526,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           )
                           .take(o.cleaners.length * 2 - 1),
                       if (!widget.isReadOnly &&
-                          o.status != OrderStatus.cancelled &&
+                          !_isCancelled &&
                           o.services.any((s) => s.bonusLayanan > 0)) ...[
                         const SizedBox(height: 12),
                         _buildAlokasiBonusButton(o),
@@ -580,7 +589,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   ],
                 ),
               ),
-              if (!widget.isReadOnly) ...[
+              if (!widget.isReadOnly && !_isCancelled) ...[
                 if (_canEdit) ...[
                   const SizedBox(width: 8),
                   InkWell(
@@ -659,41 +668,37 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     ),
                   ),
                 ],
-                const SizedBox(width: 8),
-                InkWell(
-                  onTap: () => PdfInvoiceService.showPrintDialog(context, o),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.35),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.print_rounded,
-                          color: Colors.white,
-                          size: 14,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Invoice',
-                          style: GoogleFonts.inter(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
+              ],
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () => PdfInvoiceService.showPrintDialog(context, o),
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.35),
                     ),
                   ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.print_rounded, color: Colors.white, size: 14),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Invoice',
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ],
           ),
           if (_isLoading)
@@ -704,6 +709,65 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 color: Colors.white,
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCancellationBanner(OrderModel o) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFCA5A5)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFDC2626).withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: const BoxDecoration(
+              color: Color(0xFFDC2626),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.close_rounded, color: Colors.white, size: 16),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Pesanan Dibatalkan',
+                  style: GoogleFonts.inter(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF991B1B),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  o.cancelReason != null && o.cancelReason!.trim().isNotEmpty
+                      ? 'Alasan: ${o.cancelReason}'
+                      : 'Pesanan telah dibatalkan oleh CS. Layanan, jadwal, dan alokasi bonus tidak dapat diubah.',
+                  style: GoogleFonts.inter(
+                    fontSize: 11.5,
+                    color: const Color(0xFFB91C1C),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -1765,7 +1829,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ),
             ),
           ],
-          if (!widget.isReadOnly && o.status != OrderStatus.cancelled) ...[
+          if (!widget.isReadOnly && !_isCancelled) ...[
             const SizedBox(height: 12),
             const Divider(color: AppColors.border, height: 1),
             const SizedBox(height: 8),
@@ -2609,9 +2673,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   Widget _buildActionButtons(OrderModel o) {
     final showNotifyBtn =
+        !_isCancelled &&
         o.cleaners.isNotEmpty &&
-        o.status != OrderStatus.completed &&
-        o.status != OrderStatus.cancelled;
+        o.status != OrderStatus.completed;
     final isPriceQtyValid =
         o.services.isNotEmpty &&
         o.services.every(
@@ -2698,9 +2762,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             icon: Icons.payments_rounded,
             color: AppColors.primary,
             isDone: isPaid,
-            enabled:
-                o.status != OrderStatus.cancelled &&
-                o.status != OrderStatus.waitingCancelApproval,
+            enabled: !_isCancelled,
             onTap: () async {
               final result = await Navigator.push(
                 context,

@@ -41,7 +41,7 @@ OrderStatus _parseOrderStatus(String? val) {
     case 'in_progress': return OrderStatus.inProgress;
     case 'finished_by_cleaner': return OrderStatus.finishedByCleaner;
     case 'waiting_payment_approval': return OrderStatus.waitingPaymentApproval;
-    case 'waiting_cancel_approval': return OrderStatus.waitingCancelApproval;
+    case 'waiting_cancel_approval': return OrderStatus.cancelled;
     case 'completed': return OrderStatus.completed;
     case 'cancelled': return OrderStatus.cancelled;
     default: return OrderStatus.draft;
@@ -447,7 +447,7 @@ class OrderModel {
   bool isWajibPpn;
 
   String get statusPengerjaanLabel {
-    if (status == OrderStatus.cancelled) return 'Dibatalkan';
+    if (status == OrderStatus.cancelled || status == OrderStatus.waitingCancelApproval || pembatalanId != null) return 'Dibatalkan';
     if (status == OrderStatus.draft) return 'Draft';
     if (status == OrderStatus.completed) return 'Selesai';
     if (status == OrderStatus.finishedByCleaner) return 'Selesai Cleaner';
@@ -457,20 +457,29 @@ class OrderModel {
   String get statusPembayaranLabel {
     final p = paymentStatus.toLowerCase();
     final pSub = pembayaran?.statusPembayaran.toLowerCase() ?? '';
+    if (status == OrderStatus.cancelled || status == OrderStatus.waitingCancelApproval || pembatalanId != null || p == 'cancelled') return 'Dibatalkan';
     if (p == 'approved' || p == 'paid' || p == 'lunas' || pSub == 'approved') return 'Disetujui';
     if (p == 'pending' || pSub == 'pending' || status == OrderStatus.waitingPaymentApproval) return 'Pending';
     if (p == 'rejected' || pSub == 'rejected') return 'Ditolak';
-    if (p == 'cancelled' || status == OrderStatus.cancelled) return 'Dibatalkan';
     return 'Belum Dibayar';
   }
 
   String get statusBonusLabel {
+    if (status == OrderStatus.cancelled || status == OrderStatus.waitingCancelApproval || pembatalanId != null) return 'Dibatalkan';
     if (statusBonus.toLowerCase() == 'selesai') return 'Selesai';
     if (statusBonus.toLowerCase() == 'approved' || statusBonus.toLowerCase() == 'disetujui') return 'Disetujui';
     return 'Pending';
   }
 
   String get statusUtamaLabel {
+    if (status == OrderStatus.cancelled || 
+        status == OrderStatus.waitingCancelApproval || 
+        paymentStatus.toLowerCase() == 'cancelled' ||
+        pembatalanId != null ||
+        (cancelReason != null && cancelReason!.trim().isNotEmpty)) {
+      return 'Dibatalkan';
+    }
+
     if (statusUtamaRaw != null && statusUtamaRaw!.isNotEmpty) {
       final s = statusUtamaRaw!.toLowerCase();
       if (s == 'done') return 'Done';
@@ -480,12 +489,10 @@ class OrderModel {
       if (s == 'draft') return 'Draft';
     }
 
-    if (status == OrderStatus.cancelled || paymentStatus.toLowerCase() == 'cancelled') return 'Dibatalkan';
     if (status == OrderStatus.draft) return 'Draft';
     if (status == OrderStatus.completed && statusBonus.toLowerCase() == 'selesai') return 'Done';
     if (status == OrderStatus.finishedByCleaner || 
         status == OrderStatus.waitingPaymentApproval || 
-        status == OrderStatus.waitingCancelApproval || 
         (status == OrderStatus.completed && statusBonus.toLowerCase() != 'selesai')) {
       return 'Pending';
     }
@@ -632,6 +639,15 @@ class OrderModel {
                  cabangData['is_ppn_enabled']?.toString().toLowerCase() == 'true';
     }
 
+    final rawStatusPesanan = (orderJson['status_pesanan'] ?? json['status_pesanan'] ?? '').toString();
+    final hasPembatalan = orderJson['pembatalan'] != null || json['pembatalan'] != null || orderJson['pembatalan_id'] != null || json['pembatalan_id'] != null || (orderJson['alasan_cancel'] != null && orderJson['alasan_cancel'].toString().isNotEmpty) || (json['alasan_cancel'] != null && json['alasan_cancel'].toString().isNotEmpty);
+    final isOrderCancelled = rawStatusPesanan == 'cancelled' || rawStatusPesanan == 'waiting_cancel_approval' || (hasPembatalan && rawStatusPesanan != 'completed');
+
+    OrderStatus finalStatus = _parseOrderStatus(rawStatusPesanan);
+    if (isOrderCancelled) {
+      finalStatus = OrderStatus.cancelled;
+    }
+
     return OrderModel(
       id: orderJson['id']?.toString() ?? json['pesanan_id']?.toString() ?? json['id']?.toString() ?? '',
       nomorPesanan: orderJson['nomor_pesanan']?.toString() ?? orderJson['id']?.toString() ?? '',
@@ -641,11 +657,11 @@ class OrderModel {
       tipeCustomer: _parseCustomerType(orderJson['tipe_customer'] ?? json['tipe_customer']),
       services: parsedServices,
       cleaners: parsedCleaners,
-      status: _parseOrderStatus(orderJson['status_pesanan'] ?? json['status_pesanan']),
+      status: finalStatus,
       total: parseTotal(),
       subtotal: computedTotal,
       paymentMethod: orderJson['pembayaran']?['metode_pembayaran'] ?? orderJson['metode_pembayaran'] ?? json['metode_pembayaran'] ?? '-',
-      paymentStatus: orderJson['pembayaran']?['status_pembayaran'] ?? orderJson['status_pembayaran'] ?? json['status_pembayaran'] ?? 'unpaid',
+      paymentStatus: isOrderCancelled ? 'cancelled' : (orderJson['pembayaran']?['status_pembayaran'] ?? orderJson['status_pembayaran'] ?? json['status_pembayaran'] ?? 'unpaid'),
       notes: orderJson['keterangan_order'] ?? json['keterangan_order'] ?? '',
       tanggalInput: orderJson['tanggal_input'] != null ? (DateTime.tryParse(orderJson['tanggal_input']) ?? DateTime.now()) : (json['created_at'] != null ? (DateTime.tryParse(json['created_at']) ?? DateTime.now()) : DateTime.now()),
       cancelReason: orderJson['alasan_batal'] ?? orderJson['pembatalan']?['alasan_batal'] ?? orderJson['pembatalan']?['alasan_cancel'] ?? json['alasan_batal'] ?? json['alasan_cancel'] ?? json['alasan_penolakan'],

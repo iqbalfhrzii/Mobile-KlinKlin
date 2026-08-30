@@ -23,8 +23,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/orders/screens/order_detail_screen.dart';
 import '../../features/orders/services/order_service.dart';
 import '../../features/cleaner/jobs/cleaner_job_detail_screen.dart';
-import '../../features/finance/screens/finance_approval_list_screen.dart';
-import '../../features/finance/screens/finance_approval_detail_screen.dart';
+import '../../features/finance/screens/finance_audit_screen.dart';
 
 class NotificationListSheet extends StatefulWidget {
   const NotificationListSheet({super.key});
@@ -179,21 +178,9 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
     // 0. Approval Pembayaran (Khusus Finance)
     if (type.contains('pembayaran') || screen.contains('approval_pembayaran')) {
       if (currentRole.contains('finance') || currentRole.contains('admin') || currentRole.contains('ceo')) {
-        final pesananId = data['pesanan_id'] ?? data['id'];
-        if (pesananId != null) {
-          try {
-            final order = await OrderService().fetchOrderDetail(pesananId.toString());
-            nav.push(
-              MaterialPageRoute(
-                builder: (_) => FinanceApprovalDetailScreen(order: order),
-              ),
-            );
-            return;
-          } catch (_) {}
-        }
         nav.push(
           MaterialPageRoute(
-            builder: (_) => const FinanceApprovalListScreen(),
+            builder: (_) => const FinanceAuditScreen(),
           ),
         );
         return;
@@ -386,12 +373,24 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
       return;
     }
 
-    // P. Order Detail
+    // P. Pembatalan Pesanan / Audit
+    if (type.contains('pembatalan') || type.contains('cancel') || screen.contains('hasil_audit') || screen.contains('audit') || title.contains('batal') || message.contains('batal')) {
+      if (currentRole.contains('finance') || currentRole.contains('admin') || currentRole.contains('ceo')) {
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => const FinanceAuditScreen(initialTab: 'hasil-audit'),
+          ),
+        );
+        return;
+      }
+    }
+
+    // P2. Order Detail
     if (type.contains('order') || screen.contains('order')) {
       if (currentRole.contains('finance')) {
         nav.push(
           MaterialPageRoute(
-            builder: (_) => const FinanceApprovalListScreen(),
+            builder: (_) => const FinanceAuditScreen(),
           ),
         );
         return;

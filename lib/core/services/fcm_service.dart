@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -26,8 +27,7 @@ import '../../features/konten_marketing/screens/konten_marketing_screen.dart';
 import '../../features/orders/screens/order_detail_screen.dart';
 import '../../features/orders/services/order_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../features/finance/screens/finance_approval_list_screen.dart';
-import '../../features/finance/screens/finance_approval_detail_screen.dart';
+import '../../features/finance/screens/finance_audit_screen.dart';
 
 // Top-level background message handler
 @pragma('vm:entry-point')
@@ -134,7 +134,10 @@ class FcmService {
           IconData iconData = Icons.notifications_active_rounded;
           Color iconColor = const Color(0xFF38BDF8);
 
-          if (type.contains('pengumuman')) {
+          if (type.contains('batal') || type.contains('cancel') || screen.contains('audit') || (message.notification?.title ?? '').toLowerCase().contains('batal')) {
+            iconData = Icons.cancel_rounded;
+            iconColor = const Color(0xFFEF4444);
+          } else if (type.contains('pengumuman')) {
             iconData = Icons.campaign_rounded;
             iconColor = const Color(0xFF10B981);
           } else if (type.contains('kas') || type.contains('cashflow')) {
@@ -181,50 +184,12 @@ class FcmService {
             iconColor = const Color(0xFF10B981);
           }
 
-          ScaffoldMessenger.of(navigatorKey!.currentContext!).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xFF0F172A),
-              behavior: SnackBarBehavior.floating,
-              elevation: 6,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              content: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: iconColor.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(iconData, color: iconColor, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          message.notification!.title ?? 'Notifikasi Baru',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
-                        ),
-                        if (message.notification!.body != null)
-                          Text(
-                            message.notification!.body!,
-                            style: GoogleFonts.inter(color: Colors.white.withValues(alpha: 0.85), fontSize: 11.5),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              action: SnackBarAction(
-                label: 'Buka',
-                textColor: const Color(0xFF34D399),
-                onPressed: () => _handleMessage(message),
-              ),
-            ),
+          _showTopBanner(
+            title: message.notification!.title ?? 'Notifikasi Baru',
+            body: message.notification!.body,
+            iconData: iconData,
+            iconColor: iconColor,
+            onTap: () => _handleMessage(message),
           );
         }
       });
@@ -329,28 +294,27 @@ class FcmService {
     final title = (message.notification?.title ?? message.data['title'] ?? '').toString();
     final body = (message.notification?.body ?? message.data['body'] ?? message.data['message'] ?? '').toString();
 
-    // 0. Approval Pembayaran (Khusus Finance)
-    if (type == 'pembayaran_pending' || screen == 'approval_pembayaran') {
+    // 0. Pembatalan Pesanan / Hasil Audit (Finance)
+    if (type == 'pembatalan' || type == 'cancel_order' || screen == 'hasil_audit' || screen == 'audit_pesanan' || type == 'approval_edit' || title.toLowerCase().contains('batal') || body.toLowerCase().contains('batal')) {
       if (currentRole.contains('finance') || currentRole.contains('admin') || currentRole.contains('ceo')) {
-        final pesananId = message.data['pesanan_id'];
-        if (pesananId != null && pesananId.toString().isNotEmpty) {
-          try {
-            final order = await OrderService().fetchOrderDetail(pesananId.toString());
-            if (navigatorKey?.currentContext != null) {
-              Navigator.of(navigatorKey!.currentContext!).push(
-                MaterialPageRoute(
-                  builder: (_) => FinanceApprovalDetailScreen(order: order),
-                ),
-              );
-              return;
-            }
-          } catch (_) {}
-        }
         navState.push(
           MaterialPageRoute(
-            builder: (_) => const FinanceApprovalListScreen(),
+            builder: (_) => const FinanceAuditScreen(initialTab: 'hasil-audit'),
           ),
         );
+        return;
+      }
+    }
+
+    // 0b. Approval Pembayaran (Khusus Finance)
+    if (type == 'pembayaran_pending' || screen == 'approval_pembayaran') {
+      if (currentRole.contains('finance') || currentRole.contains('admin') || currentRole.contains('ceo')) {
+        navState.push(
+          MaterialPageRoute(
+            builder: (_) => const FinanceAuditScreen(),
+          ),
+        );
+        return;
       } else {
         if (navContext.mounted) {
           ScaffoldMessenger.of(navContext).showSnackBar(
@@ -571,23 +535,9 @@ class FcmService {
     if (type == 'order_detail' || screen == 'order_detail') {
       // Jika yang login adalah Finance, arahkan ke layar persetujuan Finance, BUKAN ke detail CS!
       if (currentRole.contains('finance')) {
-        final pesananId = message.data['pesanan_id'];
-        if (pesananId != null && pesananId.toString().isNotEmpty) {
-          try {
-            final order = await OrderService().fetchOrderDetail(pesananId.toString());
-            if (navigatorKey?.currentContext != null) {
-              Navigator.of(navigatorKey!.currentContext!).push(
-                MaterialPageRoute(
-                  builder: (_) => FinanceApprovalDetailScreen(order: order),
-                ),
-              );
-              return;
-            }
-          } catch (_) {}
-        }
         navState.push(
           MaterialPageRoute(
-            builder: (_) => const FinanceApprovalListScreen(),
+            builder: (_) => const FinanceAuditScreen(),
           ),
         );
         return;
@@ -625,7 +575,7 @@ class FcmService {
     }
 
     // 10. Cleaner New Job & Cancel Job
-    if ((type == 'new_job' && screen == 'detail_pesanan') || type == 'cancel_job') {
+    if ((type == 'new_job' && screen == 'detail_pesanan') || type == 'cancel_job' || type == 'job_cancelled') {
       if (!currentRole.contains('cleaner') && !currentRole.contains('admin') && !currentRole.contains('ceo')) {
         if (navContext.mounted) {
           ScaffoldMessenger.of(navContext).showSnackBar(
@@ -637,19 +587,290 @@ class FcmService {
         }
         return;
       }
-      final String? cleanerIdStr = message.data['pesanan_cleaner_id'];
+      final String? cleanerIdStr = message.data['pesanan_cleaner_id'] ?? message.data['cleaner_job_id'];
       if (cleanerIdStr != null) {
         final int? cleanerId = int.tryParse(cleanerIdStr);
         if (cleanerId != null) {
+          final isCancel = type == 'cancel_job' || type == 'job_cancelled';
           navState.push(
             MaterialPageRoute(
               builder: (_) => CleanerJobDetailScreen(
-                job: {'id': cleanerId, 'status_pengerjaan': 'notified'},
+                job: {
+                  'id': cleanerId,
+                  'status_pengerjaan': isCancel ? 'cancelled' : 'notified',
+                },
               ),
             ),
           );
         }
       }
     }
+  }
+
+  OverlayEntry? _currentBannerEntry;
+
+  void _showTopBanner({
+    required String title,
+    required String? body,
+    required IconData iconData,
+    required Color iconColor,
+    required VoidCallback onTap,
+  }) {
+    _removeCurrentBanner();
+
+    final overlay = navigatorKey?.currentState?.overlay;
+    if (overlay == null) return;
+
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (ctx) => _TopNotificationBanner(
+        title: title,
+        body: body,
+        iconData: iconData,
+        iconColor: iconColor,
+        onTap: () {
+          _removeCurrentBanner();
+          onTap();
+        },
+        onDismissed: () {
+          _removeCurrentBanner();
+        },
+      ),
+    );
+
+    _currentBannerEntry = entry;
+    overlay.insert(entry);
+  }
+
+  void _removeCurrentBanner() {
+    if (_currentBannerEntry != null) {
+      try {
+        _currentBannerEntry?.remove();
+      } catch (_) {}
+      _currentBannerEntry = null;
+    }
+  }
+}
+
+class _TopNotificationBanner extends StatefulWidget {
+  final String title;
+  final String? body;
+  final IconData iconData;
+  final Color iconColor;
+  final VoidCallback onTap;
+  final VoidCallback onDismissed;
+
+  const _TopNotificationBanner({
+    required this.title,
+    required this.body,
+    required this.iconData,
+    required this.iconColor,
+    required this.onTap,
+    required this.onDismissed,
+  });
+
+  @override
+  State<_TopNotificationBanner> createState() => _TopNotificationBannerState();
+}
+
+class _TopNotificationBannerState extends State<_TopNotificationBanner>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+  Timer? _autoDismissTimer;
+  bool _isDismissing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+      reverseDuration: const Duration(milliseconds: 250),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, -1.2),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    ));
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOut,
+      reverseCurve: Curves.easeIn,
+    ));
+
+    _animController.forward();
+
+    // Otomatis hilang setelah 4 detik
+    _autoDismissTimer = Timer(const Duration(seconds: 4), () {
+      _dismiss();
+    });
+  }
+
+  void _dismiss() {
+    if (_isDismissing || !mounted) return;
+    _isDismissing = true;
+    _autoDismissTimer?.cancel();
+    _animController.reverse().then((_) {
+      if (mounted) {
+        widget.onDismissed();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoDismissTimer?.cancel();
+    _animController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final topPadding = MediaQuery.of(context).padding.top;
+
+    return Positioned(
+      top: topPadding + 10,
+      left: 16,
+      right: 16,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Dismissible(
+            key: UniqueKey(),
+            direction: DismissDirection.up,
+            onDismissed: (_) {
+              _autoDismissTimer?.cancel();
+              widget.onDismissed();
+            },
+            child: Material(
+              color: Colors.transparent,
+              child: GestureDetector(
+                onTap: () {
+                  _dismiss();
+                  widget.onTap();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F172A),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFF334155).withValues(alpha: 0.8),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.35),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: widget.iconColor.withValues(alpha: 0.18),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(widget.iconData, color: widget.iconColor, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              widget.title,
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontSize: 13,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (widget.body != null && widget.body!.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                widget.body!,
+                                style: GoogleFonts.inter(
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                  fontSize: 11.5,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Tombol Buka
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Buka',
+                              style: GoogleFonts.inter(
+                                color: const Color(0xFF34D399),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 10,
+                              color: Color(0xFF34D399),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      // Tombol Close
+                      GestureDetector(
+                        onTap: _dismiss,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: 16,
+                            color: Colors.white.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

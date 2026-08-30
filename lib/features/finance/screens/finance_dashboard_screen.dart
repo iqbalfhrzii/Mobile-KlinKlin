@@ -10,16 +10,12 @@ import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/animated_notification_bell.dart';
 import 'finance_cashflow_cabang_screen.dart';
 import 'finance_approval_kas_screen.dart';
-import 'finance_approval_list_screen.dart';
-import 'finance_pemasukan_screen.dart';
-import 'finance_pengeluaran_screen.dart';
 import 'finance_audit_screen.dart';
 import 'finance_gaji_screen.dart';
 import 'finance_download_screen.dart';
 import '../../operasional/screens/operasional_permintaan_design_screen.dart';
 import '../../operasional/screens/operasional_pengumuman_screen.dart';
 import 'finance_pengaturan_ppn_screen.dart';
-import 'finance_keuangan_menu_screen.dart';
 
 class FinanceDashboardScreen extends StatefulWidget {
   const FinanceDashboardScreen({super.key});
@@ -702,13 +698,13 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
           Row(
             children: [
               _buildQuickActionBtn(
-                title: 'Verifikasi',
-                icon: Icons.verified_user_rounded,
-                color: const Color(0xFF2563EB),
-                bgColor: const Color(0xFFEFF6FF),
+                title: 'Audit Order',
+                icon: Icons.fact_check_rounded,
+                color: const Color(0xFF4F46E5),
+                bgColor: const Color(0xFFEEF2FF),
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const FinanceApprovalListScreen()),
+                  MaterialPageRoute(builder: (_) => const FinanceAuditScreen()),
                 ),
               ),
               _buildQuickActionBtn(
@@ -721,31 +717,6 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
                   MaterialPageRoute(builder: (_) => const FinanceApprovalKasScreen()),
                 ),
               ),
-              _buildQuickActionBtn(
-                title: 'Pemasukan',
-                icon: Icons.arrow_downward_rounded,
-                color: const Color(0xFF10B981),
-                bgColor: const Color(0xFFECFDF5),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const FinancePemasukanScreen()),
-                ),
-              ),
-              _buildQuickActionBtn(
-                title: 'Pengeluaran',
-                icon: Icons.arrow_upward_rounded,
-                color: const Color(0xFFEF4444),
-                bgColor: const Color(0xFFFEF2F2),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const FinancePengeluaranScreen()),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
               _buildQuickActionBtn(
                 title: 'Cashflow',
                 icon: Icons.swap_horiz_rounded,
@@ -766,6 +737,31 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
                   MaterialPageRoute(builder: (_) => const FinanceGajiScreen()),
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _buildQuickActionBtn(
+                title: 'Atur PPN',
+                icon: Icons.percent_rounded,
+                color: const Color(0xFF0F52BA),
+                bgColor: const Color(0xFFEFF6FF),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FinancePengaturanPpnScreen()),
+                ),
+              ),
+              _buildQuickActionBtn(
+                title: 'Download',
+                icon: Icons.download_rounded,
+                color: const Color(0xFF0891B2),
+                bgColor: const Color(0xFFECFEFF),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FinanceDownloadScreen()),
+                ),
+              ),
               _buildQuickActionBtn(
                 title: 'Desain',
                 icon: Icons.palette_outlined,
@@ -784,51 +780,6 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const OperasionalPengumumanScreen()),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _buildQuickActionBtn(
-                title: 'Atur PPN',
-                icon: Icons.percent_rounded,
-                color: const Color(0xFF0F52BA),
-                bgColor: const Color(0xFFEFF6FF),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const FinancePengaturanPpnScreen()),
-                ),
-              ),
-              _buildQuickActionBtn(
-                title: 'Keuangan',
-                icon: Icons.account_balance_rounded,
-                color: const Color(0xFF0D9488),
-                bgColor: const Color(0xFFF0FDFA),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const FinanceKeuanganMenuScreen()),
-                ),
-              ),
-              _buildQuickActionBtn(
-                title: 'Download',
-                icon: Icons.download_rounded,
-                color: const Color(0xFF0891B2),
-                bgColor: const Color(0xFFECFEFF),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const FinanceDownloadScreen()),
-                ),
-              ),
-              _buildQuickActionBtn(
-                title: 'Audit Order',
-                icon: Icons.fact_check_rounded,
-                color: const Color(0xFF4F46E5),
-                bgColor: const Color(0xFFEEF2FF),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const FinanceAuditScreen()),
                 ),
               ),
             ],

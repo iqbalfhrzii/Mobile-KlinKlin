@@ -330,15 +330,6 @@ class OperasionalMenuScreen extends StatelessWidget {
             },
           ),
           _MenuItem(
-            icon: Icons.category_rounded,
-            title: 'Master Barang',
-            iconColor: const Color(0xFF0D9488),
-            bgColor: const Color(0xFFCCFBF1),
-            onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const MasterBarangScreen()));
-            },
-          ),
-          _MenuItem(
             icon: Icons.palette_rounded,
             title: 'Permintaan Design',
             iconColor: const Color(0xFFEC4899),

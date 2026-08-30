@@ -10,6 +10,17 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isCancelled = status == OrderStatus.cancelled ||
+        status == OrderStatus.waitingCancelApproval ||
+        order?.status == OrderStatus.cancelled ||
+        order?.status == OrderStatus.waitingCancelApproval ||
+        order?.paymentStatus.toLowerCase() == 'cancelled' ||
+        order?.pembatalanId != null;
+
+    if (isCancelled) {
+      return const WorkStatusBadge(status: OrderStatus.cancelled);
+    }
+
     if (order != null) {
       return Wrap(
         spacing: 6,
@@ -67,10 +78,6 @@ class WorkStatusBadge extends StatelessWidget {
         bg = const Color(0xFFE0F2FE);
         break;
       case OrderStatus.waitingCancelApproval:
-        label = 'Menunggu Batal';
-        color = Colors.orange;
-        bg = const Color(0xFFFFF3E0);
-        break;
       case OrderStatus.cancelled:
         label = 'Dibatalkan';
         color = AppColors.error;
@@ -112,12 +119,22 @@ class PaymentStatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final String statusStr = (order?.paymentStatus ?? paymentStatus ?? 'unpaid').toLowerCase();
     final OrderStatus oStatus = order?.status ?? orderStatus ?? OrderStatus.draft;
+    final bool isCancelled = statusStr == 'cancelled' ||
+        oStatus == OrderStatus.cancelled ||
+        oStatus == OrderStatus.waitingCancelApproval ||
+        order?.status == OrderStatus.cancelled ||
+        order?.status == OrderStatus.waitingCancelApproval ||
+        order?.pembatalanId != null;
 
     String label;
     Color color;
     Color bg;
 
-    if (statusStr == 'paid' || statusStr == 'approved' || statusStr == 'disetujui' || statusStr == 'lunas') {
+    if (isCancelled) {
+      label = 'Dibatalkan';
+      color = AppColors.error;
+      bg = const Color(0xFFFEF2F2);
+    } else if (statusStr == 'paid' || statusStr == 'approved' || statusStr == 'disetujui' || statusStr == 'lunas') {
       label = 'Disetujui';
       color = const Color(0xFF16A34A);
       bg = const Color(0xFFDCFCE7);

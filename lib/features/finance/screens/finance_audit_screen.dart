@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
-import '../../../core/widgets/weekly_date_picker.dart';
 import '../../../core/data/order_model.dart';
 import '../../../core/data/hrd_models.dart';
 import '../../orders/services/order_service.dart';
@@ -14,7 +13,8 @@ import '../../../core/data/customer_model.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../services/finance_service.dart';
 class FinanceAuditScreen extends StatefulWidget {
-  const FinanceAuditScreen({super.key});
+  final String? initialTab;
+  const FinanceAuditScreen({super.key, this.initialTab});
 
   @override
   State<FinanceAuditScreen> createState() => _FinanceAuditScreenState();
@@ -66,6 +66,9 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialTab != null && widget.initialTab!.isNotEmpty) {
+      _auditTab = widget.initialTab!;
+    }
     _fetchData();
   }
 
@@ -164,17 +167,17 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                     else if (_error.isNotEmpty)
                       _buildErrorWidget()
                     else if (_auditTab == 'audit-order')
-                      _buildAuditOrderContent()
+                      KeyedSubtree(key: const ValueKey('tab-audit-order'), child: _buildAuditOrderContent())
                     else if (_auditTab == 'approve-edit')
-                      _buildApproveEditContent()
+                      KeyedSubtree(key: const ValueKey('tab-approve-edit'), child: _buildApproveEditContent())
                     else if (_auditTab == 'edit-order')
-                      _buildEditOrderBebasContent()
+                      KeyedSubtree(key: const ValueKey('tab-edit-order'), child: _buildEditOrderBebasContent())
                     else if (_auditTab == 'hasil-audit')
-                      _buildHasilAuditContent()
+                      KeyedSubtree(key: const ValueKey('tab-hasil-audit'), child: _buildHasilAuditContent())
                     else if (_auditTab == 'total-pesanan')
-                      _buildTotalPesananContent()
+                      KeyedSubtree(key: const ValueKey('tab-total-pesanan'), child: _buildTotalPesananContent())
                     else
-                      _buildComingSoonTab(_auditTab),
+                      KeyedSubtree(key: ValueKey('tab-$_auditTab'), child: _buildComingSoonTab(_auditTab)),
                   ],
                 ),
               ),
@@ -187,6 +190,8 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
 
   // --- Header ---
   Widget _buildHeader() {
+    final canPop = Navigator.canPop(context);
+
     return GradientHeader(
       padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
       child: Column(
@@ -195,27 +200,54 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Manajemen Audit',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: Colors.white.withValues(alpha: 0.85),
+              Expanded(
+                child: Row(
+                  children: [
+                    if (canPop) ...[
+                      InkWell(
+                        onTap: () => Navigator.pop(context),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                          ),
+                          child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Manajemen Audit',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: Colors.white.withValues(alpha: 0.85),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Audit & Persetujuan',
+                            style: GoogleFonts.inter(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Audit & Persetujuan',
-                    style: GoogleFonts.inter(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
@@ -1004,7 +1036,14 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                       child: const Icon(Icons.cancel_outlined, size: 14, color: Color(0xFFDC2626)),
                     ),
                     const SizedBox(width: 6),
-                    Text('CANCEL HARI INI', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626))),
+                    Expanded(
+                      child: Text(
+                        'CANCEL HARI INI',
+                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -1031,7 +1070,14 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                       child: const Icon(Icons.calendar_month_outlined, size: 14, color: Color(0xFFE11D48)),
                     ),
                     const SizedBox(width: 6),
-                    Text('CANCEL BULAN INI', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFFE11D48))),
+                    Expanded(
+                      child: Text(
+                        'CANCEL BULAN INI',
+                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFFE11D48)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -1118,8 +1164,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
             const SizedBox(width: 10),
             GestureDetector(
               onTap: () => _showFilterBottomSheet(showStatusFilter: showStatusFilter),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
+              child: Container(
                 height: 46,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
@@ -1888,10 +1933,11 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     );
   }
 
-  Widget _buildProMaxOrderCard(OrderModel order, {bool isPending = false, Widget? customAction}) {
+  Widget _buildProMaxOrderCard(OrderModel order, {Key? key, bool isPending = false, Widget? customAction}) {
     final orderNo = order.nomorPesanan.isNotEmpty ? order.nomorPesanan : 'Order #${order.id}';
 
     return Container(
+      key: key,
       margin: EdgeInsets.zero,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -2063,16 +2109,23 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            Icon(Icons.payment_rounded, size: 14, color: AppColors.primary),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Metode: ${order.paymentMethod.toUpperCase()}',
-                              style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                            ),
-                          ],
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Icon(Icons.payment_rounded, size: 14, color: AppColors.primary),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Metode: ${order.paymentMethod.toUpperCase()}',
+                                  style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Text(
                           _currencyFormat.format(order.total),
                           style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.bold, color: const Color(0xFF059669)),
@@ -2093,12 +2146,11 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                           child: OutlinedButton.icon(
                             onPressed: () => _showDetailModal(order),
                             icon: const Icon(Icons.description_outlined, size: 14),
-                            label: const Text('Periksa'),
+                            label: Text('Periksa', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 9),
                               side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
                             ),
                           ),
                         ),
@@ -2108,14 +2160,13 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                           child: ElevatedButton.icon(
                             onPressed: () => _showApproveConfirm(order),
                             icon: const Icon(Icons.check_circle_rounded, size: 14),
-                            label: const Text('Approve'),
+                            label: Text('Approve', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF059669),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 9),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               elevation: 0,
-                              textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
@@ -2125,7 +2176,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                           child: ElevatedButton.icon(
                             onPressed: () => _showRejectModal(order),
                             icon: const Icon(Icons.cancel_outlined, size: 14),
-                            label: const Text('Tolak'),
+                            label: Text('Tolak', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFFEF2F2),
                               foregroundColor: const Color(0xFFDC2626),
@@ -2135,7 +2186,6 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                                 side: const BorderSide(color: Color(0xFFFECACA)),
                               ),
                               elevation: 0,
-                              textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
                             ),
                           ),
                         ),
@@ -2148,12 +2198,11 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         OutlinedButton.icon(
                           onPressed: () => _showDetailModal(order),
                           icon: const Icon(Icons.description_outlined, size: 14),
-                          label: const Text('Lihat Rincian Audit'),
+                          label: Text('Lihat Rincian Audit', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
                           ),
                         ),
                       ],
@@ -2435,13 +2484,13 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                         decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(6)),
-                                        child: Text('x${s.qty}', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF475569))),
+                                        child: Text(s.qty, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF475569))),
                                       ),
                                       const SizedBox(width: 10),
                                       Text(s.name, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                                     ],
                                   ),
-                                  Text(_currencyFormat.format(s.price * (int.tryParse(s.qty) ?? 1)), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                                  Text(_currencyFormat.format(s.price), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                                 ],
                               ),
                             )),
@@ -3227,13 +3276,12 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         child: OutlinedButton.icon(
                           onPressed: () => _showEditDetailModal(order, csName, alasanStr),
                           icon: const Icon(Icons.visibility_rounded, size: 14),
-                          label: const Text('Detail', style: TextStyle(fontWeight: FontWeight.w600)),
+                          label: Text('Detail', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.primary,
                             padding: const EdgeInsets.symmetric(vertical: 9),
                             side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            textStyle: GoogleFonts.inter(fontSize: 12),
                           ),
                         ),
                       ),
@@ -3242,13 +3290,12 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         child: ElevatedButton.icon(
                           onPressed: () => _showApproveEditConfirm(order),
                           icon: const Icon(Icons.check_rounded, size: 14),
-                          label: const Text('Setujui', style: TextStyle(fontWeight: FontWeight.w600)),
+                          label: Text('Setujui', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF059669),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 9),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            textStyle: GoogleFonts.inter(fontSize: 12),
                           ),
                         ),
                       ),
@@ -3493,13 +3540,13 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                       decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(6)),
-                                      child: Text('x${s.qty}', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF475569))),
+                                      child: Text(s.qty, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF475569))),
                                     ),
                                     const SizedBox(width: 10),
                                     Text(s.name, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                                   ],
                                 ),
-                                Text(_currencyFormat.format(s.price * (int.tryParse(s.qty) ?? 1)), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                                Text(_currencyFormat.format(s.price), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                               ],
                             ),
                           )),
@@ -4079,38 +4126,37 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
           padding: const EdgeInsets.only(bottom: 8),
           child: _buildProMaxOrderCard(
             order,
-            customAction: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () => _openFinanceEditOrderBebasModal(order),
-                  icon: const Icon(Icons.edit_note_rounded, size: 16),
-                  label: const Text('Edit Bebas'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0F52BA),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    elevation: 0,
-                    textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+              customAction: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () => _openFinanceEditOrderBebasModal(order),
+                    icon: const Icon(Icons.edit_note_rounded, size: 16),
+                    label: Text('Edit Bebas', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F52BA),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: 0,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                OutlinedButton.icon(
-                  onPressed: () => _confirmDeleteOrder(order),
-                  icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFDC2626)),
-                  label: Text('Hapus', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626))),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFDC2626),
-                    side: const BorderSide(color: Color(0xFFFCA5A5)),
-                    backgroundColor: const Color(0xFFFEF2F2),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    elevation: 0,
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => _confirmDeleteOrder(order),
+                    icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFDC2626)),
+                    label: Text('Hapus', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626))),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFDC2626),
+                      side: const BorderSide(color: Color(0xFFFCA5A5)),
+                      backgroundColor: const Color(0xFFFEF2F2),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: 0,
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
           ),
         )),
         _buildLoadMoreButton(
@@ -4223,14 +4269,13 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                 ElevatedButton.icon(
                   onPressed: () => _openFinanceEditOrderBebasModal(order),
                   icon: const Icon(Icons.edit_note_rounded, size: 16),
-                  label: const Text('Edit'),
+                  label: Text('Edit', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0F52BA),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     elevation: 0,
-                    textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -4402,19 +4447,19 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
             padding: const EdgeInsets.only(bottom: 8),
             child: _buildProMaxOrderCard(
               order,
+              key: ValueKey('hasil-audit-${order.id}'),
               customAction: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   OutlinedButton.icon(
                     onPressed: () => _showCancelDetailModal(order, csName, dateStr),
                     icon: const Icon(Icons.description_outlined, size: 14),
-                    label: const Text('Lihat Rincian Audit'),
+                    label: Text('Lihat Rincian Audit', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       foregroundColor: AppColors.primary,
-                      textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -4656,13 +4701,13 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                       decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(6)),
-                                      child: Text('x${s.qty}', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF475569))),
+                                      child: Text(s.qty, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF475569))),
                                     ),
                                     const SizedBox(width: 10),
                                     Text(s.name, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                                   ],
                                 ),
-                                Text(_currencyFormat.format(s.price * (int.tryParse(s.qty) ?? 1)), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                                Text(_currencyFormat.format(s.price), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                               ],
                             ),
                           )),
@@ -4864,6 +4909,17 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     String statusPengerjaan = pengerjaanDisplay(order.statusPesananRaw.isNotEmpty ? order.statusPesananRaw : order.statusPengerjaanLabel);
     String statusPembayaran = order.statusPembayaranLabel;
     String statusBonus = order.statusBonusLabel;
+
+    String mapPaymentMethodToDisplay(String raw) {
+      final s = raw.toLowerCase().trim();
+      if (s.contains('mandiri')) return 'Transfer Mandiri';
+      if (s.contains('bca') || s == 'transfer' || s == 'transfer bank') return 'Transfer BCA';
+      if (s == 'qris') return 'QRIS';
+      if (s == 'cash' || s == 'tunai') return 'Cash';
+      return 'Belum Dibayar';
+    }
+
+    String selectedPaymentMethod = mapPaymentMethodToDisplay(order.paymentMethod);
 
     final customerNameCtrl = TextEditingController(text: order.customer.name);
     final customerPhoneCtrl = TextEditingController(text: order.customer.phone);
@@ -5465,10 +5521,21 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                                     children: [
                                       _buildFormDropdown(
                                         label: 'Metode Pembayaran',
-                                        value: order.paymentMethod.isNotEmpty && order.paymentMethod != 'Belum Dibayar (None)' ? order.paymentMethod : 'Belum Dibayar',
+                                        value: selectedPaymentMethod,
                                         icon: Icons.payment_rounded,
-                                        items: ['Belum Dibayar', 'Transfer BCA', 'Transfer Mandiri', 'Cash', 'transfer', 'qris', 'cash'],
-                                        onChanged: (v) => setModalState(() => order.paymentMethod = v == 'Belum Dibayar' ? '' : v!),
+                                        items: const [
+                                          'Belum Dibayar',
+                                          'Transfer BCA',
+                                          'Transfer Mandiri',
+                                          'Cash',
+                                          'QRIS',
+                                        ],
+                                        onChanged: (v) => setModalState(() {
+                                          if (v != null) {
+                                            selectedPaymentMethod = v;
+                                            order.paymentMethod = v;
+                                          }
+                                        }),
                                       ),
                                       const SizedBox(height: 10),
                                       Row(
@@ -5607,26 +5674,29 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                                               // Row 2: Qty, Price, Hapus
                                               Row(
                                                 children: [
-                                                  SizedBox(
-                                                    width: 65,
-                                                    height: 38,
-                                                    child: TextField(
-                                                      controller: TextEditingController(text: '${svc.qty}'),
-                                                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
-                                                      keyboardType: TextInputType.number,
-                                                      textAlign: TextAlign.center,
-                                                      onChanged: (val) => svc.qty = val,
-                                                      decoration: InputDecoration(
-                                                        prefixText: 'x',
-                                                        contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
-                                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                                                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                                                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF4F46E5))),
+                                                  Expanded(
+                                                    flex: 4,
+                                                    child: SizedBox(
+                                                      height: 38,
+                                                      child: TextField(
+                                                        controller: TextEditingController(text: svc.qty),
+                                                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                                                        keyboardType: TextInputType.text,
+                                                        onChanged: (val) => svc.qty = val,
+                                                        decoration: InputDecoration(
+                                                          hintText: 'Qty (cth: 2 jam)',
+                                                          hintStyle: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade400),
+                                                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF4F46E5))),
+                                                        ),
                                                       ),
                                                     ),
                                                   ),
                                                   const SizedBox(width: 8),
                                                   Expanded(
+                                                    flex: 5,
                                                     child: SizedBox(
                                                       height: 38,
                                                       child: TextField(
@@ -5919,6 +5989,17 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                               backendStatusBonus = 'cancelled';
                             }
 
+                            String backendMetodePembayaran = 'transfer';
+                            if (selectedPaymentMethod == 'Transfer BCA' || selectedPaymentMethod == 'Transfer Mandiri') {
+                              backendMetodePembayaran = 'transfer';
+                            } else if (selectedPaymentMethod == 'Cash') {
+                              backendMetodePembayaran = 'cash';
+                            } else if (selectedPaymentMethod == 'QRIS') {
+                              backendMetodePembayaran = 'qris';
+                            } else {
+                              backendMetodePembayaran = 'transfer';
+                            }
+
                             final data = {
                               'pelanggan_name': customerNameCtrl.text.trim(),
                               'pelanggan_phone': customerPhoneCtrl.text.trim(),
@@ -5927,7 +6008,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                               'status_pesanan': backendStatusPesanan,
                               'status_pembayaran': backendStatusPembayaran,
                               'status_bonus': backendStatusBonus,
-                              'metode_pembayaran': ['cash', 'transfer', 'qris'].contains(order.paymentMethod) ? order.paymentMethod : 'transfer',
+                              'metode_pembayaran': backendMetodePembayaran,
                               'diskon_persen': order.discount ?? 0,
                               'ppn': order.ppn ?? 0,
                               'pph': order.pph ?? 0,
@@ -5937,6 +6018,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                                 'name': s.name,
                                 'qty': s.qty.toString(),
                                 'harga': s.price,
+                                'subtotal': s.price,
                                 'tanggal_pengerjaan': s.tanggalPengerjaan.isNotEmpty ? s.tanggalPengerjaan : null,
                                 'waktu_pengerjaan': s.waktuPengerjaan.isNotEmpty ? s.waktuPengerjaan : null,
                               }).toList(),

@@ -1536,9 +1536,13 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        WorkStatusBadge(status: o.status),
-                        PaymentStatusBadge(order: o),
-                        _buildStatusBonus(o.statusBonusLabel),
+                        if (o.status == OrderStatus.cancelled || o.status == OrderStatus.waitingCancelApproval || o.pembatalanId != null || o.paymentStatus == 'cancelled') ...[
+                          const WorkStatusBadge(status: OrderStatus.cancelled),
+                        ] else ...[
+                          WorkStatusBadge(status: o.status),
+                          PaymentStatusBadge(order: o),
+                          _buildStatusBonus(o.statusBonusLabel),
+                        ],
                       ],
                     ),
                   ),

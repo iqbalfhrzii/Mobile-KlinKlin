@@ -123,6 +123,17 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
       List<dynamic> recentJobs = [];
 
       for (var job in jobs) {
+        final pesanan = job['pesanan'] ?? {};
+        final statusPesanan = (pesanan['status_pesanan'] ?? '').toString().toLowerCase();
+        final statusUtama = (pesanan['status_order_utama'] ?? '').toString().toLowerCase();
+        final isCancelled = statusPesanan == 'cancelled' ||
+            statusPesanan == 'waiting_cancel_approval' ||
+            statusUtama == 'cancelled' ||
+            pesanan['pembatalan'] != null ||
+            pesanan['pembatalan_id'] != null ||
+            job['status_pengerjaan'] == 'cancelled';
+        if (isCancelled) continue;
+
         final status = job['status_pengerjaan'];
         if (status == 'assigned' || status == 'notified') {
           activeCount++;

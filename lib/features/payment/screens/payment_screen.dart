@@ -890,14 +890,14 @@ class _PaymentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCancelled =
         order.status == OrderStatus.cancelled ||
+        order.status == OrderStatus.waitingCancelApproval ||
         order.paymentStatus == 'cancelled' ||
-        order.paymentStatus == 'rejected';
-    final isWaitingCancel = order.status == OrderStatus.waitingCancelApproval;
+        order.pembatalanId != null;
     final isPaid =
         order.paymentStatus == 'paid' || order.paymentStatus == 'approved';
-    final isPending =
-        order.paymentStatus == 'pending' ||
-        order.status == OrderStatus.waitingPaymentApproval;
+    final isPending = !isCancelled &&
+        (order.paymentStatus == 'pending' ||
+        order.status == OrderStatus.waitingPaymentApproval);
 
     return GestureDetector(
       onTap: onTap,
@@ -1001,7 +1001,7 @@ class _PaymentCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: isCancelled || isWaitingCancel
+                    color: isCancelled
                         ? AppColors.error.withValues(alpha: 0.1)
                         : isPaid
                         ? AppColors.statusDoneBg
@@ -1013,8 +1013,6 @@ class _PaymentCard extends StatelessWidget {
                   child: Text(
                     isCancelled
                         ? 'Batal'
-                        : isWaitingCancel
-                        ? 'Menunggu Cancel'
                         : isPaid
                         ? 'Lunas'
                         : isPending
@@ -1023,7 +1021,7 @@ class _PaymentCard extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: isCancelled || isWaitingCancel
+                      color: isCancelled
                           ? AppColors.error
                           : isPaid
                           ? AppColors.statusDone

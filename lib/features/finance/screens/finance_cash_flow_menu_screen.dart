@@ -219,10 +219,28 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
   }
 
   Widget _buildHeader() {
+    final canPop = Navigator.canPop(context);
+
     return GradientHeader(
       padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
       child: Row(
         children: [
+          if (canPop) ...[
+            InkWell(
+              onTap: () => Navigator.pop(context),
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                ),
+                child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

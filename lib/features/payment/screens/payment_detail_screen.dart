@@ -66,7 +66,10 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
       _o.status == OrderStatus.waitingPaymentApproval;
   bool get _isCancelled =>
       _o.paymentStatus == 'cancelled' ||
-      _o.status == OrderStatus.cancelled;
+      _o.status == OrderStatus.cancelled ||
+      _o.status == OrderStatus.waitingCancelApproval ||
+      _o.statusUtamaLabel == 'Dibatalkan' ||
+      _o.pembatalanId != null;
 
   bool get _canAct {
     if (_isWaitingCancel || _isCancelled) return false;
@@ -1365,11 +1368,33 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
     );
   }
 
+  int get _serviceSubtotal {
+    if (_o.subtotal > 0) return _o.subtotal;
+    if (_o.services.isNotEmpty) {
+      final s = _o.services.fold(0, (sum, item) => sum + item.subtotal);
+      if (s > 0) return s;
+    }
+    // Jika subtotal belum terisi dan order sudah ada PPN, kurangi PPN untuk mendapatkan DPP
+    final ppnRate = _o.ppn ?? _o.pembayaran?.ppn ?? (_o.isWajibPpn ? 11 : 0);
+    if (ppnRate > 0 && _o.total > 0) {
+      return (_o.total / (1 + (ppnRate / 100.0))).round();
+    }
+    return _o.total;
+  }
+
   // ─── PPN SELECTION MODAL (Matching Web CS PesananDetailPage) ───────────
   void _showPpnSelectionModal(BuildContext context) {
-    final int subtotal = _o.total;
+    final int rawSubtotal = _serviceSubtotal;
+    final double diskonPersen = _o.pembayaran?.diskonPersen ??
+        (_o.discount != null && _o.subtotal > 0
+            ? (_o.discount! / _o.subtotal * 100)
+            : 0.0);
+    final int diskonNominal = (rawSubtotal * diskonPersen / 100).round();
+    final int subtotal = rawSubtotal - diskonNominal;
+
     final int nominalPpn = (subtotal * 0.11).round();
     final int totalDenganPpn = subtotal + nominalPpn;
+    final int totalTanpaPpn = subtotal;
     final bool isWajibPpn = _o.isWajibPpn;
 
     showModalBottomSheet(
@@ -1589,7 +1614,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('Total', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
-                        Text(_fmt(subtotal), style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
+                        Text(_fmt(totalTanpaPpn), style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
                       ],
                     ),
                   ],
@@ -1651,11 +1676,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModal) {
-          final int baseSubtotal = (_o.subtotal > 0)
-              ? _o.subtotal
-              : (_o.services.isNotEmpty
-                  ? _o.services.fold(0, (sum, s) => sum + s.subtotal)
-                  : _o.total);
+          final int baseSubtotal = _serviceSubtotal;
           int diskonPersen = int.tryParse(diskonCtrl.text) ?? 0;
           int ppnPersen = applyPpn ? 11 : 0;
           int pphPersen = applyPph ? 2 : 0;
@@ -2369,7 +2390,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                 diskonPersen: diskonPersen,
                                 ppn: ppnPersen,
                                 usePph: applyPph,
-                                totalTagihan: _o.total,
+                                totalTagihan: baseSubtotal,
                                 totalSetelahDiskon: setelahDiskon,
                                 totalAkhir: totalAkhir,
                                 buktiTransfer: selectedProof!,

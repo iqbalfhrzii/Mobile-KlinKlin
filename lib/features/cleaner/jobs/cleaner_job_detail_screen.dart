@@ -1224,8 +1224,17 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
         ? _job['total_bonus']
         : (num.tryParse(_job['total_bonus']?.toString() ?? '0') ?? 0);
 
-    final isStartable = status == 'assigned' || status == 'notified';
-    final isFinishable = status == 'in_progress';
+    final statusPesanan = (pesanan['status_pesanan'] ?? '').toString().toLowerCase();
+    final statusUtama = (pesanan['status_order_utama'] ?? '').toString().toLowerCase();
+    final isOrderCancelled = status == 'cancelled' ||
+        statusPesanan == 'cancelled' ||
+        statusPesanan == 'waiting_cancel_approval' ||
+        statusUtama == 'cancelled' ||
+        pesanan['pembatalan'] != null ||
+        pesanan['pembatalan_id'] != null;
+
+    final isStartable = !isOrderCancelled && (status == 'assigned' || status == 'notified');
+    final isFinishable = !isOrderCancelled && (status == 'in_progress');
     final bool canShowWa = _job['show_wa'] == true ||
         _job['show_wa'] == 1 ||
         _job['show_wa'] == '1' ||
@@ -1349,6 +1358,54 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                               globalWaktu,
                             ),
                             const SizedBox(height: 20),
+                            if (isOrderCancelled) ...[
+                              Container(
+                                width: double.infinity,
+                                margin: const EdgeInsets.only(bottom: 16),
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF2F2),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFFFCA5A5)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFDC2626),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.close_rounded, color: Colors.white, size: 16),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Pesanan Dibatalkan',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: const Color(0xFF991B1B),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Order ini telah dibatalkan oleh CS. Pekerjaan tidak dapat dilanjutkan.',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12,
+                                              color: const Color(0xFFB91C1C),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
 
                             // Customer Info Section
                             _buildSectionTitle('Informasi Pelanggan', Icons.person_rounded),

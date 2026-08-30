@@ -125,6 +125,20 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
       final pelanggan = pesanan['pelanggan'] ?? {};
       final idStr = pesanan['id']?.toString() ?? '';
       final nameStr = pelanggan['nama_pelanggan']?.toString().toLowerCase() ?? '';
+
+      final statusPesanan = (pesanan['status_pesanan'] ?? '').toString().toLowerCase();
+      final statusUtama = (pesanan['status_order_utama'] ?? '').toString().toLowerCase();
+      final isOrderCancelled = statusPesanan == 'cancelled' ||
+          statusPesanan == 'waiting_cancel_approval' ||
+          statusUtama == 'cancelled' ||
+          pesanan['pembatalan'] != null ||
+          pesanan['pembatalan_id'] != null ||
+          job['status_pengerjaan'] == 'cancelled';
+
+      // Cleaner tidak boleh melihat / mengerjakan pesanan yang telah dibatalkan
+      if (isOrderCancelled) {
+        return false;
+      }
       
       bool matchQ = idStr.contains(q) || nameStr.contains(q);
       
@@ -1192,6 +1206,11 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
         bg = const Color(0xFFECFDF5);
         fg = const Color(0xFF059669);
         text = 'Selesai';
+        break;
+      case 'cancelled':
+        bg = const Color(0xFFFEF2F2);
+        fg = const Color(0xFFDC2626);
+        text = 'Dibatalkan';
         break;
     }
     return Container(
