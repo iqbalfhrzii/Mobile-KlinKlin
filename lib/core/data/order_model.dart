@@ -188,11 +188,13 @@ class CleanerBonus {
   factory CleanerBonus.fromJson(Map<String, dynamic> json) {
     String jb = '-';
     if (json['jenis_bonus'] is Map) {
-      jb = json['jenis_bonus']['nama_bonus'] ?? '-';
+      jb = json['jenis_bonus']['nama_bonus']?.toString() ?? '-';
     } else if (json['jenis_bonus'] is String) {
-      jb = json['jenis_bonus'];
-    } else if (json['tarif_bonus_cabang'] != null && json['tarif_bonus_cabang']['jenis_bonus'] != null) {
-      jb = json['tarif_bonus_cabang']['jenis_bonus']['nama_bonus'] ?? '-';
+      jb = json['jenis_bonus'].toString();
+    } else if (json['tarif_bonus_cabang'] is Map && json['tarif_bonus_cabang']['jenis_bonus'] != null) {
+      if (json['tarif_bonus_cabang']['jenis_bonus'] is Map) {
+        jb = json['tarif_bonus_cabang']['jenis_bonus']['nama_bonus']?.toString() ?? '-';
+      }
     }
 
     if (jb == '-' || jb.isEmpty) {
@@ -203,7 +205,7 @@ class CleanerBonus {
       id: json['id']?.toString() ?? '',
       jenisBonus: jb,
       nominal: json['nominal'] != null ? (double.tryParse(json['nominal'].toString())?.toInt() ?? 0) : 0,
-      keterangan: json['keterangan']?.toString().isNotEmpty == true ? json['keterangan'] : '-',
+      keterangan: json['keterangan']?.toString().isNotEmpty == true ? json['keterangan'].toString() : '-',
     );
   }
 }
@@ -225,15 +227,18 @@ class OrderCustomer {
   String area;
   String notes;
 
-  factory OrderCustomer.fromJson(Map<String, dynamic> json, [Map<String, dynamic>? rootJson]) {
-    final cabang = (rootJson ?? json)['cabang'] ?? {};
+  factory OrderCustomer.fromJson(Map<dynamic, dynamic>? json, [Map<dynamic, dynamic>? rootJson]) {
+    final cMap = json != null ? Map<String, dynamic>.from(json) : <String, dynamic>{};
+    final rMap = rootJson != null ? Map<String, dynamic>.from(rootJson) : cMap;
+    final cabang = rMap['cabang'] is Map ? Map<String, dynamic>.from(rMap['cabang']) : <String, dynamic>{};
+
     return OrderCustomer(
-      id: json['id']?.toString() ?? '',
-      name: json['nama_pelanggan'] ?? '-',
-      phone: json['no_wa'] ?? '-',
-      address: json['alamat'] ?? '-',
-      area: cabang['nama_cabang'] ?? 'Cabang',
-      notes: json['catatan'] ?? '',
+      id: cMap['id']?.toString() ?? '',
+      name: cMap['nama_pelanggan']?.toString() ?? '-',
+      phone: cMap['no_wa']?.toString() ?? '-',
+      address: cMap['alamat']?.toString() ?? '-',
+      area: cabang['nama_cabang']?.toString() ?? 'Cabang',
+      notes: cMap['catatan']?.toString() ?? '',
     );
   }
 }
@@ -254,12 +259,12 @@ class CleanerFoto {
   });
 
   factory CleanerFoto.fromJson(Map<String, dynamic> json) {
-    String rawPath = json['foto_path'] ?? json['foto_url'] ?? json['path'] ?? json['url'] ?? '';
+    String rawPath = json['foto_path']?.toString() ?? json['foto_url']?.toString() ?? json['path']?.toString() ?? json['url']?.toString() ?? '';
     return CleanerFoto(
       id: json['id']?.toString() ?? '',
-      url: json['foto_url'] ?? json['url'] ?? rawPath,
+      url: json['foto_url']?.toString() ?? json['url']?.toString() ?? rawPath,
       path: rawPath,
-      tipe: json['tipe'] ?? 'start',
+      tipe: json['tipe']?.toString() ?? 'start',
       createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) : null,
     );
   }
@@ -299,32 +304,57 @@ class OrderCleaner {
   DateTime? finishedAt;
 
   factory OrderCleaner.fromJson(Map<String, dynamic> json) {
-    final cleaner = json['cleaner'] ?? {};
-    final bonusesData = json['bonuses'] as List? ?? [];
-    final List<CleanerBonus> parsedBonuses = bonusesData.map<CleanerBonus>((e) => CleanerBonus.fromJson(e)).toList();
+    final cleaner = json['cleaner'] is Map ? Map<String, dynamic>.from(json['cleaner']) : <String, dynamic>{};
+    final bonusesData = json['bonuses'] is List ? json['bonuses'] as List : [];
+    final List<CleanerBonus> parsedBonuses = [];
+    for (final b in bonusesData) {
+      if (b is Map) {
+        try {
+          parsedBonuses.add(CleanerBonus.fromJson(Map<String, dynamic>.from(b)));
+        } catch (_) {}
+      }
+    }
     final int totalB = parsedBonuses.fold(0, (sum, b) => sum + b.nominal);
 
-    var fotosStartData = json['fotos_start'] as List? ?? [];
-    var fotosFinishData = json['fotos_finish'] as List? ?? [];
+    var fotosStartData = json['fotos_start'] is List ? json['fotos_start'] as List : [];
+    var fotosFinishData = json['fotos_finish'] is List ? json['fotos_finish'] as List : [];
     if (fotosStartData.isEmpty && fotosFinishData.isEmpty && json['fotos'] is List) {
       final allFotos = json['fotos'] as List;
-      fotosStartData = allFotos.where((f) => f['tipe'] == 'start' || f['tipe'] == 'sebelum').toList();
-      fotosFinishData = allFotos.where((f) => f['tipe'] == 'finish' || f['tipe'] == 'sesudah').toList();
+      fotosStartData = allFotos.where((f) => f is Map && (f['tipe'] == 'start' || f['tipe'] == 'sebelum')).toList();
+      fotosFinishData = allFotos.where((f) => f is Map && (f['tipe'] == 'finish' || f['tipe'] == 'sesudah')).toList();
+    }
+
+    final List<CleanerFoto> pFotosStart = [];
+    for (final f in fotosStartData) {
+      if (f is Map) {
+        try {
+          pFotosStart.add(CleanerFoto.fromJson(Map<String, dynamic>.from(f)));
+        } catch (_) {}
+      }
+    }
+
+    final List<CleanerFoto> pFotosFinish = [];
+    for (final f in fotosFinishData) {
+      if (f is Map) {
+        try {
+          pFotosFinish.add(CleanerFoto.fromJson(Map<String, dynamic>.from(f)));
+        } catch (_) {}
+      }
     }
 
     return OrderCleaner(
       id: cleaner['id']?.toString() ?? json['id']?.toString() ?? '',
       pesananCleanerId: json['id']?.toString() ?? '',
-      name: cleaner['nama'] ?? '-',
+      name: cleaner['nama']?.toString() ?? '-',
       rating: cleaner['rating'] != null ? double.tryParse(cleaner['rating'].toString()) ?? 0.0 : 0.0,
-      statusPengerjaan: _parseCleanerWorkStatus(json['status_pengerjaan']),
+      statusPengerjaan: _parseCleanerWorkStatus(json['status_pengerjaan']?.toString()),
       bonuses: parsedBonuses,
       totalBonus: totalB,
       fotoProfil: cleaner['foto_profil'] ?? cleaner['foto'] ?? cleaner['foto_url'] ?? cleaner['foto_profil_url'] ?? cleaner['profile_photo_url'] ?? (cleaner['user'] != null && cleaner['user'] is Map ? (cleaner['user']['foto_profil'] ?? cleaner['user']['foto_url'] ?? cleaner['user']['foto'] ?? cleaner['user']['profile_photo_url']) : null),
       showWa: json['show_wa'] == true || json['show_wa'] == 1 || json['show_wa'] == '1',
       phone: cleaner['no_wa']?.toString() ?? cleaner['no_hp']?.toString() ?? cleaner['phone']?.toString() ?? '',
-      fotosStart: (fotosStartData).map((e) => CleanerFoto.fromJson(e)).toList(),
-      fotosFinish: (fotosFinishData).map((e) => CleanerFoto.fromJson(e)).toList(),
+      fotosStart: pFotosStart,
+      fotosFinish: pFotosFinish,
       startedAt: json['started_at'] != null ? DateTime.tryParse(json['started_at'].toString()) : null,
       finishedAt: json['finished_at'] != null ? DateTime.tryParse(json['finished_at'].toString()) : null,
     );
@@ -565,12 +595,31 @@ class OrderModel {
     final orderJson = (json['pesanan'] != null && json['pesanan'] is Map)
         ? json['pesanan'] as Map<String, dynamic>
         : json;
-    final customerData = orderJson['pelanggan'] ?? {};
-    final detailsData = orderJson['details'] as List? ?? [];
-    final cleanersData = orderJson['cleaners'] ?? orderJson['pesanan_cleaners'] as List? ?? [];
+    final customerData = orderJson['pelanggan'];
+    final detailsData = orderJson['details'];
+    final cleanersData = orderJson['cleaners'] ?? orderJson['pesanan_cleaners'];
     
-    final List<ServiceItem> parsedServices = (detailsData as List).map<ServiceItem>((e) => ServiceItem.fromJson(e)).toList();
-    final List<OrderCleaner> parsedCleaners = (cleanersData as List).map<OrderCleaner>((e) => OrderCleaner.fromJson(e)).toList();
+    final List<ServiceItem> parsedServices = [];
+    if (detailsData is List) {
+      for (final d in detailsData) {
+        if (d is Map) {
+          try {
+            parsedServices.add(ServiceItem.fromJson(Map<String, dynamic>.from(d)));
+          } catch (_) {}
+        }
+      }
+    }
+
+    final List<OrderCleaner> parsedCleaners = [];
+    if (cleanersData is List) {
+      for (final c in cleanersData) {
+        if (c is Map) {
+          try {
+            parsedCleaners.add(OrderCleaner.fromJson(Map<String, dynamic>.from(c)));
+          } catch (_) {}
+        }
+      }
+    }
     
     final int computedTotal = parsedServices.fold(0, (sum, s) => sum + s.subtotal);
 

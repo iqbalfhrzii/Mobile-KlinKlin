@@ -50,22 +50,21 @@ class OrderService {
         lastPage = responseData['last_page'] is int ? responseData['last_page'] : 1;
 
         if (fetchAllPages && lastPage > 1) {
-          // Fetch remaining pages in parallel with Future.wait to avoid slow sequential roundtrips
-          final targetLastPage = lastPage > 8 ? 8 : lastPage;
-          final futures = <Future<Response>>[];
+          final targetLastPage = lastPage > 6 ? 6 : lastPage;
           for (int p = 2; p <= targetLastPage; p++) {
-            final pParams = Map<String, dynamic>.from(queryParams);
-            pParams['page'] = p;
-            futures.add(_dio.get('/pesanan', queryParameters: pParams));
-          }
-          final pageResponses = await Future.wait(futures);
-          for (final pageRes in pageResponses) {
-            final pBody = pageRes.data;
-            final pData = pBody['data'] ?? pBody;
-            if (pData is Map && pData.containsKey('data') && pData['data'] is List) {
-              allRawOrders.addAll(pData['data'] as List);
-            } else if (pData is List) {
-              allRawOrders.addAll(pData);
+            try {
+              final pParams = Map<String, dynamic>.from(queryParams);
+              pParams['page'] = p;
+              final pageRes = await _dio.get('/pesanan', queryParameters: pParams);
+              final pBody = pageRes.data;
+              final pData = pBody['data'] ?? pBody;
+              if (pData is Map && pData.containsKey('data') && pData['data'] is List) {
+                allRawOrders.addAll(pData['data'] as List);
+              } else if (pData is List) {
+                allRawOrders.addAll(pData);
+              }
+            } catch (_) {
+              break;
             }
           }
         }
@@ -73,7 +72,18 @@ class OrderService {
         allRawOrders.addAll(responseData);
       }
 
-      return allRawOrders.map((json) => OrderModel.fromJson(json)).toList();
+      final List<OrderModel> orders = [];
+      for (final item in allRawOrders) {
+        if (item is Map) {
+          try {
+            orders.add(OrderModel.fromJson(Map<String, dynamic>.from(item)));
+          } catch (_) {
+            // Ignore single malformed historical order
+          }
+        }
+      }
+
+      return orders;
     } catch (e) {
       if (e is DioException) {
         throw Exception(e.response?.data['message'] ?? 'Gagal mengambil data pesanan');

@@ -103,7 +103,12 @@ class _HomeScreenState extends State<HomeScreen> {
     await _loadProfile();
     try {
       final dbData = await DashboardService().fetchCsDashboard();
-      final orders = await OrderService().fetchOrders(fetchAllPages: true);
+      List<OrderModel> orders = [];
+      try {
+        orders = await OrderService().fetchOrders(fetchAllPages: true);
+      } catch (err) {
+        debugPrint('Error fetching orders for stats: $err');
+      }
 
       if (mounted) {
         _allOrders = orders;
