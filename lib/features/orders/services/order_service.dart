@@ -13,7 +13,8 @@ class OrderService {
     int? cabangId,
     String? chatDari,
     String? tipeCustomer,
-    bool fetchAllPages = true,
+    bool fetchAllPages = false,
+    int perPage = 50,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -24,7 +25,7 @@ class OrderService {
       }
 
       final Map<String, dynamic> queryParams = {
-        'per_page': 100,
+        'per_page': perPage,
       };
       if (statusPesanan != null && statusPesanan != 'Semua') {
         queryParams['status_pesanan'] = statusPesanan;
@@ -50,21 +51,21 @@ class OrderService {
         lastPage = responseData['last_page'] is int ? responseData['last_page'] : 1;
 
         if (fetchAllPages && lastPage > 1) {
-          final targetLastPage = lastPage > 6 ? 6 : lastPage;
+          final targetLastPage = lastPage > 5 ? 5 : lastPage;
+          final futures = <Future<Response>>[];
           for (int p = 2; p <= targetLastPage; p++) {
-            try {
-              final pParams = Map<String, dynamic>.from(queryParams);
-              pParams['page'] = p;
-              final pageRes = await _dio.get('/pesanan', queryParameters: pParams);
-              final pBody = pageRes.data;
-              final pData = pBody['data'] ?? pBody;
-              if (pData is Map && pData.containsKey('data') && pData['data'] is List) {
-                allRawOrders.addAll(pData['data'] as List);
-              } else if (pData is List) {
-                allRawOrders.addAll(pData);
-              }
-            } catch (_) {
-              break;
+            final pParams = Map<String, dynamic>.from(queryParams);
+            pParams['page'] = p;
+            futures.add(_dio.get('/pesanan', queryParameters: pParams));
+          }
+          final pageResponses = await Future.wait(futures);
+          for (final pageRes in pageResponses) {
+            final pBody = pageRes.data;
+            final pData = pBody['data'] ?? pBody;
+            if (pData is Map && pData.containsKey('data') && pData['data'] is List) {
+              allRawOrders.addAll(pData['data'] as List);
+            } else if (pData is List) {
+              allRawOrders.addAll(pData);
             }
           }
         }

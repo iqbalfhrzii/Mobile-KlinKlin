@@ -40,21 +40,23 @@ class _PaymentScreenState extends State<PaymentScreen> {
     setState(() => _isLoading = true);
     try {
       final svc = OrderService();
-      final orders = await svc.fetchOrders();
-      setState(() {
-        _allOrders = orders;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
+      final initialOrders = await svc.fetchOrders(fetchAllPages: false, perPage: 30);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        setState(() {
+          _allOrders = initialOrders;
+          _isLoading = false;
+        });
       }
+
+      svc.fetchOrders(fetchAllPages: true, perPage: 50).then((allOrders) {
+        if (mounted && allOrders.length > initialOrders.length) {
+          setState(() {
+            _allOrders = allOrders;
+          });
+        }
+      }).catchError((_) {});
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

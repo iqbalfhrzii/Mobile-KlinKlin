@@ -102,13 +102,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadStats() async {
     await _loadProfile();
     try {
-      final dbData = await DashboardService().fetchCsDashboard();
-      List<OrderModel> orders = [];
-      try {
-        orders = await OrderService().fetchOrders(fetchAllPages: true);
-      } catch (err) {
-        debugPrint('Error fetching orders for stats: $err');
-      }
+      final results = await Future.wait([
+        DashboardService().fetchCsDashboard(),
+        OrderService().fetchOrders(fetchAllPages: false, perPage: 5).catchError((err) {
+          debugPrint('Error fetching recent orders for home: $err');
+          return <OrderModel>[];
+        }),
+      ]);
+
+      final dbData = results[0] as Map<String, dynamic>;
+      final orders = results[1] as List<OrderModel>;
 
       if (mounted) {
         _allOrders = orders;

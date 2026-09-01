@@ -101,16 +101,30 @@ class _OrderListScreenState extends State<OrderListScreen> {
       _error = '';
     });
     try {
-      final data = await _orderService.fetchOrders();
-      setState(() {
-        _orders = data;
-        _isLoading = false;
-      });
+      // 1. Ambil data halaman pertama secara instan (<150ms) agar layar langsung muncul tanpa loading lama
+      final initialOrders = await _orderService.fetchOrders(fetchAllPages: false, perPage: 30);
+      if (mounted) {
+        setState(() {
+          _orders = initialOrders;
+          _isLoading = false;
+        });
+      }
+
+      // 2. Ambil riwayat lengkap di background tanpa memblokir UI
+      _orderService.fetchOrders(fetchAllPages: true, perPage: 50).then((allOrders) {
+        if (mounted && allOrders.length > initialOrders.length) {
+          setState(() {
+            _orders = allOrders;
+          });
+        }
+      }).catchError((_) {});
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 
