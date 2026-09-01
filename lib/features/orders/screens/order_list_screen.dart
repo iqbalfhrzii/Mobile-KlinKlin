@@ -249,7 +249,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                 child: Column(
                   children: [
                     WeeklyDatePicker(
-                      showAllMonthButton: false,
+                      showAllMonthButton: true,
                       searchQuery: _query,
                       initialDate: widget.isTodayOnly ? DateTime.now() : null,
                       onSearchChanged: (val) => setState(() => _query = val),
@@ -298,11 +298,49 @@ class _OrderListScreenState extends State<OrderListScreen> {
                       Padding(
                         padding: const EdgeInsets.only(top: 40),
                         child: Center(
-                          child: Text(
-                            'Tidak ada pesanan',
-                            style: GoogleFonts.inter(
-                              color: AppColors.textMuted,
-                            ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.inbox_outlined,
+                                size: 48,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                _orders.isEmpty
+                                    ? 'Belum ada data pesanan'
+                                    : 'Tidak ada pesanan di tanggal ini\n(Total ${_orders.length} pesanan di cabang ini)',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: AppColors.textMuted,
+                                  height: 1.4,
+                                ),
+                              ),
+                              if (_orders.isNotEmpty && _periodFilter != 'semua') ...[
+                                const SizedBox(height: 14),
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    setState(() {
+                                      _periodFilter = 'semua';
+                                      _filterStart = null;
+                                      _filterEnd = null;
+                                    });
+                                  },
+                                  icon: const Icon(Icons.calendar_today_rounded, size: 16),
+                                  label: const Text('Tampilkan Semua Tanggal'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                       )
