@@ -65,6 +65,13 @@ class FcmService {
         sound: true,
       );
 
+      // Enable foreground notification presentation on iOS (alert banner, badge, sound)
+      await _messaging!.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
       debugPrint('User granted permission: ${settings.authorizationStatus}');
 
       // Handle token updates
