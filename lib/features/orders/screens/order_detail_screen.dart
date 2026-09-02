@@ -3195,7 +3195,7 @@ Tanggal : $tanggal
 Total Awal : ${_formatRupiah(baseSubtotal).replaceAll('Rp ', '')}
 Diskon : ${diskonValue > 0 ? _formatRupiah(diskonValue).replaceAll('Rp ', '') : '0'}
 PPn : ${_formatRupiah(ppnValue).replaceAll('Rp ', '')}
-*TOTAL BAYAR : ${_formatRupiah(totalAkhir).replaceAll(' ', '')}*
+${pphValue > 0 ? 'PPh : -${_formatRupiah(pphValue).replaceAll('Rp ', '')}\n' : ''}*TOTAL BAYAR : ${_formatRupiah(totalAkhir).replaceAll(' ', '')}*
 --------------------------------
 
 Transfer hanya ke No. Rekening Berikut:

@@ -1156,7 +1156,7 @@ Tanggal : $tanggal
 Total Awal : ${_fmt(baseSubtotal).replaceAll('Rp ', '')}
 Diskon : ${diskonValue > 0 ? _fmt(diskonValue).replaceAll('Rp ', '') : '0'}
 PPn : ${_fmt(ppnValue).replaceAll('Rp ', '')}
-*TOTAL BAYAR : ${_fmt(totalAkhir).replaceAll(' ', '')}*
+${pphValue > 0 ? 'PPh : -${_fmt(pphValue).replaceAll('Rp ', '')}\n' : ''}*TOTAL BAYAR : ${_fmt(totalAkhir).replaceAll(' ', '')}*
 --------------------------------
 
 Transfer hanya ke No. Rekening Berikut:
