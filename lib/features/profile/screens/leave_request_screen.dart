@@ -80,12 +80,6 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
       'desc': 'Anggota keluarga lain dalam satu rumah',
     },
     {
-      'title': 'Ibadah Haji / Umrah',
-      'icon': Icons.mosque_rounded,
-      'duration_info': 'Sesuai Jadwal Ibadah',
-      'desc': 'Menunaikan ibadah keagamaan wajib',
-    },
-    {
       'title': 'Cuti Khusus Lainnya',
       'icon': Icons.more_horiz_rounded,
       'duration_info': 'Sesuai Kebijakan HRD',
@@ -520,7 +514,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                     _buildLeaveTypeCard(
                       value: 'cuti_khusus',
                       title: 'Cuti Khusus (Melahirkan, Menikah, dll - Tidak memotong jatah cuti)',
-                      subtitle: 'Melahirkan, Menikah, Ibadah, Duka, dll',
+                      subtitle: 'Melahirkan, Menikah, dll',
                       icon: Icons.star_rounded,
                       activeColor: const Color(0xFF7C3AED),
                       activeBg: const Color(0xFFFAF5FF),
