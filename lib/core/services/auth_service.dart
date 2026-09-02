@@ -61,23 +61,26 @@ class AuthService {
             'user_branch',
             cabang.isEmpty ? '-' : cabang,
           );
+          await prefs.setString(
+            'user_cabang_name',
+            cabang.isEmpty ? '-' : cabang,
+          );
 
           final userId = userData['id']?.toString() ?? '0';
           await prefs.setString('user_id', 'KLK-CS-0$userId');
           await prefs.setString('karyawan_id', userId);
 
+          int? parsedCabangId;
           if (userData['cabang_id'] != null) {
-            await prefs.setInt(
-              'user_cabang_id',
-              int.tryParse(userData['cabang_id'].toString()) ?? 1,
-            );
+            parsedCabangId = int.tryParse(userData['cabang_id'].toString());
           } else if (userData['cabang'] != null &&
               userData['cabang'] is Map &&
               userData['cabang']['id'] != null) {
-            await prefs.setInt(
-              'user_cabang_id',
-              int.tryParse(userData['cabang']['id'].toString()) ?? 1,
-            );
+            parsedCabangId = int.tryParse(userData['cabang']['id'].toString());
+          }
+
+          if (parsedCabangId != null) {
+            await prefs.setInt('user_cabang_id', parsedCabangId);
           }
         }
       }

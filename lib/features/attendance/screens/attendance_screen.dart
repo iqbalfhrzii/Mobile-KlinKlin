@@ -87,13 +87,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       await _fetchHistory();
     } catch (e) {
       if (mounted) {
+        final prefs = await SharedPreferences.getInstance();
+        final savedBranch = prefs.getString('user_cabang_name') ?? prefs.getString('user_branch') ?? 'Kantor Cabang';
         setState(() {
           _status = AttendanceStatus(
             hasCheckedIn: false,
             hasCheckedOut: false,
-            branchName: 'Kantor Cabang',
-            branchLat: -6.200000,
-            branchLng: 106.816666,
+            branchName: savedBranch,
+            branchLat: null,
+            branchLng: null,
             maxRadiusMeter: 50.0,
             jamMasuk: '08:00',
             jamPulang: '17:00',

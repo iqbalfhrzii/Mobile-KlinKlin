@@ -10,139 +10,133 @@ class AttendanceService {
 
   Future<AttendanceStatus> getTodayStatus() async {
     try {
-      final response = await _dio.get('/absensi/saya');
-      if (response.statusCode == 200) {
-        final List data = response.data['data'] ?? [];
-        
-        bool hasCheckedIn = false;
-        bool hasCheckedOut = false;
-        String? checkInTime;
-        String? checkOutTime;
-        String? branchName;
-        double? branchLat;
-        double? branchLng;
-        double? maxRadiusMeter;
-        String? jamMasuk;
-        int? toleransiTelatMenit;
-        String? jamPulang;
+      bool hasCheckedIn = false;
+      bool hasCheckedOut = false;
+      String? checkInTime;
+      String? checkOutTime;
+      String? branchName;
+      double? branchLat;
+      double? branchLng;
+      double? maxRadiusMeter;
+      String? jamMasuk;
+      int? toleransiTelatMenit;
+      String? jamPulang;
 
-        final now = DateTime.now();
-        final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      final prefs = await SharedPreferences.getInstance();
 
-        for (var item in data) {
-          if (item['tanggal'] == todayStr) {
-            if (item['tipe'] == 'masuk') {
-              hasCheckedIn = true;
-              checkInTime = item['waktu_server'];
-            } else if (item['tipe'] == 'pulang') {
-              hasCheckedOut = true;
-              checkOutTime = item['waktu_server'];
+      // 1. Fetch user profile from /me FIRST to determine active branch accurately
+      try {
+        final meResponse = await _dio.get('/me');
+        if (meResponse.statusCode == 200) {
+          final meData = meResponse.data['data'] ?? {};
+          final c = meData['cabang'] ?? meData['karyawan']?['cabang'] ?? meData['user']?['cabang'];
+          
+          if (c is Map) {
+            if (c['nama_cabang'] != null && c['nama_cabang'].toString().isNotEmpty) {
+              branchName = c['nama_cabang'].toString();
+              await prefs.setString('user_branch', branchName);
+              await prefs.setString('user_cabang_name', branchName);
             }
-            
-            // Try to extract branch info from the absensi record itself if possible
-            final c = item['karyawan']?['cabang'] ?? item['cabang'];
-            if (c != null) {
-              if (branchName == null && c['nama_cabang'] != null) {
-                branchName = c['nama_cabang'];
+
+            final lat = c['latitude'] ?? c['lat'];
+            final lng = c['longitude'] ?? c['lng'];
+            final radius = c['radius_absensi_meter'] ?? c['radius'];
+
+            if (lat != null) branchLat = double.tryParse(lat.toString());
+            if (lng != null) branchLng = double.tryParse(lng.toString());
+            if (radius != null) maxRadiusMeter = double.tryParse(radius.toString());
+            if (c['jam_masuk'] != null) jamMasuk = c['jam_masuk'].toString();
+            if (c['toleransi_telat_menit'] != null) toleransiTelatMenit = int.tryParse(c['toleransi_telat_menit'].toString());
+            if (c['jam_pulang'] != null) jamPulang = c['jam_pulang'].toString();
+
+            if (c['id'] != null) {
+              final parsedId = int.tryParse(c['id'].toString());
+              if (parsedId != null) {
+                await prefs.setInt('user_cabang_id', parsedId);
               }
-              final lat = c['latitude'] ?? c['lat'];
-              final lng = c['longitude'] ?? c['lng'];
-              final radius = c['radius_absensi_meter'] ?? c['radius'];
-              
-              if (lat != null && branchLat == null) branchLat = double.tryParse(lat.toString());
-              if (lng != null && branchLng == null) branchLng = double.tryParse(lng.toString());
-              if (radius != null && maxRadiusMeter == null) maxRadiusMeter = double.tryParse(radius.toString());
-              if (c['jam_masuk'] != null && jamMasuk == null) jamMasuk = c['jam_masuk'].toString();
-              if (c['toleransi_telat_menit'] != null && toleransiTelatMenit == null) toleransiTelatMenit = int.tryParse(c['toleransi_telat_menit'].toString());
-              if (c['jam_pulang'] != null && jamPulang == null) jamPulang = c['jam_pulang'].toString();
+            }
+          }
+
+          // If coordinates or branch details are missing, fetch from /cabangs for this specific cabang_id
+          if (branchLat == null || branchLng == null || maxRadiusMeter == null || jamMasuk == null) {
+            final dynamic cabangId = meData['cabang_id'] ??
+                meData['karyawan']?['cabang_id'] ??
+                (c is Map ? c['id'] : null) ??
+                prefs.getInt('user_cabang_id');
+
+            if (cabangId != null) {
+              try {
+                final cabangsResponse = await _dio.get('/cabangs');
+                if (cabangsResponse.statusCode == 200) {
+                  final cabangsList = cabangsResponse.data['data'] as List;
+                  final myCabang = cabangsList.firstWhere(
+                    (cb) => cb['id'].toString() == cabangId.toString(),
+                    orElse: () => null,
+                  );
+
+                  if (myCabang != null) {
+                    branchName = myCabang['nama_cabang']?.toString() ?? branchName;
+                    final lat = myCabang['latitude'] ?? myCabang['lat'];
+                    final lng = myCabang['longitude'] ?? myCabang['lng'];
+                    final radius = myCabang['radius_absensi_meter'] ?? myCabang['radius'];
+
+                    if (lat != null) branchLat = double.tryParse(lat.toString());
+                    if (lng != null) branchLng = double.tryParse(lng.toString());
+                    if (radius != null) maxRadiusMeter = double.tryParse(radius.toString());
+                    if (myCabang['jam_masuk'] != null) jamMasuk = myCabang['jam_masuk'].toString();
+                    if (myCabang['toleransi_telat_menit'] != null) toleransiTelatMenit = int.tryParse(myCabang['toleransi_telat_menit'].toString());
+                    if (myCabang['jam_pulang'] != null) jamPulang = myCabang['jam_pulang'].toString();
+
+                    if (branchName != null) {
+                      await prefs.setString('user_branch', branchName);
+                      await prefs.setString('user_cabang_name', branchName);
+                    }
+                  }
+                }
+              } catch (_) {}
             }
           }
         }
+      } catch (_) {}
 
-        // Get branch info from /me since absensi list might be empty for today
-        try {
-          final meResponse = await _dio.get('/me');
-          if (meResponse.statusCode == 200) {
-            final meData = meResponse.data['data'] ?? {};
-            
-            // 1. Get branch info directly from /me first
-            final cabang1 = meData['cabang'];
-            final cabang2 = meData['karyawan']?['cabang'];
-            final cabang3 = meData['user']?['cabang'];
-            
-            final List<dynamic> possibleCabangs = [cabang1, cabang2, cabang3];
-            for (var c in possibleCabangs) {
-              if (c != null) {
-                if (branchName == null && c['nama_cabang'] != null) {
-                  branchName = c['nama_cabang'];
-                }
-                
-                final lat = c['latitude'] ?? c['lat'];
-                final lng = c['longitude'] ?? c['lng'];
-                final radius = c['radius_absensi_meter'] ?? c['radius'];
-                
-                if (lat != null && branchLat == null) branchLat = double.tryParse(lat.toString());
-                if (lng != null && branchLng == null) branchLng = double.tryParse(lng.toString());
-                if (radius != null && maxRadiusMeter == null) maxRadiusMeter = double.tryParse(radius.toString());
-                if (c['jam_masuk'] != null && jamMasuk == null) jamMasuk = c['jam_masuk'].toString();
-                if (c['toleransi_telat_menit'] != null && toleransiTelatMenit == null) toleransiTelatMenit = int.tryParse(c['toleransi_telat_menit'].toString());
-                if (c['jam_pulang'] != null && jamPulang == null) jamPulang = c['jam_pulang'].toString();
-              }
-            }
+      // 2. Fetch today's attendance status from /absensi/saya
+      try {
+        final response = await _dio.get('/absensi/saya');
+        if (response.statusCode == 200) {
+          final List data = response.data['data'] ?? [];
+          final now = DateTime.now();
+          final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
-            // 2. Fallback: If coordinates or schedule are STILL null, try fetching /cabangs
-            if (branchLat == null || branchLng == null || jamMasuk == null) {
-              var cabangId = meData['cabang_id'] ?? meData['karyawan']?['cabang_id'] ?? meData['user']?['cabang_id'];
-              
-              if (cabangId == null) {
-                final prefs = await SharedPreferences.getInstance();
-                cabangId = prefs.getInt('user_cabang_id') ?? prefs.getString('user_cabang_id');
-              }
-              
-              if (cabangId != null) {
-                try {
-                  // Fetch from /cabangs to guarantee getting the coordinates
-                  final cabangsResponse = await _dio.get('/cabangs');
-                  if (cabangsResponse.statusCode == 200) {
-                    final cabangsList = cabangsResponse.data['data'] as List;
-                    final myCabang = cabangsList.firstWhere((c) => c['id'].toString() == cabangId.toString(), orElse: () => null);
-                    
-                    if (myCabang != null) {
-                      branchName = myCabang['nama_cabang'] ?? branchName;
-                      
-                      final lat = myCabang['latitude'] ?? myCabang['lat'];
-                      final lng = myCabang['longitude'] ?? myCabang['lng'];
-                      final radius = myCabang['radius_absensi_meter'] ?? myCabang['radius'];
-                      
-                      if (lat != null && branchLat == null) branchLat = double.tryParse(lat.toString());
-                      if (lng != null && branchLng == null) branchLng = double.tryParse(lng.toString());
-                      if (radius != null && maxRadiusMeter == null) maxRadiusMeter = double.tryParse(radius.toString());
-                      if (myCabang['jam_masuk'] != null && jamMasuk == null) jamMasuk = myCabang['jam_masuk'].toString();
-                      if (myCabang['toleransi_telat_menit'] != null && toleransiTelatMenit == null) toleransiTelatMenit = int.tryParse(myCabang['toleransi_telat_menit'].toString());
-                      if (myCabang['jam_pulang'] != null && jamPulang == null) jamPulang = myCabang['jam_pulang'].toString();
-                    }
-                  }
-                } catch (_) {}
+          for (var item in data) {
+            if (item['tanggal'] == todayStr) {
+              if (item['tipe'] == 'masuk') {
+                hasCheckedIn = true;
+                checkInTime = item['waktu_server'];
+              } else if (item['tipe'] == 'pulang') {
+                hasCheckedOut = true;
+                checkOutTime = item['waktu_server'];
               }
             }
           }
-        } catch (_) {}
+        }
+      } catch (_) {}
 
-        return AttendanceStatus(
-          hasCheckedIn: hasCheckedIn,
-          hasCheckedOut: hasCheckedOut,
-          checkInTime: checkInTime,
-          checkOutTime: checkOutTime,
-          branchName: branchName,
-          branchLat: branchLat,
-          branchLng: branchLng,
-          maxRadiusMeter: maxRadiusMeter,
-          jamMasuk: jamMasuk,
-          toleransiTelatMenit: toleransiTelatMenit,
-          jamPulang: jamPulang,
-        );
-      }
-      throw Exception('Gagal mendapatkan status absensi');
+      // Fallback branchName from preferences if still null
+      branchName ??= prefs.getString('user_cabang_name') ?? prefs.getString('user_branch') ?? 'Kantor Cabang';
+
+      return AttendanceStatus(
+        hasCheckedIn: hasCheckedIn,
+        hasCheckedOut: hasCheckedOut,
+        checkInTime: checkInTime,
+        checkOutTime: checkOutTime,
+        branchName: branchName,
+        branchLat: branchLat,
+        branchLng: branchLng,
+        maxRadiusMeter: maxRadiusMeter,
+        jamMasuk: jamMasuk,
+        toleransiTelatMenit: toleransiTelatMenit,
+        jamPulang: jamPulang,
+      );
     } catch (e) {
       throw Exception('Terjadi kesalahan jaringan atau server: $e');
     }
