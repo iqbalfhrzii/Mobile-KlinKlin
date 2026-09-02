@@ -45,6 +45,10 @@ class _OrderListScreenState extends State<OrderListScreen> {
   DateTime? _filterStart;
   DateTime? _filterEnd;
 
+  // Pagination limits matching Finance Audit design
+  int _limit = 10;
+  final ScrollController _scrollController = ScrollController();
+
   static const _filters = [
     'Semua',
     'draft',
@@ -91,12 +95,33 @@ class _OrderListScreenState extends State<OrderListScreen> {
     if (widget.initialStatusFilter != null) {
       _statusFilter = widget.initialStatusFilter!;
     }
+    _scrollController.addListener(_onScroll);
+
     // Tampilkan data cache langsung (0ms lag) jika ada
     if (OrderService.cachedOrders.isNotEmpty) {
       _orders = List.from(OrderService.cachedOrders);
       _isLoading = false;
     }
     _fetchData();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.hasClients &&
+        _scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      final total = _filtered.length;
+      if (_limit < total) {
+        setState(() {
+          _limit += 10;
+        });
+      }
+    }
   }
 
   Future<void> _fetchData({DateTime? customStart, DateTime? customEnd}) async {
@@ -153,14 +178,22 @@ class _OrderListScreenState extends State<OrderListScreen> {
       // Ambil data spesifik tanggal/bulan secara instan (<100ms)
       final initialOrders = await _orderService.fetchOrders(
         fetchAllPages: false,
-        perPage: 50,
+        perPage: 100,
         statusPesanan: _statusFilter != 'Semua' ? _statusFilter : null,
         startDate: startStr,
         endDate: endStr,
       );
+
       if (mounted) {
+        final Map<String, OrderModel> map = {
+          for (var o in _orders) o.id: o,
+        };
+        for (var o in initialOrders) {
+          map[o.id] = o;
+        }
+
         setState(() {
-          _orders = initialOrders;
+          _orders = map.values.toList();
           _isLoading = false;
         });
       }
@@ -203,6 +236,8 @@ class _OrderListScreenState extends State<OrderListScreen> {
       bool matchDate = true;
       if (q.isEmpty) {
         final dt = o.scheduleDateTime;
+        final dtInput = o.tanggalInput;
+
         if (_periodFilter == 'semua') {
           matchDate = true;
         } else if (_periodFilter == 'weekly_date' &&
@@ -221,28 +256,38 @@ class _OrderListScreenState extends State<OrderListScreen> {
             59,
             59,
           );
-          matchDate = !dt.isBefore(start) && !dt.isAfter(end);
+
+          final matchSchedule = !dt.isBefore(start) && !dt.isAfter(end);
+          final matchInput = !dtInput.isBefore(start) && !dtInput.isAfter(end);
+          final matchAnyService = o.services.any((s) {
+            try {
+              final sDt = DateTime.parse(s.tanggalPengerjaan);
+              return !sDt.isBefore(start) && !sDt.isAfter(end);
+            } catch (_) {
+              return false;
+            }
+          });
+
+          matchDate = matchSchedule || matchInput || matchAnyService;
         } else {
           final now = DateTime.now();
           if (_periodFilter == 'hari_ini') {
             matchDate =
-                dt.year == now.year &&
-                dt.month == now.month &&
-                dt.day == now.day;
+                (dt.year == now.year && dt.month == now.month && dt.day == now.day) ||
+                (dtInput.year == now.year && dtInput.month == now.month && dtInput.day == now.day);
           } else if (_periodFilter == 'kemarin') {
             final yest = now.subtract(const Duration(days: 1));
             matchDate =
-                dt.year == yest.year &&
-                dt.month == yest.month &&
-                dt.day == yest.day;
+                (dt.year == yest.year && dt.month == yest.month && dt.day == yest.day) ||
+                (dtInput.year == yest.year && dtInput.month == yest.month && dtInput.day == yest.day);
           } else if (_periodFilter == 'besok') {
             final tom = now.add(const Duration(days: 1));
             matchDate =
-                dt.year == tom.year &&
-                dt.month == tom.month &&
-                dt.day == tom.day;
+                (dt.year == tom.year && dt.month == tom.month && dt.day == tom.day) ||
+                (dtInput.year == tom.year && dtInput.month == tom.month && dtInput.day == tom.day);
           } else if (_periodFilter == 'bulan_ini') {
-            matchDate = dt.year == now.year && dt.month == now.month;
+            matchDate = (dt.year == now.year && dt.month == now.month) ||
+                (dtInput.year == now.year && dtInput.month == now.month);
           } else if (_periodFilter == 'custom' && _customRange != null) {
             final cStart = DateTime(
               _customRange!.start.year,
@@ -257,7 +302,9 @@ class _OrderListScreenState extends State<OrderListScreen> {
               59,
               59,
             );
-            matchDate = !dt.isBefore(cStart) && !dt.isAfter(cEnd);
+            final matchSchedule = !dt.isBefore(cStart) && !dt.isAfter(cEnd);
+            final matchInput = !dtInput.isBefore(cStart) && !dtInput.isAfter(cEnd);
+            matchDate = matchSchedule || matchInput;
           }
         }
       }
@@ -291,8 +338,51 @@ class _OrderListScreenState extends State<OrderListScreen> {
     return list;
   }
 
+  Widget _buildLoadMoreButton({
+    required int currentCount,
+    required int totalCount,
+    required VoidCallback onTap,
+  }) {
+    if (currentCount >= totalCount) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 14, bottom: 8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF0284C7), width: 1.2),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: Color(0xFF0284C7)),
+              const SizedBox(width: 6),
+              Text(
+                'Tampilkan Lebih Banyak ($currentCount dari $totalCount)',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF0284C7),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final filteredList = _filtered;
+    final totalCount = filteredList.length;
+    final displayedList = filteredList.take(_limit).toList();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Column(
@@ -304,6 +394,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
               color: AppColors.primary,
               backgroundColor: AppColors.surface,
               child: SingleChildScrollView(
+                controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 child: Column(
@@ -312,24 +403,28 @@ class _OrderListScreenState extends State<OrderListScreen> {
                       showAllMonthButton: true,
                       searchQuery: _query,
                       initialDate: widget.isTodayOnly ? DateTime.now() : null,
-                      onSearchChanged: (val) => setState(() => _query = val),
+                      onSearchChanged: (val) => setState(() {
+                        _query = val;
+                        _limit = 10;
+                      }),
                       onFilterChanged: (start, end) {
                         setState(() {
                           _filterStart = start;
                           _filterEnd = end;
                           if (start != null) _periodFilter = 'weekly_date';
+                          _limit = 10;
                         });
                         _fetchData(customStart: start, customEnd: end);
                       },
                       trailingWidget: _buildFilterButton(),
                     ),
                     const SizedBox(height: 12),
-                    if (_isLoading)
+                    if (_isLoading && _orders.isEmpty)
                       const Padding(
                         padding: EdgeInsets.only(top: 40),
                         child: Center(child: CircularProgressIndicator()),
                       )
-                    else if (_error.isNotEmpty)
+                    else if (_error.isNotEmpty && _orders.isEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 40),
                         child: Center(
@@ -355,7 +450,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                           ),
                         ),
                       )
-                    else if (_filtered.isEmpty)
+                    else if (filteredList.isEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 40),
                         child: Center(
@@ -387,6 +482,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                                       _periodFilter = 'semua';
                                       _filterStart = null;
                                       _filterEnd = null;
+                                      _limit = 10;
                                     });
                                     _fetchData();
                                   },
@@ -406,8 +502,8 @@ class _OrderListScreenState extends State<OrderListScreen> {
                           ),
                         ),
                       )
-                    else
-                      ..._filtered.map(
+                    else ...[
+                      ...displayedList.map(
                         (o) => _OrderCard(
                           order: o,
                           onTap: () async {
@@ -422,6 +518,16 @@ class _OrderListScreenState extends State<OrderListScreen> {
                           onRefresh: _fetchData,
                         ),
                       ),
+                      _buildLoadMoreButton(
+                        currentCount: displayedList.length,
+                        totalCount: totalCount,
+                        onTap: () {
+                          setState(() {
+                            _limit += 10;
+                          });
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ),

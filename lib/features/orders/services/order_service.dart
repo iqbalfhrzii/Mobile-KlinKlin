@@ -61,7 +61,7 @@ class OrderService {
         lastPage = responseData['last_page'] is int ? responseData['last_page'] : 1;
 
         if (fetchAllPages && lastPage > 1) {
-          final targetLastPage = lastPage > 3 ? 3 : lastPage;
+          final targetLastPage = lastPage > 10 ? 10 : lastPage;
           final futures = <Future<Response>>[];
           for (int p = 2; p <= targetLastPage; p++) {
             final pParams = Map<String, dynamic>.from(queryParams);
@@ -94,8 +94,14 @@ class OrderService {
         }
       }
 
-      if (orders.isNotEmpty && statusPesanan == null && chatDari == null && tipeCustomer == null) {
-        _cachedOrders = orders;
+      if (orders.isNotEmpty) {
+        final Map<String, OrderModel> map = {
+          for (var o in _cachedOrders) o.id: o,
+        };
+        for (var o in orders) {
+          map[o.id] = o;
+        }
+        _cachedOrders = map.values.toList();
         _lastFetchTime = DateTime.now();
       }
 
