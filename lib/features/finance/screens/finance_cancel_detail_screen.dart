@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -68,51 +69,120 @@ class _FinanceCancelDetailScreenState extends State<FinanceCancelDetailScreen> {
     return initials;
   }
 
-  void _showImageDialog(BuildContext context, String imageUrl) {
+  void _showImageDialog(BuildContext context, dynamic imageSource) {
+    List<String> urls = [];
+    if (imageSource is List<String>) {
+      urls = imageSource;
+    } else if (imageSource is String) {
+      final trimmed = imageSource.trim();
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        try {
+          final decoded = jsonDecode(trimmed);
+          if (decoded is List) {
+            urls = decoded.map((p) => p.toString().trim()).where((p) => p.isNotEmpty).toList();
+          }
+        } catch (_) {}
+      }
+      if (urls.isEmpty) {
+        if (trimmed.contains(',')) {
+          urls = trimmed.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+        } else {
+          urls = [trimmed];
+        }
+      }
+    }
+
+    if (urls.isEmpty) return;
+
     showDialog(
       context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(16),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                imageUrl.startsWith('http')
-                    ? imageUrl
-                    : '${ApiClient.baseUrl.replaceAll('/api', '')}/storage/${imageUrl.replaceFirst(RegExp(r'^/?storage/'), '')}',
-                fit: BoxFit.contain,
-                errorBuilder: (ctx, err, stack) => Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+      builder: (ctx) {
+        int currentIndex = 0;
+        final pageCtrl = PageController();
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.all(16),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.75,
+                    width: double.infinity,
+                    child: PageView.builder(
+                      controller: pageCtrl,
+                      itemCount: urls.length,
+                      onPageChanged: (idx) {
+                        setDialogState(() => currentIndex = idx);
+                      },
+                      itemBuilder: (context, idx) {
+                        final img = urls[idx];
+                        final fullUrl = img.startsWith('http')
+                            ? img
+                            : '${ApiClient.baseUrl.replaceAll('/api', '')}/storage/${img.replaceFirst(RegExp(r'^/?storage/'), '')}';
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: InteractiveViewer(
+                            child: Image.network(
+                              fullUrl,
+                              fit: BoxFit.contain,
+                              errorBuilder: (ctx, err, stack) => Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(32),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.broken_image, color: AppColors.textMuted, size: 48),
+                                    const SizedBox(height: 16),
+                                    Text('Gagal memuat gambar', style: GoogleFonts.inter(color: AppColors.textMuted)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.broken_image, color: AppColors.textMuted, size: 48),
-                      const SizedBox(height: 16),
-                      Text('Gagal memuat gambar', style: GoogleFonts.inter(color: AppColors.textMuted)),
-                    ],
+                  if (urls.length > 1)
+                    Positioned(
+                      bottom: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${currentIndex + 1} / ${urls.length}',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white, size: 32),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ),
-            Positioned(
-              top: 8,
-              right: 8,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white, size: 32),
-                onPressed: () => Navigator.pop(ctx),
-              ),
-            ),
-          ],
-        ),
-      ),
+            );
+          },
+        );
+      },
     );
   }
 

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 enum OrderStatus {
   draft,
   assigned,
@@ -393,7 +395,14 @@ class OrderPayment {
       id: json['id'] != null ? int.parse(json['id'].toString()) : 0,
       metodePembayaran: json['metode_pembayaran'] ?? '-',
       statusPembayaran: json['status_pembayaran'] ?? 'unpaid',
-      buktiTransfer: json['bukti_transfer'],
+      buktiTransfer: () {
+        final raw = json['bukti_transfer'];
+        if (raw == null) return null;
+        if (raw is List) {
+          return raw.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).join(',');
+        }
+        return raw.toString();
+      }(),
       catatanPembayaran: json['catatan_pembayaran'],
       total: json['total_akhir'] != null ? (double.tryParse(json['total_akhir'].toString())?.toInt()) : (json['total'] != null ? (double.tryParse(json['total'].toString())?.toInt()) : null),
       ppn: json['ppn'] != null ? (double.tryParse(json['ppn'].toString())?.toInt()) : null,
@@ -576,10 +585,19 @@ class OrderModel {
   List<String> get proofUrls {
     final proof = paymentProof ?? pembayaran?.buktiTransfer;
     if (proof == null || proof.trim().isEmpty || proof.trim() == 'null') return [];
-    if (proof.contains(',')) {
-      return proof.split(',').map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
+    final trimmed = proof.trim();
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        final decoded = jsonDecode(trimmed);
+        if (decoded is List) {
+          return decoded.map((p) => p.toString().trim()).where((p) => p.isNotEmpty).toList();
+        }
+      } catch (_) {}
     }
-    return [proof.trim()];
+    if (trimmed.contains(',')) {
+      return trimmed.split(',').map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
+    }
+    return [trimmed];
   }
 
   bool get isPaymentApproved {
@@ -730,7 +748,18 @@ class OrderModel {
       tanggalInput: orderJson['tanggal_input'] != null ? (DateTime.tryParse(orderJson['tanggal_input']) ?? DateTime.now()) : (json['created_at'] != null ? (DateTime.tryParse(json['created_at']) ?? DateTime.now()) : DateTime.now()),
       cancelReason: orderJson['alasan_batal'] ?? orderJson['pembatalan']?['alasan_batal'] ?? orderJson['pembatalan']?['alasan_cancel'] ?? json['alasan_batal'] ?? json['alasan_cancel'] ?? json['alasan_penolakan'],
       cancelProof: orderJson['bukti_batal'] ?? orderJson['pembatalan']?['bukti_batal'] ?? orderJson['pembatalan']?['bukti_cancel'] ?? json['bukti_cancel'],
-      paymentProof: orderJson['pembayaran']?['bukti_transfer'] ?? orderJson['pembayaran']?['bukti_pembayaran'] ?? orderJson['file_invoice'] ?? json['bukti_transfer'] ?? json['bukti_pembayaran'],
+      paymentProof: () {
+        final raw = orderJson['pembayaran']?['bukti_transfer'] ?? 
+                    orderJson['pembayaran']?['bukti_pembayaran'] ?? 
+                    orderJson['file_invoice'] ?? 
+                    json['bukti_transfer'] ?? 
+                    json['bukti_pembayaran'];
+        if (raw == null) return null;
+        if (raw is List) {
+          return raw.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).join(',');
+        }
+        return raw.toString();
+      }(),
       pembayaran: paymentObj,
       pembatalanId: orderJson['pembatalan']?['id'] ?? json['pembatalan_id'] ?? (json['alasan_cancel'] != null ? json['id'] : null),
       waktuBatal: orderJson['waktu_batal'] != null 

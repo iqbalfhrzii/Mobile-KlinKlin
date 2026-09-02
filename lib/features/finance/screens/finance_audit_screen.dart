@@ -2595,19 +2595,82 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                           hasProof
                               ? OutlinedButton.icon(
                                   onPressed: () {
+                                    final urls = order.proofUrls;
                                     showDialog(
                                       context: context,
-                                      builder: (ctx) => Dialog(
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(16),
-                                          child: _buildSafeImage(order.paymentProof!),
-                                        ),
-                                      ),
+                                      builder: (ctx) {
+                                        int currentIndex = 0;
+                                        final pageCtrl = PageController();
+                                        return StatefulBuilder(
+                                          builder: (ctx, setModalState) {
+                                            return Dialog(
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                              insetPadding: const EdgeInsets.all(16),
+                                              backgroundColor: Colors.transparent,
+                                              child: Stack(
+                                                alignment: Alignment.center,
+                                                children: [
+                                                  SizedBox(
+                                                    height: MediaQuery.of(context).size.height * 0.75,
+                                                    width: double.infinity,
+                                                    child: PageView.builder(
+                                                      controller: pageCtrl,
+                                                      itemCount: urls.length,
+                                                      onPageChanged: (idx) {
+                                                        setModalState(() => currentIndex = idx);
+                                                      },
+                                                      itemBuilder: (ctx, idx) {
+                                                        return ClipRRect(
+                                                          borderRadius: BorderRadius.circular(16),
+                                                          child: InteractiveViewer(
+                                                            child: _buildSafeImage(urls[idx], fit: BoxFit.contain),
+                                                          ),
+                                                        );
+                                                      },
+                                                    ),
+                                                  ),
+                                                  if (urls.length > 1)
+                                                    Positioned(
+                                                      bottom: 12,
+                                                      child: Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                                        decoration: BoxDecoration(
+                                                          color: Colors.black.withValues(alpha: 0.6),
+                                                          borderRadius: BorderRadius.circular(20),
+                                                        ),
+                                                        child: Text(
+                                                          '${currentIndex + 1} / ${urls.length}',
+                                                          style: GoogleFonts.inter(
+                                                            color: Colors.white,
+                                                            fontSize: 12,
+                                                            fontWeight: FontWeight.w600,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  Positioned(
+                                                    top: 8,
+                                                    right: 8,
+                                                    child: IconButton(
+                                                      onPressed: () => Navigator.pop(ctx),
+                                                      icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        );
+                                      },
                                     );
                                   },
                                   icon: const Icon(Icons.receipt_long_rounded, size: 16, color: Color(0xFF0D52BA)),
-                                  label: Text('Buka bukti foto', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF0D52BA))),
+                                  label: Text(
+                                    order.proofUrls.length > 1
+                                        ? 'Buka bukti foto (${order.proofUrls.length} Foto)'
+                                        : 'Buka bukti foto',
+                                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF0D52BA)),
+                                  ),
                                   style: OutlinedButton.styleFrom(
                                     side: const BorderSide(color: Color(0xFF0D52BA)),
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
