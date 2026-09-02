@@ -363,7 +363,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!_isPaid && _o.cleaners.length > 1) ...[
+          if (!_isCancelled && _o.cleaners.length > 1) ...[
             InkWell(
               onTap: () {
                 showModalBottomSheet(
@@ -465,7 +465,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                       ],
                     ),
                   ),
-                  if (!_isPaid)
+                  if (!_isCancelled)
                     InkWell(
                       onTap: () {
                         showModalBottomSheet(
