@@ -21,13 +21,13 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
   bool _isLoadingCuti = false;
   List<Map<String, dynamic>> _cutiList = [];
   String _statusCutiFilter = 'semua'; // 'semua', 'disetujui', 'ditolak'
-  String _bulanCutiFilter = ''; // 'YYYY-MM'
+  DateTime? _selectedBulanCuti;
   final TextEditingController _searchCutiController = TextEditingController();
 
   // Tukar Libur State
   bool _isLoadingTukar = false;
   List<Map<String, dynamic>> _tukarList = [];
-  String _bulanTukarFilter = ''; // 'YYYY-MM'
+  DateTime? _selectedBulanTukar;
   final TextEditingController _searchTukarController = TextEditingController();
 
   // Summary Today
@@ -44,10 +44,9 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
       }
     });
 
-    // Default current month
     final now = DateTime.now();
-    _bulanCutiFilter = DateFormat('yyyy-MM').format(now);
-    _bulanTukarFilter = DateFormat('yyyy-MM').format(now);
+    _selectedBulanCuti = DateTime(now.year, now.month);
+    _selectedBulanTukar = DateTime(now.year, now.month);
 
     _loadSummary();
     _loadCutiList();
@@ -60,6 +59,16 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
     _searchCutiController.dispose();
     _searchTukarController.dispose();
     super.dispose();
+  }
+
+  String _formatMonthParam(DateTime? dt) {
+    if (dt == null) return '';
+    return DateFormat('yyyy-MM').format(dt);
+  }
+
+  String _formatMonthDisplay(DateTime? dt) {
+    if (dt == null) return 'Semua Bulan';
+    return DateFormat('MMMM yyyy', 'id_ID').format(dt);
   }
 
   Future<void> _loadSummary() async {
@@ -77,7 +86,7 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
     setState(() => _isLoadingCuti = true);
     final data = await _service.fetchCutiIzin(
       status: _statusCutiFilter,
-      bulan: _bulanCutiFilter,
+      bulan: _formatMonthParam(_selectedBulanCuti),
       search: _searchCutiController.text,
     );
     if (mounted) {
@@ -91,7 +100,7 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
   Future<void> _loadTukarList() async {
     setState(() => _isLoadingTukar = true);
     final data = await _service.fetchTukarLibur(
-      bulan: _bulanTukarFilter,
+      bulan: _formatMonthParam(_selectedBulanTukar),
       search: _searchTukarController.text,
     );
     if (mounted) {
@@ -103,20 +112,10 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
   }
 
   Future<void> _pickMonth(bool isCuti) async {
-    final currentStr = isCuti ? _bulanCutiFilter : _bulanTukarFilter;
-    DateTime initial = DateTime.now();
-    if (currentStr.isNotEmpty) {
-      try {
-        final parts = currentStr.split('-');
-        if (parts.length == 2) {
-          initial = DateTime(int.parse(parts[0]), int.parse(parts[1]));
-        }
-      } catch (_) {}
-    }
-
+    final current = (isCuti ? _selectedBulanCuti : _selectedBulanTukar) ?? DateTime.now();
     final picked = await showDatePicker(
       context: context,
-      initialDate: initial,
+      initialDate: current,
       firstDate: DateTime(2023, 1),
       lastDate: DateTime(2030, 12),
       helpText: 'PILIH BULAN & TAHUN',
@@ -124,12 +123,11 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
     );
 
     if (picked != null) {
-      final formatted = DateFormat('yyyy-MM').format(picked);
       setState(() {
         if (isCuti) {
-          _bulanCutiFilter = formatted;
+          _selectedBulanCuti = DateTime(picked.year, picked.month);
         } else {
-          _bulanTukarFilter = formatted;
+          _selectedBulanTukar = DateTime(picked.year, picked.month);
         }
       });
       if (isCuti) {
@@ -137,6 +135,23 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
       } else {
         _loadTukarList();
       }
+    }
+  }
+
+  void _shiftMonth(bool isCuti, int delta) {
+    setState(() {
+      final current = (isCuti ? _selectedBulanCuti : _selectedBulanTukar) ?? DateTime.now();
+      final updated = DateTime(current.year, current.month + delta);
+      if (isCuti) {
+        _selectedBulanCuti = updated;
+      } else {
+        _selectedBulanTukar = updated;
+      }
+    });
+    if (isCuti) {
+      _loadCutiList();
+    } else {
+      _loadTukarList();
     }
   }
 
@@ -191,17 +206,17 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
 
   void _showCutiDetailSheet(Map<String, dynamic> item) {
     final karyawan = item['karyawan'] as Map<String, dynamic>? ?? {};
-    final nama = karyawan['nama'] ?? '-';
-    final cabang = karyawan['cabang']?['nama_cabang'] ?? '-';
+    final nama = karyawan['nama']?.toString() ?? '-';
+    final cabang = karyawan['cabang']?['nama_cabang']?.toString() ?? '-';
     final jenis = (item['jenis'] ?? 'cuti').toString().toUpperCase();
     final status = (item['status'] ?? '-').toString().toLowerCase();
-    final tglMulai = item['tanggal_mulai'] ?? '-';
-    final tglSelesai = item['tanggal_selesai'] ?? '-';
+    final tglMulai = item['tanggal_mulai']?.toString() ?? '-';
+    final tglSelesai = item['tanggal_selesai']?.toString() ?? '-';
     final durasi = item['durasi_hari']?.toString() ?? '1';
-    final alasan = item['alasan'] ?? '-';
+    final alasan = item['alasan']?.toString() ?? '-';
     final catatan = item['catatan_hrd'] ?? item['catatan'] ?? '-';
     final tglPengajuan = item['created_at'] != null
-        ? DateFormat('d MMMM yyyy, HH:mm', 'id_ID').format(DateTime.tryParse(item['created_at']) ?? DateTime.now())
+        ? DateFormat('d MMMM yyyy, HH:mm', 'id_ID').format(DateTime.tryParse(item['created_at'].toString()) ?? DateTime.now())
         : '-';
     final selfie = item['selfie'] ?? item['foto_selfie'] ?? item['lampiran'] ?? item['bukti'];
 
@@ -259,11 +274,9 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
               ),
               const Divider(height: 28, color: Color(0xFFF1F5F9)),
 
-              // Info Karyawan
               _buildDetailInfoRow(Icons.person_rounded, 'Cleaner', nama, subValue: cabang),
               const SizedBox(height: 14),
 
-              // Tanggal Pelaksanaan
               _buildDetailInfoRow(
                 Icons.calendar_today_rounded,
                 'Tanggal Pelaksanaan',
@@ -273,17 +286,14 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
               ),
               const SizedBox(height: 14),
 
-              // Alasan
               _buildDetailInfoRow(Icons.short_text_rounded, 'Alasan', alasan),
               const SizedBox(height: 14),
 
-              // Catatan HRD
               if (catatan != '-' && catatan.toString().trim().isNotEmpty) ...[
-                _buildDetailInfoRow(Icons.notes_rounded, 'Catatan HRD', catatan),
+                _buildDetailInfoRow(Icons.notes_rounded, 'Catatan HRD', catatan.toString()),
                 const SizedBox(height: 14),
               ],
 
-              // Lampiran / Selfie jika ada
               if (selfie != null && selfie.toString().trim().isNotEmpty && selfie != 'null') ...[
                 Text(
                   'Lampiran / Bukti Foto:',
@@ -452,7 +462,6 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
       body: Column(
         children: [
           _buildHeader(),
-          _buildTabBar(),
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -511,13 +520,48 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
             ],
           ),
 
-          // Summary Today Banner (if available)
+          // Summary Today Banner
           if (!_isLoadingSummary &&
               _summaryData['total_tidak_masuk_today'] != null &&
               (_summaryData['total_tidak_masuk_today'] as int) > 0) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             _buildTodaySummaryCard(),
           ],
+
+          const SizedBox(height: 14),
+
+          // Integrated Tab Bar inside Header (Same design as HRD Cuti)
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              labelColor: const Color(0xFF1D4ED8),
+              unselectedLabelColor: Colors.white.withValues(alpha: 0.85),
+              labelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold),
+              unselectedLabelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicator: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              dividerColor: Colors.transparent,
+              tabs: const [
+                Tab(text: 'Data Cuti & Izin'),
+                Tab(text: 'Riwayat Tukar Libur'),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -543,7 +587,7 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
               const Icon(Icons.info_outline_rounded, size: 16, color: Colors.amberAccent),
               const SizedBox(width: 6),
               Text(
-                'Cleaner Tidak Masuk Hari Ini ($total Orang)',
+                'Cleaner Libur / Tidak Masuk Hari Ini ($total Orang)',
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
@@ -558,7 +602,7 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
             runSpacing: 4,
             children: [
               ...cutiToday.map((c) {
-                final name = c['karyawan']?['nama'] ?? 'Cleaner';
+                final name = c['karyawan']?['nama']?.toString() ?? 'Cleaner';
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
@@ -572,8 +616,8 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
                 );
               }),
               ...tukarToday.map((t) {
-                final p = t['pengaju']?['nama'] ?? 'Cleaner';
-                final tg = t['target']?['nama'] ?? 'Cleaner';
+                final p = t['pengaju']?['nama']?.toString() ?? 'Cleaner';
+                final tg = t['target']?['nama']?.toString() ?? 'Cleaner';
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
@@ -593,62 +637,45 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
     );
   }
 
-  Widget _buildTabBar() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: TabBar(
-        controller: _tabController,
-        indicator: BoxDecoration(
-          color: const Color(0xFF0F172A),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        labelColor: Colors.white,
-        unselectedLabelColor: const Color(0xFF64748B),
-        labelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
-        unselectedLabelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
-        dividerColor: Colors.transparent,
-        tabs: const [
-          Tab(text: 'Data Cuti & Izin'),
-          Tab(text: 'Riwayat Tukar Libur'),
-        ],
-      ),
-    );
-  }
-
   // ==================== TAB 1: CUTI & IZIN ====================
   Widget _buildCutiTab() {
+    final bool hasActiveFilter = _selectedBulanCuti != null ||
+        _statusCutiFilter != 'semua' ||
+        _searchCutiController.text.trim().isNotEmpty;
+
     return RefreshIndicator(
       onRefresh: _loadCutiList,
       child: Column(
         children: [
-          // Filter Bar
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          // Filter & Search Controls Card
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: Column(
               children: [
+                // Month Navigation & Search
                 Row(
                   children: [
-                    // Search Bar
+                    // Search Input
                     Expanded(
                       child: Container(
-                        height: 42,
+                        height: 40,
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFCBD5E1)),
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
                         child: TextField(
                           controller: _searchCutiController,
@@ -667,7 +694,7 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
                                   )
                                 : null,
                             border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                            contentPadding: const EdgeInsets.symmetric(vertical: 9),
                           ),
                           style: GoogleFonts.inter(fontSize: 13),
                         ),
@@ -675,72 +702,110 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
                     ),
                     const SizedBox(width: 8),
 
-                    // Month Picker Button
-                    InkWell(
-                      onTap: () => _pickMonth(true),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        height: 42,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFCBD5E1)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.calendar_month_rounded, size: 16, color: AppColors.primary),
-                            const SizedBox(width: 6),
-                            Text(
-                              _bulanCutiFilter.isNotEmpty ? _bulanCutiFilter : 'Bulan',
-                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF334155)),
+                    // Month Picker Pill with Prev/Next
+                    Container(
+                      height: 40,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.chevron_left_rounded, size: 18, color: Color(0xFF64748B)),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 26, minHeight: 36),
+                            onPressed: () => _shiftMonth(true, -1),
+                          ),
+                          InkWell(
+                            onTap: () => _pickMonth(true),
+                            borderRadius: BorderRadius.circular(6),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.calendar_month_rounded, size: 15, color: AppColors.primary),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _formatMonthDisplay(_selectedBulanCuti),
+                                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B)),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ],
-                        ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFF64748B)),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 26, minHeight: 36),
+                            onPressed: () => _shiftMonth(true, 1),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
 
-                // Status Filter Chips
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildFilterChip('semua', 'Semua Status', _statusCutiFilter == 'semua', (val) {
-                        setState(() => _statusCutiFilter = val);
-                        _loadCutiList();
-                      }),
-                      const SizedBox(width: 6),
-                      _buildFilterChip('disetujui', 'Disetujui', _statusCutiFilter == 'disetujui', (val) {
-                        setState(() => _statusCutiFilter = val);
-                        _loadCutiList();
-                      }),
-                      const SizedBox(width: 6),
-                      _buildFilterChip('ditolak', 'Ditolak', _statusCutiFilter == 'ditolak', (val) {
-                        setState(() => _statusCutiFilter = val);
-                        _loadCutiList();
-                      }),
-                      if (_bulanCutiFilter.isNotEmpty || _statusCutiFilter != 'semua' || _searchCutiController.text.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _statusCutiFilter = 'semua';
-                              _bulanCutiFilter = '';
-                              _searchCutiController.clear();
-                            });
-                            _loadCutiList();
-                          },
-                          child: Text(
-                            'Reset',
-                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.red[600]),
+                // Status Chips
+                Row(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _buildFilterChip('semua', 'Semua Status', _statusCutiFilter == 'semua', (val) {
+                              setState(() => _statusCutiFilter = val);
+                              _loadCutiList();
+                            }),
+                            const SizedBox(width: 6),
+                            _buildFilterChip('disetujui', 'Disetujui', _statusCutiFilter == 'disetujui', (val) {
+                              setState(() => _statusCutiFilter = val);
+                              _loadCutiList();
+                            }, activeColor: const Color(0xFF059669)),
+                            const SizedBox(width: 6),
+                            _buildFilterChip('ditolak', 'Ditolak', _statusCutiFilter == 'ditolak', (val) {
+                              setState(() => _statusCutiFilter = val);
+                              _loadCutiList();
+                            }, activeColor: const Color(0xFFDC2626)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (hasActiveFilter) ...[
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _statusCutiFilter = 'semua';
+                            _selectedBulanCuti = null;
+                            _searchCutiController.clear();
+                          });
+                          _loadCutiList();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.close_rounded, size: 12, color: Color(0xFFDC2626)),
+                              const SizedBox(width: 2),
+                              Text(
+                                'Reset',
+                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFFDC2626)),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ],
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -751,7 +816,20 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
             child: _isLoadingCuti
                 ? const Center(child: CircularProgressIndicator())
                 : _cutiList.isEmpty
-                    ? _buildEmptyState('Belum ada data cuti & izin pada periode ini.')
+                    ? _buildEmptyState(
+                        'Belum Ada Pengajuan Cuti / Izin',
+                        'Tidak ada data cuti atau izin cleaner pada filter & periode yang dipilih.',
+                        onReset: hasActiveFilter
+                            ? () {
+                                setState(() {
+                                  _statusCutiFilter = 'semua';
+                                  _selectedBulanCuti = null;
+                                  _searchCutiController.clear();
+                                });
+                                _loadCutiList();
+                              }
+                            : null,
+                      )
                     : ListView.builder(
                         padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
                         itemCount: _cutiList.length,
@@ -766,23 +844,25 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
     );
   }
 
-  Widget _buildFilterChip(String value, String label, bool isSelected, Function(String) onSelect) {
+  Widget _buildFilterChip(String value, String label, bool isSelected, Function(String) onSelect, {Color? activeColor}) {
+    final Color selectedBg = activeColor ?? const Color(0xFF0F172A);
     return GestureDetector(
       onTap: () => onSelect(value),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF0F172A) : Colors.white,
+          color: isSelected ? selectedBg : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
+            color: isSelected ? selectedBg : const Color(0xFFE2E8F0),
           ),
         ),
         child: Text(
           label,
           style: GoogleFonts.inter(
             fontSize: 11,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
             color: isSelected ? Colors.white : const Color(0xFF475569),
           ),
         ),
@@ -792,20 +872,19 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
 
   Widget _buildCutiCard(Map<String, dynamic> item) {
     final karyawan = item['karyawan'] as Map<String, dynamic>? ?? {};
-    final nama = karyawan['nama'] ?? '-';
-    final cabang = karyawan['cabang']?['nama_cabang'] ?? '-';
+    final nama = karyawan['nama']?.toString() ?? '-';
+    final cabang = karyawan['cabang']?['nama_cabang']?.toString() ?? '-';
     final jenis = (item['jenis'] ?? 'cuti').toString().toLowerCase();
     final status = (item['status'] ?? '-').toString().toLowerCase();
-    final tglMulai = item['tanggal_mulai'] ?? '-';
-    final tglSelesai = item['tanggal_selesai'] ?? '-';
+    final tglMulai = item['tanggal_mulai']?.toString() ?? '-';
+    final tglSelesai = item['tanggal_selesai']?.toString() ?? '-';
     final durasi = item['durasi_hari']?.toString() ?? '1';
-    final alasan = item['alasan'] ?? '-';
+    final alasan = item['alasan']?.toString() ?? '-';
 
     final bool isCutiType = jenis == 'cuti';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -818,182 +897,213 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Cleaner & Jenis
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: isCutiType ? const Color(0xFFF3E8FF) : const Color(0xFFFFF7ED),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(
-                    nama.isNotEmpty ? nama[0].toUpperCase() : 'C',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: isCutiType ? const Color(0xFF7E22CE) : const Color(0xFFC2410C),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: () => _showCutiDetailSheet(item),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Row: Avatar, Name, Branch & Status
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: isCutiType ? const Color(0xFFF3E8FF) : const Color(0xFFFFF7ED),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: Text(
+                          nama.isNotEmpty ? nama[0].toUpperCase() : 'C',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: isCutiType ? const Color(0xFF7E22CE) : const Color(0xFFC2410C),
+                          ),
+                        ),
+                      ),
                     ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            nama,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            cabang,
+                            style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _buildStatusBadge(status),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Date Execution Box
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFF1F5F9)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.date_range_rounded, size: 16, color: Color(0xFF0284C7)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${_formatDate(tglMulai)} - ${_formatDate(tglSelesai)}',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1E293B),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE0F2FE),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '$durasi Hari',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF0369A1),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
+                const SizedBox(height: 10),
+
+                // Reason Preview
+                Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      nama,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF0F172A),
-                      ),
+                      'Alasan: ',
+                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      cabang,
-                      style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B)),
+                    Expanded(
+                      child: Text(
+                        alasan,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF334155)),
+                      ),
                     ),
                   ],
                 ),
-              ),
-              _buildStatusBadge(status),
-            ],
-          ),
-          const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-          // Tanggal Pelaksanaan
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFF1F5F9)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.date_range_rounded, size: 16, color: Color(0xFF0284C7)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '${_formatDate(tglMulai)} - ${_formatDate(tglSelesai)}',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1E293B),
+                // Bottom Row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: isCutiType ? const Color(0xFFFAF5FF) : const Color(0xFFFFFBEB),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: isCutiType ? const Color(0xFFE9D5FF) : const Color(0xFFFDE68A),
+                        ),
+                      ),
+                      child: Text(
+                        jenis.toUpperCase(),
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: isCutiType ? const Color(0xFF7E22CE) : const Color(0xFFB45309),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0F2FE),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    '$durasi Hari',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0369A1),
+                    Row(
+                      children: [
+                        Text(
+                          'Lihat Detail',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.primary),
+                      ],
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 8),
-
-          // Alasan
-          Text(
-            alasan,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF475569)),
-          ),
-          const SizedBox(height: 12),
-
-          // Footer Action
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: isCutiType ? const Color(0xFFFAF5FF) : const Color(0xFFFFFBEB),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: isCutiType ? const Color(0xFFE9D5FF) : const Color(0xFFFDE68A),
-                  ),
-                ),
-                child: Text(
-                  jenis.toUpperCase(),
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: isCutiType ? const Color(0xFF7E22CE) : const Color(0xFFB45309),
-                  ),
-                ),
-              ),
-              InkWell(
-                onTap: () => _showCutiDetailSheet(item),
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: Row(
-                    children: [
-                      Text(
-                        'Lihat Detail',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.primary),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
 
   // ==================== TAB 2: TUKAR LIBUR ====================
   Widget _buildTukarLiburTab() {
+    final bool hasActiveFilter = _selectedBulanTukar != null || _searchTukarController.text.trim().isNotEmpty;
+
     return RefreshIndicator(
       onRefresh: _loadTukarList,
       child: Column(
         children: [
-          // Filter Bar
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          // Filter & Search Controls Card
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: Row(
               children: [
+                // Search Input
                 Expanded(
                   child: Container(
-                    height: 42,
+                    height: 40,
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
                     child: TextField(
                       controller: _searchTukarController,
                       onSubmitted: (_) => _loadTukarList(),
                       decoration: InputDecoration(
-                        hintText: 'Cari nama cleaner...',
+                        hintText: 'Cari cleaner...',
                         hintStyle: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8)),
                         prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF94A3B8)),
                         suffixIcon: _searchTukarController.text.isNotEmpty
@@ -1006,7 +1116,7 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
                               )
                             : null,
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 9),
                       ),
                       style: GoogleFonts.inter(fontSize: 13),
                     ),
@@ -1014,28 +1124,47 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
                 ),
                 const SizedBox(width: 8),
 
-                // Month Picker Button
-                InkWell(
-                  onTap: () => _pickMonth(false),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    height: 42,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFCBD5E1)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.calendar_month_rounded, size: 16, color: AppColors.primary),
-                        const SizedBox(width: 6),
-                        Text(
-                          _bulanTukarFilter.isNotEmpty ? _bulanTukarFilter : 'Bulan',
-                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF334155)),
+                // Month Picker Pill with Prev/Next
+                Container(
+                  height: 40,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left_rounded, size: 18, color: Color(0xFF64748B)),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 26, minHeight: 36),
+                        onPressed: () => _shiftMonth(false, -1),
+                      ),
+                      InkWell(
+                        onTap: () => _pickMonth(false),
+                        borderRadius: BorderRadius.circular(6),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.calendar_month_rounded, size: 15, color: AppColors.primary),
+                              const SizedBox(width: 4),
+                              Text(
+                                _formatMonthDisplay(_selectedBulanTukar),
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B)),
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFF64748B)),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 26, minHeight: 36),
+                        onPressed: () => _shiftMonth(false, 1),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -1047,7 +1176,19 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
             child: _isLoadingTukar
                 ? const Center(child: CircularProgressIndicator())
                 : _tukarList.isEmpty
-                    ? _buildEmptyState('Belum ada riwayat tukar libur pada periode ini.')
+                    ? _buildEmptyState(
+                        'Belum Ada Riwayat Tukar Libur',
+                        'Tidak ada jadwal tukar libur cleaner yang disetujui pada periode ini.',
+                        onReset: hasActiveFilter
+                            ? () {
+                                setState(() {
+                                  _selectedBulanTukar = null;
+                                  _searchTukarController.clear();
+                                });
+                                _loadTukarList();
+                              }
+                            : null,
+                      )
                     : ListView.builder(
                         padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
                         itemCount: _tukarList.length,
@@ -1067,17 +1208,17 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
     final target = item['target'] as Map<String, dynamic>? ?? {};
     final hrd = item['hrd'] as Map<String, dynamic>? ?? {};
 
-    final namaPengaju = pengaju['nama'] ?? 'Cleaner A';
-    final tglPengaju = item['tanggal_pengaju'] ?? '-';
+    final namaPengaju = pengaju['nama']?.toString() ?? 'Cleaner A';
+    final tglPengaju = item['tanggal_pengaju']?.toString() ?? '-';
 
-    final namaTarget = target['nama'] ?? 'Cleaner B';
-    final tglTarget = item['tanggal_target'] ?? '-';
+    final namaTarget = target['nama']?.toString() ?? 'Cleaner B';
+    final tglTarget = item['tanggal_target']?.toString() ?? '-';
 
-    final alasan = item['alasan'] ?? '-';
-    final hrdNama = hrd['nama'] ?? 'HRD';
+    final alasan = item['alasan']?.toString() ?? '-';
+    final hrdNama = hrd['nama']?.toString() ?? 'HRD';
 
     final tglPengajuan = item['created_at'] != null
-        ? DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(DateTime.tryParse(item['created_at']) ?? DateTime.now())
+        ? DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(DateTime.tryParse(item['created_at'].toString()) ?? DateTime.now())
         : '-';
 
     return Container(
@@ -1103,7 +1244,7 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                tglPengajuan,
+                'Diajukan: $tglPengajuan',
                 style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF94A3B8)),
               ),
               _buildStatusBadge('disetujui'),
@@ -1229,7 +1370,7 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
     );
   }
 
-  Widget _buildEmptyState(String message) {
+  Widget _buildEmptyState(String title, String message, {VoidCallback? onReset}) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -1237,24 +1378,40 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              width: 72,
+              height: 72,
               decoration: BoxDecoration(
                 color: const Color(0xFFF1F5F9),
                 shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
-              child: const Icon(Icons.event_available_rounded, size: 48, color: Color(0xFF94A3B8)),
+              child: const Icon(Icons.event_available_rounded, size: 36, color: Color(0xFF94A3B8)),
             ),
             const SizedBox(height: 16),
             Text(
-              'Tidak Ada Data',
-              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
+              title,
+              style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B)),
             ),
             const SizedBox(height: 6),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B), height: 1.4),
             ),
+            if (onReset != null) ...[
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: onReset,
+                icon: const Icon(Icons.refresh_rounded, size: 16),
+                label: Text('Tampilkan Semua Periode', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
           ],
         ),
       ),

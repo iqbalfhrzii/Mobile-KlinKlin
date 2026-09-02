@@ -742,12 +742,19 @@ class OrderModel {
       status: finalStatus,
       total: parseTotal(),
       subtotal: computedTotal,
-      paymentMethod: orderJson['pembayaran']?['metode_pembayaran'] ?? orderJson['metode_pembayaran'] ?? json['metode_pembayaran'] ?? '-',
-      paymentStatus: isOrderCancelled ? 'cancelled' : (orderJson['pembayaran']?['status_pembayaran'] ?? orderJson['status_pembayaran'] ?? json['status_pembayaran'] ?? 'unpaid'),
-      notes: orderJson['keterangan_order'] ?? json['keterangan_order'] ?? '',
-      tanggalInput: orderJson['tanggal_input'] != null ? (DateTime.tryParse(orderJson['tanggal_input']) ?? DateTime.now()) : (json['created_at'] != null ? (DateTime.tryParse(json['created_at']) ?? DateTime.now()) : DateTime.now()),
-      cancelReason: orderJson['alasan_batal'] ?? orderJson['pembatalan']?['alasan_batal'] ?? orderJson['pembatalan']?['alasan_cancel'] ?? json['alasan_batal'] ?? json['alasan_cancel'] ?? json['alasan_penolakan'],
-      cancelProof: orderJson['bukti_batal'] ?? orderJson['pembatalan']?['bukti_batal'] ?? orderJson['pembatalan']?['bukti_cancel'] ?? json['bukti_cancel'],
+      paymentMethod: (orderJson['pembayaran']?['metode_pembayaran'] ?? orderJson['metode_pembayaran'] ?? json['metode_pembayaran'] ?? '-').toString(),
+      paymentStatus: isOrderCancelled ? 'cancelled' : (orderJson['pembayaran']?['status_pembayaran'] ?? orderJson['status_pembayaran'] ?? json['status_pembayaran'] ?? 'unpaid').toString(),
+      notes: (orderJson['keterangan_order'] ?? json['keterangan_order'] ?? '').toString(),
+      tanggalInput: orderJson['tanggal_input'] != null ? (DateTime.tryParse(orderJson['tanggal_input'].toString()) ?? DateTime.now()) : (json['created_at'] != null ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()) : DateTime.now()),
+      cancelReason: (orderJson['alasan_batal'] ?? orderJson['pembatalan']?['alasan_batal'] ?? orderJson['pembatalan']?['alasan_cancel'] ?? json['alasan_batal'] ?? json['alasan_cancel'] ?? json['alasan_penolakan'])?.toString(),
+      cancelProof: () {
+        final raw = orderJson['bukti_batal'] ?? orderJson['pembatalan']?['bukti_batal'] ?? orderJson['pembatalan']?['bukti_cancel'] ?? json['bukti_cancel'];
+        if (raw == null) return null;
+        if (raw is List) {
+          return raw.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).join(',');
+        }
+        return raw.toString();
+      }(),
       paymentProof: () {
         final raw = orderJson['pembayaran']?['bukti_transfer'] ?? 
                     orderJson['pembayaran']?['bukti_pembayaran'] ?? 
