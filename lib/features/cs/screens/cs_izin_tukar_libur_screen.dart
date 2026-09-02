@@ -478,7 +478,7 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
 
   Widget _buildHeader() {
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(16, 44, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -493,16 +493,16 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
                     Text(
                       'Izin & Libur Cleaner',
                       style: GoogleFonts.inter(
-                        fontSize: 18,
+                        fontSize: 17,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 1),
                     Text(
                       'Jadwal Cuti & Tukar Libur Cabang',
                       style: GoogleFonts.inter(
-                        fontSize: 12,
+                        fontSize: 11,
                         color: Colors.white.withValues(alpha: 0.85),
                       ),
                     ),
@@ -524,34 +524,35 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
           if (!_isLoadingSummary &&
               _summaryData['total_tidak_masuk_today'] != null &&
               (_summaryData['total_tidak_masuk_today'] as int) > 0) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             _buildTodaySummaryCard(),
           ],
 
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
 
           // Integrated Tab Bar inside Header (Same design as HRD Cuti)
           Container(
-            padding: const EdgeInsets.all(4),
+            height: 38,
+            padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: TabBar(
               controller: _tabController,
               labelColor: const Color(0xFF1D4ED8),
-              unselectedLabelColor: Colors.white.withValues(alpha: 0.85),
-              labelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold),
-              unselectedLabelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
+              unselectedLabelColor: Colors.white.withValues(alpha: 0.9),
+              labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+              unselectedLabelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500),
               indicatorSize: TabBarIndicatorSize.tab,
               indicator: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(9),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
                   ),
                 ],
               ),
@@ -649,7 +650,7 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
         children: [
           // Filter & Search Controls Card
           Container(
-            margin: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+            margin: const EdgeInsets.fromLTRB(16, 10, 16, 6),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -1074,7 +1075,7 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
         children: [
           // Filter & Search Controls Card
           Container(
-            margin: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+            margin: const EdgeInsets.fromLTRB(16, 10, 16, 6),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white,
