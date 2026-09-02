@@ -6,6 +6,8 @@ import '../../../../core/widgets/gradient_header.dart';
 import '../../../../core/widgets/app_confirmation_dialog.dart';
 import '../../services/hrd_service.dart';
 import '../../services/hrd_tukar_libur_service.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/widgets/whatsapp_icon.dart';
 
 class HrdTukarLiburScreen extends StatefulWidget {
   const HrdTukarLiburScreen({super.key});
@@ -236,7 +238,13 @@ class _HrdTukarLiburScreenState extends State<HrdTukarLiburScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(res['message'] ?? 'Pengajuan tukar libur berhasil disetujui.'),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text(res['message'] ?? 'Pengajuan tukar libur disetujui & CS otomatis diberitahu.')),
+              ],
+            ),
             backgroundColor: const Color(0xFF059669),
           ),
         );
@@ -250,6 +258,265 @@ class _HrdTukarLiburScreenState extends State<HrdTukarLiburScreen> {
         );
       }
     }
+  }
+
+  Future<void> _notifyCsInApp(int id) async {
+    try {
+      final res = await HrdTukarLiburService.notifyCs(id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text(res['message'] ?? 'Notifikasi tukar libur berhasil dikirim ke CS')),
+              ],
+            ),
+            backgroundColor: const Color(0xFF059669),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengirim notifikasi ke CS: $e'),
+            backgroundColor: const Color(0xFFDC2626),
+          ),
+        );
+      }
+    }
+  }
+
+  void _sendTukarLiburInfoToCSWA(dynamic item, {String? targetPhone}) async {
+    final pengajuNama = item['pengaju']?['nama'] ?? 'Cleaner A';
+    final pengajuCabang = item['pengaju']?['cabang']?['nama_cabang'] ?? 'Cabang';
+    final targetNama = item['target']?['nama'] ?? 'Cleaner B';
+    final tglPengaju = _formatDate(item['tanggal_pengaju']);
+    final tglTarget = _formatDate(item['tanggal_target']);
+    final alasan = (item['alasan'] != null && item['alasan'].toString().isNotEmpty) ? item['alasan'].toString() : '-';
+
+    final message = '''🔄 *INFO TUKAR LIBUR CLEANER*
+Halo tim CS *$pengajuCabang*,
+Diberitahukan bahwa pertukaran libur cleaner telah *DISETUJUI* oleh HRD:
+
+👤 *Cleaner A*: *$pengajuNama*
+📅 *Jadwal Libur Baru*: *$tglTarget* (Semula $tglPengaju)
+
+👤 *Cleaner B*: *$targetNama*
+📅 *Jadwal Libur Baru*: *$tglPengaju* (Semula $tglTarget)
+
+📝 *Alasan*: $alasan
+
+⚠️ *Catatan untuk CS*:
+Mohon sesuaikan alokasi & jadwal penugasan pesanan cleaner di cabang terkait. Terima kasih! 🙏''';
+
+    final encodedMsg = Uri.encodeComponent(message);
+    Uri url;
+    if (targetPhone != null && targetPhone.isNotEmpty) {
+      final phone = targetPhone.startsWith('0') ? '62${targetPhone.substring(1)}' : targetPhone;
+      url = Uri.parse('https://wa.me/$phone?text=$encodedMsg');
+    } else {
+      url = Uri.parse('https://wa.me/?text=$encodedMsg');
+    }
+
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {}
+  }
+
+  void _showNotifyCsOptions(dynamic item) {
+    final pengajuNama = item['pengaju']?['nama'] ?? 'Cleaner A';
+    final targetNama = item['target']?['nama'] ?? 'Cleaner B';
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.campaign_rounded, color: Color(0xFF2563EB), size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Beritahu CS (Tukar Libur)',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                      Text(
+                        '$pengajuNama ⇄ $targetNama',
+                        style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.pop(ctx),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF1F5F9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.close_rounded, size: 16, color: Color(0xFF64748B)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            const SizedBox(height: 16),
+
+            // Option 1: WhatsApp
+            InkWell(
+              onTap: () {
+                Navigator.pop(ctx);
+                _sendTukarLiburInfoToCSWA(item);
+              },
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF25D366),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const WhatsAppIcon(size: 20, color: Colors.white),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Kirim Format WhatsApp ke CS',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF14532D),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Buka WhatsApp dengan pesan format info tukar libur yang rapi',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: const Color(0xFF166534),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF166534)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Option 2: Push Notification In-App
+            InkWell(
+              onTap: () {
+                Navigator.pop(ctx);
+                _notifyCsInApp(item['id']);
+              },
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF2563EB),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.notifications_active_rounded, size: 20, color: Colors.white),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Kirim Notifikasi Aplikasi ke CS',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF1E3A8A),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Kirim notif pengingat tukar libur ke CS cabang terkait & seluruh CS',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: const Color(0xFF1D4ED8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF1D4ED8)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _handleReject(dynamic item) async {
@@ -1111,6 +1378,23 @@ class _HrdTukarLiburScreenState extends State<HrdTukarLiburScreen> {
                       ),
                     ],
                   ),
+                ] else if (isApproved) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0284C7),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () => _showNotifyCsOptions(item),
+                      icon: const Icon(Icons.campaign_rounded, size: 16),
+                      label: Text('Beritahu CS', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
+                    ),
+                  ),
                 ],
 
                 const SizedBox(height: 10),
@@ -1337,6 +1621,26 @@ class _HrdTukarLiburScreenState extends State<HrdTukarLiburScreen> {
                       ),
                     ),
                   ],
+                ),
+              ] else if (isApproved) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0284C7),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _showNotifyCsOptions(item);
+                    },
+                    icon: const Icon(Icons.campaign_rounded, size: 18),
+                    label: Text('Beritahu CS (Notif / WhatsApp)', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14)),
+                  ),
                 ),
               ],
             ],

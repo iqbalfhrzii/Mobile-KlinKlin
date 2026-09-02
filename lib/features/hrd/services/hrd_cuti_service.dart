@@ -54,6 +54,10 @@ class HrdCutiService {
     });
   }
 
+  Future<void> notifyCs(int pengajuanId) async {
+    await _dio.post('/cuti/pengajuan/$pengajuanId/notify-cs');
+  }
+
   // --- Pengaturan Cuti ---
   Future<Map<String, dynamic>> fetchPengaturan() async {
     final response = await _dio.get('/cuti/pengaturan');

@@ -7,6 +7,8 @@ import '../../../../core/widgets/app_avatar.dart';
 import '../../services/hrd_cuti_service.dart';
 import '../../services/hrd_service.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/widgets/whatsapp_icon.dart';
 
 class HrdCutiScreen extends StatefulWidget {
   const HrdCutiScreen({super.key});
@@ -166,10 +168,284 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
     }
   }
 
+  Future<void> _notifyCsInApp(int pengajuanId) async {
+    try {
+      await _service.notifyCs(pengajuanId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle_rounded, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Notifikasi pengingat cuti/izin berhasil dikirim ke CS'),
+              ],
+            ),
+            backgroundColor: Color(0xFF059669),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengirim notifikasi: $e'),
+            backgroundColor: const Color(0xFFDC2626),
+          ),
+        );
+      }
+    }
+  }
+
+  void _sendCutiInfoToCSWA(Map<String, dynamic> p, {String? targetPhone}) async {
+    final k = p['karyawan'];
+    final namaCleaner = k?['nama'] ?? 'Cleaner';
+    final namaCabang = k?['cabang']?['nama_cabang'] ?? 'Cabang';
+    final jenis = (p['jenis']?.toString().toUpperCase() ?? 'CUTI');
+    final tglMulai = _formatDate(p['tanggal_mulai']);
+    final tglSelesai = _formatDate(p['tanggal_selesai']);
+    final tglStr = tglMulai == tglSelesai ? tglMulai : '$tglMulai s/d $tglSelesai';
+    final durasi = p['durasi_hari']?.toString() ?? '1';
+    final alasan = (p['alasan'] != null && p['alasan'].toString().isNotEmpty) ? p['alasan'].toString() : '-';
+
+    final message = '''📢 *INFO $jenis CLEANER*
+Halo tim CS *$namaCabang*,
+Diberitahukan bahwa Cleaner berikut telah *DISETUJUI* $jenis oleh HRD:
+
+👤 *Nama*: *$namaCleaner*
+🏢 *Cabang*: *$namaCabang*
+🏖️ *Jenis*: *$jenis*
+📅 *Tanggal*: *$tglStr* ($durasi Hari)
+📝 *Alasan*: $alasan
+
+⚠️ *Catatan untuk CS*:
+Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada tanggal di atas. Terima kasih! 🙏''';
+
+    final encodedMsg = Uri.encodeComponent(message);
+    Uri url;
+    if (targetPhone != null && targetPhone.isNotEmpty) {
+      final phone = targetPhone.startsWith('0') ? '62${targetPhone.substring(1)}' : targetPhone;
+      url = Uri.parse('https://wa.me/$phone?text=$encodedMsg');
+    } else {
+      url = Uri.parse('https://wa.me/?text=$encodedMsg');
+    }
+
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {}
+  }
+
+  void _showNotifyCsOptions(Map<String, dynamic> p) {
+    final k = p['karyawan'];
+    final namaCleaner = k?['nama'] ?? 'Cleaner';
+    final jenis = (p['jenis']?.toString().toUpperCase() ?? 'CUTI');
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.campaign_rounded, color: Color(0xFF2563EB), size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Beritahu CS ($namaCleaner)',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                      Text(
+                        'Pemberitahuan persetujuan $jenis cleaner',
+                        style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.pop(ctx),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF1F5F9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.close_rounded, size: 16, color: Color(0xFF64748B)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            const SizedBox(height: 16),
+
+            // Option 1: WhatsApp
+            InkWell(
+              onTap: () {
+                Navigator.pop(ctx);
+                _sendCutiInfoToCSWA(p);
+              },
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF25D366),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const WhatsAppIcon(size: 20, color: Colors.white),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Kirim Format WhatsApp ke CS',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF14532D),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Buka WhatsApp dengan pesan format info cuti/izin yang rapi',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: const Color(0xFF166534),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF166534)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Option 2: Push Notification In-App
+            InkWell(
+              onTap: () {
+                Navigator.pop(ctx);
+                _notifyCsInApp(p['id']);
+              },
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF2563EB),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.notifications_active_rounded, size: 20, color: Colors.white),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Kirim Notifikasi Aplikasi ke CS',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF1E3A8A),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Kirim notif pengingat ke CS cabang & seluruh CS',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: const Color(0xFF1D4ED8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF1D4ED8)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _approve(int id) async {
     try {
       await _service.approvePengajuan(id);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengajuan berhasil disetujui')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle_rounded, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Pengajuan disetujui & CS otomatis dapat notifikasi'),
+              ],
+            ),
+            backgroundColor: Color(0xFF059669),
+          ),
+        );
+      }
       _fetchPengajuan();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -1163,6 +1439,23 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
                         ),
                       ),
                     ],
+                  ),
+                ] else if (isApproved) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0284C7),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () => _showNotifyCsOptions(p),
+                      icon: const Icon(Icons.campaign_rounded, size: 16),
+                      label: Text('Beritahu CS', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
+                    ),
                   ),
                 ],
 
@@ -2349,6 +2642,26 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
                             ),
                           ),
                         ],
+                      ),
+                    ] else if (isApproved) ...[
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0284C7),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            _showNotifyCsOptions(p);
+                          },
+                          icon: const Icon(Icons.campaign_rounded, size: 18),
+                          label: Text('Beritahu CS (Notif / WhatsApp)', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14)),
+                        ),
                       ),
                     ],
                   ],

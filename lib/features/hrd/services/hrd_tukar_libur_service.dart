@@ -88,4 +88,20 @@ class HrdTukarLiburService {
       throw Exception('Gagal menolak pengajuan: $e');
     }
   }
+
+  static Future<Map<String, dynamic>> notifyCs(int id) async {
+    try {
+      final response = await _dio.post('/hrd/tukar-libur/$id/notify-cs');
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      return {'status': true, 'message': 'Notifikasi berhasil dikirim ke CS'};
+    } catch (e) {
+      if (e is DioException && e.response?.data is Map) {
+        final msg = e.response?.data['message'] ?? 'Gagal mengirim notifikasi ke CS';
+        throw Exception(msg);
+      }
+      throw Exception('Gagal mengirim notifikasi ke CS: $e');
+    }
+  }
 }
