@@ -32,6 +32,7 @@ import '../../konten_marketing/screens/konten_marketing_screen.dart';
 import '../../operasional/screens/operasional_pengumuman_screen.dart';
 import '../../lapor_kecelakaan/screens/lapor_kecelakaan_screen.dart';
 import '../../cs/screens/cs_izin_tukar_libur_screen.dart';
+import '../../profile/screens/leave_request_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -1106,6 +1107,13 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AttendanceScreen())),
       ),
       _MenuGridItem(
+        title: 'Pengajuan Cuti',
+        icon: Icons.event_available_rounded,
+        iconColor: const Color(0xFF2563EB),
+        bgColor: const Color(0xFFEFF6FF),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaveRequestScreen())),
+      ),
+      _MenuGridItem(
         title: 'Buat Pesanan',
         icon: Icons.add_circle_outline_rounded,
         iconColor: AppColors.primary,
@@ -1127,7 +1135,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatHarianScreen())),
       ),
       _MenuGridItem(
-        title: 'Izin & Libur',
+        title: 'Libur Cleaner',
         icon: Icons.event_busy_outlined,
         iconColor: const Color(0xFF8B5CF6),
         bgColor: const Color(0xFFF5F3FF),
