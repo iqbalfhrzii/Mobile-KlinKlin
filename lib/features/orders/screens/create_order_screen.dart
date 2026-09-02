@@ -2675,8 +2675,6 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
         ),
 
         const Divider(height: 1, color: AppColors.border),
-
-        // Cleaner list
         Expanded(
           child: filtered.isEmpty
               ? Center(
@@ -2700,124 +2698,116 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
                     final idStr = c['id'].toString();
                     final isSelected = widget.draft.cleaners.any((x) => x.id == idStr);
 
-                    final statusStr = c['status_pengerjaan']?.toString().toLowerCase() ?? 'free';
-                    final bool isFree = statusStr == 'free';
+                    final statusLabel = c['status_label']?.toString() ?? 'Tersedia (Bebas)';
+                    final statusType = c['status_type']?.toString().toLowerCase() ?? 'tersedia';
+                    final bool isDisabled = c['is_disabled'] == true;
 
                     final String? foto = c['foto_profil']?.toString().replaceAll('\\', '/').trim();
 
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      decoration: BoxDecoration(
-                        color: isSelected ? AppColors.primary.withValues(alpha: 0.05) : AppColors.surface,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isSelected ? AppColors.primary : AppColors.border,
-                          width: isSelected ? 1.5 : 1.0,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.02),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
+                    return Opacity(
+                      opacity: isDisabled && !isSelected ? 0.65 : 1.0,
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primary.withValues(alpha: 0.05) : AppColors.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isSelected ? AppColors.primary : (isDisabled ? AppColors.border.withValues(alpha: 0.5) : AppColors.border),
+                            width: isSelected ? 1.5 : 1.0,
                           ),
-                        ],
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                        onTap: () {
-                          setState(() {
-                            if (isSelected) {
-                              widget.draft.cleaners.removeWhere((x) => x.id == idStr);
-                            } else {
-                              widget.draft.cleaners.add(
-                                OrderCleaner(
-                                  id: idStr,
-                                  pesananCleanerId: '',
-                                  name: c['name'] ?? c['nama'] ?? 'Unknown',
-                                  rating: c['rating'] != null
-                                      ? double.tryParse(c['rating'].toString()) ?? 0.0
-                                      : 0.0,
-                                  statusPengerjaan: CleanerWorkStatus.assigned,
-                                  totalBonus: 0,
-                                  bonuses: [],
-                                  fotoProfil: foto,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.02),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          onTap: () {
+                            if (isDisabled && !isSelected) {
+                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Cleaner sedang $statusLabel pada tanggal pengerjaan ini.'),
+                                  backgroundColor: const Color(0xFFDC2626),
+                                  duration: const Duration(seconds: 2),
                                 ),
                               );
+                              return;
                             }
-                            widget.onChanged();
-                          });
-                        },
-                        leading: AppAvatar(
-                          photoUrl: foto,
-                          name: c['name'] ?? c['nama'] ?? 'C',
-                          size: 44,
-                          borderColor: isSelected ? AppColors.primary : null,
-                          backgroundColor: isSelected ? AppColors.primary.withValues(alpha: 0.1) : AppColors.surfaceBlue,
-                          textColor: isSelected ? AppColors.primary : AppColors.primary,
-                        ),
-                        title: Text(
-                          c['name'] ?? c['nama'] ?? '-',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                            color: isSelected ? AppColors.primary : AppColors.textDark,
+
+                            setState(() {
+                              if (isSelected) {
+                                widget.draft.cleaners.removeWhere((x) => x.id == idStr);
+                              } else {
+                                widget.draft.cleaners.add(
+                                  OrderCleaner(
+                                    id: idStr,
+                                    pesananCleanerId: '',
+                                    name: c['name'] ?? c['nama'] ?? 'Unknown',
+                                    rating: c['rating'] != null
+                                        ? double.tryParse(c['rating'].toString()) ?? 0.0
+                                        : 0.0,
+                                    statusPengerjaan: CleanerWorkStatus.assigned,
+                                    totalBonus: 0,
+                                    bonuses: [],
+                                    fotoProfil: foto,
+                                  ),
+                                );
+                              }
+                              widget.onChanged();
+                            });
+                          },
+                          leading: AppAvatar(
+                            photoUrl: foto,
+                            name: c['name'] ?? c['nama'] ?? 'C',
+                            size: 44,
+                            borderColor: isSelected ? AppColors.primary : null,
+                            backgroundColor: isSelected ? AppColors.primary.withValues(alpha: 0.1) : AppColors.surfaceBlue,
+                            textColor: isSelected ? AppColors.primary : AppColors.primary,
                           ),
-                        ),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Row(
+                          title: Row(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: isFree ? const Color(0xFFE6FFEC) : const Color(0xFFFFF7E6),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 6,
-                                      height: 6,
-                                      decoration: BoxDecoration(
-                                        color: isFree ? const Color(0xFF10B981) : const Color(0xFFD48806),
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      isFree ? 'Tersedia' : 'Ada Jadwal',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: isFree ? const Color(0xFF10B981) : const Color(0xFFD48806),
-                                      ),
-                                    ),
-                                  ],
+                              Expanded(
+                                child: Text(
+                                  c['name'] ?? c['nama'] ?? '-',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                    color: isSelected ? AppColors.primary : AppColors.textDark,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                        trailing: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isSelected ? AppColors.primary : AppColors.border,
-                              width: 2,
-                            ),
-                            color: isSelected ? AppColors.primary : Colors.transparent,
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 5),
+                            child: _buildCleanerStatusBadge(statusLabel, statusType),
                           ),
-                          child: isSelected
-                              ? const Icon(
-                                  Icons.check,
-                                  size: 15,
-                                  color: Colors.white,
-                                )
-                              : null,
+                          trailing: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isSelected ? AppColors.primary : (isDisabled ? AppColors.border : AppColors.border),
+                                width: 2,
+                              ),
+                              color: isSelected ? AppColors.primary : Colors.transparent,
+                            ),
+                            child: isSelected
+                                ? const Icon(
+                                    Icons.check,
+                                    size: 15,
+                                    color: Colors.white,
+                                  )
+                                : null,
+                          ),
                         ),
                       ),
                     );
@@ -2825,6 +2815,76 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
                 ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCleanerStatusBadge(String statusLabel, String statusType) {
+    Color bg;
+    Color text;
+    Color border;
+
+    final type = statusType.toLowerCase();
+    if (type == 'libur' ||
+        type.contains('cuti') ||
+        type.contains('izin') ||
+        type.contains('sakit') ||
+        type == 'nonaktif' ||
+        statusLabel.toLowerCase().contains('libur') ||
+        statusLabel.toLowerCase().contains('cuti') ||
+        statusLabel.toLowerCase().contains('izin') ||
+        statusLabel.toLowerCase().contains('nonaktif')) {
+      bg = const Color(0xFFFEF2F2);
+      text = const Color(0xFFDC2626);
+      border = const Color(0xFFFECACA);
+    } else if (type == 'in_progress' ||
+        statusLabel.toLowerCase().contains('sibuk') ||
+        statusLabel.toLowerCase().contains('pengerjaan')) {
+      bg = const Color(0xFFFFFBEB);
+      text = const Color(0xFFD97706);
+      border = const Color(0xFFFDE68A);
+    } else if (type == 'finished' || statusLabel.toLowerCase().contains('selesai')) {
+      bg = const Color(0xFFEFF6FF);
+      text = const Color(0xFF2563EB);
+      border = const Color(0xFFBFDBFE);
+    } else if (type == 'assigned' || statusLabel.toLowerCase().contains('jadwal')) {
+      bg = const Color(0xFFF1F5F9);
+      text = const Color(0xFF475569);
+      border = const Color(0xFFCBD5E1);
+    } else {
+      bg = const Color(0xFFECFDF5);
+      text = const Color(0xFF059669);
+      border = const Color(0xFFA7F3D0);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: border, width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: text,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            statusLabel,
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: text,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

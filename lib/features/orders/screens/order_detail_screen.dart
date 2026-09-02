@@ -4136,22 +4136,32 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
                             itemBuilder: (listContext, index) {
                               final c = filteredCleaners[index];
                               final isSelected = selectedIds.contains(c['id']);
-                              final statusPengerjaan =
-                                  c['status_pengerjaan']?.toString() ?? 'free';
-                              final isBusy = statusPengerjaan == 'in_progress';
+                              final statusLabel = c['status_label']?.toString() ?? 'Tersedia (Bebas)';
+                              final statusType = c['status_type']?.toString().toLowerCase() ?? 'tersedia';
+                              final bool isDisabled = c['is_disabled'] == true;
 
                               return GestureDetector(
-                                onTap: isBusy
-                                    ? null
-                                    : () {
-                                        setStateModal(() {
-                                          if (isSelected) {
-                                            selectedIds.remove(c['id']);
-                                          } else {
-                                            selectedIds.add(c['id']);
-                                          }
-                                        });
-                                      },
+                                onTap: () {
+                                  if (isDisabled && !isSelected) {
+                                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Cleaner sedang $statusLabel pada tanggal pengerjaan ini.'),
+                                        backgroundColor: const Color(0xFFDC2626),
+                                        duration: const Duration(seconds: 2),
+                                      ),
+                                    );
+                                    return;
+                                  }
+
+                                  setStateModal(() {
+                                    if (isSelected) {
+                                      selectedIds.remove(c['id']);
+                                    } else {
+                                      selectedIds.add(c['id']);
+                                    }
+                                  });
+                                },
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 150),
                                   margin: const EdgeInsets.only(bottom: 10),
@@ -4164,11 +4174,12 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
                                     border: Border.all(
                                       color: isSelected
                                           ? AppColors.primary
-                                          : AppColors.border,
+                                          : (isDisabled ? AppColors.border.withValues(alpha: 0.5) : AppColors.border),
+                                      width: isSelected ? 1.5 : 1.0,
                                     ),
                                   ),
                                   child: Opacity(
-                                    opacity: isBusy ? 0.5 : 1.0,
+                                    opacity: isDisabled && !isSelected ? 0.65 : 1.0,
                                     child: Row(
                                       children: [
                                         AppAvatar(
@@ -4185,52 +4196,15 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
                                                 CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                c['name'] as String,
+                                                (c['name'] ?? c['nama'] ?? '-').toString(),
                                                 style: GoogleFonts.inter(
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.w600,
                                                   color: AppColors.textDark,
                                                 ),
                                               ),
-                                              Row(
-                                                children: [
-                                                  Container(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          horizontal: 6,
-                                                          vertical: 2,
-                                                        ),
-                                                    decoration: BoxDecoration(
-                                                      color: !isBusy
-                                                          ? AppColors.statusDone
-                                                                .withValues(alpha: 
-                                                                  0.1,
-                                                                )
-                                                          : AppColors.error
-                                                                .withValues(alpha: 
-                                                                  0.1,
-                                                                ),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            4,
-                                                          ),
-                                                    ),
-                                                    child: Text(
-                                                      statusPengerjaan
-                                                          .toUpperCase(),
-                                                      style: GoogleFonts.inter(
-                                                        fontSize: 10,
-                                                        color: !isBusy
-                                                            ? AppColors
-                                                                  .statusDone
-                                                            : AppColors.error,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
+                                              const SizedBox(height: 4),
+                                              _buildCleanerStatusBadge(statusLabel, statusType),
                                             ],
                                           ),
                                         ),
@@ -4240,10 +4214,10 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
                                             color: AppColors.primary,
                                             size: 22,
                                           ),
-                                        if (isBusy)
+                                        if (isDisabled && !isSelected)
                                           const Icon(
-                                            Icons.block,
-                                            color: AppColors.error,
+                                            Icons.block_rounded,
+                                            color: Color(0xFFDC2626),
                                             size: 20,
                                           ),
                                       ],
@@ -4328,6 +4302,76 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
           },
         );
       },
+    );
+  }
+
+  Widget _buildCleanerStatusBadge(String statusLabel, String statusType) {
+    Color bg;
+    Color text;
+    Color border;
+
+    final type = statusType.toLowerCase();
+    if (type == 'libur' ||
+        type.contains('cuti') ||
+        type.contains('izin') ||
+        type.contains('sakit') ||
+        type == 'nonaktif' ||
+        statusLabel.toLowerCase().contains('libur') ||
+        statusLabel.toLowerCase().contains('cuti') ||
+        statusLabel.toLowerCase().contains('izin') ||
+        statusLabel.toLowerCase().contains('nonaktif')) {
+      bg = const Color(0xFFFEF2F2);
+      text = const Color(0xFFDC2626);
+      border = const Color(0xFFFECACA);
+    } else if (type == 'in_progress' ||
+        statusLabel.toLowerCase().contains('sibuk') ||
+        statusLabel.toLowerCase().contains('pengerjaan')) {
+      bg = const Color(0xFFFFFBEB);
+      text = const Color(0xFFD97706);
+      border = const Color(0xFFFDE68A);
+    } else if (type == 'finished' || statusLabel.toLowerCase().contains('selesai')) {
+      bg = const Color(0xFFEFF6FF);
+      text = const Color(0xFF2563EB);
+      border = const Color(0xFFBFDBFE);
+    } else if (type == 'assigned' || statusLabel.toLowerCase().contains('jadwal')) {
+      bg = const Color(0xFFF1F5F9);
+      text = const Color(0xFF475569);
+      border = const Color(0xFFCBD5E1);
+    } else {
+      bg = const Color(0xFFECFDF5);
+      text = const Color(0xFF059669);
+      border = const Color(0xFFA7F3D0);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: border, width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: text,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            statusLabel,
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: text,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

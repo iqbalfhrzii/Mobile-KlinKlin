@@ -388,13 +388,43 @@ class OrderService {
     }
   }
 
-  /// Fetch cleaners
-  Future<List<Map<String, dynamic>>> fetchAvailableCleaners({String? tanggal, String? waktu}) async {
+  /// Fetch cleaners with availability and leave status
+  Future<List<Map<String, dynamic>>> fetchAvailableCleaners({String? tanggal, String? waktu, int? cabangId}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cabangId = prefs.getInt('user_cabang_id');
+      final effectiveCabangId = cabangId ?? prefs.getInt('user_cabang_id');
+
+      // 1. Try dedicated availability endpoint first
+      try {
+        final response = await _dio.get('/cleaners/available', queryParameters: {
+          if (tanggal != null && tanggal.isNotEmpty) 'tanggal': tanggal,
+          if (effectiveCabangId != null && effectiveCabangId > 0) 'cabang_id': effectiveCabangId,
+        });
+        var responseData = response.data['data'] ?? response.data;
+        if (responseData is Map && responseData.containsKey('data')) {
+          responseData = responseData['data'];
+        }
+        if (responseData is List && responseData.isNotEmpty) {
+          return List<Map<String, dynamic>>.from(
+            responseData.map((e) {
+              final map = Map<String, dynamic>.from(e as Map);
+              map['id'] = map['id'].toString();
+              map['name'] = map['name'] ?? map['nama'] ?? '-';
+              map['status_label'] = map['status_label'] ?? 'Tersedia (Bebas)';
+              map['status_type'] = map['status_type'] ?? 'tersedia';
+              map['is_disabled'] = map['is_disabled'] ?? false;
+              map['badge_color'] = map['badge_color'] ?? '#10B981';
+              return map;
+            }),
+          );
+        }
+      } catch (_) {
+        // Fallback to /karyawans
+      }
+
+      // 2. Fallback
       final response = await _dio.get('/karyawans', queryParameters: {
-        if (cabangId != null) 'cabang_id': cabangId,
+        if (effectiveCabangId != null && effectiveCabangId > 0) 'cabang_id': effectiveCabangId,
       }); 
       var responseData = response.data['data'] ?? response.data;
       if (responseData is Map && responseData.containsKey('data')) {
@@ -406,47 +436,19 @@ class OrderService {
           final jab = e['jabatan']?['nama_jabatan']?.toString().toLowerCase() ?? '';
           return jab.contains('cleaner') || e['jabatan_id'] == 3;
         }).map((e) {
+          final isAktif = e['status'] == 'aktif';
           return {
             'id': e['id'].toString(),
             'name': e['nama'] ?? e['nama_karyawan'] ?? '-',
-            'status_pengerjaan': 'free',
+            'status_label': isAktif ? 'Tersedia (Bebas)' : 'Nonaktif',
+            'status_type': isAktif ? 'tersedia' : 'nonaktif',
+            'is_disabled': !isAktif,
+            'badge_color': isAktif ? '#10B981' : '#EF4444',
             'rating': 5.0,
             'orders': 0,
             'foto_profil': e['foto_profil'] ?? e['foto'] ?? e['foto_url'] ?? e['foto_profil_url'] ?? e['profile_photo_url'] ?? (e['user'] != null && e['user'] is Map ? (e['user']['foto_profil'] ?? e['user']['foto_url'] ?? e['user']['foto'] ?? e['user']['profile_photo_url']) : null),
           };
         }).toList();
-
-        if (tanggal != null && waktu != null) {
-          String fWaktu = waktu;
-          if (fWaktu.contains(':')) {
-            final tParts = fWaktu.split(':');
-            if (tParts.length >= 2) fWaktu = '${tParts[0].padLeft(2, '0')}:${tParts[1].padLeft(2, '0')}';
-          }
-
-          final futures = cleaners.map((c) async {
-            try {
-              final jobRes = await _dio.get('/cleaner/jobs', queryParameters: {'cleaner_id': c['id']});
-              final jobs = jobRes.data['data'] ?? [];
-              if (jobs is List) {
-                for (var job in jobs) {
-                  final pesanan = job['pesanan'];
-                  if (pesanan != null && pesanan['details'] != null && pesanan['details'] is List) {
-                    for (var detail in pesanan['details']) {
-                      if (detail['tanggal_pengerjaan'] == tanggal) {
-                        c['status_pengerjaan'] = job['status_pengerjaan']?.toString() ?? 'free';
-                        break;
-                      }
-                    }
-                  }
-                  if (c['status_pengerjaan'] != 'free') break;
-                }
-              }
-            } catch (e) {
-              // Ignore failure for individual cleaner
-            }
-          });
-          await Future.wait(futures);
-        }
 
         return cleaners;
       }
