@@ -761,6 +761,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     _buildServicesCard(o),
                     const SizedBox(height: 12),
                     if (o.cleaners.isNotEmpty) ...[
+                      if (!widget.isReadOnly && !_isCancelled && o.cleaners.length > 1) ...[
+                        _buildBeriBonusSekaligusButton(o),
+                        const SizedBox(height: 12),
+                      ],
                       ...o.cleaners
                           .expand(
                             (c) => [
@@ -1853,6 +1857,52 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
+  Widget _buildBeriBonusSekaligusButton(OrderModel o) {
+    return InkWell(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => _AddBonusSheet(
+            order: o,
+            initialCleaner: null,
+            onBonusAdded: _fetchDetail,
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEFF6FF),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFBFDBFE)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.group_add_rounded,
+              size: 18,
+              color: Color(0xFF2563EB),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Beri Bonus Sekaligus (${o.cleaners.length} Cleaner)',
+              style: GoogleFonts.inter(
+                fontSize: 12.5,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF2563EB),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildCleanerCard(OrderModel o, OrderCleaner cleaner) {
     final isBonusSelesai = o.statusBonus.toLowerCase() == 'selesai';
     return _card(
@@ -1884,6 +1934,56 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ),
             ),
           ),
+          if (!widget.isReadOnly && !_isCancelled) ...[
+            const SizedBox(width: 6),
+            InkWell(
+              onTap: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => _AddBonusSheet(
+                    order: o,
+                    initialCleaner: cleaner,
+                    onBonusAdded: _fetchDetail,
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(4),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: const Color(0xFFFDE68A),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.stars_rounded,
+                      size: 12,
+                      color: Color(0xFFD97706),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Bonus',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFFD97706),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           if (_canEdit) ...[
             const SizedBox(width: 6),
             InkWell(
