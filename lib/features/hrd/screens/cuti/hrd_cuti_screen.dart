@@ -1534,6 +1534,7 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
                     SizedBox(
                       width: 90,
                       child: TextFormField(
+                        key: ValueKey('default_jatah_$_defaultJatahCuti'),
                         initialValue: _defaultJatahCuti.toString(),
                         keyboardType: TextInputType.number,
                         textAlign: TextAlign.center,
@@ -2037,8 +2038,9 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
   // MODAL EDIT JATAH & SISA CUTI
   // ==========================================
   void _showEditCuti(Map<String, dynamic> k) {
-    int jatah = k['jatah_cuti'] ?? 0;
-    int sisa = k['sisa_cuti'] ?? 0;
+    final int karyawanId = int.tryParse(k['id']?.toString() ?? '0') ?? 0;
+    final int jatah = int.tryParse(k['jatah_cuti']?.toString() ?? '0') ?? 0;
+    final int sisa = int.tryParse(k['sisa_cuti']?.toString() ?? '0') ?? 0;
     final jatahCtrl = TextEditingController(text: jatah.toString());
     final sisaCtrl = TextEditingController(text: sisa.toString());
 
@@ -2146,7 +2148,7 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
                         final newJatah = int.tryParse(jatahCtrl.text) ?? jatah;
                         final newSisa = int.tryParse(sisaCtrl.text) ?? sisa;
                         Navigator.pop(ctx);
-                        _updateJatahCuti(k['id'], newJatah, newSisa);
+                        _updateJatahCuti(karyawanId, newJatah, newSisa);
                       },
                       child: Text('Simpan Perubahan', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
                     ),
