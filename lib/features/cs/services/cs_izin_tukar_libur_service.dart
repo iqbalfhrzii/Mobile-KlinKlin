@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/api/api_client.dart';
 
 class CsIzinTukarLiburService {
@@ -12,18 +13,21 @@ class CsIzinTukarLiburService {
     int? cabangId,
   }) async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final effectiveCabangId = cabangId ?? prefs.getInt('user_cabang_id');
+
       final Map<String, dynamic> params = {};
       if (status != null && status.isNotEmpty && status != 'semua' && status != 'all') {
         params['status'] = status;
       }
-      if (bulan != null && bulan.isNotEmpty) {
+      if (bulan != null && bulan.isNotEmpty && bulan != 'semua') {
         params['bulan'] = bulan;
       }
       if (search != null && search.trim().isNotEmpty) {
         params['search'] = search.trim();
       }
-      if (cabangId != null) {
-        params['cabang_id'] = cabangId;
+      if (effectiveCabangId != null) {
+        params['cabang_id'] = effectiveCabangId;
       }
 
       final response = await _dio.get(
@@ -50,15 +54,18 @@ class CsIzinTukarLiburService {
     int? cabangId,
   }) async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final effectiveCabangId = cabangId ?? prefs.getInt('user_cabang_id');
+
       final Map<String, dynamic> params = {};
-      if (bulan != null && bulan.isNotEmpty) {
+      if (bulan != null && bulan.isNotEmpty && bulan != 'semua') {
         params['bulan'] = bulan;
       }
       if (search != null && search.trim().isNotEmpty) {
         params['search'] = search.trim();
       }
-      if (cabangId != null) {
-        params['cabang_id'] = cabangId;
+      if (effectiveCabangId != null) {
+        params['cabang_id'] = effectiveCabangId;
       }
 
       final response = await _dio.get(
@@ -81,9 +88,12 @@ class CsIzinTukarLiburService {
   /// Fetch summary of absent/swapped cleaners today
   Future<Map<String, dynamic>> fetchSummaryToday({int? cabangId}) async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final effectiveCabangId = cabangId ?? prefs.getInt('user_cabang_id');
+
       final Map<String, dynamic> params = {};
-      if (cabangId != null) {
-        params['cabang_id'] = cabangId;
+      if (effectiveCabangId != null) {
+        params['cabang_id'] = effectiveCabangId;
       }
 
       final response = await _dio.get(
