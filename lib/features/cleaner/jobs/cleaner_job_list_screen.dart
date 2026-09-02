@@ -880,11 +880,11 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
                           color: const Color(0xFFEFF6FF),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.receipt_long_rounded, size: 15, color: Color(0xFF2563EB)),
+                        child: const Icon(Icons.cleaning_services_rounded, size: 15, color: Color(0xFF2563EB)),
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        pesanan['nomor_pesanan']?.toString() ?? pesanan['id']?.toString() ?? '-',
+                        'Tugas Pengerjaan',
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
@@ -13,7 +11,6 @@ import 'create_order_screen.dart';
 import '../../payment/screens/payment_detail_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:printing/printing.dart';
 import '../../../core/services/pdf_invoice_service.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/widgets/whatsapp_icon.dart';
@@ -180,6 +177,253 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           setState(() {
             _o.pph = currentPphStatus ? 2 : 0;
           });
+        }
+      }
+    }
+  }
+
+  Future<void> _showEditDiskonDialog() async {
+    if (_isPaid) return;
+    double currentDiskon = _o.diskonPersen;
+    final ctrl = TextEditingController(
+      text: currentDiskon > 0 ? (currentDiskon == currentDiskon.toInt() ? currentDiskon.toInt().toString() : currentDiskon.toString()) : '',
+    );
+
+    final result = await showModalBottomSheet<double>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          return Container(
+            padding: EdgeInsets.fromLTRB(
+              20, 20, 20,
+              MediaQuery.of(ctx).viewInsets.bottom + 24,
+            ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD1FAE5),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.local_offer_rounded,
+                        color: Color(0xFF059669),
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Atur Diskon Pesanan',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                          Text(
+                            'Diskon akan langsung tercantum pada rincian & invoice PDF',
+                            style: GoogleFonts.inter(
+                              fontSize: 11.5,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'PILIH PERSENTASE CEPAT',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textMuted,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 50.0].map((val) {
+                    final isSelected = currentDiskon == val;
+                    return InkWell(
+                      onTap: () {
+                        setSheetState(() {
+                          currentDiskon = val;
+                          ctrl.text = val > 0 ? val.toInt().toString() : '';
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: isSelected ? const Color(0xFF059669) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected ? const Color(0xFF059669) : const Color(0xFFCBD5E1),
+                          ),
+                        ),
+                        child: Text(
+                          val == 0.0 ? '0% (Tanpa Diskon)' : '${val.toInt()}%',
+                          style: GoogleFonts.inter(
+                            fontSize: 12.5,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                            color: isSelected ? Colors.white : const Color(0xFF334155),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'ATAU INPUT PERSENTASE KHUSUS (%)',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textMuted,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: ctrl,
+                  keyboardType: TextInputType.number,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Contoh: 12.5',
+                    prefixIcon: const Icon(Icons.percent_rounded, size: 18, color: Color(0xFF059669)),
+                    suffixText: '%',
+                    suffixStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF059669)),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFF059669), width: 1.5),
+                    ),
+                  ),
+                  onChanged: (val) {
+                    final parsed = double.tryParse(val.trim()) ?? 0.0;
+                    setSheetState(() {
+                      currentDiskon = parsed.clamp(0.0, 100.0);
+                    });
+                  },
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    final finalVal = double.tryParse(ctrl.text.trim()) ?? currentDiskon;
+                    Navigator.pop(ctx, finalVal.clamp(0.0, 100.0));
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF059669),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Simpan Diskon',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    if (result != null && result != _o.diskonPersen) {
+      final oldDiscount = _o.discount;
+      setState(() {
+        _o.discount = result.toInt();
+      });
+
+      try {
+        final draft = OrderDraft(
+          customer: _o.customer,
+          chatDari: _o.chatDari,
+          tipeCustomer: _o.tipeCustomer,
+          services: List.from(_o.services),
+          cleaners: List.from(_o.cleaners),
+          notes: _o.notes,
+          applyPpn: (_o.ppn ?? _o.pembayaran?.ppn ?? 0) > 0,
+          applyPph: (_o.pph ?? _o.pembayaran?.pph ?? 0) > 0,
+          diskonPersen: result,
+        );
+
+        await _orderService.updateOrder(_o.id, draft);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Diskon ${result == result.toInt() ? result.toInt() : result}% berhasil disimpan'),
+              backgroundColor: const Color(0xFF059669),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          final errorMsg = e.toString().toLowerCase();
+          if (errorMsg.contains('selesai') ||
+              errorMsg.contains('pembayaran') ||
+              _o.status == OrderStatus.finishedByCleaner) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Diskon diubah lokal, akan disimpan saat pembayaran.'),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Gagal memperbarui diskon: $e')),
+            );
+            setState(() {
+              _o.discount = oldDiscount;
+            });
+          }
         }
       }
     }
@@ -579,10 +823,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       ),
                     ),
                     Text(
-                      o.nomorPesanan,
+                      o.customer.name,
                       style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: Colors.white.withValues(alpha: 0.6),
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withValues(alpha: 0.85),
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1213,9 +1458,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   : (o.services.isNotEmpty
                       ? o.services.fold(0, (sum, s) => sum + s.subtotal)
                       : o.total);
-              final double diskonPersen = o.pembayaran?.diskonPersen ?? 0.0;
+              final double diskonPersen = o.diskonPersen;
               final int diskonValue = (baseSubtotal * (diskonPersen / 100)).round();
-              final int totalSetelahDiskon = baseSubtotal - diskonValue;
+              final int totalSetelahDiskon = (baseSubtotal - diskonValue) > 0 ? (baseSubtotal - diskonValue) : 0;
 
               final int ppnPersen = o.ppn ?? (o.pembayaran?.ppn ?? (o.isWajibPpn ? 11 : 0));
               final int ppnValue = (totalSetelahDiskon * (ppnPersen / 100))
@@ -1247,24 +1492,77 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 6),
+                  InkWell(
+                    onTap: () {
+                      if (!_isPaid) {
+                        _showEditDiskonDialog();
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(4),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.local_offer_outlined,
+                                size: 16,
+                                color: diskonValue > 0 ? const Color(0xFF059669) : AppColors.textMuted,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                diskonValue > 0
+                                    ? 'Diskon ${diskonPersen == diskonPersen.toInt() ? diskonPersen.toInt() : diskonPersen}%'
+                                    : 'Tambah Diskon',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: diskonValue > 0 ? FontWeight.w600 : FontWeight.normal,
+                                  color: diskonValue > 0 ? const Color(0xFF059669) : AppColors.primary,
+                                ),
+                              ),
+                              if (!_isPaid) ...[
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.edit_outlined,
+                                  size: 13,
+                                  color: diskonValue > 0 ? const Color(0xFF059669) : AppColors.primary,
+                                ),
+                              ],
+                            ],
+                          ),
+                          Text(
+                            diskonValue > 0 ? '- ${_formatRupiah(diskonValue)}' : '0%',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: diskonValue > 0 ? const Color(0xFF059669) : AppColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   if (diskonValue > 0) ...[
                     const SizedBox(height: 6),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Diskon ${diskonPersen == diskonPersen.toInt() ? diskonPersen.toInt() : diskonPersen}%',
+                          'Subtotal Setelah Diskon',
                           style: GoogleFonts.inter(
-                            fontSize: 13,
+                            fontSize: 12.5,
                             color: AppColors.textMuted,
                           ),
                         ),
                         Text(
-                          '-${_formatRupiah(diskonValue)}',
+                          _formatRupiah(totalSetelahDiskon),
                           style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.error,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textDark,
                           ),
                         ),
                       ],
@@ -1937,23 +2235,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
-  void _showAddBonusSheet(OrderModel o, OrderCleaner cleaner) {
-    if (cleaner.pesananCleanerId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('ID Cleaner tidak valid (belum tersimpan di database)'),
-        ),
-      );
-      return;
-    }
-
+  void _showAddBonusSheet(OrderModel o, [OrderCleaner? cleaner]) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (modalCtx) => _AddBonusSheet(
         order: o,
-        cleaner: cleaner,
+        initialCleaner: cleaner,
         onBonusAdded: _fetchDetail,
       ),
     );
@@ -2874,9 +3163,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         : (o.services.isNotEmpty
             ? o.services.fold(0, (sum, s) => sum + s.subtotal)
             : o.total);
-    final double diskonPersen = o.pembayaran?.diskonPersen ?? 0.0;
+    final double diskonPersen = o.diskonPersen;
     final int diskonValue = (baseSubtotal * (diskonPersen / 100)).round();
-    final int totalSetelahDiskon = baseSubtotal - diskonValue;
+    final int totalSetelahDiskon = (baseSubtotal - diskonValue) > 0 ? (baseSubtotal - diskonValue) : 0;
 
     final int ppnPersen = o.ppn ?? (o.pembayaran?.ppn ?? (o.isWajibPpn ? 11 : 0));
     final int ppnValue = (o.pembayaran != null || o.ppn != null || o.isWajibPpn)
@@ -4475,11 +4764,11 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
 class _AddBonusSheet extends StatefulWidget {
   const _AddBonusSheet({
     required this.order,
-    required this.cleaner,
+    this.initialCleaner,
     required this.onBonusAdded,
   });
   final OrderModel order;
-  final OrderCleaner cleaner;
+  final OrderCleaner? initialCleaner;
   final VoidCallback onBonusAdded;
 
   @override
@@ -4495,13 +4784,18 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
   bool _isSubmitting = false;
   List<Map<String, dynamic>> _tarifBonuses = [];
   Map<String, dynamic>? _selectedTarifBonus;
-  String? _existingBonusId;
+  final Set<String> _selectedPesananCleanerIds = {};
 
   @override
   void initState() {
     super.initState();
+    if (widget.initialCleaner != null) {
+      _selectedPesananCleanerIds.add(widget.initialCleaner!.pesananCleanerId);
+    } else {
+      _selectedPesananCleanerIds.addAll(widget.order.cleaners.map((c) => c.pesananCleanerId));
+    }
     _fetchTarifBonus();
-    _onTarifSelected(null); // Trigger pre-fill for default 'Bonus Manual'
+    _onTarifSelected(null);
   }
 
   Future<void> _fetchTarifBonus() async {
@@ -4522,7 +4816,6 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
     setState(() {
       _selectedTarifBonus = tarif;
       _noteCtrl.clear();
-      _existingBonusId = null;
 
       if (tarif != null && tarif['nominal_default'] != null) {
         final double nominalVal =
@@ -4532,29 +4825,36 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
         _nominalCtrl.clear();
       }
 
-      // Overwrite with existing bonus if present
       final String targetJenis = tarif == null
           ? 'Bonus Manual'
           : (tarif['jenis_bonus']?['nama_bonus'] ?? '');
 
-      if (targetJenis.isNotEmpty) {
-        try {
-          final existing = widget.cleaner.bonuses.firstWhere(
-            (b) => b.jenisBonus.toLowerCase() == targetJenis.toLowerCase(),
-          );
-          _existingBonusId = existing.id;
-          _nominalCtrl.text = CurrencyInputFormatter.format(existing.nominal);
-          if (existing.keterangan != '-' &&
-              existing.keterangan != 'Bonus manual' &&
-              existing.keterangan != targetJenis) {
-            _noteCtrl.text = existing.keterangan;
+      if (targetJenis.isNotEmpty && _selectedPesananCleanerIds.length == 1) {
+        final cleanerId = _selectedPesananCleanerIds.first;
+        final cleaner = widget.order.cleaners.where((c) => c.pesananCleanerId == cleanerId).firstOrNull;
+        if (cleaner != null) {
+          final existing = cleaner.bonuses.where((b) => b.jenisBonus.toLowerCase() == targetJenis.toLowerCase()).firstOrNull;
+          if (existing != null) {
+            _nominalCtrl.text = CurrencyInputFormatter.format(existing.nominal);
+            if (existing.keterangan != '-' &&
+                existing.keterangan != 'Bonus manual' &&
+                existing.keterangan != targetJenis) {
+              _noteCtrl.text = existing.keterangan;
+            }
           }
-        } catch (_) {}
+        }
       }
     });
   }
 
   Future<void> _submit() async {
+    if (_selectedPesananCleanerIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pilih minimal 1 cleaner penerima bonus')),
+      );
+      return;
+    }
+
     final nominalText = _nominalCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
     if (nominalText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -4563,43 +4863,43 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
       return;
     }
 
+    final int nominalInt = int.parse(nominalText);
+    final String note = _noteCtrl.text.trim();
+
     setState(() => _isSubmitting = true);
     try {
-      if (_existingBonusId != null && _existingBonusId!.isNotEmpty) {
-        await _orderService.updateManualBonus(
-          _existingBonusId!,
-          int.parse(nominalText),
-          _noteCtrl.text.trim(),
-        );
+      final String targetJenis = _selectedTarifBonus == null
+          ? 'Bonus Manual'
+          : (_selectedTarifBonus!['jenis_bonus']?['nama_bonus'] ?? 'Bonus');
+
+      int jenisBonusId = 4;
+      if (_selectedTarifBonus != null && _selectedTarifBonus!['jenis_bonus_id'] != null) {
+        jenisBonusId = _selectedTarifBonus!['jenis_bonus_id'] as int;
       } else {
-        if (_selectedTarifBonus == null) {
-          // Coba cari tarif bonus manual dari data yang difetch, jika tidak ada fallback ke ID 4 sesuai request
-          final manualTarif = _tarifBonuses.firstWhere(
-            (t) =>
-                (t['jenis_bonus']?['nama_bonus']?.toString().toLowerCase() ??
-                    '') ==
-                'bonus manual',
-            orElse: () => <String, dynamic>{},
-          );
+        final manualTarif = _tarifBonuses.where(
+          (t) => (t['jenis_bonus']?['nama_bonus']?.toString().toLowerCase() ?? '') == 'bonus manual',
+        ).firstOrNull;
+        if (manualTarif != null && manualTarif['jenis_bonus_id'] != null) {
+          jenisBonusId = manualTarif['jenis_bonus_id'] as int;
+        }
+      }
 
-          final int jenisBonusId =
-              manualTarif.isNotEmpty && manualTarif['jenis_bonus_id'] != null
-              ? manualTarif['jenis_bonus_id'] as int
-              : 4;
+      for (final pesananCleanerId in _selectedPesananCleanerIds) {
+        final cleaner = widget.order.cleaners.where((c) => c.pesananCleanerId == pesananCleanerId).firstOrNull;
+        final existing = cleaner?.bonuses.where((b) => b.jenisBonus.toLowerCase() == targetJenis.toLowerCase()).firstOrNull;
 
-          await _orderService.storeManualBonus(
-            widget.cleaner.pesananCleanerId,
-            jenisBonusId,
-            int.parse(nominalText),
-            _noteCtrl.text.trim(),
+        if (existing != null && existing.id.isNotEmpty) {
+          await _orderService.updateManualBonus(
+            existing.id,
+            nominalInt,
+            note,
           );
         } else {
-          // Bonus dari Tarif
           await _orderService.storeManualBonus(
-            widget.cleaner.pesananCleanerId,
-            _selectedTarifBonus!['jenis_bonus_id'] as int,
-            int.parse(nominalText),
-            _noteCtrl.text.trim(),
+            pesananCleanerId,
+            jenisBonusId,
+            nominalInt,
+            note,
           );
         }
       }
@@ -4607,8 +4907,8 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
       if (!mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Bonus berhasil ditambahkan!'),
+        SnackBar(
+          content: Text('Bonus berhasil diberikan untuk ${_selectedPesananCleanerIds.length} cleaner!'),
           backgroundColor: AppColors.statusDone,
         ),
       );
@@ -4639,7 +4939,7 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         decoration: const BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -4659,32 +4959,195 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              Text(
-                'Beri Bonus',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
-              ),
-              Text(
-                widget.cleaner.name,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: AppColors.textMuted,
-                ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Beri Bonus Cleaner',
+                        style: GoogleFonts.inter(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Bisa pilih beberapa cleaner sekaligus',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.card_giftcard_rounded,
+                      color: Color(0xFF2563EB),
+                      size: 20,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 
               if (_isLoading)
                 const Center(
                   child: Padding(
-                    padding: EdgeInsets.all(20),
+                    padding: EdgeInsets.all(24),
                     child: CircularProgressIndicator(),
                   ),
                 )
               else ...[
+                // Cleaner Multi-Select Section
+                if (widget.order.cleaners.isNotEmpty) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Pilih Cleaner (${_selectedPesananCleanerIds.length}/${widget.order.cleaners.length})',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      if (widget.order.cleaners.length > 1)
+                        InkWell(
+                          onTap: () {
+                            setState(() {
+                              if (_selectedPesananCleanerIds.length == widget.order.cleaners.length) {
+                                _selectedPesananCleanerIds.clear();
+                              } else {
+                                _selectedPesananCleanerIds.clear();
+                                _selectedPesananCleanerIds.addAll(
+                                  widget.order.cleaners.map((c) => c.pesananCleanerId),
+                                );
+                              }
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(6),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            child: Text(
+                              _selectedPesananCleanerIds.length == widget.order.cleaners.length
+                                  ? 'Batal Semua'
+                                  : 'Pilih Semua',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF2563EB),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Cleaner Cards
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      children: widget.order.cleaners.map((c) {
+                        final isSelected = _selectedPesananCleanerIds.contains(c.pesananCleanerId);
+                        return InkWell(
+                          onTap: () {
+                            setState(() {
+                              if (isSelected) {
+                                _selectedPesananCleanerIds.remove(c.pesananCleanerId);
+                              } else {
+                                _selectedPesananCleanerIds.add(c.pesananCleanerId);
+                              }
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 3),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isSelected ? const Color(0xFFEFF6FF) : Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isSelected ? const Color(0xFF93C5FD) : const Color(0xFFF1F5F9),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isSelected
+                                      ? Icons.check_circle_rounded
+                                      : Icons.radio_button_unchecked_rounded,
+                                  color: isSelected
+                                      ? const Color(0xFF2563EB)
+                                      : const Color(0xFF94A3B8),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        c.name,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                          color: isSelected ? const Color(0xFF1E3A8A) : const Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                      if (c.totalBonus > 0)
+                                        Text(
+                                          'Total saat ini: Rp ${CurrencyInputFormatter.format(c.totalBonus)}',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11,
+                                            color: const Color(0xFF059669),
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                if (isSelected)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF2563EB),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'Dipilih',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+
                 Text(
                   'Jenis Bonus',
                   style: GoogleFonts.inter(
@@ -4866,7 +5329,7 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
                 const SizedBox(height: 16),
 
                 Text(
-                  'Nominal (Rp)',
+                  'Nominal per Cleaner (Rp)',
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -4962,7 +5425,9 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
                             ),
                           )
                         : Text(
-                            'Simpan Bonus',
+                            _selectedPesananCleanerIds.isNotEmpty
+                                ? 'Simpan Bonus (${_selectedPesananCleanerIds.length} Cleaner)'
+                                : 'Pilih Cleaner Terlebih Dahulu',
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,

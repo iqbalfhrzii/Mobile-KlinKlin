@@ -361,7 +361,56 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
     return _card(
       'Petugas Kebersihan',
       Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (!_isPaid && _o.cleaners.length > 1) ...[
+            InkWell(
+              onTap: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => _AddBonusSheet(
+                    order: _o,
+                    initialCleaner: null,
+                    onBonusAdded: () {
+                      _refreshOrder();
+                    },
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.group_add_rounded,
+                      size: 18,
+                      color: Color(0xFF2563EB),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Beri Bonus Sekaligus (${_o.cleaners.length} Cleaner)',
+                      style: GoogleFonts.inter(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF2563EB),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           ..._o.cleaners.map(
             (c) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -425,7 +474,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                           backgroundColor: Colors.transparent,
                           builder: (_) => _AddBonusSheet(
                             order: _o,
-                            cleaner: c,
+                            initialCleaner: c,
                             onBonusAdded: () {
                               _refreshOrder();
                             },
@@ -827,10 +876,14 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   }
 
   // ─── Proof card ──────────────────────────────────────────────────────────
+  // ─── Proof card ──────────────────────────────────────────────────────────
   Widget _buildProofCard() {
+    final urls = _o.proofUrls;
     return GestureDetector(
       onTap: () {
-        if (_o.paymentProof != null && _o.paymentProof!.isNotEmpty) {
+        if (urls.isNotEmpty) {
+          _showImageDialog(context, urls);
+        } else if (_o.paymentProof != null && _o.paymentProof!.isNotEmpty) {
           _showImageDialog(context, _o.paymentProof!);
         }
       },
@@ -857,7 +910,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Lihat Bukti Pembayaran',
+                    urls.length > 1 ? 'Lihat Bukti Pembayaran (${urls.length} Foto)' : 'Lihat Bukti Pembayaran',
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -885,65 +938,123 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
     );
   }
 
-  void _showImageDialog(BuildContext context, String imageUrl) {
+  void _showImageDialog(BuildContext context, dynamic imageSource) {
+    List<String> urls = [];
+    if (imageSource is List<String>) {
+      urls = imageSource;
+    } else if (imageSource is String) {
+      if (imageSource.contains(',')) {
+        urls = imageSource.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+      } else {
+        urls = [imageSource.trim()];
+      }
+    }
+
+    if (urls.isEmpty) return;
+
     showDialog(
       context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(16),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                imageUrl.startsWith('http')
-                    ? imageUrl
-                    : '${ApiClient.baseUrl.replaceAll('/api', '')}/storage/${imageUrl.replaceFirst(RegExp(r'^/?storage/'), '')}',
-                fit: BoxFit.contain,
-                errorBuilder: (ctx, err, stack) => Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+      builder: (ctx) {
+        int currentIndex = 0;
+        final pageCtrl = PageController();
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.all(16),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.75,
+                    width: double.infinity,
+                    child: PageView.builder(
+                      controller: pageCtrl,
+                      itemCount: urls.length,
+                      onPageChanged: (idx) {
+                        setDialogState(() => currentIndex = idx);
+                      },
+                      itemBuilder: (context, idx) {
+                        final img = urls[idx];
+                        final fullUrl = img.startsWith('http')
+                            ? img
+                            : '${ApiClient.baseUrl.replaceAll('/api', '')}/storage/${img.replaceFirst(RegExp(r'^/?storage/'), '')}';
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: InteractiveViewer(
+                            child: Image.network(
+                              fullUrl,
+                              fit: BoxFit.contain,
+                              errorBuilder: (ctx, err, stack) => Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(32),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.broken_image,
+                                      color: AppColors.textMuted,
+                                      size: 48,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'Gagal memuat gambar',
+                                      style: GoogleFonts.inter(color: AppColors.textMuted),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.broken_image,
-                        color: AppColors.textMuted,
-                        size: 48,
+                  if (urls.length > 1)
+                    Positioned(
+                      bottom: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.75),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'Foto ${currentIndex + 1} dari ${urls.length}',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Gagal memuat gambar',
-                        style: GoogleFonts.inter(color: AppColors.textMuted),
+                    ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: Colors.black54,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.close, color: Colors.white, size: 20),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ),
-            Positioned(
-              top: 8,
-              right: 8,
-              child: GestureDetector(
-                onTap: () => Navigator.pop(ctx),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    color: Colors.black54,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.close, color: Colors.white, size: 20),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -1630,11 +1741,14 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   // ─── PAYMENT SHEET ──────────────────────────────────────────────────────
   void _showPaymentSheet(BuildContext context, {bool? initialPpn}) {
     final noteCtrl = TextEditingController();
-    final diskonCtrl = TextEditingController();
+    final double initDiskon = _o.diskonPersen;
+    final diskonCtrl = TextEditingController(
+      text: initDiskon > 0 ? (initDiskon == initDiskon.toInt() ? initDiskon.toInt().toString() : initDiskon.toString()) : '',
+    );
     final bool isWajibPpn = _o.isWajibPpn;
     bool applyPpn = initialPpn ?? isWajibPpn;
     bool applyPph = (_o.pph ?? _o.pembayaran?.pph ?? 0) > 0;
-    File? selectedProof;
+    List<File> selectedProofs = [];
     bool isSubmitting = false;
     String? errorMsg;
     final ImagePicker picker = ImagePicker();
@@ -1855,104 +1969,154 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                       Expanded(
                         flex: 6,
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // PPN (11%) - Auto centang jika cabang wajib PPN, namun dapat diuncentang/diubah bebas oleh CS
-                            InkWell(
-                              onTap: () {
-                                setModal(() {
-                                  applyPpn = !applyPpn;
-                                });
-                              },
-                              borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 7,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: applyPpn
-                                      ? const Color(0xFFEFF6FF)
-                                      : const Color(0xFFF8FAFC),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: applyPpn
-                                        ? const Color(0xFFBFDBFE)
-                                        : const Color(0xFFE2E8F0),
-                                    width: 1.0,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: Checkbox(
-                                        value: applyPpn,
-                                        onChanged: (v) {
-                                          setModal(() => applyPpn = v ?? false);
-                                        },
-                                        activeColor: const Color(0xFF2563EB),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(4),
+                            Text(
+                              'Pajak PPN (11%)',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textDark,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            // Pilihan apakah mau bayar sesuai PPN atau tanpa PPN
+                            Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding: const EdgeInsets.all(3),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: () {
+                                        setModal(() => applyPpn = true);
+                                      },
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: applyPpn ? Colors.white : Colors.transparent,
+                                          borderRadius: BorderRadius.circular(8),
+                                          boxShadow: applyPpn
+                                              ? [
+                                                  BoxShadow(
+                                                    color: Colors.black.withValues(alpha: 0.06),
+                                                    blurRadius: 4,
+                                                    offset: const Offset(0, 1),
+                                                  ),
+                                                ]
+                                              : null,
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            'Pakai PPN',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              fontWeight: applyPpn ? FontWeight.bold : FontWeight.w500,
+                                              color: applyPpn ? const Color(0xFF16A34A) : const Color(0xFF64748B),
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Wrap(
-                                            spacing: 4,
-                                            runSpacing: 2,
-                                            crossAxisAlignment: WrapCrossAlignment.center,
-                                            children: [
-                                              Text(
-                                                'PPN (11%)',
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 11.5,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: applyPpn
-                                                      ? const Color(0xFF1E293B)
-                                                      : const Color(0xFF94A3B8),
-                                                ),
-                                              ),
-                                              if (isWajibPpn)
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                                  decoration: BoxDecoration(
-                                                    color: const Color(0xFFDBEAFE),
-                                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: () {
+                                        setModal(() => applyPpn = false);
+                                      },
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: !applyPpn ? Colors.white : Colors.transparent,
+                                          borderRadius: BorderRadius.circular(8),
+                                          boxShadow: !applyPpn
+                                              ? [
+                                                  BoxShadow(
+                                                    color: Colors.black.withValues(alpha: 0.06),
+                                                    blurRadius: 4,
+                                                    offset: const Offset(0, 1),
                                                   ),
-                                                  child: Text(
-                                                    'Default',
-                                                    style: GoogleFonts.inter(
-                                                      fontSize: 8.5,
-                                                      fontWeight: FontWeight.w700,
-                                                      color: const Color(0xFF1E40AF),
-                                                    ),
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                          Text(
-                                            applyPpn ? 'Dikenakan PPN' : 'Tanpa PPN',
+                                                ]
+                                              : null,
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            'Tanpa PPN',
                                             style: GoogleFonts.inter(
-                                              fontSize: 9.5,
-                                              fontWeight: FontWeight.w500,
-                                              color: applyPpn
-                                                  ? const Color(0xFF2563EB)
-                                                  : const Color(0xFF94A3B8),
+                                              fontSize: 11,
+                                              fontWeight: !applyPpn ? FontWeight.bold : FontWeight.w500,
+                                              color: !applyPpn ? const Color(0xFF2563EB) : const Color(0xFF64748B),
                                             ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
                                           ),
-                                        ],
+                                        ),
                                       ),
                                     ),
-                                  ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            // Checkbox PPN (Terkunci, nilai otomatis mengikuti pilihan)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: applyPpn
+                                    ? const Color(0xFFF0FDF4)
+                                    : const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: applyPpn
+                                      ? const Color(0xFFBBF7D0)
+                                      : const Color(0xFFE2E8F0),
+                                  width: 1.0,
                                 ),
+                              ),
+                              child: Row(
+                                children: [
+                                  SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: Checkbox(
+                                      value: applyPpn,
+                                      onChanged: null, // Terkunci! Hanya diatur lewat tombol pilihan di atas
+                                      activeColor: const Color(0xFF16A34A),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          applyPpn ? 'PPN 11% Aktif' : 'PPN Nonaktif',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: applyPpn
+                                                ? const Color(0xFF15803D)
+                                                : const Color(0xFF64748B),
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        const Icon(
+                                          Icons.lock_rounded,
+                                          size: 11,
+                                          color: Color(0xFF94A3B8),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -2145,7 +2309,6 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                       color: AppColors.textDark,
                     ),
                   ),
-                  const SizedBox(height: 8),
                   TextField(
                     controller: noteCtrl,
                     maxLines: 2,
@@ -2155,151 +2318,192 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                     ),
                     decoration: InputDecoration(
                       hintText:
-                          'cth. Ref transfer: 12345, sudah konfirmasi ke admin...',
-                      hintStyle: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: AppColors.textMuted,
-                      ),
+                          'cth. Ref transfer: 12345, sudah konfirmasi CS...',
                       filled: true,
                       fillColor: AppColors.background,
-                      contentPadding: const EdgeInsets.all(12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: const BorderSide(color: AppColors.border),
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.border),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.primary),
-                      ),
                     ),
                   ),
-
                   const SizedBox(height: 16),
 
                   // Proof upload
-                  Text(
-                    'Bukti Pembayaran',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  GestureDetector(
-                    onTap: isSubmitting
-                        ? null
-                        : () async {
-                            final picked = await picker.pickImage(
-                              source: ImageSource.gallery,
-                            );
-                            if (picked != null) {
-                              final compressed = await ImageCompressHelper.compressXFileIfNeeded(picked);
-                              if (compressed != null) {
-                                setModal(() {
-                                  selectedProof = compressed;
-                                });
-                              }
-                            }
-                          },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        color: selectedProof != null
-                            ? AppColors.statusDoneBg
-                            : AppColors.background,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: selectedProof != null
-                              ? AppColors.statusDone
-                              : AppColors.border,
-                          width: selectedProof != null ? 1.5 : 1,
-                          // Dashed via custom painter below
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Bukti Pembayaran (Maks. 2 Foto)',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textDark,
                         ),
                       ),
-                      child: selectedProof != null
-                          ? Row(
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                        decoration: BoxDecoration(
+                          color: selectedProofs.isNotEmpty ? const Color(0xFFEFF6FF) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: selectedProofs.isNotEmpty ? const Color(0xFFBFDBFE) : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        child: Text(
+                          '${selectedProofs.length}/2 Foto',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: selectedProofs.isNotEmpty ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // List of uploaded proofs
+                  if (selectedProofs.isNotEmpty) ...[
+                    ...selectedProofs.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final file = entry.value;
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.statusDoneBg,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.statusDone.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(
+                                file,
+                                width: 44,
+                                height: 44,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Foto Bukti ${index + 1}',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textDark,
+                                    ),
+                                  ),
+                                  Text(
+                                    file.path.split(r'/').last.split(r'\').last,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      color: AppColors.textMuted,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: isSubmitting
+                                  ? null
+                                  : () {
+                                      setModal(() {
+                                        selectedProofs.removeAt(index);
+                                      });
+                                    },
+                              icon: const Icon(
+                                Icons.delete_outline_rounded,
+                                color: AppColors.error,
+                                size: 20,
+                              ),
+                              tooltip: 'Hapus foto',
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+
+                  // Add button / Box
+                  if (selectedProofs.length < 2)
+                    GestureDetector(
+                      onTap: isSubmitting
+                          ? null
+                          : () async {
+                              final picked = await picker.pickImage(
+                                source: ImageSource.gallery,
+                              );
+                              if (picked != null) {
+                                final compressed = await ImageCompressHelper.compressXFileIfNeeded(picked);
+                                if (compressed != null) {
+                                  setModal(() {
+                                    selectedProofs.add(compressed);
+                                    errorMsg = null;
+                                  });
+                                }
+                              }
+                            },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(
+                          vertical: selectedProofs.isEmpty ? 20 : 12,
+                          horizontal: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: AppColors.border,
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceBlue,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.add_photo_alternate_rounded,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.statusDoneBg,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(
-                                    Icons.image_rounded,
-                                    color: AppColors.statusDone,
-                                    size: 22,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        selectedProof!.path.split('/').last,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.statusDone,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      Text(
-                                        'Tap untuk ganti foto',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 11,
-                                          color: AppColors.textMuted,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const Icon(
-                                  Icons.check_circle_rounded,
-                                  color: AppColors.statusDone,
-                                  size: 22,
-                                ),
-                              ],
-                            )
-                          : Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surfaceBlue,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.add_photo_alternate_rounded,
-                                    color: AppColors.primary,
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
                                 Text(
-                                  'Upload Bukti Pembayaran',
+                                  selectedProofs.isEmpty
+                                      ? 'Upload Bukti Pembayaran (Min. 1 Foto)'
+                                      : '+ Tambah Foto Bukti Kedua (Opsional)',
                                   style: GoogleFonts.inter(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.primary,
                                   ),
                                 ),
-                                const SizedBox(height: 2),
                                 Text(
-                                  'JPG, PNG, max 5MB',
+                                  'Bisa upload hingga 2 foto (JPG, PNG, max 5MB)',
                                   style: GoogleFonts.inter(
                                     fontSize: 11,
                                     color: AppColors.textMuted,
@@ -2307,10 +2511,13 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                 ),
                               ],
                             ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
 
                   if (errorMsg != null) ...[
+                    const SizedBox(height: 12),
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
@@ -2342,6 +2549,8 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+                  ] else ...[
+                    const SizedBox(height: 16),
                   ],
 
                   // Confirm button
@@ -2349,10 +2558,10 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                     onTap: isSubmitting
                         ? null
                         : () async {
-                            if (selectedProof == null) {
+                            if (selectedProofs.isEmpty) {
                               setModal(
                                 () =>
-                                    errorMsg = 'Harap unggah bukti pembayaran',
+                                    errorMsg = 'Harap unggah minimal 1 foto bukti pembayaran',
                               );
                               return;
                             }
@@ -2393,7 +2602,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                 totalTagihan: baseSubtotal,
                                 totalSetelahDiskon: setelahDiskon,
                                 totalAkhir: totalAkhir,
-                                buktiTransfer: selectedProof!,
+                                buktiTransfer: selectedProofs,
                               );
                               if (!context.mounted) return;
 
@@ -2972,11 +3181,11 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
 class _AddBonusSheet extends StatefulWidget {
   const _AddBonusSheet({
     required this.order,
-    required this.cleaner,
+    this.initialCleaner,
     required this.onBonusAdded,
   });
   final OrderModel order;
-  final OrderCleaner cleaner;
+  final OrderCleaner? initialCleaner;
   final VoidCallback onBonusAdded;
 
   @override
@@ -2992,13 +3201,18 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
   bool _isSubmitting = false;
   List<Map<String, dynamic>> _tarifBonuses = [];
   Map<String, dynamic>? _selectedTarifBonus;
-  String? _existingBonusId;
+  final Set<String> _selectedPesananCleanerIds = {};
 
   @override
   void initState() {
     super.initState();
+    if (widget.initialCleaner != null) {
+      _selectedPesananCleanerIds.add(widget.initialCleaner!.pesananCleanerId);
+    } else {
+      _selectedPesananCleanerIds.addAll(widget.order.cleaners.map((c) => c.pesananCleanerId));
+    }
     _fetchTarifBonus();
-    _onTarifSelected(null); // Trigger pre-fill for default 'Bonus Manual'
+    _onTarifSelected(null);
   }
 
   Future<void> _fetchTarifBonus() async {
@@ -3019,7 +3233,6 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
     setState(() {
       _selectedTarifBonus = tarif;
       _noteCtrl.clear();
-      _existingBonusId = null;
 
       if (tarif != null && tarif['nominal_default'] != null) {
         final double nominalVal =
@@ -3029,29 +3242,37 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
         _nominalCtrl.clear();
       }
 
-      // Overwrite with existing bonus if present
       final String targetJenis = tarif == null
           ? 'Bonus Manual'
           : (tarif['jenis_bonus']?['nama_bonus'] ?? '');
 
-      if (targetJenis.isNotEmpty) {
-        try {
-          final existing = widget.cleaner.bonuses.firstWhere(
-            (b) => b.jenisBonus.toLowerCase() == targetJenis.toLowerCase(),
-          );
-          _existingBonusId = existing.id;
-          _nominalCtrl.text = CurrencyInputFormatter.format(existing.nominal);
-          if (existing.keterangan != '-' &&
-              existing.keterangan != 'Bonus manual' &&
-              existing.keterangan != targetJenis) {
-            _noteCtrl.text = existing.keterangan;
+      // Pre-fill notes if single cleaner selected
+      if (targetJenis.isNotEmpty && _selectedPesananCleanerIds.length == 1) {
+        final cleanerId = _selectedPesananCleanerIds.first;
+        final cleaner = widget.order.cleaners.where((c) => c.pesananCleanerId == cleanerId).firstOrNull;
+        if (cleaner != null) {
+          final existing = cleaner.bonuses.where((b) => b.jenisBonus.toLowerCase() == targetJenis.toLowerCase()).firstOrNull;
+          if (existing != null) {
+            _nominalCtrl.text = CurrencyInputFormatter.format(existing.nominal);
+            if (existing.keterangan != '-' &&
+                existing.keterangan != 'Bonus manual' &&
+                existing.keterangan != targetJenis) {
+              _noteCtrl.text = existing.keterangan;
+            }
           }
-        } catch (_) {}
+        }
       }
     });
   }
 
   Future<void> _submit() async {
+    if (_selectedPesananCleanerIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pilih minimal 1 cleaner penerima bonus')),
+      );
+      return;
+    }
+
     final nominalText = _nominalCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
     if (nominalText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -3060,43 +3281,43 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
       return;
     }
 
+    final int nominalInt = int.parse(nominalText);
+    final String note = _noteCtrl.text.trim();
+
     setState(() => _isSubmitting = true);
     try {
-      if (_existingBonusId != null && _existingBonusId!.isNotEmpty) {
-        await _orderService.updateManualBonus(
-          _existingBonusId!,
-          int.parse(nominalText),
-          _noteCtrl.text.trim(),
-        );
+      final String targetJenis = _selectedTarifBonus == null
+          ? 'Bonus Manual'
+          : (_selectedTarifBonus!['jenis_bonus']?['nama_bonus'] ?? 'Bonus');
+
+      int jenisBonusId = 4;
+      if (_selectedTarifBonus != null && _selectedTarifBonus!['jenis_bonus_id'] != null) {
+        jenisBonusId = _selectedTarifBonus!['jenis_bonus_id'] as int;
       } else {
-        if (_selectedTarifBonus == null) {
-          // Coba cari tarif bonus manual dari data yang difetch, jika tidak ada fallback ke ID 4 sesuai request
-          final manualTarif = _tarifBonuses.firstWhere(
-            (t) =>
-                (t['jenis_bonus']?['nama_bonus']?.toString().toLowerCase() ??
-                    '') ==
-                'bonus manual',
-            orElse: () => <String, dynamic>{},
-          );
+        final manualTarif = _tarifBonuses.where(
+          (t) => (t['jenis_bonus']?['nama_bonus']?.toString().toLowerCase() ?? '') == 'bonus manual',
+        ).firstOrNull;
+        if (manualTarif != null && manualTarif['jenis_bonus_id'] != null) {
+          jenisBonusId = manualTarif['jenis_bonus_id'] as int;
+        }
+      }
 
-          final int jenisBonusId =
-              manualTarif.isNotEmpty && manualTarif['jenis_bonus_id'] != null
-              ? manualTarif['jenis_bonus_id'] as int
-              : 4;
+      for (final pesananCleanerId in _selectedPesananCleanerIds) {
+        final cleaner = widget.order.cleaners.where((c) => c.pesananCleanerId == pesananCleanerId).firstOrNull;
+        final existing = cleaner?.bonuses.where((b) => b.jenisBonus.toLowerCase() == targetJenis.toLowerCase()).firstOrNull;
 
-          await _orderService.storeManualBonus(
-            widget.cleaner.pesananCleanerId,
-            jenisBonusId,
-            int.parse(nominalText),
-            _noteCtrl.text.trim(),
+        if (existing != null && existing.id.isNotEmpty) {
+          await _orderService.updateManualBonus(
+            existing.id,
+            nominalInt,
+            note,
           );
         } else {
-          // Bonus dari Tarif
           await _orderService.storeManualBonus(
-            widget.cleaner.pesananCleanerId,
-            _selectedTarifBonus!['jenis_bonus_id'] as int,
-            int.parse(nominalText),
-            _noteCtrl.text.trim(),
+            pesananCleanerId,
+            jenisBonusId,
+            nominalInt,
+            note,
           );
         }
       }
@@ -3104,8 +3325,8 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
       if (!mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Bonus berhasil ditambahkan!'),
+        SnackBar(
+          content: Text('Bonus berhasil diberikan untuk ${_selectedPesananCleanerIds.length} cleaner!'),
           backgroundColor: AppColors.statusDone,
         ),
       );
@@ -3131,7 +3352,7 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         decoration: const BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -3151,32 +3372,195 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              Text(
-                'Beri Bonus',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
-              ),
-              Text(
-                widget.cleaner.name,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: AppColors.textMuted,
-                ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Beri Bonus Cleaner',
+                        style: GoogleFonts.inter(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Bisa pilih beberapa cleaner sekaligus',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.card_giftcard_rounded,
+                      color: Color(0xFF2563EB),
+                      size: 20,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 
               if (_isLoading)
                 const Center(
                   child: Padding(
-                    padding: EdgeInsets.all(20),
+                    padding: EdgeInsets.all(24),
                     child: CircularProgressIndicator(),
                   ),
                 )
               else ...[
+                // Cleaner Multi-Select Section
+                if (widget.order.cleaners.isNotEmpty) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Pilih Cleaner (${_selectedPesananCleanerIds.length}/${widget.order.cleaners.length})',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      if (widget.order.cleaners.length > 1)
+                        InkWell(
+                          onTap: () {
+                            setState(() {
+                              if (_selectedPesananCleanerIds.length == widget.order.cleaners.length) {
+                                _selectedPesananCleanerIds.clear();
+                              } else {
+                                _selectedPesananCleanerIds.clear();
+                                _selectedPesananCleanerIds.addAll(
+                                  widget.order.cleaners.map((c) => c.pesananCleanerId),
+                                );
+                              }
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(6),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            child: Text(
+                              _selectedPesananCleanerIds.length == widget.order.cleaners.length
+                                  ? 'Batal Semua'
+                                  : 'Pilih Semua',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF2563EB),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Cleaner Cards
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      children: widget.order.cleaners.map((c) {
+                        final isSelected = _selectedPesananCleanerIds.contains(c.pesananCleanerId);
+                        return InkWell(
+                          onTap: () {
+                            setState(() {
+                              if (isSelected) {
+                                _selectedPesananCleanerIds.remove(c.pesananCleanerId);
+                              } else {
+                                _selectedPesananCleanerIds.add(c.pesananCleanerId);
+                              }
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 3),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isSelected ? const Color(0xFFEFF6FF) : Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isSelected ? const Color(0xFF93C5FD) : const Color(0xFFF1F5F9),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isSelected
+                                      ? Icons.check_circle_rounded
+                                      : Icons.radio_button_unchecked_rounded,
+                                  color: isSelected
+                                      ? const Color(0xFF2563EB)
+                                      : const Color(0xFF94A3B8),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        c.name,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                          color: isSelected ? const Color(0xFF1E3A8A) : const Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                      if (c.totalBonus > 0)
+                                        Text(
+                                          'Total saat ini: Rp ${CurrencyInputFormatter.format(c.totalBonus)}',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11,
+                                            color: const Color(0xFF059669),
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                if (isSelected)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF2563EB),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'Dipilih',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+
                 Text(
                   'Jenis Bonus',
                   style: GoogleFonts.inter(
@@ -3243,7 +3627,7 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
                 const SizedBox(height: 16),
 
                 Text(
-                  'Nominal (Rp)',
+                  'Nominal per Cleaner (Rp)',
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -3339,7 +3723,9 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
                             ),
                           )
                         : Text(
-                            'Simpan Bonus',
+                            _selectedPesananCleanerIds.isNotEmpty
+                                ? 'Simpan Bonus (${_selectedPesananCleanerIds.length} Cleaner)'
+                                : 'Pilih Cleaner Terlebih Dahulu',
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,

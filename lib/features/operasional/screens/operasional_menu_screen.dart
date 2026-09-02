@@ -217,20 +217,20 @@ class OperasionalMenuScreen extends StatelessWidget {
           ),
           _MenuItem(
             icon: Icons.groups_rounded,
-            title: 'Evaluasi Rapat',
-            iconColor: const Color(0xFF0891B2),
-            bgColor: const Color(0xFFCFFAFE),
-            onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalEvaluasiRapatScreen()));
-            },
-          ),
-          _MenuItem(
-            icon: Icons.insights_rounded,
-            title: 'Strategi Rapat',
+            title: 'Rapat Harian',
             iconColor: const Color(0xFF9333EA),
             bgColor: const Color(0xFFF3E8FF),
             onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalStrategiRapatScreen()));
+            },
+          ),
+          _MenuItem(
+            icon: Icons.calendar_month_rounded,
+            title: 'Rapat Bulanan',
+            iconColor: const Color(0xFF0891B2),
+            bgColor: const Color(0xFFCFFAFE),
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalEvaluasiRapatScreen()));
             },
           ),
         ],

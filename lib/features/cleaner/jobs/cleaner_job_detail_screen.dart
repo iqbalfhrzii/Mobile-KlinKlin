@@ -1335,7 +1335,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
           children: [
             _buildHeader(
               context,
-              pesanan['nomor_pesanan']?.toString() ?? pesanan['id']?.toString() ?? '-',
+              pelanggan['nama_pelanggan']?.toString() ?? 'Pelanggan',
             ),
             Expanded(
               child: _isLoading
@@ -2088,7 +2088,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, String orderId) {
+  Widget _buildHeader(BuildContext context, String customerName) {
     return GradientHeader(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       child: Row(
@@ -2111,15 +2111,17 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                       color: Colors.white,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    orderId,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white.withValues(alpha: 0.85),
+                  if (customerName.isNotEmpty && customerName != '-') ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      customerName,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ],

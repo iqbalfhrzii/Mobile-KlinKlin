@@ -5,7 +5,6 @@ import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/whatsapp_icon.dart';
-import '../../../core/data/mock_data.dart';
 import '../../../core/data/order_model.dart';
 import '../../../core/services/pdf_invoice_service.dart';
 import '../../../core/widgets/weekly_date_picker.dart';
@@ -92,32 +91,79 @@ class _OrderListScreenState extends State<OrderListScreen> {
     if (widget.initialStatusFilter != null) {
       _statusFilter = widget.initialStatusFilter!;
     }
+    // Tampilkan data cache langsung (0ms lag) jika ada
+    if (OrderService.cachedOrders.isNotEmpty) {
+      _orders = List.from(OrderService.cachedOrders);
+      _isLoading = false;
+    }
     _fetchData();
   }
 
-  Future<void> _fetchData() async {
-    setState(() {
-      _isLoading = true;
-      _error = '';
-    });
+  Future<void> _fetchData({DateTime? customStart, DateTime? customEnd}) async {
+    if (_orders.isEmpty) {
+      setState(() {
+        _isLoading = true;
+        _error = '';
+      });
+    }
     try {
-      // 1. Ambil data halaman pertama secara instan (<150ms) agar layar langsung muncul tanpa loading lama
-      final initialOrders = await _orderService.fetchOrders(fetchAllPages: false, perPage: 30);
+      final start = customStart ?? _filterStart;
+      final end = customEnd ?? _filterEnd;
+
+      String? startStr;
+      String? endStr;
+
+      if (_periodFilter == 'hari_ini') {
+        final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+        startStr = todayStr;
+        endStr = todayStr;
+      } else if (_periodFilter == 'kemarin') {
+        final yestStr = DateFormat('yyyy-MM-dd').format(
+          DateTime.now().subtract(const Duration(days: 1)),
+        );
+        startStr = yestStr;
+        endStr = yestStr;
+      } else if (_periodFilter == 'besok') {
+        final tomStr = DateFormat('yyyy-MM-dd').format(
+          DateTime.now().add(const Duration(days: 1)),
+        );
+        startStr = tomStr;
+        endStr = tomStr;
+      } else if (_periodFilter == 'bulan_ini') {
+        final now = DateTime.now();
+        startStr = DateFormat('yyyy-MM-01').format(now);
+        endStr = DateFormat('yyyy-MM-dd').format(
+          DateTime(now.year, now.month + 1, 0),
+        );
+      } else if (_periodFilter == 'custom' && _customRange != null) {
+        startStr = DateFormat('yyyy-MM-dd').format(_customRange!.start);
+        endStr = DateFormat('yyyy-MM-dd').format(_customRange!.end);
+      } else if (_periodFilter == 'weekly_date' && (start != null || end != null)) {
+        if (start != null) startStr = DateFormat('yyyy-MM-dd').format(start);
+        if (end != null) endStr = DateFormat('yyyy-MM-dd').format(end);
+      } else if (_periodFilter != 'semua') {
+        // Default ke rentang bulan aktif agar loading instan
+        final now = DateTime.now();
+        startStr = DateFormat('yyyy-MM-01').format(now);
+        endStr = DateFormat('yyyy-MM-dd').format(
+          DateTime(now.year, now.month + 1, 0),
+        );
+      }
+
+      // Ambil data spesifik tanggal/bulan secara instan (<100ms)
+      final initialOrders = await _orderService.fetchOrders(
+        fetchAllPages: false,
+        perPage: 50,
+        statusPesanan: _statusFilter != 'Semua' ? _statusFilter : null,
+        startDate: startStr,
+        endDate: endStr,
+      );
       if (mounted) {
         setState(() {
           _orders = initialOrders;
           _isLoading = false;
         });
       }
-
-      // 2. Ambil riwayat lengkap di background tanpa memblokir UI
-      _orderService.fetchOrders(fetchAllPages: true, perPage: 50).then((allOrders) {
-        if (mounted && allOrders.length > initialOrders.length) {
-          setState(() {
-            _orders = allOrders;
-          });
-        }
-      }).catchError((_) {});
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -273,6 +319,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                           _filterEnd = end;
                           if (start != null) _periodFilter = 'weekly_date';
                         });
+                        _fetchData(customStart: start, customEnd: end);
                       },
                       trailingWidget: _buildFilterButton(),
                     ),
@@ -341,6 +388,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                                       _filterStart = null;
                                       _filterEnd = null;
                                     });
+                                    _fetchData();
                                   },
                                   icon: const Icon(Icons.calendar_today_rounded, size: 16),
                                   label: const Text('Tampilkan Semua Tanggal'),
@@ -471,6 +519,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
         _customRange = picked;
         _periodFilter = 'custom';
       });
+      _fetchData();
     }
   }
 
@@ -884,7 +933,10 @@ class _OrderListScreenState extends State<OrderListScreen> {
                         Expanded(
                           flex: 2,
                           child: ElevatedButton(
-                            onPressed: () => Navigator.pop(ctx),
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              _fetchData();
+                            },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
                               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1073,9 +1125,9 @@ class _OrderCard extends StatelessWidget {
         : (o.services.isNotEmpty
             ? o.services.fold(0, (sum, s) => sum + s.subtotal)
             : o.total);
-    final double diskonPersen = o.pembayaran?.diskonPersen ?? 0.0;
+    final double diskonPersen = o.diskonPersen;
     final int diskonValue = (baseSubtotal * (diskonPersen / 100)).round();
-    final int totalSetelahDiskon = baseSubtotal - diskonValue;
+    final int totalSetelahDiskon = (baseSubtotal - diskonValue) > 0 ? (baseSubtotal - diskonValue) : 0;
 
     final int ppnPersen = o.ppn ?? (o.pembayaran?.ppn ?? (o.isWajibPpn ? 11 : 0));
     final int ppnValue = (o.pembayaran != null || o.ppn != null || o.isWajibPpn)
@@ -1373,7 +1425,6 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
   @override
   Widget build(BuildContext context) {
     final o = order;
-    final isCancelled = o.status == OrderStatus.cancelled;
 
     // Calculate total price accurately
     final int baseSubtotal = (o.subtotal > 0)
@@ -1381,9 +1432,9 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
         : (o.services.isNotEmpty
             ? o.services.fold(0, (sum, s) => sum + s.subtotal)
             : o.total);
-    final double diskonPersen = o.pembayaran?.diskonPersen ?? 0.0;
+    final double diskonPersen = o.diskonPersen;
     final int diskonValue = (baseSubtotal * (diskonPersen / 100)).round();
-    final int totalSetelahDiskon = baseSubtotal - diskonValue;
+    final int totalSetelahDiskon = (baseSubtotal - diskonValue) > 0 ? (baseSubtotal - diskonValue) : 0;
     final int ppnPersen = o.ppn ?? o.pembayaran?.ppn ?? 0;
     final int ppnValue = (o.pembayaran != null || o.ppn != null)
         ? (totalSetelahDiskon * (ppnPersen / 100)).round()
@@ -1391,7 +1442,6 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
     final int totalAkhir = totalSetelahDiskon + ppnValue;
 
     String dateStr = _formatDisplayDate(o.schedule);
-    final bool isDone = o.status == OrderStatus.completed;
 
     return GestureDetector(
       onTap: onTap,
@@ -1442,19 +1492,6 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (o.nomorPesanan.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 2),
-                            child: Text(
-                              o.nomorPesanan,
-                              style: GoogleFonts.inter(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ),
                         Text(
                           o.customer.name,
                           style: GoogleFonts.inter(

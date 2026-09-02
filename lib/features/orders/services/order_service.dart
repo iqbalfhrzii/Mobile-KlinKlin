@@ -7,12 +7,19 @@ import 'dart:io';
 class OrderService {
   final Dio _dio = ApiClient.instance;
 
+  static List<OrderModel> _cachedOrders = [];
+  static DateTime? _lastFetchTime;
+
+  static List<OrderModel> get cachedOrders => List.unmodifiable(_cachedOrders);
+
   /// Get all orders
   Future<List<OrderModel>> fetchOrders({
     String? statusPesanan,
     int? cabangId,
     String? chatDari,
     String? tipeCustomer,
+    String? startDate,
+    String? endDate,
     bool fetchAllPages = false,
     int perPage = 50,
   }) async {
@@ -33,6 +40,8 @@ class OrderService {
       if (cabangId != null) queryParams['cabang_id'] = cabangId;
       if (chatDari != null) queryParams['chat_dari'] = chatDari;
       if (tipeCustomer != null) queryParams['tipe_customer'] = tipeCustomer;
+      if (startDate != null && startDate.isNotEmpty) queryParams['start_date'] = startDate;
+      if (endDate != null && endDate.isNotEmpty) queryParams['end_date'] = endDate;
 
       final List<dynamic> allRawOrders = [];
       int lastPage = 1;
@@ -51,7 +60,7 @@ class OrderService {
         lastPage = responseData['last_page'] is int ? responseData['last_page'] : 1;
 
         if (fetchAllPages && lastPage > 1) {
-          final targetLastPage = lastPage > 5 ? 5 : lastPage;
+          final targetLastPage = lastPage > 3 ? 3 : lastPage;
           final futures = <Future<Response>>[];
           for (int p = 2; p <= targetLastPage; p++) {
             final pParams = Map<String, dynamic>.from(queryParams);
@@ -82,6 +91,11 @@ class OrderService {
             // Ignore single malformed historical order
           }
         }
+      }
+
+      if (orders.isNotEmpty && statusPesanan == null && chatDari == null && tipeCustomer == null) {
+        _cachedOrders = orders;
+        _lastFetchTime = DateTime.now();
       }
 
       return orders;

@@ -112,30 +112,18 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
   String _formatNotificationText(String rawText, NotificationItem item) {
     String text = rawText;
 
-    // 1. Cek nomor_pesanan eksplisit dari payload backend
-    final explicitNomor = item.data['nomor_pesanan']?.toString().trim();
-    final pesananId = item.data['pesanan_id']?.toString().trim();
+    // Bersihkan nomor order dalam kurung, contoh: (MLG-0209-001689)
+    text = text.replaceAll(RegExp(r'\s*\([A-Za-z0-9]+-\d+-\d+\)'), '');
+    
+    // Bersihkan nomor order mandiri, contoh: MLG-0209-001678
+    text = text.replaceAll(RegExp(r'\b[A-Za-z0-9]{2,5}-\d{4}-\d{4,8}\b'), '');
+    
+    // Bersihkan format pesanan #123
+    text = text.replaceAll(RegExp(r'pesanan\s*#\d+\b', caseSensitive: false), 'pesanan');
 
-    if (explicitNomor != null && explicitNomor.isNotEmpty && !explicitNomor.startsWith('#')) {
-      return text.replaceAll(RegExp(r'pesanan\s*#?\d+', caseSensitive: false), 'pesanan $explicitNomor');
-    }
-
-    // 2. Cek apakah ada di cache berdasarkan pesanan_id
-    if (pesananId != null && _orderNumberCache.containsKey(pesananId)) {
-      final cached = _orderNumberCache[pesananId]!;
-      return text.replaceAll(RegExp(r'pesanan\s*#?\d+', caseSensitive: false), 'pesanan $cached');
-    }
-
-    // 3. Cek regex pesanan #123
-    final idRegex = RegExp(r'pesanan\s*#(\d+)', caseSensitive: false);
-    final match = idRegex.firstMatch(text);
-    if (match != null) {
-      final orderId = match.group(1)!;
-      if (_orderNumberCache.containsKey(orderId)) {
-        final cached = _orderNumberCache[orderId]!;
-        return text.replaceAll(match.group(0)!, 'pesanan $cached');
-      }
-    }
+    // Rapikan kurung kosong atau spasi berlebih
+    text = text.replaceAll('()', '');
+    text = text.replaceAll(RegExp(r'\s{2,}'), ' ').trim();
 
     return text;
   }

@@ -62,12 +62,11 @@ class _GajiPokokFormSheetState extends State<GajiPokokFormSheet> {
 
   final List<String> _statusOptions = [
     'FREELANCE',
+    'VENDOR',
+    'TRAINING',
     'SEMI',
     'TETAP',
     'TETAP KOOR',
-    'VENDOR',
-    'KONTRAK',
-    'TRAINING',
   ];
 
   @override

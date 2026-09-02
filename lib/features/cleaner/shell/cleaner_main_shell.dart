@@ -8,6 +8,7 @@ import '../dashboard/cleaner_dashboard_screen.dart';
 import '../history/cleaner_history_screen.dart';
 import '../jobs/cleaner_job_list_screen.dart';
 import '../../attendance/screens/attendance_screen.dart';
+import '../../../core/utils/permission_helper.dart';
 
 class CleanerMainShell extends StatefulWidget {
   const CleanerMainShell({
@@ -46,6 +47,7 @@ class _CleanerMainShellState extends State<CleanerMainShell> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    PermissionHelper.requestInitialPermissions();
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
   }
 

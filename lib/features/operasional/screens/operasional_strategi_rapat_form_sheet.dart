@@ -262,7 +262,7 @@ class _OperasionalStrategiRapatFormSheetState extends State<OperasionalStrategiR
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    widget.initialData != null ? 'Edit Strategi Rapat' : 'Tambah Strategi Rapat',
+                    widget.initialData != null ? 'Edit Rapat Harian' : 'Tambah Rapat Harian',
                     style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.textDark),
                   ),
                 ),

@@ -73,10 +73,12 @@ class _KaryawanFormSheetState extends State<KaryawanFormSheet> {
 
   // Status Pegawai strictly matching web + koor
   static const List<Map<String, String>> _statusPegawaiOptions = [
+    {'value': 'Freelance', 'label': 'Freelance'},
+    {'value': 'Vendor', 'label': 'Vendor'},
+    {'value': 'Training', 'label': 'Training'},
+    {'value': 'Semi', 'label': 'Semi'},
     {'value': 'Tetap', 'label': 'Tetap'},
     {'value': 'Tetap Koor', 'label': 'Tetap Koor (Cleaner Koor)'},
-    {'value': 'Kontrak', 'label': 'Kontrak'},
-    {'value': 'Training', 'label': 'Training'},
   ];
 
   @override

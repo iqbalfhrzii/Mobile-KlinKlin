@@ -59,6 +59,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       _draft.services = List.from(o.services);
       _draft.cleaners = List.from(o.cleaners);
       _draft.applyPpn = (o.ppn ?? o.pembayaran?.ppn ?? 0) > 0;
+      _draft.applyPph = (o.pph ?? o.pembayaran?.pph ?? 0) > 0;
+      _draft.diskonPersen = (o.discount ?? (o.pembayaran?.diskonPersen?.toInt() ?? 0)).toDouble();
 
       if (o.services.isNotEmpty) {
         _draft.tanggalPengerjaan = o.services.first.tanggalPengerjaan;
@@ -2838,12 +2840,21 @@ class _Step4Summary extends StatefulWidget {
 }
 
 class _Step4SummaryState extends State<_Step4Summary> {
+  late final TextEditingController _diskonCustomCtrl;
+  bool _isCustomDiskon = false;
+
   @override
   void initState() {
     super.initState();
     if (widget.isBranchWajibPpn && !widget.draft.hasUserToggledPpn) {
       widget.draft.applyPpn = true;
     }
+    final p = widget.draft.diskonPersen;
+    _diskonCustomCtrl = TextEditingController(
+      text: p > 0 ? (p == p.toInt() ? p.toInt().toString() : p.toString()) : '',
+    );
+    final standardPresets = [0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 50.0];
+    _isCustomDiskon = p > 0 && !standardPresets.contains(p);
   }
 
   @override
@@ -2855,11 +2866,22 @@ class _Step4SummaryState extends State<_Step4Summary> {
   }
 
   @override
+  void dispose() {
+    _diskonCustomCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final int subtotal = widget.draft.total;
-    final int ppn = widget.draft.applyPpn ? (subtotal * 0.11).round() : 0;
-    final int pph = widget.draft.applyPph ? (subtotal * 0.02).round() : 0;
-    final int totalAkhir = subtotal + ppn - pph;
+    final double diskonPersen = widget.draft.diskonPersen;
+    final int diskonValue = (diskonPersen > 0)
+        ? ((subtotal * diskonPersen) / 100).round()
+        : 0;
+    final int totalSetelahDiskon = (subtotal - diskonValue) > 0 ? (subtotal - diskonValue) : 0;
+    final int ppn = widget.draft.applyPpn ? (totalSetelahDiskon * 0.11).round() : 0;
+    final int pph = widget.draft.applyPph ? (totalSetelahDiskon * 0.02).round() : 0;
+    final int totalAkhir = totalSetelahDiskon + ppn - pph;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -3050,13 +3072,14 @@ class _Step4SummaryState extends State<_Step4Summary> {
             const SizedBox(height: 12),
           ],
 
-          // Card 4: Rincian Biaya
+          // Card 4: Rincian Biaya, Diskon & Pajak
           _SummaryCard(
-            title: 'RINCIAN BIAYA & PAJAK',
+            title: 'RINCIAN BIAYA & DISKON',
             icon: Icons.receipt_rounded,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Subtotal
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -3077,7 +3100,183 @@ class _Step4SummaryState extends State<_Step4Summary> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 14),
+
+                // Diskon Selector
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.local_offer_outlined,
+                          size: 16,
+                          color: Color(0xFF059669),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Diskon Pesanan',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (diskonValue > 0)
+                      Text(
+                        '- Rp ${CurrencyInputFormatter.format(diskonValue)} (${diskonPersen == diskonPersen.toInt() ? diskonPersen.toInt() : diskonPersen}%)',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF059669),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Quick Diskon Chips
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    ...[0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 50.0].map((val) {
+                      final bool isSelected = !_isCustomDiskon && widget.draft.diskonPersen == val;
+                      return InkWell(
+                        onTap: () {
+                          setState(() {
+                            _isCustomDiskon = false;
+                            widget.draft.diskonPersen = val;
+                            _diskonCustomCtrl.text = val > 0 ? val.toInt().toString() : '';
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFF059669) : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isSelected ? const Color(0xFF059669) : const Color(0xFFCBD5E1),
+                            ),
+                          ),
+                          child: Text(
+                            val == 0.0 ? 'Tanpa Diskon' : '${val.toInt()}%',
+                            style: GoogleFonts.inter(
+                              fontSize: 11.5,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                              color: isSelected ? Colors.white : const Color(0xFF334155),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          _isCustomDiskon = true;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: _isCustomDiskon ? const Color(0xFF059669) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: _isCustomDiskon ? const Color(0xFF059669) : const Color(0xFFCBD5E1),
+                          ),
+                        ),
+                        child: Text(
+                          'Custom %',
+                          style: GoogleFonts.inter(
+                            fontSize: 11.5,
+                            fontWeight: _isCustomDiskon ? FontWeight.bold : FontWeight.w600,
+                            color: _isCustomDiskon ? Colors.white : const Color(0xFF334155),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Custom Discount Input Field
+                if (_isCustomDiskon) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 38,
+                          child: TextField(
+                            controller: _diskonCustomCtrl,
+                            keyboardType: TextInputType.number,
+                            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                            decoration: InputDecoration(
+                              hintText: 'Tulis persentase diskon (1 - 100)...',
+                              hintStyle: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+                              prefixIcon: const Icon(Icons.percent_rounded, size: 16, color: Color(0xFF059669)),
+                              suffixText: '%',
+                              suffixStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF059669)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              filled: true,
+                              fillColor: const Color(0xFFF8FAFC),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: Color(0xFF059669), width: 1.5),
+                              ),
+                            ),
+                            onChanged: (val) {
+                              final parsed = double.tryParse(val.trim()) ?? 0.0;
+                              final clamped = parsed.clamp(0.0, 100.0);
+                              setState(() {
+                                widget.draft.diskonPersen = clamped;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+                if (diskonValue > 0) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Subtotal Setelah Diskon',
+                        style: GoogleFonts.inter(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      Text(
+                        'Rp ${CurrencyInputFormatter.format(totalSetelahDiskon)}',
+                        style: GoogleFonts.inter(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Divider(color: AppColors.border, height: 1),
+                ),
+
+                // PPN 11%
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -3089,14 +3288,7 @@ class _Step4SummaryState extends State<_Step4Summary> {
                             height: 22,
                             child: Checkbox(
                               value: widget.draft.applyPpn,
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setState(() {
-                                    widget.draft.hasUserToggledPpn = true;
-                                    widget.draft.applyPpn = val;
-                                  });
-                                }
-                              },
+                              onChanged: null, // Terkunci sesuai wajib PPN cabang
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(4),
                               ),
@@ -3121,26 +3313,38 @@ class _Step4SummaryState extends State<_Step4Summary> {
                                         color: widget.draft.applyPpn ? AppColors.textDark : AppColors.textMuted,
                                       ),
                                     ),
-                                    if (widget.isBranchWajibPpn)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFDBEAFE),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          'Default Cabang',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w600,
-                                            color: const Color(0xFF1E40AF),
-                                          ),
-                                        ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                      decoration: BoxDecoration(
+                                        color: widget.isBranchWajibPpn ? const Color(0xFFDBEAFE) : const Color(0xFFF1F5F9),
+                                        borderRadius: BorderRadius.circular(4),
                                       ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.lock_rounded, 
+                                            size: 9.5, 
+                                            color: widget.isBranchWajibPpn ? const Color(0xFF1E40AF) : const Color(0xFF64748B),
+                                          ),
+                                          const SizedBox(width: 3),
+                                          Text(
+                                            widget.isBranchWajibPpn ? 'Terkunci (Wajib PPN)' : 'Terkunci (Tanpa PPN)',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w600,
+                                              color: widget.isBranchWajibPpn ? const Color(0xFF1E40AF) : const Color(0xFF64748B),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ],
                                 ),
                                 Text(
-                                  widget.draft.applyPpn ? 'Dikenakan PPN 11%' : 'Tanpa PPN',
+                                  widget.draft.applyPpn 
+                                      ? 'Dikenakan PPN 11% (Dapat diatur saat pembayaran)' 
+                                      : 'Tanpa PPN (Dapat diatur saat pembayaran)',
                                   style: GoogleFonts.inter(
                                     fontSize: 10,
                                     color: widget.draft.applyPpn ? const Color(0xFF2563EB) : AppColors.textMuted,
@@ -3166,6 +3370,8 @@ class _Step4SummaryState extends State<_Step4Summary> {
                   ],
                 ),
                 const SizedBox(height: 6),
+
+                // PPh 23 (2%)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [

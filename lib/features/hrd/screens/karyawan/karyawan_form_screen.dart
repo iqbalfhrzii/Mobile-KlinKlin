@@ -52,7 +52,7 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
       
       if (widget.karyawan!.statusKaryawan != null && widget.karyawan!.statusKaryawan!.isNotEmpty) {
         String statusKar = widget.karyawan!.statusKaryawan!;
-        final validStatuses = ['Tetap', 'Tetap Koor', 'Kontrak', 'Training'];
+        final validStatuses = ['Freelance', 'Vendor', 'Training', 'Semi', 'Tetap', 'Tetap Koor'];
         final matched = validStatuses.firstWhere(
           (s) => s.toLowerCase() == statusKar.toLowerCase() || (statusKar.toLowerCase().contains('koor') && s == 'Tetap Koor'),
           orElse: () => 'Tetap',
@@ -271,10 +271,12 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                             ),
                             items: const [
+                              DropdownMenuItem(value: 'Freelance', child: Text('Freelance')),
+                              DropdownMenuItem(value: 'Vendor', child: Text('Vendor')),
+                              DropdownMenuItem(value: 'Training', child: Text('Training')),
+                              DropdownMenuItem(value: 'Semi', child: Text('Semi')),
                               DropdownMenuItem(value: 'Tetap', child: Text('Tetap')),
                               DropdownMenuItem(value: 'Tetap Koor', child: Text('Tetap Koor (Cleaner Koor)')),
-                              DropdownMenuItem(value: 'Kontrak', child: Text('Kontrak')),
-                              DropdownMenuItem(value: 'Training', child: Text('Training')),
                             ],
                             onChanged: (val) {
                               if (val != null) setState(() => _statusKaryawan = val);

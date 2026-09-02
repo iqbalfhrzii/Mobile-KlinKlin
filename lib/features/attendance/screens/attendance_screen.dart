@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/gradient_header.dart';
 import '../../../core/utils/snackbar_utils.dart';
+import '../../../core/utils/permission_helper.dart';
 import '../../attendance/services/attendance_service.dart';
 import 'camera_screen.dart';
 import '../services/mock_location_service.dart';
@@ -371,17 +372,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Future<bool> _checkPermissions() async {
-    final cameraStatus = await Permission.camera.request();
-    if (!cameraStatus.isGranted) {
-      _showError('Izin kamera ditolak. Silakan izinkan melalui pengaturan.');
-      return false;
-    }
+    final cameraGranted = await PermissionHelper.requestCameraPermission(context);
+    if (!cameraGranted) return false;
 
-    final locationStatus = await Permission.location.request();
-    if (!locationStatus.isGranted) {
-      _showError('Izin lokasi ditolak. Silakan izinkan melalui pengaturan.');
-      return false;
-    }
+    final locationGranted = await PermissionHelper.requestLocationPermission(context);
+    if (!locationGranted) return false;
 
     if (!await Geolocator.isLocationServiceEnabled()) {
       _showError('GPS mati. Silakan nyalakan GPS Anda.');

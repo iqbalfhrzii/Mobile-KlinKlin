@@ -17,20 +17,20 @@ class GajiPokokFormScreen extends StatefulWidget {
 class _GajiPokokFormScreenState extends State<GajiPokokFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final HrdService _hrdService = HrdService();
-  
+
   late TextEditingController _gajiPokokCtrl;
   late TextEditingController _bonusBulananCtrl;
   late TextEditingController _tunjanganKosCtrl;
   late TextEditingController _tunjanganKerjaCtrl;
   late TextEditingController _gajiPokokHarianCtrl;
-  
+
   int? _selectedCabang;
   int? _selectedJabatan;
   String _status = 'TETAP';
-  
+
   List<CabangModel> _cabangs = [];
   List<JabatanModel> _jabatans = [];
-  
+
   bool _isLoading = false;
   bool _isLoadingRef = true;
   bool _isBpjsAktif = false;
@@ -38,22 +38,42 @@ class _GajiPokokFormScreenState extends State<GajiPokokFormScreen> {
   @override
   void initState() {
     super.initState();
-    _gajiPokokCtrl = TextEditingController(text: widget.gajiPokok?.gajiPokok.toString() ?? '');
-    _bonusBulananCtrl = TextEditingController(text: widget.gajiPokok?.bonusBulanan.toString() ?? '');
-    _tunjanganKosCtrl = TextEditingController(text: widget.gajiPokok?.tunjanganKos.toString() ?? '');
-    _tunjanganKerjaCtrl = TextEditingController(text: widget.gajiPokok?.tunjanganKerja.toString() ?? '');
-    _gajiPokokHarianCtrl = TextEditingController(text: widget.gajiPokok?.gajiPokokHarian.toString() ?? '');
-    
+    _gajiPokokCtrl = TextEditingController(
+      text: widget.gajiPokok?.gajiPokok.toString() ?? '',
+    );
+    _bonusBulananCtrl = TextEditingController(
+      text: widget.gajiPokok?.bonusBulanan.toString() ?? '',
+    );
+    _tunjanganKosCtrl = TextEditingController(
+      text: widget.gajiPokok?.tunjanganKos.toString() ?? '',
+    );
+    _tunjanganKerjaCtrl = TextEditingController(
+      text: widget.gajiPokok?.tunjanganKerja.toString() ?? '',
+    );
+    _gajiPokokHarianCtrl = TextEditingController(
+      text: widget.gajiPokok?.gajiPokokHarian.toString() ?? '',
+    );
+
     _isBpjsAktif = (widget.gajiPokok?.premiBpjs ?? 0) > 0;
-    
+
     _selectedCabang = widget.gajiPokok?.cabangId;
     _selectedJabatan = widget.gajiPokok?.jabatanId;
-    
+
     if (widget.gajiPokok != null) {
       String statusVal = widget.gajiPokok!.statusKaryawan.toUpperCase();
-      _status = ['TETAP', 'KONTRAK', 'TRAINING', 'FREELANCE', 'TETAP KOOR'].contains(statusVal) ? statusVal : 'TETAP';
+      _status =
+          [
+            'FREELANCE',
+            'VENDOR',
+            'TRAINING',
+            'SEMI',
+            'TETAP',
+            'TETAP KOOR',
+          ].contains(statusVal)
+          ? statusVal
+          : 'TETAP';
     }
-    
+
     _fetchRefs();
   }
 
@@ -61,7 +81,7 @@ class _GajiPokokFormScreenState extends State<GajiPokokFormScreen> {
     try {
       final cabangs = await _hrdService.fetchCabang();
       final jabatans = await _hrdService.fetchJabatan();
-      
+
       if (mounted) {
         setState(() {
           _cabangs = cabangs;
@@ -72,7 +92,9 @@ class _GajiPokokFormScreenState extends State<GajiPokokFormScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoadingRef = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memuat referensi: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal memuat referensi: $e')));
       }
     }
   }
@@ -90,21 +112,45 @@ class _GajiPokokFormScreenState extends State<GajiPokokFormScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCabang == null || _selectedJabatan == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pilih Cabang dan Jabatan terlebih dahulu')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pilih Cabang dan Jabatan terlebih dahulu'),
+        ),
+      );
       return;
     }
-    
+
     setState(() => _isLoading = true);
     try {
       final data = {
         'cabang_id': _selectedCabang,
         'jabatan_id': _selectedJabatan,
         'status_karyawan': _status,
-        'gaji_pokok': int.tryParse(_gajiPokokCtrl.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0,
-        'bonus_bulanan': int.tryParse(_bonusBulananCtrl.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0,
-        'tunjangan_kos': int.tryParse(_tunjanganKosCtrl.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0,
-        'tunjangan_kerja': int.tryParse(_tunjanganKerjaCtrl.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0,
-        'gaji_pokok_harian': int.tryParse(_gajiPokokHarianCtrl.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0,
+        'gaji_pokok':
+            int.tryParse(
+              _gajiPokokCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
+            ) ??
+            0,
+        'bonus_bulanan':
+            int.tryParse(
+              _bonusBulananCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
+            ) ??
+            0,
+        'tunjangan_kos':
+            int.tryParse(
+              _tunjanganKosCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
+            ) ??
+            0,
+        'tunjangan_kerja':
+            int.tryParse(
+              _tunjanganKerjaCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
+            ) ??
+            0,
+        'gaji_pokok_harian':
+            int.tryParse(
+              _gajiPokokHarianCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
+            ) ??
+            0,
         'premi_bpjs': _isBpjsAktif ? 35000 : 0,
       };
 
@@ -113,7 +159,7 @@ class _GajiPokokFormScreenState extends State<GajiPokokFormScreen> {
       } else {
         await _hrdService.updateGajiPokok(widget.gajiPokok!.id, data);
       }
-      
+
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
@@ -131,7 +177,9 @@ class _GajiPokokFormScreenState extends State<GajiPokokFormScreen> {
             }
           }
         }
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errMsg)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errMsg)));
         setState(() => _isLoading = false);
       }
     }
@@ -145,7 +193,14 @@ class _GajiPokokFormScreenState extends State<GajiPokokFormScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textMuted,
+          ),
+        ),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
@@ -155,8 +210,14 @@ class _GajiPokokFormScreenState extends State<GajiPokokFormScreen> {
             prefixText: 'Rp ',
             filled: true,
             fillColor: AppColors.surface,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
           ),
         ),
       ],
@@ -175,12 +236,22 @@ class _GajiPokokFormScreenState extends State<GajiPokokFormScreen> {
               children: [
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
-                  child: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+                  child: const Icon(
+                    Icons.arrow_back_ios,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Text(
-                  widget.gajiPokok == null ? 'Tambah Gaji Pokok' : 'Edit Gaji Pokok',
-                  style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                  widget.gajiPokok == null
+                      ? 'Tambah Gaji Pokok'
+                      : 'Edit Gaji Pokok',
+                  style: GoogleFonts.inter(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ],
             ),
@@ -195,80 +266,179 @@ class _GajiPokokFormScreenState extends State<GajiPokokFormScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Cabang *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
+                          Text(
+                            'Cabang *',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<int>(
                             value: _selectedCabang,
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: AppColors.surface,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
-                            items: _cabangs.map((c) => DropdownMenuItem(value: c.id, child: Text(c.namaCabang))).toList(),
-                            onChanged: (val) => setState(() => _selectedCabang = val),
-                            validator: (val) => val == null ? 'Wajib pilih' : null,
+                            items: _cabangs
+                                .map(
+                                  (c) => DropdownMenuItem(
+                                    value: c.id,
+                                    child: Text(c.namaCabang),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (val) =>
+                                setState(() => _selectedCabang = val),
+                            validator: (val) =>
+                                val == null ? 'Wajib pilih' : null,
                           ),
                           const SizedBox(height: 16),
-                          
-                          Text('Jabatan *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
+
+                          Text(
+                            'Jabatan *',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<int>(
                             value: _selectedJabatan,
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: AppColors.surface,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
-                            items: _jabatans.map((j) => DropdownMenuItem(value: j.id, child: Text(j.namaJabatan))).toList(),
-                            onChanged: (val) => setState(() => _selectedJabatan = val),
-                            validator: (val) => val == null ? 'Wajib pilih' : null,
+                            items: _jabatans
+                                .map(
+                                  (j) => DropdownMenuItem(
+                                    value: j.id,
+                                    child: Text(j.namaJabatan),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (val) =>
+                                setState(() => _selectedJabatan = val),
+                            validator: (val) =>
+                                val == null ? 'Wajib pilih' : null,
                           ),
                           const SizedBox(height: 16),
-                          
-                          Text('Status Karyawan *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
+
+                          Text(
+                            'Status Karyawan *',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<String>(
                             value: _status,
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: AppColors.surface,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
                             items: const [
-                              DropdownMenuItem(value: 'TETAP', child: Text('TETAP')),
-                              DropdownMenuItem(value: 'KONTRAK', child: Text('KONTRAK')),
-                              DropdownMenuItem(value: 'TRAINING', child: Text('TRAINING')),
-                              DropdownMenuItem(value: 'FREELANCE', child: Text('FREELANCE')),
-                              DropdownMenuItem(value: 'TETAP KOOR', child: Text('TETAP KOOR')),
+                              DropdownMenuItem(
+                                value: 'FREELANCE',
+                                child: Text('FREELANCE'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'VENDOR',
+                                child: Text('VENDOR'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'TRAINING',
+                                child: Text('TRAINING'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'SEMI',
+                                child: Text('SEMI'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'TETAP',
+                                child: Text('TETAP'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'TETAP KOOR',
+                                child: Text('TETAP KOOR'),
+                              ),
                             ],
                             onChanged: (val) {
                               if (val != null) setState(() => _status = val);
                             },
                           ),
                           const SizedBox(height: 16),
-                          
-                          _buildNumericField(label: 'Gaji Pokok', controller: _gajiPokokCtrl),
+
+                          _buildNumericField(
+                            label: 'Gaji Pokok',
+                            controller: _gajiPokokCtrl,
+                          ),
                           const SizedBox(height: 16),
-                          _buildNumericField(label: 'Bonus Bulanan', controller: _bonusBulananCtrl),
+                          _buildNumericField(
+                            label: 'Bonus Bulanan',
+                            controller: _bonusBulananCtrl,
+                          ),
                           const SizedBox(height: 16),
-                          _buildNumericField(label: 'Tunjangan Kos', controller: _tunjanganKosCtrl),
+                          _buildNumericField(
+                            label: 'Tunjangan Kos',
+                            controller: _tunjanganKosCtrl,
+                          ),
                           const SizedBox(height: 16),
-                          _buildNumericField(label: 'Tunjangan Kerja', controller: _tunjanganKerjaCtrl),
+                          _buildNumericField(
+                            label: 'Tunjangan Kerja',
+                            controller: _tunjanganKerjaCtrl,
+                          ),
                           const SizedBox(height: 16),
-                          _buildNumericField(label: 'Gaji Pokok Harian', controller: _gajiPokokHarianCtrl),
+                          _buildNumericField(
+                            label: 'Gaji Pokok Harian',
+                            controller: _gajiPokokHarianCtrl,
+                          ),
                           const SizedBox(height: 24),
-                          
-                          Text('Premi BPJS Aktif', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+
+                          Text(
+                            'Premi BPJS Aktif',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textDark,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           InkWell(
-                            onTap: () => setState(() => _isBpjsAktif = !_isBpjsAktif),
+                            onTap: () =>
+                                setState(() => _isBpjsAktif = !_isBpjsAktif),
                             borderRadius: BorderRadius.circular(12),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
                               decoration: BoxDecoration(
-                                color: _isBpjsAktif ? AppColors.primary.withValues(alpha: 0.05) : AppColors.surface,
+                                color: _isBpjsAktif
+                                    ? AppColors.primary.withValues(alpha: 0.05)
+                                    : AppColors.surface,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: _isBpjsAktif ? AppColors.primary : Colors.transparent),
+                                border: Border.all(
+                                  color: _isBpjsAktif
+                                      ? AppColors.primary
+                                      : Colors.transparent,
+                                ),
                               ),
                               child: Row(
                                 children: [
@@ -277,15 +447,23 @@ class _GajiPokokFormScreenState extends State<GajiPokokFormScreen> {
                                     height: 24,
                                     child: Checkbox(
                                       value: _isBpjsAktif,
-                                      onChanged: (val) => setState(() => _isBpjsAktif = val ?? false),
+                                      onChanged: (val) => setState(
+                                        () => _isBpjsAktif = val ?? false,
+                                      ),
                                       activeColor: AppColors.primary,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
                                   Text(
                                     '+ Rp 35.000',
-                                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textDark,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -298,12 +476,29 @@ class _GajiPokokFormScreenState extends State<GajiPokokFormScreen> {
                               onPressed: _isLoading ? null : _submit,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                               child: _isLoading
-                                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white))
-                                  : Text('Simpan', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(
+                                      'Simpan',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                             ),
                           ),
                         ],

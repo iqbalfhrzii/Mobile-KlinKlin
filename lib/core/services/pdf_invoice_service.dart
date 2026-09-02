@@ -58,17 +58,17 @@ class PdfInvoiceService {
 
     // Calculations
     final num subtotal = order.subtotal > 0 ? order.subtotal : order.total;
-    final num diskonPersen = order.pembayaran?.diskonPersen ?? 0.0;
-    final num diskonAmount = order.discount != null && order.discount! > 0
-        ? order.discount!
-        : (subtotal * (diskonPersen / 100)).round();
+    final num diskonPersen = order.diskonPersen;
+    final num diskonAmount = (subtotal * (diskonPersen / 100)).round();
 
     final num afterDiscount = (subtotal - diskonAmount) > 0 ? (subtotal - diskonAmount) : 0;
-    final num ppnPersen = order.pembayaran?.ppn ?? order.ppn ?? 0;
+    final num ppnPersen = order.pembayaran?.ppn ?? order.ppn ?? (order.isWajibPpn ? 11 : 0);
     final num ppnAmount = (afterDiscount * (ppnPersen / 100)).round();
+    final num pphPersen = order.pembayaran?.pph ?? order.pph ?? 0;
+    final num pphAmount = (afterDiscount * (pphPersen / 100)).round();
     final num totalAkhir = order.pembayaran?.total != null && order.pembayaran!.total! > 0
         ? order.pembayaran!.total!
-        : (afterDiscount + ppnAmount);
+        : (afterDiscount + ppnAmount - pphAmount);
 
     final terbilangText = _terbilang(totalAkhir.toInt());
 
@@ -504,18 +504,36 @@ class PdfInvoiceService {
                     child: pw.Column(
                       children: [
                         _buildTotalRow('Subtotal', formatRupiah(subtotal), lightBlueText),
-                        pw.SizedBox(height: 4),
-                        _buildTotalRow(
-                          'Diskon',
-                          diskonAmount > 0 ? '- ${formatRupiah(diskonAmount)}' : '- Rp 0',
-                          lightBlueText,
-                        ),
-                        pw.SizedBox(height: 4),
-                        _buildTotalRow(
-                          'PPn (${ppnPersen.toInt()}%)',
-                          formatRupiah(ppnAmount),
-                          lightBlueText,
-                        ),
+                        if (diskonAmount > 0) ...[
+                          pw.SizedBox(height: 4),
+                          _buildTotalRow(
+                            'Diskon (${diskonPersen == diskonPersen.toInt() ? diskonPersen.toInt() : diskonPersen}%)',
+                            '- ${formatRupiah(diskonAmount)}',
+                            lightBlueText,
+                          ),
+                          pw.SizedBox(height: 4),
+                          _buildTotalRow(
+                            'Setelah Diskon',
+                            formatRupiah(afterDiscount),
+                            lightBlueText,
+                          ),
+                        ],
+                        if (ppnAmount > 0) ...[
+                          pw.SizedBox(height: 4),
+                          _buildTotalRow(
+                            'PPN (${ppnPersen.toInt()}%)',
+                            '+ ${formatRupiah(ppnAmount)}',
+                            lightBlueText,
+                          ),
+                        ],
+                        if (pphAmount > 0) ...[
+                          pw.SizedBox(height: 4),
+                          _buildTotalRow(
+                            'PPh 23 (${pphPersen.toInt()}%)',
+                            '- ${formatRupiah(pphAmount)}',
+                            lightBlueText,
+                          ),
+                        ],
                         pw.SizedBox(height: 6),
                         pw.Container(
                           height: 1,

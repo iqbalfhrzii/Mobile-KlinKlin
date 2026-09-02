@@ -102,7 +102,7 @@ class _OperasionalEvaluasiRapatScreenState extends State<OperasionalEvaluasiRapa
           _lastPage = res['data']['last_page'] ?? 1;
         });
       } else {
-        setState(() => _error = res['message'] ?? 'Gagal memuat data evaluasi rapat');
+        setState(() => _error = res['message'] ?? 'Gagal memuat data rapat bulanan');
       }
     } catch (e) {
       setState(() => _error = e.toString().replaceAll('Exception: ', ''));
@@ -171,7 +171,7 @@ class _OperasionalEvaluasiRapatScreenState extends State<OperasionalEvaluasiRapa
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Filter Evaluasi Rapat',
+                        'Filter Rapat Bulanan',
                         style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
                       ),
                       IconButton(
@@ -373,7 +373,7 @@ class _OperasionalEvaluasiRapatScreenState extends State<OperasionalEvaluasiRapa
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Detail Evaluasi Rapat',
+                            'Detail Rapat Bulanan',
                             style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.textDark),
                           ),
                           const SizedBox(height: 2),
@@ -762,8 +762,8 @@ class _OperasionalEvaluasiRapatScreenState extends State<OperasionalEvaluasiRapa
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Hapus Evaluasi Rapat', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-        content: Text('Apakah Anda yakin ingin menghapus data evaluasi rapat ini?', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
+        title: Text('Hapus Rapat Bulanan', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        content: Text('Apakah Anda yakin ingin menghapus data rapat bulanan ini?', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -825,12 +825,12 @@ class _OperasionalEvaluasiRapatScreenState extends State<OperasionalEvaluasiRapa
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Evaluasi Rapat',
+                        'Rapat Bulanan',
                         style: GoogleFonts.inter(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Kelola data evaluasi dan notulen rapat operasional bulanan',
+                        'Kelola data rapat bulanan & tindak lanjut operasional',
                         style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.85)),
                       ),
                     ],
@@ -937,7 +937,7 @@ class _OperasionalEvaluasiRapatScreenState extends State<OperasionalEvaluasiRapa
           children: [
             Icon(Icons.event_busy_rounded, size: 54, color: Colors.grey.shade400),
             const SizedBox(height: 12),
-            Text('Tidak ada data evaluasi rapat', style: GoogleFonts.inter(fontSize: 14, color: AppColors.textMuted)),
+            Text('Tidak ada data rapat bulanan', style: GoogleFonts.inter(fontSize: 14, color: AppColors.textMuted)),
           ],
         ),
       );

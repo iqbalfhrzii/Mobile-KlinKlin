@@ -17,7 +17,7 @@ class PaymentService {
     required int totalTagihan,
     required int totalSetelahDiskon,
     required int totalAkhir,
-    required File buktiTransfer,
+    required dynamic buktiTransfer, // File or List<File>
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -25,9 +25,14 @@ class PaymentService {
 
       if (token == null) throw Exception('Sesi telah berakhir, silakan login kembali.');
 
-      String fileName = buktiTransfer.path.split('/').last;
+      final List<File> files = [];
+      if (buktiTransfer is List<File>) {
+        files.addAll(buktiTransfer);
+      } else if (buktiTransfer is File) {
+        files.add(buktiTransfer);
+      }
 
-      FormData formData = FormData.fromMap({
+      final Map<String, dynamic> formMap = {
         'metode_pembayaran': metodePembayaran,
         'diskon_persen': diskonPersen,
         'ppn': ppn,
@@ -36,12 +41,25 @@ class PaymentService {
         'total_tagihan': totalTagihan,
         'total_setelah_diskon': totalSetelahDiskon,
         'total_akhir': totalAkhir,
-        'bukti_transfer': await MultipartFile.fromFile(
-          buktiTransfer.path,
-          filename: fileName,
-        ),
-      });
+      };
 
+      if (files.isNotEmpty) {
+        final f1 = files[0];
+        formMap['bukti_transfer'] = await MultipartFile.fromFile(
+          f1.path,
+          filename: f1.path.split(r'/').last.split(r'\').last,
+        );
+      }
+
+      if (files.length > 1) {
+        final f2 = files[1];
+        formMap['bukti_transfer_2'] = await MultipartFile.fromFile(
+          f2.path,
+          filename: f2.path.split(r'/').last.split(r'\').last,
+        );
+      }
+
+      FormData formData = FormData.fromMap(formMap);
       await _dio.post('/pesanan/$orderId/pembayaran', data: formData);
     } catch (e) {
       if (e is DioException) {

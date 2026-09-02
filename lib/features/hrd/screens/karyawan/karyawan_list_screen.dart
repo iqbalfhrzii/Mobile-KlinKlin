@@ -328,8 +328,10 @@ class _KaryawanListScreenState extends State<KaryawanListScreen> {
                         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
                       ),
                       items: const [
+                        DropdownMenuItem(value: 'Freelance', child: Text('Freelance')),
+                        DropdownMenuItem(value: 'Vendor', child: Text('Vendor')),
                         DropdownMenuItem(value: 'Training', child: Text('Training (Masa Percobaan)')),
-                        DropdownMenuItem(value: 'Kontrak', child: Text('Kontrak')),
+                        DropdownMenuItem(value: 'Semi', child: Text('Semi')),
                         DropdownMenuItem(value: 'Tetap', child: Text('Tetap')),
                         DropdownMenuItem(value: 'Tetap Koor', child: Text('Tetap Koor (Cleaner Koor)')),
                       ],

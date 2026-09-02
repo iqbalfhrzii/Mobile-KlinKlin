@@ -4,6 +4,7 @@ import '../../shell/main_shell.dart';
 
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/fcm_service.dart';
+import '../../../core/utils/permission_helper.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../cleaner/shell/cleaner_main_shell.dart';
@@ -69,8 +70,9 @@ class _PinScreenState extends State<PinScreen> {
 
         debugPrint('DEBUG LOGIN isMarketing: $isMarketing, isCeo: $isCeo');
 
-        // Send FCM token to backend for all roles
+        // Send FCM token to backend for all roles & request initial permissions
         FcmService.instance.updateTokenToServer();
+        PermissionHelper.requestInitialPermissions();
 
         if (res['wajib_ganti_pin'] == true) {
           if (isCleaner) {

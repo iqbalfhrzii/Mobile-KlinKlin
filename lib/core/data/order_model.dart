@@ -531,6 +531,12 @@ class OrderModel {
 
   String get rawStatus => _orderStatusToString(status);
 
+  String get branch => customer.area;
+
+  double get diskonPersen => (discount ?? (pembayaran?.diskonPersen?.toInt() ?? 0)).toDouble();
+  int get diskonAmount => ((subtotal * diskonPersen) / 100).round();
+  int get totalSetelahDiskon => (subtotal - diskonAmount) > 0 ? (subtotal - diskonAmount) : 0;
+
   String get schedule {
     if (services.isEmpty) return "-";
     return '${services.first.tanggalPengerjaan} · ${services.first.waktuPengerjaan}';
@@ -564,7 +570,16 @@ class OrderModel {
 
   bool get hasUploadedTransferProof {
     final proof = paymentProof ?? pembayaran?.buktiTransfer;
-    return proof != null && proof.trim().isNotEmpty;
+    return proof != null && proof.trim().isNotEmpty && proof.trim() != 'null';
+  }
+
+  List<String> get proofUrls {
+    final proof = paymentProof ?? pembayaran?.buktiTransfer;
+    if (proof == null || proof.trim().isEmpty || proof.trim() == 'null') return [];
+    if (proof.contains(',')) {
+      return proof.split(',').map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
+    }
+    return [proof.trim()];
   }
 
   bool get isPaymentApproved {
@@ -729,7 +744,7 @@ class OrderModel {
         return wajibPpn ? 11 : null;
       }(),
       pph: orderJson['pembayaran']?['pph'] != null ? (double.tryParse(orderJson['pembayaran']['pph'].toString())?.toInt()) : (orderJson['pph'] != null ? (double.tryParse(orderJson['pph'].toString())?.toInt()) : (json['pembayaran']?['pph'] != null ? double.tryParse(json['pembayaran']['pph'].toString())?.toInt() : (json['pph'] != null ? double.tryParse(json['pph'].toString())?.toInt() : null))),
-      discount: orderJson['pembayaran']?['diskon_persen'] != null ? (double.tryParse(orderJson['pembayaran']['diskon_persen'].toString())?.toInt()) : (orderJson['diskon_persen'] != null ? (double.tryParse(orderJson['diskon_persen'].toString())?.toInt()) : (json['pembayaran']?['diskon_persen'] != null ? double.tryParse(json['pembayaran']['diskon_persen'].toString())?.toInt() : (json['diskon_persen'] != null ? double.tryParse(json['diskon_persen'].toString())?.toInt() : 0))),
+      discount: orderJson['diskon_persen'] != null ? (double.tryParse(orderJson['diskon_persen'].toString())?.toInt()) : (orderJson['pembayaran']?['diskon_persen'] != null ? (double.tryParse(orderJson['pembayaran']['diskon_persen'].toString())?.toInt()) : (json['diskon_persen'] != null ? double.tryParse(json['diskon_persen'].toString())?.toInt() : (json['pembayaran']?['diskon_persen'] != null ? double.tryParse(json['pembayaran']['diskon_persen'].toString())?.toInt() : 0))),
       hasPendingEditRequest: hasPendingEdit,
       alasanPengajuanEdit: alasanEdit,
       createdByName: createdByName,
@@ -766,6 +781,7 @@ class OrderDraft {
     this.applyPpn = false,
     this.hasUserToggledPpn = false,
     this.applyPph = false,
+    this.diskonPersen = 0.0,
     this.tanggalPengerjaan = '',
     this.waktuPengerjaan = '',
   }) : services = services ?? [],
@@ -781,10 +797,16 @@ class OrderDraft {
   bool applyPpn;
   bool hasUserToggledPpn;
   bool applyPph;
+  double diskonPersen;
   String tanggalPengerjaan;
   String waktuPengerjaan;
 
   int get total => services.fold(0, (sum, s) => sum + s.subtotal);
+  int get diskonAmount => ((total * diskonPersen) / 100).round();
+  int get totalSetelahDiskon => (total - diskonAmount) > 0 ? (total - diskonAmount) : 0;
+  int get ppnAmount => applyPpn ? (totalSetelahDiskon * 0.11).round() : 0;
+  int get pphAmount => applyPph ? (totalSetelahDiskon * 0.02).round() : 0;
+  int get totalAkhir => totalSetelahDiskon + ppnAmount - pphAmount;
 
   Map<String, dynamic> toJson() {
     final cleanId = customer?.id.replaceAll(RegExp(r'[^0-9]'), '');
@@ -802,6 +824,7 @@ class OrderDraft {
       if (paymentMethod != null) 'metode_pembayaran': paymentMethod,
       'ppn': applyPpn ? 11 : 0,
       'pph': applyPph ? 2 : 0,
+      'diskon_persen': diskonPersen,
     };
   }
 

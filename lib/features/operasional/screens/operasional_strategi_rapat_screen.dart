@@ -102,7 +102,7 @@ class _OperasionalStrategiRapatScreenState extends State<OperasionalStrategiRapa
           _lastPage = res['data']['last_page'] ?? 1;
         });
       } else {
-        setState(() => _error = res['message'] ?? 'Gagal memuat data strategi rapat');
+        setState(() => _error = res['message'] ?? 'Gagal memuat data rapat harian');
       }
     } catch (e) {
       setState(() => _error = e.toString().replaceAll('Exception: ', ''));
@@ -171,7 +171,7 @@ class _OperasionalStrategiRapatScreenState extends State<OperasionalStrategiRapa
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Filter Strategi Rapat',
+                        'Filter Rapat Harian',
                         style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
                       ),
                       IconButton(
@@ -372,7 +372,7 @@ class _OperasionalStrategiRapatScreenState extends State<OperasionalStrategiRapa
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Detail Strategi Rapat',
+                            'Detail Rapat Harian',
                             style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.textDark),
                           ),
                           const SizedBox(height: 2),
@@ -644,7 +644,7 @@ class _OperasionalStrategiRapatScreenState extends State<OperasionalStrategiRapa
                         FileAttachmentPreview.buildAttachmentCard(
                           context,
                           filePath: lampiranPath,
-                          label: 'Lampiran Strategi Rapat',
+                          label: 'Lampiran Rapat Harian',
                         ),
                         const SizedBox(height: 14),
                       ],
@@ -747,8 +747,8 @@ class _OperasionalStrategiRapatScreenState extends State<OperasionalStrategiRapa
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Hapus Strategi Rapat', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-        content: Text('Apakah Anda yakin ingin menghapus strategi rapat ini?', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
+        title: Text('Hapus Rapat Harian', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        content: Text('Apakah Anda yakin ingin menghapus data rapat harian ini?', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -810,12 +810,12 @@ class _OperasionalStrategiRapatScreenState extends State<OperasionalStrategiRapa
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Strategi Rapat',
+                        'Rapat Harian',
                         style: GoogleFonts.inter(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Kelola data strategi & program tindak lanjut operasional',
+                        'Kelola data rapat harian operasional',
                         style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.85)),
                       ),
                     ],
@@ -922,7 +922,7 @@ class _OperasionalStrategiRapatScreenState extends State<OperasionalStrategiRapa
           children: [
             Icon(Icons.show_chart_rounded, size: 54, color: Colors.grey.shade400),
             const SizedBox(height: 12),
-            Text('Tidak ada data strategi rapat', style: GoogleFonts.inter(fontSize: 14, color: AppColors.textMuted)),
+            Text('Tidak ada data rapat harian', style: GoogleFonts.inter(fontSize: 14, color: AppColors.textMuted)),
           ],
         ),
       );
