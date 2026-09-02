@@ -278,9 +278,16 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
             items: _rekan.isEmpty 
               ? [const DropdownMenuItem(value: null, child: Text('Tidak ada rekan kerja'))]
               : _rekan.map((r) {
+                  final bool isSelf = r['is_self'] == true;
                   return DropdownMenuItem<dynamic>(
                     value: r,
-                    child: Text('${r['nama']} - ${r['jabatan']?['nama_jabatan'] ?? 'Cleaner'}'),
+                    child: Text(
+                      isSelf ? '🌟 ${r['nama']}' : '${r['nama']} - ${r['jabatan']?['nama_jabatan'] ?? 'Cleaner'}',
+                      style: GoogleFonts.inter(
+                        fontWeight: isSelf ? FontWeight.bold : FontWeight.normal,
+                        color: isSelf ? const Color(0xFF2563EB) : null,
+                      ),
+                    ),
                   );
                 }).toList(),
             onChanged: _rekan.isEmpty ? null : (val) {
@@ -294,23 +301,75 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
           const SizedBox(height: 20),
 
           if (_selectedRekan != null) ...[
-            Text('Libur Rekan Kerja (Tujuan)', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<dynamic>(
-              value: _selectedLiburTarget,
-              decoration: _inputDecoration('Pilih tanggal libur rekan kerja'),
-              items: (_selectedRekan['jadwal_liburs'] as List? ?? []).map((libur) {
-                return DropdownMenuItem<dynamic>(
-                  value: libur,
-                  child: Text(_formatDate(libur['tanggal'])),
-                );
-              }).toList(),
-              onChanged: (val) {
-                setState(() => _selectedLiburTarget = val);
-              },
-              isExpanded: true,
-            ),
-            const SizedBox(height: 20),
+            if (_selectedRekan['is_self'] == true) ...[
+              Text('Tanggal Libur Baru (Pengganti)', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () async {
+                  final now = DateTime.now();
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: now,
+                    firstDate: DateTime(now.year, now.month, 1),
+                    lastDate: DateTime(now.year, now.month + 1, 0),
+                  );
+                  if (picked != null) {
+                    final formatted = DateFormat('yyyy-MM-dd').format(picked);
+                    final isAlreadyOff = _liburSaya.any((l) => l['tanggal'] == formatted);
+                    if (isAlreadyOff) {
+                      _showError('Tanggal tersebut sudah merupakan hari libur Anda. Pilih tanggal kerja.');
+                      return;
+                    }
+                    setState(() {
+                      _selectedLiburTarget = {'tanggal': formatted};
+                    });
+                  }
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _selectedLiburTarget != null
+                            ? _formatDate(_selectedLiburTarget['tanggal'])
+                            : 'Pilih tanggal libur baru pengganti',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: _selectedLiburTarget != null ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
+                        ),
+                      ),
+                      const Icon(Icons.calendar_month_rounded, size: 20, color: AppColors.primary),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ] else ...[
+              Text('Libur Rekan Kerja (Tujuan)', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<dynamic>(
+                value: _selectedLiburTarget,
+                decoration: _inputDecoration('Pilih tanggal libur rekan kerja'),
+                items: (_selectedRekan['jadwal_liburs'] as List? ?? []).map((libur) {
+                  return DropdownMenuItem<dynamic>(
+                    value: libur,
+                    child: Text(_formatDate(libur['tanggal'])),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  setState(() => _selectedLiburTarget = val);
+                },
+                isExpanded: true,
+              ),
+              const SizedBox(height: 20),
+            ],
           ],
 
           Text('Alasan Penukaran', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
@@ -363,9 +422,7 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
         final item = _riwayat[index];
         final pengaju = item['pengaju'];
         final target = item['target'];
-        
-        final isPengaju = true; // Wait, we need to check if user is pengaju or target. 
-        // For cleaner, if they are target, they might see it pending or approved.
+        final bool isSelfSwap = item['pengaju_id'] == item['target_id'];
         
         Color statusColor;
         switch (item['status']) {
@@ -373,7 +430,6 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
           case 'rejected': statusColor = AppColors.error; break;
           default: statusColor = Colors.orange; break;
         }
-
 
         return Container(
           padding: const EdgeInsets.all(16),
@@ -398,10 +454,14 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF5F3FF),
+                      color: isSelfSwap ? const Color(0xFFEFF6FF) : const Color(0xFFF5F3FF),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.event_repeat_rounded, color: Color(0xFF8B5CF6), size: 24),
+                    child: Icon(
+                      isSelfSwap ? Icons.person_pin_circle_rounded : Icons.event_repeat_rounded,
+                      color: isSelfSwap ? const Color(0xFF2563EB) : const Color(0xFF8B5CF6),
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -409,12 +469,12 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Tukar dengan: ${target['nama']}', 
+                          isSelfSwap ? 'Tukar Libur Mandiri (Diri Sendiri)' : 'Tukar dengan: ${target?['nama'] ?? '-'}', 
                           style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textDark)
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'ID: #${item['id']} • Diajukan oleh: ${pengaju['nama']}',
+                          'ID: #${item['id']} • Diajukan oleh: ${pengaju?['nama'] ?? '-'}',
                           style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)
                         ),
                       ],

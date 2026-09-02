@@ -1196,7 +1196,7 @@ Mohon sesuaikan alokasi & jadwal penugasan pesanan cleaner di cabang terkait. Te
                 ),
                 const SizedBox(height: 12),
 
-                // Visual Swap Box (Cleaner A <-> Cleaner B)
+                // Visual Swap Box (Cleaner A <-> Cleaner B / Self Swap)
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -1249,13 +1249,17 @@ Mohon sesuaikan alokasi & jadwal penugasan pesanan cleaner di cabang terkait. Te
                         margin: const EdgeInsets.symmetric(horizontal: 8),
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                          color: (item['pengaju_id'] == item['target_id'] ? const Color(0xFF059669) : const Color(0xFF2563EB)).withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.swap_horiz_rounded, size: 18, color: Color(0xFF2563EB)),
+                        child: Icon(
+                          item['pengaju_id'] == item['target_id'] ? Icons.arrow_forward_rounded : Icons.swap_horiz_rounded,
+                          size: 18,
+                          color: item['pengaju_id'] == item['target_id'] ? const Color(0xFF059669) : const Color(0xFF2563EB),
+                        ),
                       ),
 
-                      // Cleaner B (Target)
+                      // Cleaner B (Target / Self Swap New Day)
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1266,15 +1270,19 @@ Mohon sesuaikan alokasi & jadwal penugasan pesanan cleaner di cabang terkait. Te
                                   radius: 12,
                                   backgroundColor: const Color(0xFFECFDF5),
                                   child: Text(
-                                    initialB,
+                                    item['pengaju_id'] == item['target_id'] ? '★' : initialB,
                                     style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF059669)),
                                   ),
                                 ),
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
-                                    targetNama,
-                                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                                    item['pengaju_id'] == item['target_id'] ? 'Libur Baru (Mandiri)' : targetNama,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: item['pengaju_id'] == item['target_id'] ? const Color(0xFF059669) : const Color(0xFF0F172A),
+                                    ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -1282,7 +1290,7 @@ Mohon sesuaikan alokasi & jadwal penugasan pesanan cleaner di cabang terkait. Te
                               ],
                             ),
                             const SizedBox(height: 4),
-                            Text('Libur Asal:', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF64748B))),
+                            Text(item['pengaju_id'] == item['target_id'] ? 'Libur Pengganti:' : 'Libur Asal:', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF64748B))),
                             Text(
                               tglB,
                               style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w800, color: const Color(0xFF059669)),
