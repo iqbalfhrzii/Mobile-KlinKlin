@@ -3229,6 +3229,9 @@ klinklin.co.id/aduanpayment''';
         // Fallback: just try to launch it anyway
         await launchUrl(url, mode: LaunchMode.externalApplication);
       }
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

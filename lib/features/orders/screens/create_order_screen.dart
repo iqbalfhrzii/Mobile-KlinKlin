@@ -13,8 +13,9 @@ import '../services/order_service.dart';
 import '../../../core/api/api_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/utils/currency_formatter.dart';
-import 'order_detail_screen.dart';
 import '../../customers/screens/add_customer_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../core/widgets/whatsapp_icon.dart';
 
 class CreateOrderScreen extends StatefulWidget {
   const CreateOrderScreen({super.key, this.existingOrder, this.initialCustomer});
@@ -395,68 +396,169 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          if (_step > 0) ...[
-            Expanded(
-              flex: 1,
-              child: OutlinedButton(
-                onPressed: _prev,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+      child: _step == 3
+          ? Row(
+              children: [
+                Expanded(
+                  flex: 1,
+                  child: OutlinedButton(
+                    onPressed: _prev,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      side: const BorderSide(color: AppColors.border, width: 1.5),
+                      backgroundColor: AppColors.surface,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textDark),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Kembali',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  side: const BorderSide(color: AppColors.border, width: 1.5),
-                  backgroundColor: AppColors.surface,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textDark),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Kembali',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textDark,
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 1,
+                  child: OutlinedButton(
+                    onPressed: (canNext && !_isSaving) ? () => _submit(sendWa: false) : null,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      side: const BorderSide(color: AppColors.primary, width: 1.5),
+                      backgroundColor: AppColors.surface,
+                    ),
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              color: AppColors.primary,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            widget.existingOrder != null ? 'Simpan' : 'Buat Saja',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton(
+                    onPressed: (canNext && !_isSaving) ? () => _submit(sendWa: true) : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF25D366),
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: AppColors.border.withValues(alpha: 0.6),
+                      disabledForegroundColor: AppColors.textMuted,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      elevation: canNext && !_isSaving ? 3 : 0,
+                      shadowColor: const Color(0xFF25D366).withValues(alpha: 0.4),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                  ],
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const WhatsAppIcon(size: 16, color: Colors.white),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  widget.existingOrder != null ? 'Simpan & Kirim WA' : 'Buat & Kirim WA',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 12),
-          ],
-          Expanded(
-            flex: 2,
-            child: ElevatedButton(
-              onPressed: (canNext && !_isSaving)
-                  ? (_step == 3 ? _submit : _next)
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: AppColors.border.withValues(alpha: 0.6),
-                disabledForegroundColor: AppColors.textMuted,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                elevation: canNext && !_isSaving ? 3 : 0,
-                shadowColor: AppColors.primary.withValues(alpha: 0.4),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: _isSaving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
+              ],
+            )
+          : Row(
+              children: [
+                if (_step > 0) ...[
+                  Expanded(
+                    flex: 1,
+                    child: OutlinedButton(
+                      onPressed: _prev,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        side: const BorderSide(color: AppColors.border, width: 1.5),
+                        backgroundColor: AppColors.surface,
                       ),
-                    )
-                  : Row(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textDark),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Kembali',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton(
+                    onPressed: (canNext && !_isSaving) ? _next : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: AppColors.border.withValues(alpha: 0.6),
+                      disabledForegroundColor: AppColors.textMuted,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      elevation: canNext && !_isSaving ? 3 : 0,
+                      shadowColor: AppColors.primary.withValues(alpha: 0.4),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
@@ -475,17 +577,144 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                         ),
                       ],
                     ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 
-  Future<void> _submit() async {
+  String _formatWADate(String dateString) {
+    if (dateString.isEmpty) return '-|-';
+    try {
+      final dt = DateTime.parse(dateString);
+      final days = [
+        'Minggu',
+        'Senin',
+        'Selasa',
+        'Rabu',
+        'Kamis',
+        'Jumat',
+        'Sabtu',
+      ];
+      final months = [
+        'Januari',
+        'Februari',
+        'Maret',
+        'April',
+        'Mei',
+        'Juni',
+        'Juli',
+        'Agustus',
+        'September',
+        'Oktober',
+        'November',
+        'Desember',
+      ];
+      final dayName = days[dt.weekday % 7];
+      final monthName = months[dt.month - 1];
+      return '$dayName|${dt.day.toString().padLeft(2, '0')} $monthName ${dt.year}';
+    } catch (_) {
+      return '-|-';
+    }
+  }
+
+  Future<void> _sendInvoiceWhatsApp(OrderModel o) async {
+    final customerName = o.customer.name;
+    final branchName = o.customer.area.toUpperCase();
+    final orderId = o.nomorPesanan.isNotEmpty ? o.nomorPesanan : o.id.toString();
+    final address = o.customer.address;
+
+    String rincian = '';
+    for (int i = 0; i < o.services.length; i++) {
+      final s = o.services[i];
+      rincian += '${i + 1}. ${s.name} : ${s.qty}\n';
+    }
+    if (rincian.isEmpty) {
+      rincian = '-';
+    }
+
+    final tglRaw = o.services.isNotEmpty ? o.services.first.tanggalPengerjaan : '';
+    final waktu = o.services.isNotEmpty ? o.services.first.waktuPengerjaan : '-';
+
+    final dateFmt = _formatWADate(tglRaw).split('|');
+    final hari = dateFmt[0];
+    final tanggal = dateFmt.length > 1 ? dateFmt[1] : '-';
+
+    final int baseSubtotal = (o.subtotal > 0)
+        ? o.subtotal
+        : (o.services.isNotEmpty
+            ? o.services.fold(0, (sum, s) => sum + s.subtotal)
+            : o.total);
+    final double diskonPersen = o.diskonPersen;
+    final int diskonValue = (baseSubtotal * (diskonPersen / 100)).round();
+    final int totalSetelahDiskon = (baseSubtotal - diskonValue) > 0 ? (baseSubtotal - diskonValue) : 0;
+
+    final int ppnPersen = o.ppn ?? (o.pembayaran?.ppn ?? (o.isWajibPpn ? 11 : 0));
+    final int ppnValue = (o.pembayaran != null || o.ppn != null || o.isWajibPpn)
+        ? (totalSetelahDiskon * (ppnPersen / 100)).round()
+        : 0;
+    final int pphPersen = o.pph ?? o.pembayaran?.pph ?? 0;
+    final int pphValue = (totalSetelahDiskon * (pphPersen / 100)).round();
+    final int totalAkhir = totalSetelahDiskon + ppnValue - pphValue;
+
+    final message = '''Halo Kak $customerName
+Terimakasih sudah melakukan pemesanan di Klinklin $branchName, Berikut Rinciannya :
+
+📄 *KLINKLIN $branchName*
+--------------------------------
+No. Order : $orderId
+Nama Customer : *$customerName*
+Alamat : *$address*
+
+*Rincian Pesanan:*
+${rincian.trim()}
+
+Hari : $hari
+Waktu : $waktu
+Tanggal : $tanggal
+--------------------------------
+Total Awal : ${CurrencyInputFormatter.format(baseSubtotal)}
+Diskon : ${diskonValue > 0 ? CurrencyInputFormatter.format(diskonValue) : '0'}
+PPn : ${CurrencyInputFormatter.format(ppnValue)}
+${pphValue > 0 ? 'PPh : -${CurrencyInputFormatter.format(pphValue)}\n' : ''}*TOTAL BAYAR : ${CurrencyInputFormatter.format(totalAkhir)}*
+--------------------------------
+
+Transfer hanya ke No. Rekening Berikut:
+*Mandiri 1780022255554*
+*BCA 8640679949*
+an. KLINKLIN INDONESIA GROUP
+
+
+
+
+⚠️ *PENTING & HARAP DIBACA :*
+Pembayaran ini SAH jika disertai Invoice Resmi Berupa file PDF.
+Jika Anda melakukan pembayaran tanpa menerima Invoice, maka transaksi dianggap TIDAK ADA / ILEGAL
+
+Silahkan klik Link berikut ini jika ada kendala pembayaran
+klinklin.co.id/aduanpayment''';
+
+    final phone = o.customer.phone.startsWith('0')
+        ? '62${o.customer.phone.substring(1)}'
+        : o.customer.phone;
+    final encodedMsg = Uri.encodeComponent(message);
+    final url = Uri.parse('https://wa.me/$phone?text=$encodedMsg');
+
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _submit({bool sendWa = false}) async {
     setState(() => _isSaving = true);
     try {
       String? createdOrderId;
+      OrderModel? finishedOrder;
       if (widget.existingOrder == null) {
         createdOrderId = await _orderService.createOrder(_draft);
         if (_draft.cleaners.isNotEmpty) {
@@ -493,6 +722,11 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             createdOrderId,
             _draft.cleaners.map((c) => c.id).toList(),
           );
+        }
+        if (sendWa && createdOrderId.isNotEmpty) {
+          try {
+            finishedOrder = await _orderService.fetchOrderDetail(createdOrderId);
+          } catch (_) {}
         }
       } else {
         final int? origCabang = int.tryParse(widget.existingOrder!.cabangId.replaceAll(RegExp(r'[^0-9]'), ''));
@@ -507,6 +741,15 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             _draft.cleaners.map((c) => c.id).toList(),
           );
         }
+        if (sendWa) {
+          try {
+            finishedOrder = await _orderService.fetchOrderDetail(widget.existingOrder!.id);
+          } catch (_) {}
+        }
+      }
+
+      if (sendWa && finishedOrder != null) {
+        await _sendInvoiceWhatsApp(finishedOrder);
       }
 
       if (!mounted) return;
@@ -532,19 +775,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         ),
       );
 
-      if (createdOrderId != null) {
-        final newOrder = await _orderService.fetchOrderDetail(createdOrderId);
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => OrderDetailScreen(order: newOrder),
-          ),
-          result: true,
-        );
-      } else {
-        Navigator.pop(context, true);
-      }
+      // Selesai langsung kembali ke halaman List Pesanan
+      Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
