@@ -84,6 +84,7 @@ class _MarketingProgressScreenState extends State<MarketingProgressScreen> {
 
   void _openProgressModal({dynamic item}) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -614,7 +615,7 @@ class _MarketingProgressScreenState extends State<MarketingProgressScreen> {
 
           // Footer Action Buttons
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+            padding: EdgeInsets.fromLTRB(14, 0, 14, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 8 : 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [

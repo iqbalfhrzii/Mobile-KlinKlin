@@ -151,6 +151,7 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
 
   void _openForm({Map<String, dynamic>? item}) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -170,6 +171,7 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
   void _openFilterModal() {
     String tempStatus = _selectedStatus;
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -306,6 +308,7 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
     }
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -584,7 +587,7 @@ class _OperasionalPermintaanDesignScreenState extends State<OperasionalPermintaa
 
             // Modal Footer Actions
             Container(
-              padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
+              padding: EdgeInsets.fromLTRB(18, 12, 18, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 10 : 14),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),

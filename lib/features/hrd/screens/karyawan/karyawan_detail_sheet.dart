@@ -28,6 +28,7 @@ class KaryawanDetailSheet extends StatelessWidget {
     VoidCallback? onEdit,
   }) {
     return showModalBottomSheet<bool>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -382,7 +383,7 @@ class KaryawanDetailSheet extends StatelessWidget {
 
           // Bottom Action Buttons
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 20),
             decoration: const BoxDecoration(
               color: Colors.white,
               border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),

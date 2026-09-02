@@ -154,6 +154,7 @@ class _OperasionalTandaTerimaApdScreenState extends State<OperasionalTandaTerima
 
   void _openForm([dynamic data]) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -178,6 +179,7 @@ class _OperasionalTandaTerimaApdScreenState extends State<OperasionalTandaTerima
     String tempCabang = _selectedCabangId;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -341,6 +343,7 @@ class _OperasionalTandaTerimaApdScreenState extends State<OperasionalTandaTerima
     final hasFoto = fotoPath != null && fotoPath.trim().isNotEmpty;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

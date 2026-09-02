@@ -129,6 +129,7 @@ class _MarketingSpendAdsScreenState extends State<MarketingSpendAdsScreen> {
 
   void _openSpendAdFormSheet({dynamic item}) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

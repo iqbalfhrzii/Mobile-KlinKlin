@@ -11,6 +11,7 @@ Future<bool?> showGajiKaryawanFormModal(
   String initialJenisGaji = 'bulanan',
 }) {
   return showModalBottomSheet<bool>(
+      useSafeArea: true,
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,

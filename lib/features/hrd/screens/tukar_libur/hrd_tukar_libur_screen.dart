@@ -335,6 +335,7 @@ Mohon sesuaikan alokasi & jadwal penugasan pesanan cleaner di cabang terkait. Te
     final targetNama = item['target']?['nama'] ?? 'Cleaner B';
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
@@ -572,7 +573,7 @@ Mohon sesuaikan alokasi & jadwal penugasan pesanan cleaner di cabang terkait. Te
         children: [
           // Header
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
+            padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 20),
             child: Row(
               children: [
                 GestureDetector(
@@ -1463,6 +1464,7 @@ Mohon sesuaikan alokasi & jadwal penugasan pesanan cleaner di cabang terkait. Te
     }
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -1695,6 +1697,7 @@ Mohon sesuaikan alokasi & jadwal penugasan pesanan cleaner di cabang terkait. Te
     int? tempCabangId = _selectedCabangId;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -1702,7 +1705,7 @@ Mohon sesuaikan alokasi & jadwal penugasan pesanan cleaner di cabang terkait. Te
         return StatefulBuilder(
           builder: (context, setModalState) {
             return Container(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 20 : 24),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),

@@ -154,6 +154,7 @@ class _PembelianBhpScreenState extends State<PembelianBhpScreen> {
 
   void _openForm() {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -174,6 +175,7 @@ class _PembelianBhpScreenState extends State<PembelianBhpScreen> {
 
   void _showDetail(dynamic item) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -190,6 +192,7 @@ class _PembelianBhpScreenState extends State<PembelianBhpScreen> {
     int? tempCabangId = _selectedCabangId;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -450,7 +453,7 @@ class _PembelianBhpScreenState extends State<PembelianBhpScreen> {
           // Search Bar & Filter Button Header Row
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+            padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 8 : 10),
             child: Row(
               children: [
                 // Search Input Box

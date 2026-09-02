@@ -227,7 +227,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     }
 
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 18),
+      padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 14 : 18),
       child: Column(
         children: [
           // Top Nav bar

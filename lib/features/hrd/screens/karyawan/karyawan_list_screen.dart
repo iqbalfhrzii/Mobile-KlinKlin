@@ -127,6 +127,7 @@ class _KaryawanListScreenState extends State<KaryawanListScreen> {
         : 'Training';
 
     final approved = await showModalBottomSheet<bool>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -519,7 +520,7 @@ class _KaryawanListScreenState extends State<KaryawanListScreen> {
         children: [
           // 1. Header
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(20, 52, 20, 16),
+            padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
             child: Column(
               children: [
                 Row(
@@ -1390,7 +1391,7 @@ class _KaryawanListScreenState extends State<KaryawanListScreen> {
 
           // Action Buttons: Setujui vs Hapus
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+            padding: EdgeInsets.fromLTRB(16, 0, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 10 : 14),
             child: Row(
               children: [
                 Expanded(

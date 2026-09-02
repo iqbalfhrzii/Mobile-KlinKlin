@@ -20,6 +20,7 @@ class PelangganFormSheet extends StatefulWidget {
     List<CabangModel>? cabangs,
   }) {
     return showModalBottomSheet<bool>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -195,7 +196,7 @@ class _PelangganFormSheetState extends State<PelangganFormSheet> {
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
-        padding: const EdgeInsets.fromLTRB(24, 14, 24, 24),
+        padding: EdgeInsets.fromLTRB(24, 14, 24, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 24),
         child: Form(
           key: _formKey,
           child: Column(

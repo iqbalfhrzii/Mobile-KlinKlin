@@ -95,6 +95,7 @@ class _FinanceCashflowCabangScreenState extends State<FinanceCashflowCabangScree
 
   void _showFormModal({dynamic item}) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -196,7 +197,7 @@ class _FinanceCashflowCabangScreenState extends State<FinanceCashflowCabangScree
 
   Widget _buildHeader() {
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(16, 50, 16, 18),
+      padding: EdgeInsets.fromLTRB(16, 50, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 14 : 18),
       child: Row(
         children: [
           InkWell(

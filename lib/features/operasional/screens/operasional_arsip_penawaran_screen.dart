@@ -123,6 +123,7 @@ class _OperasionalArsipPenawaranScreenState extends State<OperasionalArsipPenawa
 
   void _openForm([dynamic arsip]) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -147,6 +148,7 @@ class _OperasionalArsipPenawaranScreenState extends State<OperasionalArsipPenawa
     String tempCabang = _selectedCabangId;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -297,6 +299,7 @@ class _OperasionalArsipPenawaranScreenState extends State<OperasionalArsipPenawa
     final hasFile = (arsip['file_path'] != null && arsip['file_path'].toString().trim().isNotEmpty) || (arsip['file_bukti'] != null && arsip['file_bukti'].toString().trim().isNotEmpty) || (arsip['file_penawaran'] != null && arsip['file_penawaran'].toString().trim().isNotEmpty);
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

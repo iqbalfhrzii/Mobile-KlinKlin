@@ -319,7 +319,7 @@ class _CleanerSimScreenState extends State<CleanerSimScreen> {
         children: [
           // Header
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
+            padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 20),
             child: Row(
               children: [
                 const AppBackButton(),
@@ -984,6 +984,7 @@ class _CleanerSimScreenState extends State<CleanerSimScreen> {
       _populateFormWithData(_mySimData!);
     }
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

@@ -148,6 +148,7 @@ class _OperasionalMonthlyReportScreenState extends State<OperasionalMonthlyRepor
 
   void _openForm([dynamic data]) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -172,6 +173,7 @@ class _OperasionalMonthlyReportScreenState extends State<OperasionalMonthlyRepor
     String tempCabang = _selectedCabangId;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -329,6 +331,7 @@ class _OperasionalMonthlyReportScreenState extends State<OperasionalMonthlyRepor
     final hasFile = (data['file'] != null && data['file'].toString().trim().isNotEmpty) || (data['file_lampiran'] != null && data['file_lampiran'].toString().trim().isNotEmpty) || (data['file_laporan'] != null && data['file_laporan'].toString().trim().isNotEmpty);
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

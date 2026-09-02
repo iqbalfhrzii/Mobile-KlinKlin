@@ -143,7 +143,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
   Widget _buildHeader(BuildContext context) {
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(20, 52, 20, 16),
+      padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
       child: Row(
         children: [
           HeaderBackButton(onTap: _prev),
@@ -1011,6 +1011,7 @@ class _Step1InfoState extends State<_Step1Info> {
 
   void _showCustomerSearchSheet() {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -1729,7 +1730,7 @@ class _CustomerSearchSheetState extends State<_CustomerSearchSheet> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+            padding: EdgeInsets.fromLTRB(20, 10, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 10 : 14),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1980,6 +1981,7 @@ class _Step2Services extends StatelessWidget {
     int? index,
   }) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -2005,7 +2007,7 @@ class _Step2Services extends StatelessWidget {
       children: [
         // Action Bar
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 8 : 8),
           child: ElevatedButton.icon(
             onPressed: () => _showAddServiceSheet(context),
             icon: const Icon(Icons.add_circle_outline_rounded, color: Colors.white, size: 18),
@@ -2417,6 +2419,7 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
   void _showSearchServiceDialog() {
     String searchQ = '';
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

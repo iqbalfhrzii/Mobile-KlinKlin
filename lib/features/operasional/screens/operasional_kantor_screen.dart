@@ -73,6 +73,7 @@ class _OperasionalKantorScreenState extends State<OperasionalKantorScreen> {
     DateTime? akhirSewa = cabang?['akhir_sewa'] != null ? DateTime.tryParse(cabang!['akhir_sewa']) : null;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -120,7 +121,7 @@ class _OperasionalKantorScreenState extends State<OperasionalKantorScreen> {
                   const Divider(color: Color(0xFFEEEEEE)),
                   Expanded(
                     child: ListView(
-                      padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+                      padding: EdgeInsets.fromLTRB(20, 10, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 20 : 24),
                       children: [
                         _buildLabel('Cabang *'),
                         Container(

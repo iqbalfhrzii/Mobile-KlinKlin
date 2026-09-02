@@ -193,7 +193,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     final canPop = Navigator.canPop(context);
 
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
+      padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1400,6 +1400,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     }
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -1407,7 +1408,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return Container(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 20 : 24),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -2250,6 +2251,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     }
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -2266,7 +2268,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
           children: [
             // Header Content
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+              padding: EdgeInsets.fromLTRB(20, 14, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 8 : 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -2756,7 +2758,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
             // Sticky Bottom Action Bar (Persis Image 1)
             if (_approvalTableMode == 'pending')
               Container(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+                padding: EdgeInsets.fromLTRB(20, 14, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   boxShadow: [
@@ -3396,6 +3398,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
   // --- Modal Detail Pengajuan Edit Bottom Sheet UI UX Pro Max ---
   void _showEditDetailModal(OrderModel order, String csName, String alasanStr) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -3707,7 +3710,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
 
             // Sticky Bottom Action Bar
             Container(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+              padding: EdgeInsets.fromLTRB(20, 14, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
@@ -4540,6 +4543,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     final cancelReason = order.cancelReason?.isNotEmpty == true ? order.cancelReason! : 'Dibatalkan atas permintaan pelanggan / operasional.';
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -4868,7 +4872,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
 
             // Sticky Bottom Action Bar
             Container(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+              padding: EdgeInsets.fromLTRB(20, 14, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
@@ -4988,6 +4992,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     final customerPhoneCtrl = TextEditingController(text: order.customer.phone);
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -5981,7 +5986,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
 
                 // Sticky Bottom Action Bar
                 Container(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                  padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     boxShadow: [

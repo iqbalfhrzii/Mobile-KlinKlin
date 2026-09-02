@@ -132,7 +132,7 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
       body: Column(
         children: [
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+            padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
             child: Row(
               children: [
                 if (Navigator.canPop(context)) ...[

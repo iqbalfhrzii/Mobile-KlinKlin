@@ -199,6 +199,7 @@ class _KontenMarketingScreenState extends State<KontenMarketingScreen> with Sing
   void _openUploadSheet(BuildContext context) {
     final currentType = _tabs[_tabController.index]['key']!;
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -228,7 +229,7 @@ class _KontenMarketingScreenState extends State<KontenMarketingScreen> with Sing
         children: [
           // 1. GRADIENT HEADER WITH SEARCH BAR & ADD BUTTON
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+            padding: EdgeInsets.fromLTRB(16, 10, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

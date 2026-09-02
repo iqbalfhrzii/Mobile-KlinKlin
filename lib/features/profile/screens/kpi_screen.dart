@@ -123,6 +123,7 @@ class _KpiScreenState extends State<KpiScreen> {
     ];
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
@@ -403,7 +404,7 @@ class _KpiScreenState extends State<KpiScreen> {
             : const Color(0xFFF59E0B);
 
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(20, 52, 20, 26),
+      padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 22 : 26),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

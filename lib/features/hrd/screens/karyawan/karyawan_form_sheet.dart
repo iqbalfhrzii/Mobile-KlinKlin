@@ -28,6 +28,7 @@ class KaryawanFormSheet extends StatefulWidget {
     List<JabatanModel>? jabatans,
   }) {
     return showModalBottomSheet<bool>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -200,6 +201,7 @@ class _KaryawanFormSheetState extends State<KaryawanFormSheet> {
 
   void _showImageSourcePicker() {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
@@ -881,7 +883,7 @@ class _KaryawanFormSheetState extends State<KaryawanFormSheet> {
 
             // Fixed Bottom Action Bar
             Container(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 border: Border(

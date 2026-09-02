@@ -226,7 +226,7 @@ class _GajiPokokListScreenState extends State<GajiPokokListScreen> {
         children: [
           // Header
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+            padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 10 : 14),
             child: Row(
               children: [
                 GestureDetector(

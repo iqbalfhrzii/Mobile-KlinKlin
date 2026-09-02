@@ -116,6 +116,7 @@ class _PengadaanBarangFormSheetState extends State<PengadaanBarangFormSheet> {
 
   Future<void> _pickImage(int index) async {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (ctx) => SafeArea(

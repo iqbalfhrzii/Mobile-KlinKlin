@@ -155,6 +155,7 @@ class _OperasionalKajianRdScreenState extends State<OperasionalKajianRdScreen> {
 
   void _openForm([dynamic data]) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -179,6 +180,7 @@ class _OperasionalKajianRdScreenState extends State<OperasionalKajianRdScreen> {
     String tempCabang = _selectedCabangId;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -338,6 +340,7 @@ class _OperasionalKajianRdScreenState extends State<OperasionalKajianRdScreen> {
     final hasDoc = (data['file'] != null && data['file'].toString().trim().isNotEmpty) || (data['dokumen'] != null && data['dokumen'].toString().trim().isNotEmpty);
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

@@ -390,7 +390,7 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
         children: [
           // Header
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
+            padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 20),
             child: Row(
               children: [
                 const AppBackButton(),
@@ -429,7 +429,7 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
                 : Form(
                     key: _formKey,
                     child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                      padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 28 : 32),
                       children: [
                         // Branch & Auto Banner
                         _buildBranchBanner(),
@@ -1001,6 +1001,7 @@ class _LaporKecelakaanScreenState extends State<LaporKecelakaanScreen> {
 
   void _showCleanerPickerModal() {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

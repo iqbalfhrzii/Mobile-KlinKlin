@@ -200,6 +200,7 @@ class _OperasionalCashflowCabangScreenState extends State<OperasionalCashflowCab
 
   void _showFormBottomSheet({Map<String, dynamic>? data}) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -297,7 +298,7 @@ class _OperasionalCashflowCabangScreenState extends State<OperasionalCashflowCab
         children: [
           // Elegant Gradient Header
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(20, 52, 20, 18),
+            padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 14 : 18),
             child: Row(
               children: [
                 if (Navigator.canPop(context)) ...[
@@ -411,7 +412,7 @@ class _OperasionalCashflowCabangScreenState extends State<OperasionalCashflowCab
 
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 8 : 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -605,6 +606,7 @@ class _OperasionalCashflowCabangScreenState extends State<OperasionalCashflowCab
     String tempArus = _selectedArus;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -777,7 +779,7 @@ class _OperasionalCashflowCabangScreenState extends State<OperasionalCashflowCab
 
                   // Bottom Action Buttons (Reset & Terapkan)
                   Container(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                    padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 20 : 24),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       border: const Border(top: BorderSide(color: Color(0xFFF1F5F9))),
@@ -1920,7 +1922,7 @@ class _FormCashflowBottomSheetState extends State<_FormCashflowBottomSheet> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+            padding: EdgeInsets.fromLTRB(20, 8, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

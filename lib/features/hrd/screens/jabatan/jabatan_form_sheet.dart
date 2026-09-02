@@ -19,6 +19,7 @@ class JabatanFormSheet extends StatefulWidget {
     List<CabangModel>? cabangs,
   }) {
     return showModalBottomSheet<bool>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -165,7 +166,7 @@ class _JabatanFormSheetState extends State<JabatanFormSheet> {
 
               // Header modal
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                padding: EdgeInsets.fromLTRB(20, 8, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 16),
                 child: Row(
                   children: [
                     Container(
@@ -225,7 +226,7 @@ class _JabatanFormSheetState extends State<JabatanFormSheet> {
                 Form(
                   key: _formKey,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                    padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

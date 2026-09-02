@@ -525,7 +525,7 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
     final canPop = Navigator.canPop(context);
 
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(20, 50, 20, 18),
+      padding: EdgeInsets.fromLTRB(20, 50, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 14 : 18),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

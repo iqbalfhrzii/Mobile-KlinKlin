@@ -421,6 +421,7 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
 
   void _showEmployeeDetailSheet(EmployeeAttendanceSummary summary) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

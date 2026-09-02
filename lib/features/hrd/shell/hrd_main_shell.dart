@@ -159,9 +159,12 @@ class _HrdMainShellState extends State<HrdMainShell> {
           ),
         ],
       ),
-      child: SafeArea(
-        child: SizedBox(
-          height: 60,
+      padding: EdgeInsets.only(
+        top: 6,
+        bottom: MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 4 : 10,
+      ),
+      child: SizedBox(
+        height: 52,
           child: Row(
             children: List.generate(_navItems.length, (i) {
               final item = _navItems[i];
@@ -202,7 +205,6 @@ class _HrdMainShellState extends State<HrdMainShell> {
             }),
           ),
         ),
-      ),
     );
   }
 }

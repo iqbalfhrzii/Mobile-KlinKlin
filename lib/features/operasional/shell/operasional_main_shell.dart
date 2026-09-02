@@ -69,16 +69,17 @@ class _OperasionalMainShellState extends State<OperasionalMainShell> {
           ),
         ],
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(
-              _navItems.length,
-              (index) => _buildNavItem(index, _navItems[index]),
-            ),
-          ),
+      padding: EdgeInsets.only(
+        left: 8,
+        right: 8,
+        top: 6,
+        bottom: MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 4 : 10,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: List.generate(
+          _navItems.length,
+          (index) => _buildNavItem(index, _navItems[index]),
         ),
       ),
     );

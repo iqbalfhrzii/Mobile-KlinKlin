@@ -671,7 +671,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final branchName = _status?.branchName ?? 'Kantor Cabang';
 
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 20),
       child: Stack(
         children: [
           if (Navigator.canPop(context))

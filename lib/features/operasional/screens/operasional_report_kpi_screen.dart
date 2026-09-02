@@ -1155,6 +1155,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
     DateTime? tempCustomEnd = _orderCustomEndDate;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -1228,7 +1229,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
 
                   Flexible(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                      padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 8 : 12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1419,7 +1420,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
 
                   // Bottom Buttons
                   Container(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                    padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 20 : 24),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       border: const Border(top: BorderSide(color: Color(0xFFF1F5F9))),

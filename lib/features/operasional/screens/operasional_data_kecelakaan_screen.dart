@@ -143,6 +143,7 @@ class _OperasionalDataKecelakaanScreenState extends State<OperasionalDataKecelak
 
   void _openForm([dynamic data]) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -167,6 +168,7 @@ class _OperasionalDataKecelakaanScreenState extends State<OperasionalDataKecelak
     String tempCabang = _selectedCabangId;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -337,6 +339,7 @@ class _OperasionalDataKecelakaanScreenState extends State<OperasionalDataKecelak
     final hasFoto = fotoPath != null && fotoPath.trim().isNotEmpty;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

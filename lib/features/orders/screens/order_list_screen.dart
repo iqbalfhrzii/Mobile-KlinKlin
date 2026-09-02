@@ -415,7 +415,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
               child: SingleChildScrollView(
                 controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
                 child: Column(
                   children: [
                     WeeklyDatePicker(
@@ -571,7 +571,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
 
   Widget _buildHeader(BuildContext context) {
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
+      padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -650,6 +650,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
 
   void _showFilterBottomSheet() {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -1356,6 +1357,7 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
 
   void _showCleanerSelectionModal(BuildContext context, OrderModel o) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),

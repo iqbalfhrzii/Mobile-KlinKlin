@@ -181,7 +181,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildHeader() {
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(20, 52, 20, 24),
+      padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 20 : 24),
       child: Stack(
         alignment: Alignment.topCenter,
         children: [

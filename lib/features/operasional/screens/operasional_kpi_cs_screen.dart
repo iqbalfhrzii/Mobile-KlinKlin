@@ -577,6 +577,7 @@ class _OperasionalKpiCsScreenState extends State<OperasionalKpiCsScreen> {
                     InkWell(
                       onTap: () {
                         showModalBottomSheet(
+      useSafeArea: true,
                           context: context,
                           isScrollControlled: true,
                           backgroundColor: Colors.transparent,

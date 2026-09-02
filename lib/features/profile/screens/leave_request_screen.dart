@@ -217,6 +217,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
 
   void _showSpecialLeavePicker() {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,

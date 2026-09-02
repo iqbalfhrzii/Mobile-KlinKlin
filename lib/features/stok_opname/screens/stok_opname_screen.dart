@@ -363,6 +363,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
     bool isSearchingQr = false;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -784,7 +785,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
                       ),
                       // Action Submit
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                        padding: EdgeInsets.fromLTRB(20, 10, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 20),
                         child: SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -868,7 +869,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
         children: [
           // 1. Sleek Gradient Header with Integrated Month Picker
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(20, 50, 20, 18),
+            padding: EdgeInsets.fromLTRB(20, 50, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 14 : 18),
             child: Column(
               children: [
                 Row(

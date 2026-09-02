@@ -194,6 +194,7 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
 
   void _openCashflowForm({dynamic item}) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -282,6 +283,7 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
 
   void _openPengajuanForm({dynamic item}) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -528,7 +530,7 @@ class _UangKasScreenState extends State<UangKasScreen> with SingleTickerProvider
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+              padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 76 : 80),
               children: [
                 // 1. KPI Summary (Dark Hero Card + 3 Monthly Metrics Cards)
                 _buildCashflowSummaryCards(),

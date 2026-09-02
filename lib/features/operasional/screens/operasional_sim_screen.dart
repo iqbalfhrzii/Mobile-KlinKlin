@@ -141,6 +141,7 @@ class _OperasionalSimScreenState extends State<OperasionalSimScreen> {
 
   void _openForm([dynamic data]) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -165,6 +166,7 @@ class _OperasionalSimScreenState extends State<OperasionalSimScreen> {
     String tempCabang = _selectedCabangId;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -348,6 +350,7 @@ class _OperasionalSimScreenState extends State<OperasionalSimScreen> {
     final hasFoto = fotoPath != null && fotoPath.trim().isNotEmpty;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

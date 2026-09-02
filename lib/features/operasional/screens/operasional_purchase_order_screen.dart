@@ -352,6 +352,7 @@ class _OperasionalPurchaseOrderScreenState extends State<OperasionalPurchaseOrde
 
   void _showFormModal({Map<String, dynamic>? item}) async {
     final result = await showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -373,7 +374,7 @@ class _OperasionalPurchaseOrderScreenState extends State<OperasionalPurchaseOrde
       body: Column(
         children: [
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(20, 52, 20, 18),
+            padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 14 : 18),
             child: Row(
               children: [
                 InkWell(
@@ -420,7 +421,7 @@ class _OperasionalPurchaseOrderScreenState extends State<OperasionalPurchaseOrde
                     child: _purchaseOrders.isEmpty
                         ? _buildEmptyState()
                         : ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(16, 14, 16, 84),
+                            padding: EdgeInsets.fromLTRB(16, 14, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 80 : 84),
                             itemCount: _purchaseOrders.length,
                             separatorBuilder: (_, __) => const SizedBox(height: 12),
                             itemBuilder: (context, index) {
@@ -555,7 +556,7 @@ class _OperasionalPurchaseOrderScreenState extends State<OperasionalPurchaseOrde
 
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 8 : 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -765,6 +766,7 @@ class _OperasionalPurchaseOrderScreenState extends State<OperasionalPurchaseOrde
 
   void _showComprehensiveFilterModal() {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

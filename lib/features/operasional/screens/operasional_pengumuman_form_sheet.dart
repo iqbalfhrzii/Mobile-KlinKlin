@@ -204,7 +204,7 @@ class _OperasionalPengumumanFormSheetState extends State<OperasionalPengumumanFo
 
           // Sheet Header
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 14, 12),
+            padding: EdgeInsets.fromLTRB(20, 10, 14, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 8 : 12),
             child: Row(
               children: [
                 Container(
@@ -636,7 +636,7 @@ class _OperasionalPengumumanFormSheetState extends State<OperasionalPengumumanFo
 
           // Bottom Action Footer
           Container(
-            padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
+            padding: EdgeInsets.fromLTRB(18, 12, 18, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 10 : 14),
             decoration: const BoxDecoration(
               color: Colors.white,
               border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),

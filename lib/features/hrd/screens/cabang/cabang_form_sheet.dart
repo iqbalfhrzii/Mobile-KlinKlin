@@ -12,6 +12,7 @@ class CabangFormSheet extends StatefulWidget {
 
   static Future<bool?> show(BuildContext context, {CabangModel? cabang}) {
     return showModalBottomSheet<bool>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -270,7 +271,7 @@ class _CabangFormSheetState extends State<CabangFormSheet> {
 
           // Header
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 12, 14),
+            padding: EdgeInsets.fromLTRB(20, 8, 12, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 14),
             child: Row(
               children: [
                 Container(

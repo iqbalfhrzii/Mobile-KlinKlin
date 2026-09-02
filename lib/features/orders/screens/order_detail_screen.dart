@@ -190,6 +190,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
 
     final result = await showModalBottomSheet<double>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -751,7 +752,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               backgroundColor: AppColors.surface,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 20 : 24),
                 child: Column(
                   children: [
                     if (_isCancelled)
@@ -806,7 +807,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   Widget _buildHeader(BuildContext context, OrderModel o, bool canEdit) {
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
+      padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1861,6 +1862,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     return InkWell(
       onTap: () {
         showModalBottomSheet(
+      useSafeArea: true,
           context: context,
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
@@ -2290,6 +2292,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   void _showAddBonusSheet(OrderModel o, [OrderCleaner? cleaner]) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -3149,6 +3152,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   void _showTambahLayananSheet(OrderModel o) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -3527,6 +3531,7 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
     );
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -3741,6 +3746,7 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
     final hargaCtrl = TextEditingController(text: initialHarga);
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -4069,6 +4075,7 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
     List<String> selectedIds = o.cleaners.map((c) => c.id).toList();
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -4124,7 +4131,7 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+                    padding: EdgeInsets.fromLTRB(20, 10, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 8 : 12),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -4527,6 +4534,7 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
     }
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -4551,7 +4559,7 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+                    padding: EdgeInsets.fromLTRB(20, 10, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -4772,6 +4780,7 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
     ];
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
@@ -5657,6 +5666,7 @@ class __TambahLayananOrderDetailSheetState
   void _showSearchServiceDialog() {
     String searchQ = '';
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

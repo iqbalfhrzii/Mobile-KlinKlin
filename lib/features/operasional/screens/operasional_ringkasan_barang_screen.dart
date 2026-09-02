@@ -116,6 +116,7 @@ class _OperasionalRingkasanBarangScreenState extends State<OperasionalRingkasanB
 
   void _showDetailModal(Map<String, dynamic> item) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

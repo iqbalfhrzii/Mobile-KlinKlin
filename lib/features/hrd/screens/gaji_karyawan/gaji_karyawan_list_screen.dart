@@ -367,6 +367,7 @@ class _GajiKaryawanListScreenState extends State<GajiKaryawanListScreen> with Si
     int? tempTahun = _selectedTahun;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -392,7 +393,7 @@ class _GajiKaryawanListScreenState extends State<GajiKaryawanListScreen> with Si
                     decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 12, 12),
+                    padding: EdgeInsets.fromLTRB(20, 8, 12, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 8 : 12),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -554,7 +555,7 @@ class _GajiKaryawanListScreenState extends State<GajiKaryawanListScreen> with Si
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                    padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 20 : 24),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       border: Border(top: BorderSide(color: Colors.grey.shade200)),
@@ -944,7 +945,7 @@ class _GajiKaryawanListScreenState extends State<GajiKaryawanListScreen> with Si
       body: Column(
         children: [
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 8 : 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

@@ -157,6 +157,7 @@ class _ChatHarianScreenState extends State<ChatHarianScreen> {
 
   void _openFormModal({Map<String, dynamic>? editItem}) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

@@ -170,7 +170,7 @@ class _TagihanBulananScreenState extends State<TagihanBulananScreen> {
         children: [
           // Enhanced Gradient Header
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(20, 52, 20, 24),
+            padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 20 : 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1107,6 +1107,7 @@ class _TagihanBulananScreenState extends State<TagihanBulananScreen> {
     final buktiUrl = _getImageUrl(item['bukti_bayar_url'] ?? item['bukti_bayar']);
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

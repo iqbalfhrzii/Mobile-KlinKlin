@@ -30,6 +30,7 @@ class NotificationListSheet extends StatefulWidget {
 
   static Future<void> show(BuildContext context) {
     return showModalBottomSheet<void>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

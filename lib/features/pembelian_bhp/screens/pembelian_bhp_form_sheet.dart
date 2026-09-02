@@ -120,6 +120,7 @@ class _PembelianBhpFormSheetState extends State<PembelianBhpFormSheet> {
 
   void _showImageSourcePicker() {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => SafeArea(
@@ -322,7 +323,7 @@ class _PembelianBhpFormSheetState extends State<PembelianBhpFormSheet> {
 
           // Header
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 12, 12),
+            padding: EdgeInsets.fromLTRB(20, 8, 12, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 12),
             child: Row(
               children: [
                 Container(
@@ -361,7 +362,7 @@ class _PembelianBhpFormSheetState extends State<PembelianBhpFormSheet> {
           // Form Scrollable Area
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

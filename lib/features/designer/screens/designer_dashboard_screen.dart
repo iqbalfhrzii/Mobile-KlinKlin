@@ -747,6 +747,7 @@ class _DesignerDashboardScreenState extends State<DesignerDashboardScreen> {
   // ================= 6. DETAIL & ACTION MODAL =================
   void _openDetailSheet(BuildContext context, dynamic item) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

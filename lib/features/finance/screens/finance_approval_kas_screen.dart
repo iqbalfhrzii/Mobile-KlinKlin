@@ -85,6 +85,7 @@ class _FinanceApprovalKasScreenState extends State<FinanceApprovalKasScreen> {
 
   void _showProcessModal(dynamic item) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -151,7 +152,7 @@ class _FinanceApprovalKasScreenState extends State<FinanceApprovalKasScreen> {
     final pendingCount = _pengajuans.where((p) => (p['status'] ?? '').toString().toLowerCase() == 'pending').length;
 
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(16, 50, 16, 18),
+      padding: EdgeInsets.fromLTRB(16, 50, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 14 : 18),
       child: Row(
         children: [
           InkWell(

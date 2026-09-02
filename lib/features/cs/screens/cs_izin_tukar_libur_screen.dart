@@ -221,6 +221,7 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
     final selfie = item['selfie'] ?? item['foto_selfie'] ?? item['lampiran'] ?? item['bukti'];
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -478,7 +479,7 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
 
   Widget _buildHeader() {
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 8 : 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

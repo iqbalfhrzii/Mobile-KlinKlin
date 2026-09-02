@@ -149,6 +149,7 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
     int? tempCabangId = _selectedCabangId;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
@@ -435,6 +436,7 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
 
   void _openForm([dynamic quotation]) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -495,6 +497,7 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
     final bool hasAlatChemical = item['alat_chemical_klinklin'] == 1 || item['alat_chemical_klinklin'] == true;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -1225,7 +1228,7 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
           // Search Bar & Unified Filter Button
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+            padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 8 : 10),
             child: Row(
               children: [
                 Expanded(

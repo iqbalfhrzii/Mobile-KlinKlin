@@ -83,6 +83,7 @@ class _OperasionalTargetOmzetScreenState extends State<OperasionalTargetOmzetScr
     );
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -166,7 +167,7 @@ class _OperasionalTargetOmzetScreenState extends State<OperasionalTargetOmzetScr
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 20 : 24),
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,

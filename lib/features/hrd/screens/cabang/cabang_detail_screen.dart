@@ -229,6 +229,7 @@ class _CabangDetailScreenState extends State<CabangDetailScreen> with SingleTick
     bool isSubmitting = false;
 
     await showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -707,7 +708,7 @@ class _CabangDetailScreenState extends State<CabangDetailScreen> with SingleTick
           children: [
             // Top Gradient Header
             GradientHeader(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+              padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 10 : 14),
               child: Column(
                 children: [
                   Row(
@@ -1172,7 +1173,7 @@ class _CabangDetailScreenState extends State<CabangDetailScreen> with SingleTick
     }).toList();
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 76 : 80),
       children: [
         // Section Header Info & Add Category Button
         Container(
@@ -1441,7 +1442,7 @@ class _CabangDetailScreenState extends State<CabangDetailScreen> with SingleTick
     final hasCoordinates = _cabang.latitude != null && _cabang.longitude != null;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 76 : 80),
       children: [
         // CARD 1: Alamat Operasional
         _buildSectionContainer(

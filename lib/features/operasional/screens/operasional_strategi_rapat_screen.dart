@@ -116,6 +116,7 @@ class _OperasionalStrategiRapatScreenState extends State<OperasionalStrategiRapa
 
   void _openForm([dynamic strategi]) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -140,6 +141,7 @@ class _OperasionalStrategiRapatScreenState extends State<OperasionalStrategiRapa
     String tempCabang = _selectedCabangId;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -326,6 +328,7 @@ class _OperasionalStrategiRapatScreenState extends State<OperasionalStrategiRapa
     final hasLampiran = lampiranPath != null && lampiranPath.trim().isNotEmpty;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

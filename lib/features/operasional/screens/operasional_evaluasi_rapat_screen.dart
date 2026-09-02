@@ -116,6 +116,7 @@ class _OperasionalEvaluasiRapatScreenState extends State<OperasionalEvaluasiRapa
 
   void _openForm([dynamic rapat]) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -140,6 +141,7 @@ class _OperasionalEvaluasiRapatScreenState extends State<OperasionalEvaluasiRapa
     String tempCabang = _selectedCabangId;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -327,6 +329,7 @@ class _OperasionalEvaluasiRapatScreenState extends State<OperasionalEvaluasiRapa
     final hasNotulen = notulenPath != null && notulenPath.trim().isNotEmpty;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

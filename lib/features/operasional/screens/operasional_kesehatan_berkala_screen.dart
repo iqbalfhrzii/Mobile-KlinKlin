@@ -150,6 +150,7 @@ class _OperasionalKesehatanBerkalaScreenState extends State<OperasionalKesehatan
 
   void _openForm([dynamic data]) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -174,6 +175,7 @@ class _OperasionalKesehatanBerkalaScreenState extends State<OperasionalKesehatan
     String tempCabang = _selectedCabangId;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -342,6 +344,7 @@ class _OperasionalKesehatanBerkalaScreenState extends State<OperasionalKesehatan
     final hasFile = filePath != null && filePath.trim().isNotEmpty;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

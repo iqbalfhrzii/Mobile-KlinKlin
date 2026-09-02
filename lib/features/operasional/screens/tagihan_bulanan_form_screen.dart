@@ -118,6 +118,7 @@ class _TagihanBulananFormScreenState extends State<TagihanBulananFormScreen> {
 
   Future<void> _showImagePickerSheet() async {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => SafeArea(
@@ -291,7 +292,7 @@ class _TagihanBulananFormScreenState extends State<TagihanBulananFormScreen> {
         children: [
           // Enhanced Header
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(20, 52, 20, 24),
+            padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 20 : 24),
             child: Row(
               children: [
                 const AppBackButton(),

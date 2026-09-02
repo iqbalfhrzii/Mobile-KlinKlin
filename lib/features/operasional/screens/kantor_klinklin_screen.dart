@@ -94,7 +94,7 @@ class _KantorKlinklinScreenState extends State<KantorKlinklinScreen> {
         children: [
           // Enhanced Gradient Header
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(20, 52, 20, 24),
+            padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 20 : 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -825,6 +825,7 @@ class _KantorKlinklinScreenState extends State<KantorKlinklinScreen> {
   // --- RIWAYAT SEWA KANTOR BOTTOM SHEET ---
   void _showRiwayatSheet(dynamic cabang) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -853,6 +854,7 @@ class _KantorKlinklinScreenState extends State<KantorKlinklinScreen> {
     final akhirSewa = akhirSewaDate != null ? DateFormat('dd MMMM yyyy').format(akhirSewaDate) : '-';
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

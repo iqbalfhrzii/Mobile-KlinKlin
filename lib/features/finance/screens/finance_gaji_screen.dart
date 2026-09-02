@@ -247,7 +247,7 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
     final canPop = Navigator.canPop(context);
 
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(20, 50, 20, 18),
+      padding: EdgeInsets.fromLTRB(20, 50, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 14 : 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -637,6 +637,7 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
         : '${gaji.periodeBulan ?? '-'}/${gaji.periodeTahun ?? '-'}';
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -1055,6 +1056,7 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
     final sortedCabangNames = ['BALIKPAPAN', 'DENPASAR', 'MAKASSAR', 'MALANG', 'SURABAYA'];
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -1062,7 +1064,7 @@ class _FinanceGajiScreenState extends State<FinanceGajiScreen> with SingleTicker
         return StatefulBuilder(
           builder: (context, setModalState) {
             return Container(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 20 : 24),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),

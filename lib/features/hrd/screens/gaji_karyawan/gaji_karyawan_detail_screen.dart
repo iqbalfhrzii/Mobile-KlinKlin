@@ -19,6 +19,7 @@ String _toTitleCase(String text) {
 /// Menampilkan Modal Pop-up Bottom Sheet Detail Gaji Karyawan
 void showGajiKaryawanDetailModal(BuildContext context, GajiKaryawanModel gaji) {
   showModalBottomSheet(
+      useSafeArea: true,
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,

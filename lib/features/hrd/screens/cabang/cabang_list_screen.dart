@@ -133,7 +133,7 @@ class _CabangListScreenState extends State<CabangListScreen> {
         children: [
           // Header
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
+            padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 20),
             child: Row(
               children: [
                 GestureDetector(
@@ -197,7 +197,7 @@ class _CabangListScreenState extends State<CabangListScreen> {
 
           // Search Bar
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            padding: EdgeInsets.fromLTRB(16, 14, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 8 : 10),
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,

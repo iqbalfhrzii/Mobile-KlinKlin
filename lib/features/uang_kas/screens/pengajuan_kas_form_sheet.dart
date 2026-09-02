@@ -179,7 +179,7 @@ class _PengajuanKasFormSheetState extends State<PengajuanKasFormSheet> {
 
           // Header
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 12, 12),
+            padding: EdgeInsets.fromLTRB(20, 8, 12, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 12),
             child: Row(
               children: [
                 Container(
@@ -218,7 +218,7 @@ class _PengajuanKasFormSheetState extends State<PengajuanKasFormSheet> {
           // Form Body
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

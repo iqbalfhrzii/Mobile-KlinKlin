@@ -287,6 +287,7 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
     final jenis = (p['jenis']?.toString().toUpperCase() ?? 'CUTI');
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
@@ -527,7 +528,7 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
       body: Column(
         children: [
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(20, 52, 20, 16),
+            padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
             child: Column(
               children: [
                 Row(
@@ -1005,6 +1006,7 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
     String? tempCabangId = _selectedCabangId;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -1712,6 +1714,7 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
       if (mounted) Navigator.pop(context); // Close loading dialog
       if (mounted) {
         showModalBottomSheet(
+      useSafeArea: true,
           context: context,
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
@@ -2074,7 +2077,7 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
 
                   // Bottom Action Button
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                    padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
                     child: SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(
@@ -2111,6 +2114,7 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
     final sisaCtrl = TextEditingController(text: sisa.toString());
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -2268,6 +2272,7 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
   void _showRejectModal(int id) {
     String catatan = '';
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -2394,6 +2399,7 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
     final tagText = typeInfo['tag'] as String;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -2765,7 +2771,7 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
 
             // Bottom Tutup Button
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
               child: SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(

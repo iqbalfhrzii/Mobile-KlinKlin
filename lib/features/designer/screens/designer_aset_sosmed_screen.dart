@@ -55,6 +55,7 @@ class _DesignerAsetSosmedScreenState extends State<DesignerAsetSosmedScreen> {
 
   void _openFormSheet({dynamic asset}) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -138,7 +139,7 @@ class _DesignerAsetSosmedScreenState extends State<DesignerAsetSosmedScreen> {
       body: Column(
         children: [
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+            padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 10 : 14),
             child: Row(
               children: [
                 if (Navigator.canPop(context)) ...[
@@ -187,7 +188,7 @@ class _DesignerAsetSosmedScreenState extends State<DesignerAsetSosmedScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 8 : 8),
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,

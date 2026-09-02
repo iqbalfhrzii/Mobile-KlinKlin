@@ -188,6 +188,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
     List<File> selectedPhotos = [];
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -367,6 +368,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
                         GestureDetector(
                           onTap: () {
                             showModalBottomSheet(
+      useSafeArea: true,
                               context: context,
                               backgroundColor: Colors.transparent,
                               builder: (_) => Container(
@@ -2098,7 +2100,7 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
 
   Widget _buildHeader(BuildContext context, String customerName) {
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

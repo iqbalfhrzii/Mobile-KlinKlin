@@ -763,6 +763,7 @@ class _LeaveHistoryScreenState extends State<LeaveHistoryScreen> {
     final dateRange = _formatDateRange(startStr, endStr);
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       backgroundColor: Colors.white,
       isScrollControlled: true,

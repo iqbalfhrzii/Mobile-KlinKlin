@@ -2170,7 +2170,7 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+      padding: EdgeInsets.fromLTRB(16, 4, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 20 : 24),
       children: [
         // Sub Tab Selector
         Row(

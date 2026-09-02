@@ -248,7 +248,7 @@ class _OperasionalStrategiRapatFormSheetState extends State<OperasionalStrategiR
           
           // Header
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 12, 12),
+            padding: EdgeInsets.fromLTRB(20, 8, 12, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 8 : 12),
             child: Row(
               children: [
                 Container(

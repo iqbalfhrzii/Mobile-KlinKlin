@@ -40,6 +40,7 @@ class AttendanceDayDetailSheet extends StatelessWidget {
     VoidCallback? onOpenFullHistory,
   }) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

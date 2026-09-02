@@ -20,6 +20,7 @@ class GajiPokokDetailSheet extends StatelessWidget {
     VoidCallback? onDataChanged,
   }) {
     return showModalBottomSheet<bool>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

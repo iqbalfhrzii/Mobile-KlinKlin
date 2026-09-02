@@ -115,6 +115,7 @@ class _OperasionalLayananKesehatanScreenState extends State<OperasionalLayananKe
 
   void _openForm([dynamic data]) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -150,6 +151,7 @@ class _OperasionalLayananKesehatanScreenState extends State<OperasionalLayananKe
     String tempCabang = _selectedCabangId;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -296,6 +298,7 @@ class _OperasionalLayananKesehatanScreenState extends State<OperasionalLayananKe
     final keterangan = data['keterangan'] != null && data['keterangan'].toString().trim().isNotEmpty ? data['keterangan'].toString().trim() : null;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

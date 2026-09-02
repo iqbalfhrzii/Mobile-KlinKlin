@@ -253,6 +253,7 @@ class _CeoDataChatScreenState extends State<CeoDataChatScreen> {
 
   void _showCabangDetailModal(Map<String, dynamic> cabangData) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -1106,7 +1107,7 @@ class _CeoDataChatScreenState extends State<CeoDataChatScreen> {
           // Bottom Action Button: View Branch Daily Breakdown
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+            padding: EdgeInsets.fromLTRB(14, 0, 14, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 8 : 12),
             child: OutlinedButton.icon(
               onPressed: () => _showCabangDetailModal(data),
               icon: const Icon(Icons.list_alt_rounded, size: 16, color: Color(0xFF0284C7)),

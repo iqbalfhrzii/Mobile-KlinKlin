@@ -146,6 +146,7 @@ class _OperasionalApprovalPengajuanScreenState extends State<OperasionalApproval
 
   void _showDetailModal(Map<String, dynamic> item, bool isPending) async {
     final result = await showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -236,7 +237,7 @@ class _OperasionalApprovalPengajuanScreenState extends State<OperasionalApproval
         children: [
           // Enhanced Gradient Header with Mobile-First Tab Bar
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(20, 52, 20, 16),
+            padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -424,7 +425,7 @@ class _OperasionalApprovalPengajuanScreenState extends State<OperasionalApproval
 
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 8 : 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -625,6 +626,7 @@ class _OperasionalApprovalPengajuanScreenState extends State<OperasionalApproval
 
   void _showComprehensiveFilterModal() {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -929,7 +931,7 @@ class _OperasionalApprovalPengajuanScreenState extends State<OperasionalApproval
 
           // Bottom Action Bar
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+            padding: EdgeInsets.fromLTRB(16, 10, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 10 : 14),
             child: widget.isReadOnly
                 ? (isPending
                     ? SizedBox(

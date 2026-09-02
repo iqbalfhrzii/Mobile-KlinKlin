@@ -672,7 +672,7 @@ class _OperasionalKajianRdFormSheetState extends State<OperasionalKajianRdFormSh
           
           // Bottom Action Footer
           Container(
-            padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
+            padding: EdgeInsets.fromLTRB(18, 12, 18, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 10 : 14),
             decoration: const BoxDecoration(
               color: Colors.white,
               border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),

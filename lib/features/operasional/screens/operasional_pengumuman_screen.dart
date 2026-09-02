@@ -111,6 +111,7 @@ class _OperasionalPengumumanScreenState extends State<OperasionalPengumumanScree
 
   void _openForm() {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -155,6 +156,7 @@ class _OperasionalPengumumanScreenState extends State<OperasionalPengumumanScree
     }
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -464,7 +466,7 @@ class _OperasionalPengumumanScreenState extends State<OperasionalPengumumanScree
 
             // Modal Footer
             Container(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+              padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 10 : 14),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),

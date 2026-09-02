@@ -123,7 +123,7 @@ class _FinancePengaturanPpnScreenState extends State<FinancePengaturanPpnScreen>
         children: [
           // 1. Header
           GradientHeader(
-            padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
+            padding: EdgeInsets.fromLTRB(20, 50, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -437,7 +437,7 @@ class _FinancePengaturanPpnScreenState extends State<FinancePengaturanPpnScreen>
 
       // 6. Bottom Sticky Save Button
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
+        padding: EdgeInsets.fromLTRB(16, 10, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 20),
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [

@@ -207,7 +207,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     backgroundColor: AppColors.surface,
                     child: SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -330,7 +330,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         .length;
 
     return GradientHeader(
-      padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
+      padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 20),
       child: Row(
         children: [
           if (Navigator.canPop(context)) ...[
@@ -402,6 +402,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   void _showFilterBottomSheet() {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

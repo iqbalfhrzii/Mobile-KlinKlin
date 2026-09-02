@@ -324,6 +324,7 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
 
   void _showFilterModal() {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,

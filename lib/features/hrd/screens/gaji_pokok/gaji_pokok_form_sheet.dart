@@ -24,6 +24,7 @@ class GajiPokokFormSheet extends StatefulWidget {
     List<JabatanModel>? jabatans,
   }) {
     return showModalBottomSheet<bool>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -228,7 +229,14 @@ class _GajiPokokFormSheetState extends State<GajiPokokFormSheet> {
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
-        padding: const EdgeInsets.fromLTRB(24, 14, 24, 24),
+        padding: EdgeInsets.fromLTRB(
+          24,
+          14,
+          24,
+          MediaQuery.of(context).padding.bottom > 0
+              ? MediaQuery.of(context).padding.bottom + 16
+              : 24,
+        ),
         child: Form(
           key: _formKey,
           child: Column(

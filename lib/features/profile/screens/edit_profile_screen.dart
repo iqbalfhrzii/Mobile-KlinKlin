@@ -76,6 +76,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final hasPhoto = _photoPath != null && _photoPath!.isNotEmpty && !_isPhotoRemoved;
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
@@ -259,7 +260,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           : Column(
               children: [
                 GradientHeader(
-                  padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
+                  padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 16 : 20),
                   child: Row(
                     children: [
                       HeaderBackButton(onTap: () => Navigator.pop(context)),
