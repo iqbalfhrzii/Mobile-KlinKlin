@@ -87,7 +87,7 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
       };
     } else if (j == 'cuti') {
       return {
-        'label': 'CUTI BULANAN',
+        'label': 'CUTI TAHUNAN',
         'tag': 'Potong Kuota',
         'color': const Color(0xFF0284C7),
         'bg': const Color(0xFFF0F9FF),
@@ -2250,8 +2250,8 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
     } catch (_) {}
 
     final note = potongKuota
-        ? 'ℹ️ Sisa cuti bulanan/tahunan karyawan akan berkurang otomatis sebanyak $durasi hari.'
-        : '✨ Cuti Khusus (Bebas Kuota) - Persetujuan ini TIDAK akan mengurangi sisa cuti bulanan/tahunan karyawan.';
+        ? 'ℹ️ Sisa cuti tahunan karyawan akan berkurang otomatis sebanyak $durasi hari.'
+        : '✨ Cuti Khusus (Bebas Kuota) - Persetujuan ini TIDAK akan mengurangi sisa cuti tahunan karyawan.';
 
     showDialog(
       context: context,

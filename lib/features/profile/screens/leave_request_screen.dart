@@ -258,7 +258,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                           style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
                         ),
                         Text(
-                          'Tidak memotong kuota cuti bulanan/tahunan',
+                          'Tidak memotong kuota cuti tahunan',
                           style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF7C3AED), fontWeight: FontWeight.w500),
                         ),
                       ],
@@ -403,7 +403,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Ajukan cuti bulanan, cuti khusus, atau izin',
+                  'Ajukan cuti tahunan, cuti khusus, atau izin',
                   style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.85)),
                 ),
               ],
@@ -418,7 +418,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Quota Card if Cuti Bulanan
+                    // Quota Card if Cuti Tahunan
                     if (!_isLoadingQuota && _leaveType == 'cuti') ...[
                       Container(
                         padding: const EdgeInsets.all(16),
@@ -453,7 +453,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Sisa Jatah Cuti Bulanan',
+                                    'Sisa Jatah Cuti Tahunan',
                                     style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.85)),
                                   ),
                                   const SizedBox(height: 2),
@@ -471,7 +471,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
-                                'Jatah: $_jatahCuti Hari',
+                                'Jatah: $_jatahCuti Hari/Tahun',
                                 style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
                               ),
                             ),
@@ -491,7 +491,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                     // 3 Choice Cards (Ordered matching Web Form)
                     _buildLeaveTypeCard(
                       value: 'cuti',
-                      title: 'Cuti Bulanan / Tahunan (Memotong jatah cuti)',
+                      title: 'Cuti Tahunan (Memotong jatah cuti)',
                       subtitle: 'Memotong sisa kuota cuti tahunan Anda',
                       icon: Icons.beach_access_rounded,
                       activeColor: const Color(0xFF0284C7),
@@ -538,7 +538,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Pengajuan Cuti Bulanan/Tahunan akan mengurangi kuota sisa cuti Anda ($_sisaCuti Hari tersisa). Pastikan kuota mencukupi.',
+                                'Pengajuan Cuti Tahunan akan mengurangi kuota sisa cuti tahunan Anda ($_sisaCuti Hari tersisa). Pastikan kuota mencukupi.',
                                 style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF0369A1), height: 1.4),
                               ),
                             ),
