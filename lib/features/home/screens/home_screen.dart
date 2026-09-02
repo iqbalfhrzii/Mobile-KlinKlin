@@ -31,6 +31,7 @@ import '../../operasional/screens/operasional_quotation_screen.dart';
 import '../../konten_marketing/screens/konten_marketing_screen.dart';
 import '../../operasional/screens/operasional_pengumuman_screen.dart';
 import '../../lapor_kecelakaan/screens/lapor_kecelakaan_screen.dart';
+import '../../cs/screens/cs_izin_tukar_libur_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -1124,6 +1125,13 @@ class _HomeScreenState extends State<HomeScreen> {
         iconColor: const Color(0xFFEC4899),
         bgColor: const Color(0xFFFCE7F3),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatHarianScreen())),
+      ),
+      _MenuGridItem(
+        title: 'Izin & Libur',
+        icon: Icons.event_busy_outlined,
+        iconColor: const Color(0xFF8B5CF6),
+        bgColor: const Color(0xFFF5F3FF),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CsIzinTukarLiburScreen())),
       ),
       _MenuGridItem(
         title: 'Uang Kas',
