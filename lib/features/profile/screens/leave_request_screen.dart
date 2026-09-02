@@ -494,38 +494,104 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                     ),
                     const SizedBox(height: 10),
 
-                    // 3 Choice Cards
+                    // 3 Choice Cards (Ordered matching Web Form)
                     _buildLeaveTypeCard(
                       value: 'cuti',
-                      title: 'Cuti Bulanan / Tahunan',
-                      subtitle: 'Memotong jatah sisa cuti Anda',
+                      title: 'Cuti Bulanan / Tahunan (Memotong jatah cuti)',
+                      subtitle: 'Memotong sisa kuota cuti tahunan Anda',
                       icon: Icons.beach_access_rounded,
                       activeColor: const Color(0xFF0284C7),
                       activeBg: const Color(0xFFF0F9FF),
-                      tagText: 'Potong Kuota',
-                    ),
-                    const SizedBox(height: 10),
-
-                    _buildLeaveTypeCard(
-                      value: 'cuti_khusus',
-                      title: 'Cuti Khusus',
-                      subtitle: 'Melahirkan, Menikah, Ibadah, dll',
-                      icon: Icons.star_rounded,
-                      activeColor: const Color(0xFF7C3AED),
-                      activeBg: const Color(0xFFFAF5FF),
-                      tagText: 'Bebas Kuota ✨',
+                      tagText: 'Potong Jatah Cuti',
                     ),
                     const SizedBox(height: 10),
 
                     _buildLeaveTypeCard(
                       value: 'izin',
-                      title: 'Izin Sakit / Keperluan Pribadi',
-                      subtitle: 'Sakit dengan bukti dokter / keperluan mendesak',
+                      title: 'Izin Sakit / Keperluan Pribadi (Tidak memotong jatah cuti)',
+                      subtitle: 'Tidak memotong cuti, berlaku potong gaji harian',
                       icon: Icons.medical_services_rounded,
                       activeColor: const Color(0xFFEA580C),
                       activeBg: const Color(0xFFFFF7ED),
-                      tagText: 'Izin Harian',
+                      tagText: 'Tidak Potong Cuti (Potong Gaji)',
                     ),
+                    const SizedBox(height: 10),
+
+                    _buildLeaveTypeCard(
+                      value: 'cuti_khusus',
+                      title: 'Cuti Khusus (Melahirkan, Menikah, dll - Tidak memotong jatah cuti)',
+                      subtitle: 'Melahirkan, Menikah, Ibadah, Duka, dll',
+                      icon: Icons.star_rounded,
+                      activeColor: const Color(0xFF7C3AED),
+                      activeBg: const Color(0xFFFAF5FF),
+                      tagText: 'Tidak Potong Cuti (Berbayar) ✨',
+                    ),
+
+                    // Contextual Information Banner
+                    if (_leaveType == 'cuti') ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0F9FF),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFBAE6FD)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.info_outline_rounded, color: Color(0xFF0284C7), size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Pengajuan Cuti Bulanan/Tahunan akan mengurangi kuota sisa cuti Anda ($_sisaCuti Hari tersisa). Pastikan kuota mencukupi.',
+                                style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF0369A1), height: 1.4),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else if (_leaveType == 'izin') ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF7ED),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFFED7AA)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, color: Color(0xFFEA580C), size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: RichText(
+                                text: TextSpan(
+                                  style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF9A3412), height: 1.4),
+                                  children: const [
+                                    TextSpan(
+                                      text: 'Izin Sakit / Keperluan Pribadi ',
+                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    TextSpan(
+                                      text: 'TIDAK memotong jatah kuota cuti tahunan Anda. Namun hari izin yang diambil akan berlaku ',
+                                    ),
+                                    TextSpan(
+                                      text: 'potong gaji harian (unpaid). ',
+                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    TextSpan(
+                                      text: 'Wajib lampirkan surat dokter / bukti pendukung jika sakit.',
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
 
                     // Special Leave Subtype Selector (Shown when cuti_khusus is selected)
                     if (_leaveType == 'cuti_khusus') ...[

@@ -115,8 +115,9 @@ class _LeaveHistoryScreenState extends State<LeaveHistoryScreen> {
       }
       return 'CUTI KHUSUS';
     }
-    if (t == 'cuti') return 'CUTI BULANAN';
-    if (t == 'izin') return 'IZIN';
+    if (t == 'cuti') return 'CUTI BULANAN (POTONG KUOTA)';
+    if (t == 'izin' || t.contains('sakit')) return 'IZIN (POTONG GAJI)';
+    if (t.contains('tukar')) return 'TUKAR LIBUR';
     return (type ?? 'CUTI').toUpperCase();
   }
 
