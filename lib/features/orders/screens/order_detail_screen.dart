@@ -4931,6 +4931,8 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
         ).firstOrNull;
         if (manualTarif != null && manualTarif['jenis_bonus_id'] != null) {
           jenisBonusId = manualTarif['jenis_bonus_id'] as int;
+        } else if (_tarifBonuses.isNotEmpty && _tarifBonuses.first['jenis_bonus_id'] != null) {
+          jenisBonusId = _tarifBonuses.first['jenis_bonus_id'] as int;
         }
       }
 
