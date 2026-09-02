@@ -110,7 +110,6 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
             _isKoor = isKoorBool;
           });
 
-          final prefs = await SharedPreferences.getInstance();
           prefs.setString('user_status_pegawai', _userStatusPegawai);
           prefs.setBool('is_koor', _isKoor);
         }
