@@ -1884,43 +1884,63 @@ class _Step2Services extends StatelessWidget {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        s.name,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.textDark,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
                                       Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.background,
-                                              borderRadius: BorderRadius.circular(6),
-                                              border: Border.all(color: AppColors.border),
-                                            ),
+                                          Expanded(
                                             child: Text(
-                                              'Qty: ${s.qty}',
+                                              s.name,
                                               style: GoogleFonts.inter(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                                color: AppColors.primary,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.textDark,
                                               ),
                                             ),
                                           ),
-                                          const Spacer(),
+                                          const SizedBox(width: 8),
                                           Text(
                                             'Rp ${CurrencyInputFormatter.format(s.price.toInt())}',
                                             style: GoogleFonts.inter(
                                               fontSize: 14,
                                               fontWeight: FontWeight.bold,
-                                              color: AppColors.textDark,
+                                              color: AppColors.primary,
                                             ),
                                           ),
                                         ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.background,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: AppColors.border),
+                                        ),
+                                        child: Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Qty: ',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.primary,
+                                              ),
+                                            ),
+                                            Expanded(
+                                              child: Text(
+                                                s.qty.isNotEmpty ? s.qty : '1',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.textDark,
+                                                  height: 1.3,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -2428,7 +2448,13 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
                     ),
                     const SizedBox(height: 14),
                     _label('Jumlah / Qty (Contoh: 3 jam / 1 sofa)'),
-                    _textField(_qtyCtrl, hint: 'Tulis durasi, jumlah barang/ruangan...'),
+                    _textField(
+                      _qtyCtrl,
+                      hint: 'Tulis durasi, jumlah barang/ruangan...',
+                      type: TextInputType.multiline,
+                      minLines: 2,
+                      maxLines: 4,
+                    ),
                     const SizedBox(height: 8),
                     // Quick Qty Preset Chips
                     Wrap(
@@ -2511,10 +2537,14 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
     String hint = '',
     String? prefixText,
     List<TextInputFormatter>? inputFormatters,
+    int? minLines,
+    int? maxLines = 1,
   }) => TextField(
     controller: ctrl,
     keyboardType: type,
     inputFormatters: inputFormatters,
+    minLines: minLines,
+    maxLines: maxLines,
     style: GoogleFonts.inter(fontSize: 14, color: AppColors.textDark, fontWeight: FontWeight.w600),
     decoration: InputDecoration(
       hintText: hint,

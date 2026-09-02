@@ -1390,7 +1390,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
-                            vertical: 3,
+                            vertical: 3.5,
                           ),
                           decoration: BoxDecoration(
                             color: AppColors.surfaceBlue.withValues(alpha: 0.8),
@@ -1399,27 +1399,30 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                               color: AppColors.primary.withValues(alpha: 0.2),
                             ),
                           ),
-                          child: Text.rich(
-                            TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: 'Qty: ',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.primary,
-                                  ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Qty: ',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
                                 ),
-                                TextSpan(
-                                  text: s.qty,
+                              ),
+                              Flexible(
+                                child: Text(
+                                  s.qty.isNotEmpty ? s.qty : '1',
                                   style: GoogleFonts.inter(
-                                    fontSize: 13,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                     color: AppColors.textDark,
+                                    height: 1.3,
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                         if (s.bonusLayanan > 0)
