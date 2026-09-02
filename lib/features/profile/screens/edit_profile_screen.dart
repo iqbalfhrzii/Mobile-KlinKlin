@@ -19,8 +19,14 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _nameController = TextEditingController();
   String? _photoPath;
+  String _userRole = '';
   bool _isPhotoRemoved = false;
   bool _isLoading = true;
+
+  bool get _isRestricted =>
+      _userRole.toLowerCase().contains('cleaner') ||
+      _userRole.toLowerCase() == 'cs' ||
+      _userRole.toLowerCase().contains('customer service');
 
   @override
   void initState() {
@@ -32,8 +38,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final prefs = await SharedPreferences.getInstance();
     final cachedCustomName = prefs.getString('user_custom_name');
     final defaultName = prefs.getString('user_name') ?? 'Pengguna';
+    final role = prefs.getString('user_role') ?? '';
 
     setState(() {
+      _userRole = role;
       _nameController.text = cachedCustomName ?? defaultName;
       _photoPath = prefs.getString('user_photo');
     });
@@ -42,8 +50,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final meResponse = await AuthService.getMe();
       final me = meResponse['data'] ?? meResponse;
       if (mounted) {
+        final serverRole = me['jabatan'] is Map ? me['jabatan']['nama_jabatan'] ?? _userRole : _userRole;
         setState(() {
-          _nameController.text = cachedCustomName ?? me['nama'] ?? _nameController.text;
+          _userRole = serverRole.toString();
+          if (_isRestricted) {
+            _nameController.text = cachedCustomName ?? me['nama'] ?? _nameController.text;
+          } else {
+            _nameController.text = me['nama'] ?? _nameController.text;
+          }
           _photoPath = me['foto_profil'];
         });
       }
@@ -356,19 +370,35 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.05),
+                                color: _isRestricted
+                                    ? AppColors.primary.withValues(alpha: 0.05)
+                                    : const Color(0xFFECFDF5),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+                                border: Border.all(
+                                  color: _isRestricted
+                                      ? AppColors.primary.withValues(alpha: 0.15)
+                                      : const Color(0xFFA7F3D0),
+                                ),
                               ),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(Icons.info_outline_rounded, size: 15, color: AppColors.primary),
+                                  Icon(
+                                    _isRestricted ? Icons.info_outline_rounded : Icons.check_circle_outline_rounded,
+                                    size: 15,
+                                    color: _isRestricted ? AppColors.primary : const Color(0xFF059669),
+                                  ),
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
-                                      'Nama ini disimpan sebagai nama tampilan di aplikasi Anda. Perubahan nama resmi di database hanya dapat dilakukan oleh HRD.',
-                                      style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted, height: 1.3),
+                                      _isRestricted
+                                          ? 'Nama ini disimpan sebagai nama tampilan di aplikasi Anda. Perubahan nama resmi di database hanya dapat dilakukan oleh HRD.'
+                                          : 'Perubahan nama dan foto profil akan langsung diperbarui ke database sistem.',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        color: _isRestricted ? AppColors.textMuted : const Color(0xFF065F46),
+                                        height: 1.3,
+                                      ),
                                     ),
                                   ),
                                 ],

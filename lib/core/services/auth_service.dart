@@ -165,6 +165,8 @@ class AuthService {
 
   static Future<void> updateProfile(String name, String? photoPath, {bool isPhotoRemoved = false}) async {
     final prefs = await SharedPreferences.getInstance();
+    final role = (prefs.getString('user_role') ?? '').toLowerCase();
+    final isRestricted = role.contains('cleaner') || role == 'cs' || role.contains('customer service');
 
     try {
       if (isPhotoRemoved) {
@@ -172,25 +174,61 @@ class AuthService {
           await _dio.delete('/me/foto-profil');
         } catch (_) {}
         await prefs.remove('user_photo');
-      } else if (photoPath != null && photoPath.isNotEmpty && !photoPath.startsWith('http') && !photoPath.startsWith('data:')) {
-        final formData = FormData.fromMap({
-          'foto_profil': await MultipartFile.fromFile(
+      }
+
+      if (isRestricted) {
+        // For Cleaner & CS:
+        // 1. Upload photo to server if changed
+        if (photoPath != null && photoPath.isNotEmpty && !photoPath.startsWith('http') && !photoPath.startsWith('data:')) {
+          final formData = FormData.fromMap({
+            'foto_profil': await MultipartFile.fromFile(
+              photoPath,
+              filename: photoPath.split('/').last,
+            )
+          });
+          final res = await _dio.post('/me/foto-profil', data: formData);
+          final newPhoto = res.data?['data']?['foto_profil'];
+          if (newPhoto != null) {
+            await prefs.setString('user_photo', newPhoto.toString());
+          } else {
+            await prefs.setString('user_photo', photoPath);
+          }
+        }
+
+        // 2. Save name in local device cache only (database name is managed by HRD)
+        await prefs.setString('user_name', name);
+        await prefs.setString('user_custom_name', name);
+      } else {
+        // For other roles (Finance, HRD, CEO, Marketing, Operasional, Designer, Admin/Owner):
+        // Update name and photo directly in database!
+        final mapData = <String, dynamic>{
+          'nama': name,
+        };
+
+        if (photoPath != null && photoPath.isNotEmpty && !photoPath.startsWith('http') && !photoPath.startsWith('data:')) {
+          mapData['foto_profil'] = await MultipartFile.fromFile(
             photoPath,
             filename: photoPath.split('/').last,
-          )
-        });
-        final res = await _dio.post('/me/foto-profil', data: formData);
-        final newPhoto = res.data?['data']?['foto_profil'];
-        if (newPhoto != null) {
-          await prefs.setString('user_photo', newPhoto.toString());
+          );
+        }
+
+        final formData = FormData.fromMap(mapData);
+        final res = await _dio.post('/me', data: formData);
+        final updatedData = res.data?['data'];
+        if (updatedData != null && updatedData is Map) {
+          final serverName = updatedData['nama']?.toString() ?? name;
+          await prefs.setString('user_name', serverName);
+          await prefs.remove('user_custom_name'); // Clear cache so database name is active
+          final newPhoto = updatedData['foto_profil'];
+          if (newPhoto != null) {
+            await prefs.setString('user_photo', newPhoto.toString());
+          }
         } else {
-          await prefs.setString('user_photo', photoPath);
+          await prefs.setString('user_name', name);
+          await prefs.remove('user_custom_name');
         }
       }
-      
-      // Update local device cache only (database name is managed by HRD)
-      await prefs.setString('user_name', name);
-      await prefs.setString('user_custom_name', name);
+
       profileUpdateNotifier.value++;
     } on DioException catch (e) {
       throw Exception(
