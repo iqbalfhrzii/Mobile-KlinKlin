@@ -124,17 +124,31 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
   }
 
 
-  String _formatDate(String dateStr) {
+  String _formatDate(String dateStr, {bool showRelative = true}) {
     if (dateStr.isEmpty) return '-';
     try {
       final dt = DateTime.parse(dateStr).toLocal();
-      // Gunakan Intl jika tersedia locale id, atau fallback manual
-      // Berhubung kita ingin format cepat: Hari, dd Bulan yyyy
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final itemDate = DateTime(dt.year, dt.month, dt.day);
+      final diffDays = itemDate.difference(today).inDays;
+
       final days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
       final months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
       final dayName = days[dt.weekday - 1];
       final monthName = months[dt.month - 1];
-      return '$dayName, ${dt.day} $monthName ${dt.year}';
+      final formatted = '$dayName, ${dt.day} $monthName ${dt.year}';
+
+      if (!showRelative) return formatted;
+
+      if (diffDays == 0) {
+        return '$formatted (Hari Ini)';
+      } else if (diffDays == -1) {
+        return '$formatted (Kemarin)';
+      } else if (diffDays < -1) {
+        return '$formatted (Sudah Lewat)';
+      }
+      return formatted;
     } catch (_) {
       return dateStr.split('T')[0]; // fallback
     }
