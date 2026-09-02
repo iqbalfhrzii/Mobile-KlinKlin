@@ -182,8 +182,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadProfile() async {
     final prefs = await SharedPreferences.getInstance();
+    final cachedCustomName = prefs.getString('user_custom_name');
+    final defaultName = prefs.getString('user_name') ?? 'CS';
+
     setState(() {
-      _userName = prefs.getString('user_name') ?? 'CS';
+      _userName = cachedCustomName ?? defaultName;
       _userRole = prefs.getString('user_role') ?? 'Customer Service';
       _userBranch = prefs.getString('user_branch') ?? '-';
       _userPhoto = prefs.getString('user_photo');
@@ -194,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final me = meResponse['data'] ?? meResponse;
       if (mounted) {
         setState(() {
-          _userName = me['nama'] ?? _userName;
+          _userName = cachedCustomName ?? me['nama'] ?? _userName;
           _userPhoto = me['foto_profil'];
           _userRole = me['jabatan'] is Map
               ? me['jabatan']['nama_jabatan'] ?? _userRole

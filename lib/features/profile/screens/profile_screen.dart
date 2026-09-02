@@ -41,8 +41,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadProfile() async {
     final prefs = await SharedPreferences.getInstance();
+    final cachedCustomName = prefs.getString('user_custom_name');
+    final defaultName = prefs.getString('user_name') ?? 'Pengguna';
+
     setState(() {
-      _userName = prefs.getString('user_name') ?? 'Pengguna';
+      _userName = cachedCustomName ?? defaultName;
       _userRole = prefs.getString('user_role') ?? 'Cleaner';
       _userBranch = prefs.getString('user_branch') ?? '-';
       _userEmail = prefs.getString('user_email') ?? '';
@@ -55,7 +58,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final me = meResponse['data'] ?? meResponse;
       if (mounted) {
         setState(() {
-          _userName = me['nama'] ?? _userName;
+          _userName = cachedCustomName ?? me['nama'] ?? _userName;
           _userPhoto = me['foto_profil'];
           _userRole = me['jabatan'] is Map ? me['jabatan']['nama_jabatan'] ?? _userRole : _userRole;
           _userBranch = me['cabang'] is Map ? me['cabang']['nama_cabang'] ?? _userBranch : _userBranch;

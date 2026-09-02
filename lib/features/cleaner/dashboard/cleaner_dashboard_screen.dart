@@ -64,8 +64,11 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
 
   Future<void> _loadProfile() async {
     final prefs = await SharedPreferences.getInstance();
+    final cachedCustomName = prefs.getString('user_custom_name');
+    final defaultName = prefs.getString('user_name') ?? 'Cleaner';
+
     setState(() {
-      _userName = prefs.getString('user_name') ?? 'Cleaner';
+      _userName = cachedCustomName ?? defaultName;
       _userPhoto = prefs.getString('user_photo');
       _userRole = prefs.getString('user_role') ?? 'Cleaner';
       _userBranch = prefs.getString('user_branch') ?? '-';
@@ -88,6 +91,9 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
         final meResponse = await AuthService.getMe();
         final me = meResponse['data'] ?? meResponse;
         if (mounted) {
+          final prefs = await SharedPreferences.getInstance();
+          final cachedCustomName = prefs.getString('user_custom_name');
+
           final roleName = me['jabatan'] is Map ? me['jabatan']['nama_jabatan'] ?? _userRole : _userRole;
           final branchName = me['cabang'] is Map ? me['cabang']['nama_cabang'] ?? _userBranch : _userBranch;
           final statusPeg = (me['status_karyawan'] ?? me['status_pegawai'] ?? _userStatusPegawai).toString();
@@ -96,7 +102,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
               statusPeg.toLowerCase().contains('koor');
 
           setState(() {
-            _userName = me['nama'] ?? _userName;
+            _userName = cachedCustomName ?? me['nama'] ?? _userName;
             _userPhoto = me['foto_profil'];
             _userRole = roleName;
             _userBranch = branchName;

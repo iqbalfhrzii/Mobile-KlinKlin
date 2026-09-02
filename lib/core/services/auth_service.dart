@@ -32,6 +32,7 @@ class AuthService {
       if (data['token'] != null) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', data['token'].toString());
+        await prefs.remove('user_custom_name');
         
         // Save user data (safely handle if value is Map/Object)
         String extractStr(dynamic val, [String mapKey = 'nama']) {
@@ -143,6 +144,7 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     await prefs.remove('user_name');
+    await prefs.remove('user_custom_name');
     await prefs.remove('user_email');
     await prefs.remove('user_photo');
   }
@@ -186,8 +188,9 @@ class AuthService {
         }
       }
       
-      // Update local storage
+      // Update local device cache only (database name is managed by HRD)
       await prefs.setString('user_name', name);
+      await prefs.setString('user_custom_name', name);
       profileUpdateNotifier.value++;
     } on DioException catch (e) {
       throw Exception(

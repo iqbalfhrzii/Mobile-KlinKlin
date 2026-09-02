@@ -30,8 +30,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _loadProfile() async {
     final prefs = await SharedPreferences.getInstance();
+    final cachedCustomName = prefs.getString('user_custom_name');
+    final defaultName = prefs.getString('user_name') ?? 'Pengguna';
+
     setState(() {
-      _nameController.text = prefs.getString('user_name') ?? 'CS';
+      _nameController.text = cachedCustomName ?? defaultName;
       _photoPath = prefs.getString('user_photo');
     });
 
@@ -40,7 +43,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final me = meResponse['data'] ?? meResponse;
       if (mounted) {
         setState(() {
-          _nameController.text = me['nama'] ?? _nameController.text;
+          _nameController.text = cachedCustomName ?? me['nama'] ?? _nameController.text;
           _photoPath = me['foto_profil'];
         });
       }
@@ -347,6 +350,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 filled: true,
                                 fillColor: AppColors.surface,
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(Icons.info_outline_rounded, size: 15, color: AppColors.primary),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      'Nama ini disimpan sebagai nama tampilan di aplikasi Anda. Perubahan nama resmi di database hanya dapat dilakukan oleh HRD.',
+                                      style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted, height: 1.3),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
