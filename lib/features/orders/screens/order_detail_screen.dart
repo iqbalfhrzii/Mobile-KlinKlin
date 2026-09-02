@@ -1934,56 +1934,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ),
             ),
           ),
-          if (!widget.isReadOnly && !_isCancelled) ...[
-            const SizedBox(width: 6),
-            InkWell(
-              onTap: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (_) => _AddBonusSheet(
-                    order: o,
-                    initialCleaner: cleaner,
-                    onBonusAdded: _fetchDetail,
-                  ),
-                );
-              },
-              borderRadius: BorderRadius.circular(4),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 3,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: const Color(0xFFFDE68A),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.stars_rounded,
-                      size: 12,
-                      color: Color(0xFFD97706),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Bonus',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFFD97706),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
           if (_canEdit) ...[
             const SizedBox(width: 6),
             InkWell(
@@ -2927,16 +2877,22 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title.toUpperCase(),
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textMuted,
-                  letterSpacing: 0.5,
+              Flexible(
+                child: Text(
+                  title.toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textMuted,
+                    letterSpacing: 0.5,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (trailingAction != null) trailingAction,
+              if (trailingAction != null) ...[
+                const SizedBox(width: 8),
+                trailingAction,
+              ],
             ],
           ),
           const SizedBox(height: 12),
