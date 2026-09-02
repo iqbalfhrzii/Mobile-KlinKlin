@@ -27,6 +27,9 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
   dynamic _selectedLiburSaya;
   final TextEditingController _alasanController = TextEditingController();
 
+  DateTime _monthSaya = DateTime(DateTime.now().year, DateTime.now().month, 1);
+  DateTime _monthTarget = DateTime(DateTime.now().year, DateTime.now().month, 1);
+
   bool _isSubmitting = false;
 
   @override
@@ -69,7 +72,7 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
 
   Future<void> _submitPengajuan() async {
     if (_selectedLiburSaya == null) {
-      _showError('Pilih tanggal libur Anda yang ingin ditukar');
+      _showError('Pilih tanggal libur Anda yang ingin ditukar pada kalender');
       return;
     }
     if (_selectedRekan == null) {
@@ -77,7 +80,7 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
       return;
     }
     if (_selectedLiburTarget == null) {
-      _showError('Pilih tanggal libur rekan kerja');
+      _showError('Pilih tanggal libur rekan kerja pada kalender');
       return;
     }
     if (_alasanController.text.trim().isEmpty) {
@@ -104,7 +107,13 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
         _fetchData();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(res['message'] ?? 'Berhasil mengajukan penukaran', style: GoogleFonts.inter()),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text(res['message'] ?? 'Pengajuan tukar libur berhasil dikirim!', style: GoogleFonts.inter())),
+              ],
+            ),
             backgroundColor: AppColors.success,
           )
         );
@@ -119,10 +128,18 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
 
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg, style: GoogleFonts.inter()), backgroundColor: AppColors.error),
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline_rounded, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(msg, style: GoogleFonts.inter())),
+          ],
+        ),
+        backgroundColor: AppColors.error,
+      ),
     );
   }
-
 
   String _formatDate(String dateStr, {bool showRelative = true}) {
     if (dateStr.isEmpty) return '-';
@@ -150,8 +167,13 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
       }
       return formatted;
     } catch (_) {
-      return dateStr.split('T')[0]; // fallback
+      return dateStr.split('T')[0];
     }
+  }
+
+  String _formatMonthYear(DateTime dt) {
+    final months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    return '${months[dt.month - 1]} ${dt.year}';
   }
 
   @override
@@ -174,8 +196,8 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text('Tukar jadwal libur dengan sesama Cleaner', style: GoogleFonts.inter(
-                  fontSize: 14, color: Colors.white.withValues(alpha: 0.8),
+                Text('Pilih dan tukar jadwal libur dengan kalender interaktif', style: GoogleFonts.inter(
+                  fontSize: 13.5, color: Colors.white.withValues(alpha: 0.9),
                 )),
               ],
             ),
@@ -237,95 +259,186 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
   }
 
   Widget _buildForm() {
+    final bool isSelfSwap = _selectedRekan != null && _selectedRekan['is_self'] == true;
+    final List targetLiburs = _selectedRekan != null && _selectedRekan['jadwal_liburs'] is List
+        ? (_selectedRekan['jadwal_liburs'] as List)
+        : [];
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 24 : 32,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Info banner
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppColors.surfaceBlue,
+              color: const Color(0xFFEFF6FF),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+              border: Border.all(color: const Color(0xFFBFDBFE)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, color: AppColors.primary),
-                const SizedBox(width: 12),
+                const Icon(Icons.info_outline_rounded, color: Color(0xFF2563EB), size: 20),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Anda hanya dapat bertukar jadwal libur dengan sesama Cleaner di cabang yang sama.',
-                    style: GoogleFonts.inter(fontSize: 13, color: AppColors.textDark, height: 1.4),
+                    'Pilih tanggal libur Anda yang ingin ditukar pada kalender, lalu pilih rekan kerja dan tanggal libur penggantinya.',
+                    style: GoogleFonts.inter(fontSize: 12.5, color: const Color(0xFF1E40AF), height: 1.4),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           
-          Text('Libur Anda (Asal)', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<dynamic>(
-            value: _selectedLiburSaya,
-            decoration: _inputDecoration('Pilih tanggal libur Anda'),
-            items: _liburSaya.isEmpty 
-              ? [const DropdownMenuItem(value: null, child: Text('Belum ada jadwal libur'))]
-              : _liburSaya.map((libur) {
-                  return DropdownMenuItem<dynamic>(
-                    value: libur,
-                    child: Text(_formatDate(libur['tanggal'])),
-                  );
-                }).toList(),
-            onChanged: _liburSaya.isEmpty ? null : (val) {
-              setState(() => _selectedLiburSaya = val);
-            },
-            isExpanded: true,
+          // ================= STEP 1: KALENDER LIBUR SAYA =================
+          _buildStepHeader(
+            stepNumber: '1',
+            title: 'Pilih Jadwal Libur Anda (Asal)',
+            subtitle: 'Tanggal dengan tanda biru adalah jadwal libur Anda di bulan ini',
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
 
-          Text('Rekan Kerja Pengganti', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<dynamic>(
-            value: _selectedRekan,
-            decoration: _inputDecoration('Pilih rekan kerja'),
-            items: _rekan.isEmpty 
-              ? [const DropdownMenuItem(value: null, child: Text('Tidak ada rekan kerja'))]
-              : _rekan.map((r) {
-                  final bool isSelf = r['is_self'] == true;
-                  return DropdownMenuItem<dynamic>(
-                    value: r,
+          _buildCalendarBox(
+            currentMonth: _monthSaya,
+            onMonthChanged: (newM) => setState(() => _monthSaya = newM),
+            scheduleList: _liburSaya,
+            selectedDateStr: _selectedLiburSaya?['tanggal'],
+            highlightThemeColor: const Color(0xFF0284C7),
+            highlightBgColor: const Color(0xFFE0F2FE),
+            highlightBorderColor: const Color(0xFF38BDF8),
+            badgeLabel: 'Libur Anda',
+            onSelectDate: (dateStr, item) {
+              setState(() => _selectedLiburSaya = item);
+            },
+            emptyMessage: 'Belum ada jadwal libur yang terdaftar untuk Anda di bulan ini.',
+          ),
+
+          // Selected Card for Step 1
+          if (_selectedLiburSaya != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF86EFAC)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
                     child: Text(
-                      isSelf ? '🌟 ${r['nama']}' : '${r['nama']} - ${r['jabatan']?['nama_jabatan'] ?? 'Cleaner'}',
-                      style: GoogleFonts.inter(
-                        fontWeight: isSelf ? FontWeight.bold : FontWeight.normal,
-                        color: isSelf ? const Color(0xFF2563EB) : null,
-                      ),
+                      'Libur Dipilih: ${_formatDate(_selectedLiburSaya['tanggal'])}',
+                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF15803D)),
                     ),
-                  );
-                }).toList(),
-            onChanged: _rekan.isEmpty ? null : (val) {
-              setState(() {
-                _selectedRekan = val;
-                _selectedLiburTarget = null;
-              });
-            },
-            isExpanded: true,
-          ),
-          const SizedBox(height: 20),
+                  ),
+                ],
+              ),
+            ),
+          ],
 
+          const SizedBox(height: 26),
+
+          // ================= STEP 2: PILIH REKAN KERJA =================
+          _buildStepHeader(
+            stepNumber: '2',
+            title: 'Pilih Rekan Kerja Pengganti',
+            subtitle: 'Pilih Cleaner rekan kerja yang akan diajak bertukar jadwal',
+          ),
+          const SizedBox(height: 10),
+
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(color: const Color(0xFF64748B).withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
+              ],
+            ),
+            child: DropdownButtonFormField<dynamic>(
+              value: _selectedRekan,
+              decoration: InputDecoration(
+                hintText: 'Pilih rekan kerja Cleaner',
+                hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 14),
+                prefixIcon: const Icon(Icons.people_alt_rounded, color: Color(0xFF64748B), size: 20),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
+              items: _rekan.isEmpty 
+                ? [const DropdownMenuItem(value: null, child: Text('Tidak ada rekan kerja'))]
+                : _rekan.map((r) {
+                    final bool isSelf = r['is_self'] == true;
+                    final int countLibur = (r['jadwal_liburs'] as List? ?? []).length;
+                    return DropdownMenuItem<dynamic>(
+                      value: r,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              isSelf ? '🌟 ${r['nama']}' : '${r['nama']} - ${r['jabatan']?['nama_jabatan'] ?? 'Cleaner'}',
+                              style: GoogleFonts.inter(
+                                fontWeight: isSelf ? FontWeight.bold : FontWeight.w600,
+                                color: isSelf ? const Color(0xFF2563EB) : const Color(0xFF0F172A),
+                                fontSize: 13.5,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (!isSelf && countLibur > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFECFDF5),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFA7F3D0)),
+                              ),
+                              child: Text(
+                                '$countLibur Libur',
+                                style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.bold, color: const Color(0xFF059669)),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+              onChanged: _rekan.isEmpty ? null : (val) {
+                setState(() {
+                  _selectedRekan = val;
+                  _selectedLiburTarget = null;
+                });
+              },
+              isExpanded: true,
+            ),
+          ),
+
+          // ================= STEP 3: KALENDER LIBUR REKAN =================
           if (_selectedRekan != null) ...[
-            if (_selectedRekan['is_self'] == true) ...[
-              Text('Tanggal Libur Baru (Pengganti)', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-              const SizedBox(height: 8),
+            const SizedBox(height: 26),
+            if (isSelfSwap) ...[
+              _buildStepHeader(
+                stepNumber: '3',
+                title: 'Pilih Tanggal Libur Baru (Pengganti)',
+                subtitle: 'Khusus Denpasar/Tabanan: Pilih hari kerja yang ingin dijadikan libur baru',
+              ),
+              const SizedBox(height: 10),
               InkWell(
                 onTap: () async {
                   final now = DateTime.now();
                   final picked = await showDatePicker(
                     context: context,
                     initialDate: now,
-                    firstDate: DateTime(now.year, now.month, 1),
-                    lastDate: DateTime(now.year, now.month + 1, 0),
+                    firstDate: DateTime(now.year, now.month, 1).subtract(const Duration(days: 7)),
+                    lastDate: DateTime(now.year, now.month + 1, 7),
                   );
                   if (picked != null) {
                     final formatted = DateFormat('yyyy-MM-dd').format(picked);
@@ -339,61 +452,205 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
                     });
                   }
                 },
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: const Color(0xFFCBD5E1)),
+                    boxShadow: [
+                      BoxShadow(color: const Color(0xFF64748B).withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
+                    ],
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        _selectedLiburTarget != null
-                            ? _formatDate(_selectedLiburTarget['tanggal'])
-                            : 'Pilih tanggal libur baru pengganti',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: _selectedLiburTarget != null ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
-                        ),
+                      Row(
+                        children: [
+                          const Icon(Icons.event_available_rounded, color: Color(0xFF2563EB), size: 22),
+                          const SizedBox(width: 10),
+                          Text(
+                            _selectedLiburTarget != null
+                                ? _formatDate(_selectedLiburTarget['tanggal'])
+                                : 'Pilih tanggal libur baru pengganti...',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: _selectedLiburTarget != null ? FontWeight.bold : FontWeight.normal,
+                              color: _selectedLiburTarget != null ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
+                            ),
+                          ),
+                        ],
                       ),
                       const Icon(Icons.calendar_month_rounded, size: 20, color: AppColors.primary),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
             ] else ...[
-              Text('Libur Rekan Kerja (Tujuan)', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<dynamic>(
-                value: _selectedLiburTarget,
-                decoration: _inputDecoration('Pilih tanggal libur rekan kerja'),
-                items: (_selectedRekan['jadwal_liburs'] as List? ?? []).map((libur) {
-                  return DropdownMenuItem<dynamic>(
-                    value: libur,
-                    child: Text(_formatDate(libur['tanggal'])),
-                  );
-                }).toList(),
-                onChanged: (val) {
-                  setState(() => _selectedLiburTarget = val);
-                },
-                isExpanded: true,
+              _buildStepHeader(
+                stepNumber: '3',
+                title: 'Pilih Jadwal Libur ${_selectedRekan['nama']} (Tujuan)',
+                subtitle: 'Tanggal dengan tanda hijau adalah jadwal libur rekan yang dapat ditukar',
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
+
+              _buildCalendarBox(
+                currentMonth: _monthTarget,
+                onMonthChanged: (newM) => setState(() => _monthTarget = newM),
+                scheduleList: targetLiburs,
+                selectedDateStr: _selectedLiburTarget?['tanggal'],
+                highlightThemeColor: const Color(0xFF059669),
+                highlightBgColor: const Color(0xFFECFDF5),
+                highlightBorderColor: const Color(0xFF6EE7B7),
+                badgeLabel: 'Libur ${_selectedRekan['nama'].toString().split(' ').first}',
+                onSelectDate: (dateStr, item) {
+                  setState(() => _selectedLiburTarget = item);
+                },
+                emptyMessage: '${_selectedRekan['nama']} belum memiliki jadwal libur di bulan ini.',
+              ),
+
+              // Selected Card for Step 3
+              if (_selectedLiburTarget != null) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF86EFAC)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Libur Pengganti: ${_formatDate(_selectedLiburTarget['tanggal'])} (${_selectedRekan['nama']})',
+                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF15803D)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ],
 
-          Text('Alasan Penukaran', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-          const SizedBox(height: 8),
+          // ================= SUMMARY SWAP CARD =================
+          if (_selectedLiburSaya != null && _selectedLiburTarget != null) ...[
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFF8FAFC), Color(0xFFF1F5F9)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.compare_arrows_rounded, color: AppColors.primary, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Ringkasan Penukaran Jadwal',
+                        style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFBAE6FD)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Libur Anda (Asal)', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF0284C7), fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 4),
+                              Text(
+                                _formatDate(_selectedLiburSaya['tanggal']),
+                                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF2563EB),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.swap_horiz_rounded, color: Colors.white, size: 18),
+                        ),
+                      ),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFA7F3D0)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Libur Pengganti', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF059669), fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 4),
+                              Text(
+                                _formatDate(_selectedLiburTarget['tanggal']),
+                                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 24),
+
+          // ================= STEP 4: ALASAN PENUKARAN =================
+          _buildStepHeader(
+            stepNumber: '4',
+            title: 'Alasan Penukaran',
+            subtitle: 'Tuliskan alasan mengapa Anda perlu menukar jadwal libur ini',
+          ),
+          const SizedBox(height: 10),
+
           TextFormField(
             controller: _alasanController,
             maxLines: 3,
-            decoration: _inputDecoration('Masukkan alasan Anda menukar libur ini...'),
+            decoration: InputDecoration(
+              hintText: 'Tuliskan alasan penukaran jadwal secara jelas...',
+              hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 13.5),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.all(14),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+            ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 30),
 
           SizedBox(
             width: double.infinity,
@@ -403,10 +660,11 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
                 backgroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 2,
               ),
               child: _isSubmitting 
                 ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : Text('Kirim Pengajuan', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                : Text('Kirim Pengajuan Tukar Libur', style: GoogleFonts.inter(fontSize: 15.5, fontWeight: FontWeight.bold, color: Colors.white)),
             ),
           ),
         ],
@@ -414,6 +672,318 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
     );
   }
 
+  Widget _buildStepHeader({required String stepNumber, required String title, required String subtitle}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            stepNumber,
+            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.inter(fontSize: 14.5, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF64748B)),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ================= REUSABLE MONTHLY CALENDAR BOX =================
+  Widget _buildCalendarBox({
+    required DateTime currentMonth,
+    required Function(DateTime) onMonthChanged,
+    required List scheduleList,
+    required String? selectedDateStr,
+    required Color highlightThemeColor,
+    required Color highlightBgColor,
+    required Color highlightBorderColor,
+    required String badgeLabel,
+    required Function(String dateStr, dynamic item) onSelectDate,
+    required String emptyMessage,
+  }) {
+    final firstDayOfMonth = DateTime(currentMonth.year, currentMonth.month, 1);
+    final daysInMonth = DateTime(currentMonth.year, currentMonth.month + 1, 0).day;
+    // Monday is 1, Sunday is 7. Offset so Monday is index 0
+    final startOffset = firstDayOfMonth.weekday - 1;
+    final totalCells = ((daysInMonth + startOffset) / 7).ceil() * 7;
+
+    // Build map of off-day dates: YYYY-MM-DD -> item
+    final Map<String, dynamic> scheduleMap = {};
+    for (var s in scheduleList) {
+      if (s is Map && s['tanggal'] != null) {
+        final t = s['tanggal'].toString().split('T')[0];
+        scheduleMap[t] = s;
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF64748B).withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Month Header & Navigation
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left_rounded, size: 24, color: Color(0xFF475569)),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                onPressed: () {
+                  onMonthChanged(DateTime(currentMonth.year, currentMonth.month - 1, 1));
+                },
+              ),
+              Row(
+                children: [
+                  Icon(Icons.calendar_month_rounded, size: 18, color: highlightThemeColor),
+                  const SizedBox(width: 6),
+                  Text(
+                    _formatMonthYear(currentMonth),
+                    style: GoogleFonts.inter(fontSize: 14.5, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                  ),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.chevron_right_rounded, size: 24, color: Color(0xFF475569)),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                onPressed: () {
+                  onMonthChanged(DateTime(currentMonth.year, currentMonth.month + 1, 1));
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          const SizedBox(height: 10),
+
+          // Weekdays
+          Row(
+            children: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].asMap().entries.map((entry) {
+              final isSunday = entry.key == 6;
+              return Expanded(
+                child: Center(
+                  child: Text(
+                    entry.value,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: isSunday ? const Color(0xFFEF4444) : const Color(0xFF64748B),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 8),
+
+          // Calendar Grid
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: totalCells,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              crossAxisSpacing: 4,
+              mainAxisSpacing: 5,
+              childAspectRatio: 0.90,
+            ),
+            itemBuilder: (context, index) {
+              final dayNumber = index - startOffset + 1;
+              final isValid = dayNumber >= 1 && dayNumber <= daysInMonth;
+
+              if (!isValid) {
+                return const SizedBox();
+              }
+
+              final dateStr = '${currentMonth.year}-${currentMonth.month.toString().padLeft(2, '0')}-${dayNumber.toString().padLeft(2, '0')}';
+              final isLibur = scheduleMap.containsKey(dateStr);
+              final isSelected = selectedDateStr == dateStr;
+
+              final now = DateTime.now();
+              final isToday = now.year == currentMonth.year && now.month == currentMonth.month && now.day == dayNumber;
+
+              return InkWell(
+                onTap: () {
+                  if (isLibur) {
+                    onSelectDate(dateStr, scheduleMap[dateStr]);
+                  } else {
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Tanggal $dayNumber ${_formatMonthYear(currentMonth)} bukan hari libur yang tersedia.', style: GoogleFonts.inter(fontSize: 12.5)),
+                        duration: const Duration(seconds: 2),
+                        backgroundColor: const Color(0xFF475569),
+                      ),
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(10),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? highlightThemeColor
+                        : (isLibur ? highlightBgColor : Colors.transparent),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isSelected
+                          ? highlightThemeColor
+                          : (isLibur ? highlightBorderColor : (isToday ? const Color(0xFFCBD5E1) : Colors.transparent)),
+                      width: isSelected ? 2.0 : 1.0,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: highlightThemeColor.withValues(alpha: 0.35),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            )
+                          ]
+                        : null,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '$dayNumber',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: isLibur || isSelected ? FontWeight.bold : FontWeight.w500,
+                          color: isSelected
+                              ? Colors.white
+                              : (isLibur ? highlightThemeColor : const Color(0xFF64748B)),
+                        ),
+                      ),
+                      if (isLibur) ...[
+                        const SizedBox(height: 2),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
+                          decoration: BoxDecoration(
+                            color: isSelected ? Colors.white.withValues(alpha: 0.25) : highlightThemeColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                          child: Text(
+                            'LIBUR',
+                            style: GoogleFonts.inter(
+                              fontSize: 7.5,
+                              fontWeight: FontWeight.w800,
+                              color: isSelected ? Colors.white : highlightThemeColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+
+          // Quick Chips Selector below calendar
+          if (scheduleMap.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(Icons.touch_app_rounded, size: 14, color: highlightThemeColor),
+                const SizedBox(width: 6),
+                Text(
+                  'Pilih Cepat Jadwal Libur:',
+                  style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: const Color(0xFF475569)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: scheduleMap.entries.map((entry) {
+                final dateKey = entry.key;
+                final item = entry.value;
+                final isSelected = selectedDateStr == dateKey;
+
+                return InkWell(
+                  onTap: () => onSelectDate(dateKey, item),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: isSelected ? highlightThemeColor : highlightBgColor,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: isSelected ? highlightThemeColor : highlightBorderColor),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isSelected ? Icons.check_circle_rounded : Icons.beach_access_rounded,
+                          size: 13,
+                          color: isSelected ? Colors.white : highlightThemeColor,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          _formatDate(dateKey),
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                            color: isSelected ? Colors.white : highlightThemeColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ] else ...[
+            const SizedBox(height: 10),
+            Text(
+              emptyMessage,
+              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8)),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ================= RIWAYAT TAB =================
   Widget _buildRiwayat() {
     if (_riwayat.isEmpty) {
       return Center(
@@ -594,30 +1164,7 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
             ],
           ),
         );
-
       },
-    );
-  }
-
-  InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 14),
-      filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.primary),
-      ),
     );
   }
 }
