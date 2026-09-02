@@ -185,15 +185,8 @@ class _OrderListScreenState extends State<OrderListScreen> {
       );
 
       if (mounted) {
-        final Map<String, OrderModel> map = {
-          for (var o in _orders) o.id: o,
-        };
-        for (var o in initialOrders) {
-          map[o.id] = o;
-        }
-
         setState(() {
-          _orders = map.values.toList();
+          _orders = initialOrders;
           _isLoading = false;
         });
       }
@@ -205,6 +198,47 @@ class _OrderListScreenState extends State<OrderListScreen> {
         });
       }
     }
+  }
+
+  DateTime? _parseServiceDate(String raw) {
+    if (raw.trim().isEmpty) return null;
+    final direct = DateTime.tryParse(raw.trim());
+    if (direct != null) return direct;
+    final parts = raw.trim().split(' ');
+    int? y, m, d;
+    const mMap = {
+      'januari': 1, 'jan': 1, 'februari': 2, 'feb': 2, 'maret': 3, 'mar': 3,
+      'april': 4, 'apr': 4, 'mei': 5, 'may': 5, 'juni': 6, 'jun': 6,
+      'juli': 7, 'jul': 7, 'agustus': 8, 'agu': 8, 'aug': 8, 'september': 9, 'sep': 9,
+      'oktober': 10, 'okt': 10, 'oct': 10, 'november': 11, 'nov': 11, 'desember': 12, 'des': 12, 'dec': 12
+    };
+    for (final p in parts) {
+      final clean = p.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toLowerCase();
+      if (RegExp(r'^\d{4}$').hasMatch(clean)) {
+        y = int.tryParse(clean);
+      } else if (RegExp(r'^\d{1,2}$').hasMatch(clean) && d == null) {
+        d = int.tryParse(clean);
+      } else if (mMap.containsKey(clean)) {
+        m = mMap[clean];
+      }
+    }
+    if (y != null && m != null && d != null) {
+      return DateTime(y, m, d);
+    }
+    return null;
+  }
+
+  bool _matchesOrderDate(OrderModel o, DateTime start, DateTime end) {
+    final hasServiceDates = o.services.any((s) => s.tanggalPengerjaan.trim().isNotEmpty);
+    if (hasServiceDates) {
+      return o.services.any((s) {
+        final sDt = _parseServiceDate(s.tanggalPengerjaan);
+        if (sDt == null) return false;
+        return !sDt.isBefore(start) && !sDt.isAfter(end);
+      });
+    }
+    final dtInput = o.tanggalInput;
+    return !dtInput.isBefore(start) && !dtInput.isAfter(end);
   }
 
   List<OrderModel> get _filtered {
@@ -235,9 +269,6 @@ class _OrderListScreenState extends State<OrderListScreen> {
 
       bool matchDate = true;
       if (q.isEmpty) {
-        final dt = o.scheduleDateTime;
-        final dtInput = o.tanggalInput;
-
         if (_periodFilter == 'semua') {
           matchDate = true;
         } else if (_periodFilter == 'weekly_date' &&
@@ -256,45 +287,32 @@ class _OrderListScreenState extends State<OrderListScreen> {
             59,
             59,
           );
-
-          final matchSchedule = !dt.isBefore(start) && !dt.isAfter(end);
-          final matchInput = !dtInput.isBefore(start) && !dtInput.isAfter(end);
-          final matchAnyService = o.services.any((s) {
-            try {
-              final sDt = DateTime.parse(s.tanggalPengerjaan);
-              return !sDt.isBefore(start) && !sDt.isAfter(end);
-            } catch (_) {
-              return false;
-            }
-          });
-
-          matchDate = matchSchedule || matchInput || matchAnyService;
+          matchDate = _matchesOrderDate(o, start, end);
         } else {
           final now = DateTime.now();
+          DateTime start;
+          DateTime end;
           if (_periodFilter == 'hari_ini') {
-            matchDate =
-                (dt.year == now.year && dt.month == now.month && dt.day == now.day) ||
-                (dtInput.year == now.year && dtInput.month == now.month && dtInput.day == now.day);
+            start = DateTime(now.year, now.month, now.day);
+            end = DateTime(now.year, now.month, now.day, 23, 59, 59);
           } else if (_periodFilter == 'kemarin') {
             final yest = now.subtract(const Duration(days: 1));
-            matchDate =
-                (dt.year == yest.year && dt.month == yest.month && dt.day == yest.day) ||
-                (dtInput.year == yest.year && dtInput.month == yest.month && dtInput.day == yest.day);
+            start = DateTime(yest.year, yest.month, yest.day);
+            end = DateTime(yest.year, yest.month, yest.day, 23, 59, 59);
           } else if (_periodFilter == 'besok') {
             final tom = now.add(const Duration(days: 1));
-            matchDate =
-                (dt.year == tom.year && dt.month == tom.month && dt.day == tom.day) ||
-                (dtInput.year == tom.year && dtInput.month == tom.month && dtInput.day == tom.day);
+            start = DateTime(tom.year, tom.month, tom.day);
+            end = DateTime(tom.year, tom.month, tom.day, 23, 59, 59);
           } else if (_periodFilter == 'bulan_ini') {
-            matchDate = (dt.year == now.year && dt.month == now.month) ||
-                (dtInput.year == now.year && dtInput.month == now.month);
+            start = DateTime(now.year, now.month, 1);
+            end = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
           } else if (_periodFilter == 'custom' && _customRange != null) {
-            final cStart = DateTime(
+            start = DateTime(
               _customRange!.start.year,
               _customRange!.start.month,
               _customRange!.start.day,
             );
-            final cEnd = DateTime(
+            end = DateTime(
               _customRange!.end.year,
               _customRange!.end.month,
               _customRange!.end.day,
@@ -302,10 +320,11 @@ class _OrderListScreenState extends State<OrderListScreen> {
               59,
               59,
             );
-            final matchSchedule = !dt.isBefore(cStart) && !dt.isAfter(cEnd);
-            final matchInput = !dtInput.isBefore(cStart) && !dtInput.isAfter(cEnd);
-            matchDate = matchSchedule || matchInput;
+          } else {
+            start = DateTime(now.year, now.month, 1);
+            end = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
           }
+          matchDate = _matchesOrderDate(o, start, end);
         }
       }
       return matchQ &&
