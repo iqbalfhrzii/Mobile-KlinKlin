@@ -66,6 +66,48 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
     }
   }
 
+  Map<String, dynamic> _getLeaveTypeInfo(String? jenis, {String? subType, String? alasan}) {
+    final j = (jenis ?? '').toLowerCase();
+    if (j.contains('khusus')) {
+      String label = 'CUTI KHUSUS';
+      if (subType != null && subType.isNotEmpty) {
+        label = 'CUTI KHUSUS ($subType)';
+      } else if (alasan != null && alasan.contains('[Cuti Khusus:')) {
+        final match = RegExp(r'\[Cuti Khusus:\s*([^\]]+)\]').firstMatch(alasan);
+        if (match != null) label = 'CUTI KHUSUS (${match.group(1)})';
+      }
+      return {
+        'label': label,
+        'tag': 'Bebas Kuota',
+        'color': const Color(0xFF7C3AED),
+        'bg': const Color(0xFFFAF5FF),
+        'border': const Color(0xFFE9D5FF),
+        'icon': Icons.star_rounded,
+        'potong_kuota': false,
+      };
+    } else if (j == 'cuti') {
+      return {
+        'label': 'CUTI BULANAN',
+        'tag': 'Potong Kuota',
+        'color': const Color(0xFF0284C7),
+        'bg': const Color(0xFFF0F9FF),
+        'border': const Color(0xFFBAE6FD),
+        'icon': Icons.beach_access_rounded,
+        'potong_kuota': true,
+      };
+    } else {
+      return {
+        'label': 'IZIN',
+        'tag': 'Izin Harian',
+        'color': const Color(0xFFEA580C),
+        'bg': const Color(0xFFFFF7ED),
+        'border': const Color(0xFFFED7AA),
+        'icon': Icons.medical_services_rounded,
+        'potong_kuota': false,
+      };
+    }
+  }
+
   Widget _buildAvatar(Map<String, dynamic>? k, {double size = 48, double radius = 14}) {
     final name = k?['nama']?.toString() ?? '';
     final rawPhoto = (k?['foto_profil'] ?? k?['foto'] ?? k?['foto_url'] ?? k?['profile_photo_url'])?.toString().trim();
@@ -1274,10 +1316,17 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
     final statusBg = isPending ? const Color(0xFFFFFBEB) : isApproved ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2);
     final statusBorder = isPending ? const Color(0xFFFDE68A) : isApproved ? const Color(0xFFA7F3D0) : const Color(0xFFFECACA);
 
-    final isCuti = (p['jenis']?.toString().toLowerCase() ?? '') == 'cuti';
-    final jenisColor = isCuti ? const Color(0xFF7E22CE) : const Color(0xFFD97706);
-    final jenisBg = isCuti ? const Color(0xFFFAF5FF) : const Color(0xFFFFFBEB);
-    final jenisBorder = isCuti ? const Color(0xFFE9D5FF) : const Color(0xFFFDE68A);
+    final typeInfo = _getLeaveTypeInfo(
+      p['jenis']?.toString(),
+      subType: p['tipe_cuti_khusus']?.toString(),
+      alasan: p['alasan']?.toString(),
+    );
+    final jenisColor = typeInfo['color'] as Color;
+    final jenisBg = typeInfo['bg'] as Color;
+    final jenisBorder = typeInfo['border'] as Color;
+    final jenisIcon = typeInfo['icon'] as IconData;
+    final jenisLabel = typeInfo['label'] as String;
+    final tagText = typeInfo['tag'] as String;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1316,11 +1365,23 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
                       ),
                       child: Row(
                         children: [
-                          Icon(isCuti ? Icons.beach_access_rounded : Icons.sick_rounded, size: 14, color: jenisColor),
+                          Icon(jenisIcon, size: 14, color: jenisColor),
                           const SizedBox(width: 5),
                           Text(
-                            p['jenis'].toString().toUpperCase(),
+                            jenisLabel,
                             style: GoogleFonts.inter(color: jenisColor, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: jenisColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              tagText,
+                              style: GoogleFonts.inter(color: jenisColor, fontSize: 9.5, fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ],
                       ),
@@ -1434,7 +1495,7 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
-                          onPressed: () => _showApproveConfirm(p['id']),
+                          onPressed: () => _showApproveConfirm(p),
                           child: Text('Setujui', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white)),
                         ),
                       ),
@@ -1883,10 +1944,15 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
                                   ? const Color(0xFFA7F3D0) 
                                   : (isRejected ? const Color(0xFFFECACA) : const Color(0xFFFDE68A));
 
-                              final isCuti = (p['jenis']?.toString().toLowerCase() ?? '') == 'cuti';
-                              final jenisColor = isCuti ? const Color(0xFF7E22CE) : const Color(0xFFD97706);
-                              final jenisBg = isCuti ? const Color(0xFFFAF5FF) : const Color(0xFFFFFBEB);
-                              final jenisBorder = isCuti ? const Color(0xFFE9D5FF) : const Color(0xFFFDE68A);
+                              final rInfo = _getLeaveTypeInfo(
+                                p['jenis']?.toString(),
+                                subType: p['tipe_cuti_khusus']?.toString(),
+                                alasan: p['alasan']?.toString(),
+                              );
+                              final rColor = rInfo['color'] as Color;
+                              final rBg = rInfo['bg'] as Color;
+                              final rBorder = rInfo['border'] as Color;
+                              final rLabel = rInfo['label'] as String;
 
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 10),
@@ -1914,16 +1980,16 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                               decoration: BoxDecoration(
-                                                color: jenisBg,
+                                                color: rBg,
                                                 borderRadius: BorderRadius.circular(6),
-                                                border: Border.all(color: jenisBorder),
+                                                border: Border.all(color: rBorder),
                                               ),
                                               child: Text(
-                                                p['jenis'].toString().toUpperCase(),
+                                                rLabel,
                                                 style: GoogleFonts.inter(
                                                   fontSize: 11,
                                                   fontWeight: FontWeight.bold,
-                                                  color: jenisColor,
+                                                  color: rColor,
                                                 ),
                                               ),
                                             ),
@@ -2162,12 +2228,32 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
     );
   }
 
-  void _showApproveConfirm(int id) {
+  void _showApproveConfirm(Map<String, dynamic> p) {
+    final id = p['id'] is int ? p['id'] as int : int.parse(p['id'].toString());
+    final info = _getLeaveTypeInfo(
+      p['jenis']?.toString(),
+      subType: p['tipe_cuti_khusus']?.toString(),
+      alasan: p['alasan']?.toString(),
+    );
+    final bool potongKuota = info['potong_kuota'] == true;
+    final String label = info['label'] ?? 'Pengajuan';
+
+    int durasi = 1;
+    try {
+      final dMulai = DateTime.parse(p['tanggal_mulai'].toString());
+      final dSelesai = DateTime.parse(p['tanggal_selesai'].toString());
+      durasi = dSelesai.difference(dMulai).inDays + 1;
+    } catch (_) {}
+
+    final note = potongKuota
+        ? 'ℹ️ Sisa cuti bulanan/tahunan karyawan akan berkurang otomatis sebanyak $durasi hari.'
+        : '✨ Cuti Khusus (Bebas Kuota) - Persetujuan ini TIDAK akan mengurangi sisa cuti bulanan/tahunan karyawan.';
+
     showDialog(
       context: context,
       builder: (ctx) => AppConfirmationDialog(
-        title: 'Setujui Pengajuan Cuti',
-        message: 'Apakah Anda yakin ingin menyetujui pengajuan cuti ini?',
+        title: 'Setujui $label',
+        message: 'Apakah Anda yakin ingin menyetujui pengajuan ini?\n\n$note',
         type: ConfirmationDialogType.success,
         confirmText: 'Ya, Setujui',
         cancelText: 'Batal',
@@ -2295,10 +2381,17 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
         ? const Color(0xFFA7F3D0)
         : (isRejected ? const Color(0xFFFECACA) : const Color(0xFFFDE68A));
 
-    final isCuti = (p['jenis']?.toString().toLowerCase() ?? '') == 'cuti';
-    final jenisColor = isCuti ? const Color(0xFF7E22CE) : const Color(0xFFD97706);
-    final jenisBg = isCuti ? const Color(0xFFFAF5FF) : const Color(0xFFFFFBEB);
-    final jenisBorder = isCuti ? const Color(0xFFE9D5FF) : const Color(0xFFFDE68A);
+    final typeInfo = _getLeaveTypeInfo(
+      p['jenis']?.toString(),
+      subType: p['tipe_cuti_khusus']?.toString(),
+      alasan: p['alasan']?.toString(),
+    );
+    final jenisColor = typeInfo['color'] as Color;
+    final jenisBg = typeInfo['bg'] as Color;
+    final jenisBorder = typeInfo['border'] as Color;
+    final jenisIcon = typeInfo['icon'] as IconData;
+    final jenisLabel = typeInfo['label'] as String;
+    final tagText = typeInfo['tag'] as String;
 
     showModalBottomSheet(
       context: context,
@@ -2335,16 +2428,12 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      color: jenisColor,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Center(
                       child: Icon(
-                        isCuti ? Icons.beach_access_rounded : Icons.sick_rounded,
+                        jenisIcon,
                         color: Colors.white,
                         size: 20,
                       ),
@@ -2357,26 +2446,29 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
                       children: [
                         Row(
                           children: [
-                            Text(
-                              'Detail Pengajuan',
-                              style: GoogleFonts.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF0F172A),
+                            Flexible(
+                              child: Text(
+                                jenisLabel,
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF0F172A),
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
                                 color: jenisBg,
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(color: jenisBorder),
                               ),
                               child: Text(
-                                p['jenis'].toString().toUpperCase(),
+                                tagText,
                                 style: GoogleFonts.inter(
-                                  fontSize: 10.5,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   color: jenisColor,
                                 ),
@@ -2638,7 +2730,7 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
                               ),
                               onPressed: () {
                                 Navigator.pop(ctx);
-                                _showApproveConfirm(p['id']);
+                                _showApproveConfirm(p);
                               },
                               child: Text('Setujui Pengajuan', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
                             ),

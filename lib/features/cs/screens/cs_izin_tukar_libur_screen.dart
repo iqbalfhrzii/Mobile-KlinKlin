@@ -1023,24 +1023,31 @@ class _CsIzinTukarLiburScreenState extends State<CsIzinTukarLiburScreen> with Si
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: isCutiType ? const Color(0xFFFAF5FF) : const Color(0xFFFFFBEB),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: isCutiType ? const Color(0xFFE9D5FF) : const Color(0xFFFDE68A),
+                    () {
+                      final isKhusus = jenis.contains('khusus');
+                      final isCuti = jenis == 'cuti';
+                      final Color bg = isKhusus ? const Color(0xFFFAF5FF) : (isCuti ? const Color(0xFFF0F9FF) : const Color(0xFFFFFBEB));
+                      final Color border = isKhusus ? const Color(0xFFE9D5FF) : (isCuti ? const Color(0xFFBAE6FD) : const Color(0xFFFDE68A));
+                      final Color text = isKhusus ? const Color(0xFF7C3AED) : (isCuti ? const Color(0xFF0284C7) : const Color(0xFFB45309));
+                      final String label = isKhusus ? 'CUTI KHUSUS' : (isCuti ? 'CUTI BULANAN' : 'IZIN');
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: bg,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: border),
                         ),
-                      ),
-                      child: Text(
-                        jenis.toUpperCase(),
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: isCutiType ? const Color(0xFF7E22CE) : const Color(0xFFB45309),
+                        child: Text(
+                          label,
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: text,
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    }(),
                     Row(
                       children: [
                         Text(

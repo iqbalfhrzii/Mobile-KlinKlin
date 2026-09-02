@@ -89,6 +89,7 @@ class _LeaveHistoryScreenState extends State<LeaveHistoryScreen> {
 
   IconData _getTypeIcon(String? type) {
     final t = (type ?? '').toLowerCase();
+    if (t.contains('khusus')) return Icons.star_rounded;
     if (t.contains('sakit')) return Icons.medical_services_rounded;
     if (t.contains('cuti')) return Icons.beach_access_rounded;
     if (t.contains('tukar')) return Icons.event_repeat_rounded;
@@ -97,10 +98,26 @@ class _LeaveHistoryScreenState extends State<LeaveHistoryScreen> {
 
   Color _getTypeColor(String? type) {
     final t = (type ?? '').toLowerCase();
+    if (t.contains('khusus')) return const Color(0xFF7C3AED);
     if (t.contains('sakit')) return const Color(0xFFEA580C);
-    if (t.contains('cuti')) return const Color(0xFF2563EB);
-    if (t.contains('tukar')) return const Color(0xFF7C3AED);
+    if (t.contains('cuti')) return const Color(0xFF0284C7);
+    if (t.contains('tukar')) return const Color(0xFF9333EA);
     return const Color(0xFF0D9488);
+  }
+
+  String _getTypeLabel(String? type, {String? subType, String? alasan}) {
+    final t = (type ?? '').toLowerCase();
+    if (t.contains('khusus')) {
+      if (subType != null && subType.isNotEmpty) return 'CUTI KHUSUS ($subType)';
+      if (alasan != null && alasan.contains('[Cuti Khusus:')) {
+        final match = RegExp(r'\[Cuti Khusus:\s*([^\]]+)\]').firstMatch(alasan);
+        if (match != null) return 'CUTI KHUSUS (${match.group(1)})';
+      }
+      return 'CUTI KHUSUS';
+    }
+    if (t == 'cuti') return 'CUTI BULANAN';
+    if (t == 'izin') return 'IZIN';
+    return (type ?? 'CUTI').toUpperCase();
   }
 
   int _calculateDays(String? startStr, String? endStr) {
@@ -512,7 +529,7 @@ class _LeaveHistoryScreenState extends State<LeaveHistoryScreen> {
                           Icon(typeIcon, size: 13, color: typeColor),
                           const SizedBox(width: 5),
                           Text(
-                            jenis.toUpperCase(),
+                            _getTypeLabel(jenis, subType: item['tipe_cuti_khusus']?.toString(), alasan: alasan),
                             style: GoogleFonts.inter(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,

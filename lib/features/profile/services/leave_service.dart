@@ -26,15 +26,22 @@ class LeaveService {
     String endDate,
     String reason,
     List<int>? photoBytes,
-    String? photoName,
-  ) async {
+    String? photoName, {
+    String? subType,
+  }) async {
     try {
-      final formData = FormData.fromMap({
+      final map = <String, dynamic>{
         'jenis_pengajuan': type,
         'tanggal_mulai': startDate,
         'tanggal_selesai': endDate,
         'alasan': reason,
-      });
+      };
+
+      if (subType != null && subType.isNotEmpty) {
+        map['tipe_cuti_khusus'] = subType;
+      }
+
+      final formData = FormData.fromMap(map);
 
       if (photoBytes != null && photoBytes.isNotEmpty && photoName != null) {
         formData.files.add(MapEntry(
