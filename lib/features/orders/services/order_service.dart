@@ -11,6 +11,7 @@ class OrderService {
   static DateTime? _lastFetchTime;
 
   static List<OrderModel> get cachedOrders => List.unmodifiable(_cachedOrders);
+  static DateTime? get lastFetchTime => _lastFetchTime;
 
   /// Get all orders
   Future<List<OrderModel>> fetchOrders({
