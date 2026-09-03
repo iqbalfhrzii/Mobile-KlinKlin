@@ -4175,10 +4175,12 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
           builder: (innerContext, setStateModal) {
             if (isLoading && availableCleaners.isEmpty) {
               final service = o.services.isNotEmpty ? o.services.first : null;
-              final tanggal = service
-                  ?.toJson()['tanggal_pengerjaan']
-                  ?.toString();
-              final waktu = service?.toJson()['waktu_pengerjaan']?.toString();
+              final tanggal = (service?.tanggalPengerjaan.isNotEmpty == true)
+                  ? service?.tanggalPengerjaan
+                  : (service?.toJson()['tanggal_pengerjaan']?.toString());
+              final waktu = (service?.waktuPengerjaan.isNotEmpty == true)
+                  ? service?.waktuPengerjaan
+                  : (service?.toJson()['waktu_pengerjaan']?.toString());
               _orderService
                   .fetchAvailableCleaners(tanggal: tanggal, waktu: waktu)
                   .then((data) {
