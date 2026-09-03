@@ -1252,7 +1252,11 @@ class _OrderCard extends StatelessWidget {
             ? o.services.fold(0, (sum, s) => sum + s.subtotal)
             : o.total);
     final double diskonPersen = o.diskonPersen;
-    final int diskonValue = (baseSubtotal * (diskonPersen / 100)).round();
+    int diskonValue = (baseSubtotal * (diskonPersen / 100)).round();
+    if (diskonValue == 0 && o.pembayaran?.totalSetelahDiskon != null && o.pembayaran!.totalSetelahDiskon! > 0) {
+      final diff = baseSubtotal - o.pembayaran!.totalSetelahDiskon!;
+      if (diff > 0) diskonValue = diff;
+    }
     final int totalSetelahDiskon = (baseSubtotal - diskonValue) > 0 ? (baseSubtotal - diskonValue) : 0;
 
     final int ppnPersen = o.ppn ?? (o.pembayaran?.ppn ?? (o.isWajibPpn ? 11 : 0));

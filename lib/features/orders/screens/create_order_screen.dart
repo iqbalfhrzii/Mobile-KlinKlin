@@ -119,11 +119,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
   void _next() => setState(() => _step = (_step + 1).clamp(0, 3));
   void _prev() {
-    if (_step == 0) {
-      Navigator.pop(context);
-      return;
+    if (_step > 0) {
+      setState(() => _step--);
     }
-    setState(() => _step--);
   }
 
   @override
@@ -146,7 +144,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       padding: EdgeInsets.fromLTRB(20, 52, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
       child: Row(
         children: [
-          HeaderBackButton(onTap: _prev),
+          HeaderBackButton(onTap: () => Navigator.pop(context)),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -711,6 +709,7 @@ klinklin.co.id/aduanpayment''';
   }
 
   Future<void> _submit({bool sendWa = false}) async {
+    if (_isSaving) return;
     setState(() => _isSaving = true);
     try {
       String? createdOrderId;
@@ -1999,6 +1998,323 @@ class _Step2Services extends StatelessWidget {
     );
   }
 
+  void _showDiskonModal(BuildContext context) {
+    double currentDiskon = draft.diskonPersen;
+    final ctrl = TextEditingController(
+      text: currentDiskon > 0
+          ? (currentDiskon == currentDiskon.toInt()
+              ? currentDiskon.toInt().toString()
+              : currentDiskon.toString())
+          : '',
+    );
+
+    showModalBottomSheet<void>(
+      useSafeArea: true,
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          final int baseSubtotal = draft.total;
+          final int diskonRp = (baseSubtotal * (currentDiskon / 100)).round();
+          final int setelahDiskon =
+              (baseSubtotal - diskonRp) > 0 ? (baseSubtotal - diskonRp) : 0;
+
+          return Container(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              20,
+              20,
+              MediaQuery.of(ctx).viewInsets.bottom + 24,
+            ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD1FAE5),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.local_offer_rounded,
+                        color: Color(0xFF059669),
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Atur Diskon Pesanan',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                          Text(
+                            'Pilih atau ketik persentase diskon (0 - 100%)',
+                            style: GoogleFonts.inter(
+                              fontSize: 11.5,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'PILIH PERSENTASE CEPAT',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textMuted,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 50.0].map((
+                    val,
+                  ) {
+                    final isSelected = currentDiskon == val;
+                    return InkWell(
+                      onTap: () {
+                        setSheetState(() {
+                          currentDiskon = val;
+                          ctrl.text = val > 0 ? val.toInt().toString() : '';
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFF059669)
+                              : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected
+                                ? const Color(0xFF059669)
+                                : const Color(0xFFCBD5E1),
+                          ),
+                        ),
+                        child: Text(
+                          val == 0.0 ? '0% (Tanpa Diskon)' : '${val.toInt()}%',
+                          style: GoogleFonts.inter(
+                            fontSize: 12.5,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.w600,
+                            color: isSelected
+                                ? Colors.white
+                                : const Color(0xFF334155),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'ATAU INPUT PERSENTASE KHUSUS (%)',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textMuted,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: ctrl,
+                  keyboardType: TextInputType.number,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Contoh: 12.5',
+                    prefixIcon: const Icon(
+                      Icons.percent_rounded,
+                      size: 18,
+                      color: Color(0xFF059669),
+                    ),
+                    suffixText: '%',
+                    suffixStyle: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF059669),
+                    ),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF059669),
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                  onChanged: (val) {
+                    final parsed = double.tryParse(val.trim()) ?? 0.0;
+                    setSheetState(() {
+                      currentDiskon = parsed.clamp(0.0, 100.0);
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Total Awal',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                          Text(
+                            'Rp ${CurrencyInputFormatter.format(baseSubtotal)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Diskon (${currentDiskon == currentDiskon.toInt() ? currentDiskon.toInt() : currentDiskon}%)',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF059669),
+                            ),
+                          ),
+                          Text(
+                            '- Rp ${CurrencyInputFormatter.format(diskonRp)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF059669),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 6),
+                        child: Divider(height: 1, color: Color(0xFFE2E8F0)),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Total Setelah Diskon',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                          Text(
+                            'Rp ${CurrencyInputFormatter.format(setelahDiskon)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    final finalVal =
+                        double.tryParse(ctrl.text.trim()) ?? currentDiskon;
+                    draft.diskonPersen = finalVal.clamp(0.0, 100.0);
+                    onChanged();
+                    Navigator.pop(ctx);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF059669),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Terapkan Diskon',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final subtotal = draft.total;
@@ -2265,47 +2581,152 @@ class _Step2Services extends StatelessWidget {
                 ),
         ),
 
-        // Running Subtotal Banner
+        // Running Subtotal & Diskon Banner
         if (draft.services.isNotEmpty)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: AppColors.surface,
               border: const Border(top: BorderSide(color: AppColors.border)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  offset: const Offset(0, -2),
+                  blurRadius: 6,
+                ),
+              ],
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Icon(Icons.shopping_bag_outlined, size: 16, color: AppColors.primary),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${draft.services.length} Layanan Terpilih',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textDark,
-                      ),
+                    Row(
+                      children: [
+                        const Icon(Icons.shopping_bag_outlined, size: 15, color: AppColors.primary),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${draft.services.length} Layanan',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          'Total Awal: ',
+                          style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+                        ),
+                        Text(
+                          'Rp ${CurrencyInputFormatter.format(subtotal)}',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                Row(
-                  children: [
-                    Text(
-                      'Subtotal: ',
-                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
-                    ),
-                    Text(
-                      'Rp ${CurrencyInputFormatter.format(subtotal)}',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
+                const SizedBox(height: 8),
+                // Diskon Selector Row
+                InkWell(
+                  onTap: () => _showDiskonModal(context),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: draft.diskonPersen > 0
+                          ? const Color(0xFFECFDF5)
+                          : AppColors.background,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: draft.diskonPersen > 0
+                            ? const Color(0xFFA7F3D0)
+                            : AppColors.border,
                       ),
                     ),
-                  ],
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.local_offer_rounded,
+                              size: 15,
+                              color: draft.diskonPersen > 0
+                                  ? const Color(0xFF059669)
+                                  : AppColors.primary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              draft.diskonPersen > 0
+                                  ? 'Diskon (${draft.diskonPersen == draft.diskonPersen.toInt() ? draft.diskonPersen.toInt() : draft.diskonPersen}%)'
+                                  : 'Atur Diskon Pesanan',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: draft.diskonPersen > 0
+                                    ? const Color(0xFF059669)
+                                    : AppColors.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.edit_outlined,
+                              size: 13,
+                              color: draft.diskonPersen > 0
+                                  ? const Color(0xFF059669)
+                                  : AppColors.primary,
+                            ),
+                          ],
+                        ),
+                        Text(
+                          draft.diskonPersen > 0
+                              ? '- Rp ${CurrencyInputFormatter.format(draft.diskonAmount)}'
+                              : '0% (Ketuk untuk atur)',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: draft.diskonPersen > 0
+                                ? const Color(0xFF059669)
+                                : AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
+                if (draft.diskonPersen > 0) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total Setelah Diskon:',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      Text(
+                        'Rp ${CurrencyInputFormatter.format(draft.totalSetelahDiskon)}',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -3188,6 +3609,13 @@ class _Step4SummaryState extends State<_Step4Summary> {
     if (widget.isBranchWajibPpn && !widget.draft.hasUserToggledPpn) {
       widget.draft.applyPpn = true;
     }
+    final p = widget.draft.diskonPersen;
+    final standardPresets = [0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 50.0];
+    final expectedText = p > 0 ? (p == p.toInt() ? p.toInt().toString() : p.toString()) : '';
+    if (_diskonCustomCtrl.text != expectedText) {
+      _diskonCustomCtrl.text = expectedText;
+    }
+    _isCustomDiskon = p > 0 && !standardPresets.contains(p);
   }
 
   @override

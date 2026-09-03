@@ -162,6 +162,21 @@ class OrderService {
     }
   }
 
+  /// Update diskon pesanan
+  Future<void> updateDiskon(String id, double diskonPersen) async {
+    try {
+      await _dio.patch('/pesanan/$id/diskon', data: {
+        'diskon_persen': diskonPersen,
+      });
+    } catch (e) {
+      if (e is DioException) {
+        final msg = e.response?.data?['message'] ?? e.response?.data?.toString() ?? e.message;
+        throw Exception(msg);
+      }
+      throw Exception('Gagal memperbarui diskon: $e');
+    }
+  }
+
   /// Create order
   Future<String> createOrder(OrderDraft draft) async {
     try {
@@ -294,6 +309,42 @@ class OrderService {
       return [];
     } catch (e) {
       throw Exception('Gagal memuat tarif bonus: $e');
+    }
+  }
+
+  /// Tambah/Alokasikan Bonus Manual untuk Satu atau Banyak Cleaner Sekaligus
+  Future<void> assignManualBonuses({
+    required String pesananId,
+    required List<String> pesananCleanerIds,
+    required int jenisBonusId,
+    required int nominal,
+    String? keterangan,
+  }) async {
+    try {
+      final response = await _dio.post('/pesanan/$pesananId/bonus-manual', data: {
+        'manual_pesanan_cleaner_ids': pesananCleanerIds.map((id) => int.tryParse(id) ?? id).toList(),
+        'pesanan_cleaner_ids': pesananCleanerIds.map((id) => int.tryParse(id) ?? id).toList(),
+        'jenis_bonus_id': jenisBonusId,
+        'nominal': nominal,
+        if (keterangan != null && keterangan.isNotEmpty) 'keterangan': keterangan,
+      });
+      if (response.data is Map && response.data['status'] == false) {
+        throw Exception(response.data['message'] ?? 'Gagal menyimpan bonus');
+      }
+    } catch (e) {
+      if (e is DioException) {
+        final resData = e.response?.data;
+        String errMsg = 'Terjadi kesalahan sistem';
+        if (resData is Map && resData.containsKey('message')) {
+          errMsg = resData['message'].toString();
+        } else if (resData != null) {
+          errMsg = 'Status ${e.response?.statusCode}: format response tidak dikenali';
+        } else {
+          errMsg = e.message ?? 'Unknown DioException';
+        }
+        throw Exception('Gagal menyimpan bonus: $errMsg');
+      }
+      throw Exception('Gagal menyimpan bonus: $e');
     }
   }
 
