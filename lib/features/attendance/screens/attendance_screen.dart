@@ -333,7 +333,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     if (raw == null || raw.trim().isEmpty) return fallback;
     final str = raw.trim();
 
-    // 1. If it contains 'T' (e.g. "2026-08-23T08:00:00.000000Z"), extract time part after 'T'
+    // 1. If it contains ISO 8601 with timezone or UTC ('Z' or offset), parse using DateTime.toLocal()
+    if (str.contains('T') && (str.endsWith('Z') || str.contains('+') || (str.contains('-') && str.indexOf('-') > 10))) {
+      try {
+        final dt = DateTime.parse(str).toLocal();
+        final h = dt.hour.toString().padLeft(2, '0');
+        final m = dt.minute.toString().padLeft(2, '0');
+        return '$h:$m';
+      } catch (_) {}
+    }
+
+    // 2. If it contains 'T' (e.g. "2026-08-23T08:00:00"), extract time part after 'T'
     if (str.contains('T')) {
       final timePart = str.split('T')[1];
       final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(timePart);
@@ -344,7 +354,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       }
     }
 
-    // 2. If it contains date and space (e.g. "2026-08-23 08:00:00"), extract time part after space
+    // 3. If it contains date and space (e.g. "2026-08-23 08:00:00"), extract time part after space
     if (str.contains(' ')) {
       final parts = str.split(' ');
       if (parts.length >= 2) {
@@ -357,7 +367,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       }
     }
 
-    // 3. Simple time format (e.g. "08:00:00" or "08:00")
+    // 4. Simple time format (e.g. "08:00:00" or "08:00")
     final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(str);
     if (match != null) {
       final h = match.group(1)!.padLeft(2, '0');
