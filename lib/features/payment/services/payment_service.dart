@@ -60,7 +60,14 @@ class PaymentService {
       }
 
       FormData formData = FormData.fromMap(formMap);
-      await _dio.post('/pesanan/$orderId/pembayaran', data: formData);
+      await _dio.post(
+        '/pesanan/$orderId/pembayaran',
+        data: formData,
+        options: Options(
+          receiveTimeout: const Duration(seconds: 120),
+          sendTimeout: const Duration(seconds: 120),
+        ),
+      );
     } catch (e) {
       if (e is DioException) {
         final data = e.response?.data;

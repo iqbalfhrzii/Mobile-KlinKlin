@@ -111,7 +111,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                           const SizedBox(height: 12),
                           _buildCancelCard(),
                         ],
-                        if (_o.paymentProof != null) ...[
+                        if (_o.hasUploadedTransferProof) ...[
                           const SizedBox(height: 12),
                           _buildProofCard(),
                         ],
@@ -881,6 +881,21 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   // ─── Proof card ──────────────────────────────────────────────────────────
   Widget _buildProofCard() {
     final urls = _o.proofUrls;
+    final bool isApproved = _isPaid;
+    final bool isPending = _isPending || _o.pembayaran?.statusPembayaran.toLowerCase() == 'pending';
+    final Color statusColor = isApproved
+        ? AppColors.statusDone
+        : (isPending ? const Color(0xFFD97706) : AppColors.error);
+    final Color statusBg = isApproved
+        ? AppColors.statusDoneBg
+        : (isPending ? const Color(0xFFFEF3C7) : const Color(0xFFFEE2E2));
+    final IconData statusIcon = isApproved
+        ? Icons.check_circle_rounded
+        : (isPending ? Icons.hourglass_top_rounded : Icons.error_outline_rounded);
+    final String statusLabel = isApproved
+        ? 'Terverifikasi · Disetujui Finance'
+        : (isPending ? 'Pending · Menunggu Verifikasi Finance' : 'Ditolak oleh Finance');
+
     return GestureDetector(
       onTap: () {
         if (urls.isNotEmpty) {
@@ -897,12 +912,12 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: AppColors.statusDoneBg,
+                color: statusBg,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.receipt_long_rounded,
-                color: AppColors.statusDone,
+                color: statusColor,
                 size: 24,
               ),
             ),
@@ -920,18 +935,19 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                     ),
                   ),
                   Text(
-                    'Terverifikasi · Tersimpan',
+                    statusLabel,
                     style: GoogleFonts.inter(
                       fontSize: 11,
-                      color: AppColors.statusDone,
+                      fontWeight: FontWeight.w600,
+                      color: statusColor,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(
-              Icons.check_circle_rounded,
-              color: AppColors.statusDone,
+            Icon(
+              statusIcon,
+              color: statusColor,
               size: 20,
             ),
           ],
@@ -1367,7 +1383,10 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
     }
 
     final isRejected = _o.paymentStatus == 'rejected';
-    final buttonLabel = isRejected ? 'Revisi Bukti Bayar' : 'Upload Bukti Bayar';
+    final isPendingPayment = _isPending || _o.pembayaran?.statusPembayaran.toLowerCase() == 'pending' || _o.hasUploadedTransferProof;
+    final buttonLabel = isRejected
+        ? 'Revisi Bukti Bayar'
+        : (isPendingPayment ? 'Perbarui Bukti Bayar' : 'Upload Bukti Bayar');
 
     return Container(
       decoration: BoxDecoration(
@@ -1390,6 +1409,50 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (isPendingPayment) ...[
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.hourglass_top_rounded,
+                    color: Color(0xFFD97706),
+                    size: 18,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Bukti Pembayaran Sudah Diunggah',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF92400E),
+                          ),
+                        ),
+                        Text(
+                          'Status: Pending (Menunggu Verifikasi Finance)',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: const Color(0xFFB45309),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           // Primary CTA — Pay
           GestureDetector(
             onTap: () => _showPpnSelectionModal(context),
@@ -1565,6 +1628,34 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                 color: const Color(0xFF64748B),
               ),
             ),
+            if (_o.hasUploadedTransferProof || _o.pembayaran?.statusPembayaran.toLowerCase() == 'pending') ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFDE68A)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline_rounded, color: Color(0xFFD97706), size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Bukti pembayaran sudah pernah diunggah (Status: Pending Menunggu Verifikasi Finance). Mengunggah kembali akan memperbarui data bukti sebelumnya.',
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          color: const Color(0xFF92400E),
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
 
             // Card 1: Pakai PPN
@@ -1778,13 +1869,14 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
       },
     ];
     String selectedMethod = 'Transfer BCA';
-    if (_o.paymentMethod.toLowerCase().contains('mandiri'))
+    if (_o.paymentMethod.toLowerCase().contains('mandiri')) {
       selectedMethod = 'Transfer Mandiri';
-    else if (_o.paymentMethod.toLowerCase().contains('qris'))
+    } else if (_o.paymentMethod.toLowerCase().contains('qris')) {
       selectedMethod = 'QRIS';
-    else if (_o.paymentMethod.toLowerCase().contains('cash') ||
-        _o.paymentMethod.toLowerCase().contains('tunai'))
+    } else if (_o.paymentMethod.toLowerCase().contains('cash') ||
+        _o.paymentMethod.toLowerCase().contains('tunai')) {
       selectedMethod = 'Tunai';
+    }
 
     showModalBottomSheet(
       context: context,
@@ -1869,6 +1961,35 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                     ],
                   ),
                   const SizedBox(height: 4),
+
+                  if (_o.hasUploadedTransferProof || _o.pembayaran?.statusPembayaran.toLowerCase() == 'pending') ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFDE68A)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline_rounded, color: Color(0xFFD97706), size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Bukti pembayaran sebelumnya sudah diunggah (Status: Pending). Mengunggah bukti baru akan mengganti bukti transfer sebelumnya.',
+                              style: GoogleFonts.inter(
+                                fontSize: 11.5,
+                                color: const Color(0xFF92400E),
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
 
                   // Amount banner
                   Container(
@@ -3620,8 +3741,7 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
                                   style: GoogleFonts.inter(fontSize: 14),
                                 ),
                               );
-                            })
-                            .toList(),
+                            }),
                       ],
                       onChanged: _onTarifSelected,
                     ),

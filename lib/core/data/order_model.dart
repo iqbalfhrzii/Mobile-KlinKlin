@@ -736,7 +736,16 @@ class OrderModel {
       if (raw is List) {
         return raw.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).join(',');
       }
-      return raw.toString();
+      final s = raw.toString().trim();
+      if (s.startsWith('[') && s.endsWith(']')) {
+        try {
+          final decoded = jsonDecode(s);
+          if (decoded is List) {
+            return decoded.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).join(',');
+          }
+        } catch (_) {}
+      }
+      return s;
     }();
 
     String parsedPaymentStatus = isOrderCancelled ? 'cancelled' : (orderJson['pembayaran']?['status_pembayaran'] ?? orderJson['status_pembayaran'] ?? json['status_pembayaran'] ?? 'unpaid').toString();
@@ -745,7 +754,8 @@ class OrderModel {
         parsedPaymentProof != '-' && 
         parsedPaymentProof != '[]' && 
         parsedPaymentProof != '""';
-    if (parsedPaymentStatus.toLowerCase() == 'pending' && !hasValidProof) {
+    // Jangan timpa status pending jika record pembayaran memang ada di database (misal tunai/cash atau bukti array)
+    if (parsedPaymentStatus.toLowerCase() == 'pending' && !hasValidProof && rawPayment == null) {
       parsedPaymentStatus = 'unpaid';
     }
 

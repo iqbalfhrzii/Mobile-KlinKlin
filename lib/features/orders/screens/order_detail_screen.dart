@@ -2997,16 +2997,22 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         o.services.isNotEmpty &&
         o.services.first.tanggalPengerjaan.isNotEmpty &&
         o.services.first.waktuPengerjaan.isNotEmpty;
-    final isPriceQtyValid =
-        o.services.isNotEmpty &&
-        o.services.every(
-          (s) => s.price > 0 && s.qty.trim().isNotEmpty && s.qty.trim() != '0',
-        );
     final hasCleaner = o.cleaners.isNotEmpty;
     final hasBonus =
         o.services.any((s) => s.bonusLayanan > 0) ||
         o.cleaners.any((c) => c.totalBonus > 0);
     final isPaid = o.paymentStatus == 'paid' || o.paymentStatus == 'approved';
+    final isPriceQtyValid = o.services.isNotEmpty &&
+        o.services.every(
+          (s) => s.qty.trim().isNotEmpty && s.qty.trim() != '0',
+        ) &&
+        (o.services.every((s) => s.price > 0) ||
+            o.hasUploadedTransferProof ||
+            o.pembayaran != null ||
+            hasBonus ||
+            isPaid ||
+            o.paymentStatus.toLowerCase() == 'pending' ||
+            o.total == 0);
 
     final steps = [
       ('Jadwal', hasSchedule),
@@ -3114,15 +3120,27 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         !_isCancelled &&
         o.cleaners.isNotEmpty &&
         o.status != OrderStatus.completed;
-    final isPriceQtyValid =
-        o.services.isNotEmpty &&
-        o.services.every(
-          (s) => s.price > 0 && s.qty.trim().isNotEmpty && s.qty.trim() != '0',
-        );
-    final isPaid = o.paymentStatus == 'paid' || o.paymentStatus == 'approved';
     final hasBonus =
         o.services.any((s) => s.bonusLayanan > 0) ||
         o.cleaners.any((c) => c.totalBonus > 0);
+    final isPaid = o.paymentStatus == 'paid' || o.paymentStatus == 'approved';
+    final isPriceQtyValid = o.services.isNotEmpty &&
+        o.services.every(
+          (s) => s.qty.trim().isNotEmpty && s.qty.trim() != '0',
+        ) &&
+        (o.services.every((s) => s.price > 0) ||
+            o.hasUploadedTransferProof ||
+            o.pembayaran != null ||
+            hasBonus ||
+            isPaid ||
+            o.paymentStatus.toLowerCase() == 'pending' ||
+            o.total == 0);
+    final canNotify = showNotifyBtn &&
+        (isPriceQtyValid ||
+            hasBonus ||
+            o.hasUploadedTransferProof ||
+            o.pembayaran != null ||
+            o.services.isNotEmpty);
 
     return Column(
       children: [
@@ -3159,13 +3177,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             isDone: !o.cleaners.any(
               (c) => c.statusPengerjaan == CleanerWorkStatus.assigned,
             ),
-            enabled: isPriceQtyValid,
+            enabled: canNotify,
             onTap: () async {
-              if (!isPriceQtyValid) {
+              if (!canNotify) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text(
-                      'Silakan atur Harga dan Qty layanan terlebih dahulu.',
+                      'Silakan tentukan layanan dan cleaner terlebih dahulu.',
                     ),
                     backgroundColor: AppColors.error,
                   ),
