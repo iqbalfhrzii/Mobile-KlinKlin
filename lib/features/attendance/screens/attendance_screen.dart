@@ -114,9 +114,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       final hasPerms = await _checkLocationPermissionOnly();
       if (!hasPerms) return;
 
+      final lastPos = await Geolocator.getLastKnownPosition();
+      if (lastPos != null && mounted) {
+        setState(() => _currentPosition = lastPos);
+      }
+
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 15),
+        ),
       );
       if (mounted) setState(() => _currentPosition = position);
     } catch (_) {
@@ -398,6 +405,34 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     SnackbarUtils.showSuccess(context, message);
   }
 
+  Future<Position?> _getAccurateLocation() async {
+    // 1. Coba ambil posisi terbaru dengan FusedLocationProvider (LocationAccuracy.high)
+    try {
+      return await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 15),
+        ),
+      );
+    } catch (_) {
+      // 2. Fallback 1: Gunakan posisi terakhir yang tercatat di perangkat (instan & handal saat GPS lambat mengunci satelit)
+      final lastPos = await Geolocator.getLastKnownPosition();
+      if (lastPos != null) return lastPos;
+
+      // 3. Fallback 2: Coba sekali lagi dengan akurasi medium (Wi-Fi / Cell tower)
+      try {
+        return await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+            timeLimit: Duration(seconds: 8),
+          ),
+        );
+      } catch (_) {
+        return null;
+      }
+    }
+  }
+
   Future<void> _handleAbsensi(bool isCheckIn) async {
     if (_isProcessing) return;
 
@@ -407,10 +442,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     setState(() => _isProcessing = true);
 
     try {
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.bestForNavigation,
-        timeLimit: const Duration(seconds: 10),
-      );
+      final position = await _getAccurateLocation();
+      if (position == null) {
+        throw Exception('Gagal mendapatkan sinyal GPS (Timeout). Pastikan GPS Anda aktif dan berada di area terbuka, lalu coba lagi.');
+      }
       
       if (mounted) setState(() => _currentPosition = position);
 
@@ -453,18 +488,18 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: (isCheckIn ? const Color(0xFF10B981) : const Color(0xFFF59E0B)).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
+                  color: isCheckIn ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7),
+                  shape: BoxShape.circle,
                 ),
                 child: Icon(
                   isCheckIn ? Icons.login_rounded : Icons.logout_rounded,
-                  color: isCheckIn ? const Color(0xFF059669) : const Color(0xFFD97706),
+                  color: isCheckIn ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
                   size: 20,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Text(
-                isCheckIn ? 'Konfirmasi Masuk' : 'Konfirmasi Pulang',
+                'Konfirmasi ${isCheckIn ? "Check-In" : "Check-Out"}',
                 style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16),
               ),
             ],
@@ -509,7 +544,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       await _loadStatus();
 
     } catch (e) {
-      _showError(e.toString().replaceAll('Exception: ', ''));
+      String msg = e.toString().replaceAll('Exception: ', '');
+      if (msg.contains('TimeoutException') || msg.contains('Future not completed') || msg.contains('timeLimit')) {
+        msg = 'Waktu pencarian sinyal GPS habis (Timeout). Pastikan GPS Anda aktif dan berada di area dengan sinyal baik, lalu coba lagi.';
+      }
+      _showError(msg);
     } finally {
       if (mounted) setState(() => _isProcessing = false);
     }
