@@ -5078,17 +5078,17 @@ class _AddBonusSheetState extends State<_AddBonusSheet> {
           ? 'Bonus Manual'
           : (_selectedTarifBonus!['jenis_bonus']?['nama_bonus'] ?? 'Bonus');
 
-      int jenisBonusId = 4;
+      int? jenisBonusId;
       if (_selectedTarifBonus != null && _selectedTarifBonus!['jenis_bonus_id'] != null) {
-        jenisBonusId = int.tryParse(_selectedTarifBonus!['jenis_bonus_id'].toString()) ?? 4;
+        jenisBonusId = int.tryParse(_selectedTarifBonus!['jenis_bonus_id'].toString());
       } else {
         final manualTarif = _tarifBonuses.where(
           (t) => (t['jenis_bonus']?['nama_bonus']?.toString().toLowerCase() ?? '') == 'bonus manual',
         ).firstOrNull;
         if (manualTarif != null && manualTarif['jenis_bonus_id'] != null) {
-          jenisBonusId = int.tryParse(manualTarif['jenis_bonus_id'].toString()) ?? 4;
+          jenisBonusId = int.tryParse(manualTarif['jenis_bonus_id'].toString());
         } else if (_tarifBonuses.isNotEmpty && _tarifBonuses.first['jenis_bonus_id'] != null) {
-          jenisBonusId = int.tryParse(_tarifBonuses.first['jenis_bonus_id'].toString()) ?? 4;
+          jenisBonusId = int.tryParse(_tarifBonuses.first['jenis_bonus_id'].toString());
         }
       }
 

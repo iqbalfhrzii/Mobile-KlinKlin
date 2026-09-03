@@ -316,7 +316,7 @@ class OrderService {
   Future<void> assignManualBonuses({
     required String pesananId,
     required List<String> pesananCleanerIds,
-    required int jenisBonusId,
+    int? jenisBonusId,
     required int nominal,
     String? keterangan,
   }) async {
@@ -324,7 +324,7 @@ class OrderService {
       final response = await _dio.post('/pesanan/$pesananId/bonus-manual', data: {
         'manual_pesanan_cleaner_ids': pesananCleanerIds.map((id) => int.tryParse(id) ?? id).toList(),
         'pesanan_cleaner_ids': pesananCleanerIds.map((id) => int.tryParse(id) ?? id).toList(),
-        'jenis_bonus_id': jenisBonusId,
+        if (jenisBonusId != null) 'jenis_bonus_id': jenisBonusId,
         'nominal': nominal,
         if (keterangan != null && keterangan.isNotEmpty) 'keterangan': keterangan,
       });
