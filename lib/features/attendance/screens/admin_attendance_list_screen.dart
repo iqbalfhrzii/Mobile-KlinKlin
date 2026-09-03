@@ -244,7 +244,8 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
 
     // Target employees filtered by role and branch
     final targetEmployees = _allKaryawanList.where((k) {
-      if (k.status.toLowerCase() == 'pending') return false;
+      final status = k.status.toLowerCase();
+      if (status == 'pending' || status == 'nonaktif' || status == 'inactive') return false;
       final role = (k.jabatan?.namaJabatan ?? '').toLowerCase();
       if (isCleaner) {
         if (!role.contains('cleaner')) return false;

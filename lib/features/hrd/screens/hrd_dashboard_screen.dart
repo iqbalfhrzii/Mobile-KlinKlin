@@ -66,6 +66,8 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
       ]);
 
       final cleaners = (results[0] as List).where((k) {
+        final status = (k.status ?? '').toString().toLowerCase();
+        if (status == 'nonaktif' || status == 'inactive' || status == 'pending') return false;
         final role = k.jabatan?.namaJabatan.toLowerCase() ?? '';
         return role.contains('cleaner');
       }).toList();
