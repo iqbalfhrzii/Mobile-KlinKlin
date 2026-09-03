@@ -83,7 +83,70 @@ class _ClosingRateDashboardState extends State<ClosingRateDashboard> {
     }
 
     if (_errorMessage.isNotEmpty) {
-      return Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.red)));
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.sync_problem_rounded, color: Colors.amber.shade700, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Gagal memuat data chat harian',
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Koneksi server lambat. Ketuk untuk memuat ulang.',
+                    style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _isLoading = true;
+                  _errorMessage = '';
+                });
+                _fetchData();
+              },
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                visualDensity: VisualDensity.compact,
+                backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: Text(
+                'Coba Lagi',
+                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     if (_daysReported == 0) {
