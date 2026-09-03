@@ -4184,7 +4184,12 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
                   .then((data) {
                     if (mounted) {
                       setStateModal(() {
-                        availableCleaners = data;
+                        availableCleaners = data.where((c) {
+                          final status = (c['status'] ?? '').toString().toLowerCase();
+                          final statusType = (c['status_type'] ?? '').toString().toLowerCase();
+                          final statusLabel = (c['status_label'] ?? '').toString().toLowerCase();
+                          return status != 'nonaktif' && statusType != 'nonaktif' && !statusLabel.contains('nonaktif');
+                        }).toList();
                         isLoading = false;
                       });
                     }
@@ -4200,6 +4205,12 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
             }
 
             final filteredCleaners = availableCleaners.where((c) {
+              final status = (c['status'] ?? '').toString().toLowerCase();
+              final statusType = (c['status_type'] ?? '').toString().toLowerCase();
+              final statusLabel = (c['status_label'] ?? '').toString().toLowerCase();
+              if (status == 'nonaktif' || statusType == 'nonaktif' || statusLabel.contains('nonaktif')) {
+                return false;
+              }
               final name = (c['nama'] ?? c['name'] ?? '').toString().toLowerCase();
               return name.contains(searchQuery.toLowerCase());
             }).toList();

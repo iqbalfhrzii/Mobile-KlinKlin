@@ -331,6 +331,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         return _Step1Info(
           draft: _draft,
           isBranchWajibPpn: _isBranchWajibPpn,
+          isEditing: widget.existingOrder != null,
           onChanged: () => setState(() {}),
         );
       case 1:
@@ -801,10 +802,12 @@ class _Step1Info extends StatefulWidget {
   const _Step1Info({
     required this.draft,
     this.isBranchWajibPpn = false,
+    this.isEditing = false,
     required this.onChanged,
   });
   final OrderDraft draft;
   final bool isBranchWajibPpn;
+  final bool isEditing;
   final VoidCallback onChanged;
 
   @override
@@ -855,32 +858,30 @@ class _Step1InfoState extends State<_Step1Info> {
         });
 
         if (widget.draft.customer != null) {
-          final matched = _customers.firstWhere(
-            (c) => c.id == widget.draft.customer!.id,
-            orElse: () => CustomerModel(
-              id: widget.draft.customer!.id,
-              name: widget.draft.customer!.name,
-              phone: widget.draft.customer!.phone,
-              address: widget.draft.customer!.address,
-              status: 'aktif',
-              totalOrders: 0,
-              totalSpending: 0,
-              lastOrderDate: '-',
-              notes: widget.draft.customer!.notes,
-              orders: const [],
-            ),
-          );
-          final isReturning = matched.totalOrders > 0 || matched.orders.isNotEmpty;
-          if (isReturning) {
-            widget.draft.tipeCustomer = CustomerType.lama;
-            widget.draft.chatDari = ChatSource.lama;
-          } else {
-            widget.draft.tipeCustomer = CustomerType.baru;
-            if (widget.draft.chatDari == ChatSource.lama) {
-              widget.draft.chatDari = ChatSource.organik;
-            }
+          // JIKA SEDANG EDIT PESANAN, JANGAN PERNAH MENIMPA tipeCustomer & chatDari YANG SUDAH TERSIMPAN!
+          if (widget.isEditing) {
+            return;
           }
-          widget.onChanged();
+
+          final cleanId = widget.draft.customer!.id.replaceAll(RegExp(r'[^0-9]'), '');
+          final matched = _customers.where(
+            (c) => c.id.replaceAll(RegExp(r'[^0-9]'), '') == cleanId || 
+                   (c.phone.isNotEmpty && c.phone == widget.draft.customer!.phone),
+          ).firstOrNull;
+
+          if (matched != null) {
+            final isReturning = matched.totalOrders > 0 || matched.orders.isNotEmpty;
+            if (isReturning) {
+              widget.draft.tipeCustomer = CustomerType.lama;
+              widget.draft.chatDari = ChatSource.lama;
+            } else {
+              widget.draft.tipeCustomer = CustomerType.baru;
+              if (widget.draft.chatDari == ChatSource.lama) {
+                widget.draft.chatDari = ChatSource.organik;
+              }
+            }
+            widget.onChanged();
+          }
         }
       }
     } catch (e) {
@@ -895,17 +896,22 @@ class _Step1InfoState extends State<_Step1Info> {
 
   bool get _isCustomerLama {
     if (widget.draft.customer == null) return false;
-    final matched = _customers.where((c) => c.id == widget.draft.customer!.id);
+    if (widget.draft.tipeCustomer == CustomerType.lama) return true;
+    final cleanId = widget.draft.customer!.id.replaceAll(RegExp(r'[^0-9]'), '');
+    final matched = _customers.where((c) => 
+      c.id.replaceAll(RegExp(r'[^0-9]'), '') == cleanId || 
+      (c.phone.isNotEmpty && c.phone == widget.draft.customer!.phone)
+    );
     if (matched.isNotEmpty) {
       final c = matched.first;
       return c.totalOrders > 0 || c.orders.isNotEmpty;
     }
-    return widget.draft.tipeCustomer == CustomerType.lama;
+    return false;
   }
 
   Future<void> _handleCustomerSelected(CustomerModel c) async {
     widget.draft.customer = OrderCustomer(
-      id: c.id,
+      id: c.id.replaceAll(RegExp(r'[^0-9]'), ''),
       name: c.name,
       phone: c.phone,
       address: c.address,
@@ -3257,7 +3263,12 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
       );
       if (mounted) {
         setState(() {
-          _availableCleaners = data;
+          _availableCleaners = data.where((c) {
+            final status = (c['status'] ?? '').toString().toLowerCase();
+            final statusType = (c['status_type'] ?? '').toString().toLowerCase();
+            final statusLabel = (c['status_label'] ?? '').toString().toLowerCase();
+            return status != 'nonaktif' && statusType != 'nonaktif' && !statusLabel.contains('nonaktif');
+          }).toList();
           _isLoading = false;
         });
       }
@@ -3300,6 +3311,12 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
     }
 
     final filtered = _availableCleaners.where((c) {
+      final status = (c['status'] ?? '').toString().toLowerCase();
+      final statusType = (c['status_type'] ?? '').toString().toLowerCase();
+      final statusLabel = (c['status_label'] ?? '').toString().toLowerCase();
+      if (status == 'nonaktif' || statusType == 'nonaktif' || statusLabel.contains('nonaktif')) {
+        return false;
+      }
       final name = (c['name'] ?? c['nama'] ?? '').toString().toLowerCase();
       return name.contains(_searchQuery.toLowerCase());
     }).toList();
