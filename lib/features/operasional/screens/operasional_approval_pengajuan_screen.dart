@@ -27,6 +27,7 @@ class _OperasionalApprovalPengajuanScreenState extends State<OperasionalApproval
   late TabController _tabController;
 
   bool _isLoading = false;
+  bool _isEffectiveReadOnly = false;
   List<dynamic> _cabangs = [];
   String? _authToken;
 
@@ -45,6 +46,7 @@ class _OperasionalApprovalPengajuanScreenState extends State<OperasionalApproval
   @override
   void initState() {
     super.initState();
+    _isEffectiveReadOnly = widget.isReadOnly;
     _tabController = TabController(
       length: 2,
       vsync: this,
@@ -70,6 +72,10 @@ class _OperasionalApprovalPengajuanScreenState extends State<OperasionalApproval
     try {
       final prefs = await SharedPreferences.getInstance();
       _authToken = prefs.getString('auth_token');
+      final role = (prefs.getString('user_role') ?? '').toLowerCase();
+      if (role == 'ceo' || widget.isReadOnly) {
+        if (mounted) setState(() => _isEffectiveReadOnly = true);
+      }
     } catch (_) {}
     _loadCabangs();
   }
@@ -154,7 +160,7 @@ class _OperasionalApprovalPengajuanScreenState extends State<OperasionalApproval
         item: item,
         isPending: isPending,
         authToken: _authToken,
-        isReadOnly: widget.isReadOnly,
+        isReadOnly: _isEffectiveReadOnly,
       ),
     );
 
@@ -932,7 +938,7 @@ class _OperasionalApprovalPengajuanScreenState extends State<OperasionalApproval
           // Bottom Action Bar
           Padding(
             padding: EdgeInsets.fromLTRB(16, 10, 16, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 10 : 14),
-            child: widget.isReadOnly
+            child: _isEffectiveReadOnly
                 ? (isPending
                     ? SizedBox(
                         width: double.infinity,
@@ -1161,12 +1167,25 @@ class _DetailBottomSheetState extends State<_DetailBottomSheet> {
 
   bool _isLoadingApprove = false;
   bool _isLoadingReject = false;
+  bool _isEffectiveReadOnly = false;
 
   @override
   void initState() {
     super.initState();
+    _isEffectiveReadOnly = widget.isReadOnly;
+    _checkRole();
     final rawJumlah = int.tryParse(widget.item['jumlah']?.toString() ?? '1') ?? 1;
     _jumlahDisetujui = rawJumlah;
+  }
+
+  Future<void> _checkRole() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final role = (prefs.getString('user_role') ?? '').toLowerCase();
+      if (role == 'ceo' || widget.isReadOnly) {
+        if (mounted) setState(() => _isEffectiveReadOnly = true);
+      }
+    } catch (_) {}
   }
 
   @override
@@ -1590,7 +1609,7 @@ class _DetailBottomSheetState extends State<_DetailBottomSheet> {
                   const SizedBox(height: 24),
 
                   // Section 5: Form Persetujuan jika pending (Hanya untuk Admin/Operasional yang punya hak approve)
-                  if (widget.isPending && !widget.isReadOnly) ...[
+                  if (widget.isPending && !_isEffectiveReadOnly) ...[
                     _buildSectionHeader('KEPUTUSAN PERSETUJUAN', Icons.rate_review_rounded),
                     const SizedBox(height: 10),
                     Container(
@@ -1694,7 +1713,7 @@ class _DetailBottomSheetState extends State<_DetailBottomSheet> {
               border: const Border(top: BorderSide(color: Color(0xFFF1F5F9))),
               boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -3))],
             ),
-            child: (widget.isPending && !widget.isReadOnly)
+            child: (widget.isPending && !_isEffectiveReadOnly)
                 ? Row(
                     children: [
                       Expanded(

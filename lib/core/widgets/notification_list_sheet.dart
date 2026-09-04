@@ -214,9 +214,10 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
 
     // D. Approval Pengajuan / BHP
     if (type.contains('approval') || type.contains('pengajuan') || type.contains('bhp')) {
+      final isCeo = currentRole == 'ceo';
       nav.push(
         MaterialPageRoute(
-          builder: (_) => const OperasionalApprovalPengajuanScreen(),
+          builder: (_) => OperasionalApprovalPengajuanScreen(isReadOnly: isCeo),
         ),
       );
       return;

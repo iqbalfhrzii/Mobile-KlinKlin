@@ -113,7 +113,7 @@ class CeoMenuScreen extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => const OperasionalApprovalPengajuanScreen(
-                    isReadOnly: false,
+                    isReadOnly: true,
                   ),
                 ),
               );

@@ -367,9 +367,10 @@ class FcmService {
 
     // 3. Approval Pengajuan / Pembelian BHP / Pengadaan Alat
     if (type == 'approval_pengajuan' || type == 'pembelian_bhp' || screen == 'approval_pengajuan' || screen == 'pembelian_bhp') {
+      final isCeo = currentRole == 'ceo';
       navState.push(
         MaterialPageRoute(
-          builder: (_) => const OperasionalApprovalPengajuanScreen(),
+          builder: (_) => OperasionalApprovalPengajuanScreen(isReadOnly: isCeo),
         ),
       );
       return;

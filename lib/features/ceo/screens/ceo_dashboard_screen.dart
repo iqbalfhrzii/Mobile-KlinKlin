@@ -698,7 +698,7 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => const OperasionalApprovalPengajuanScreen(isReadOnly: false),
+                                      builder: (context) => const OperasionalApprovalPengajuanScreen(isReadOnly: true),
                                     ),
                                   );
                                 },
@@ -715,7 +715,7 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => const OperasionalPurchaseOrderScreen(isReadOnly: false),
+                                      builder: (context) => const OperasionalPurchaseOrderScreen(isReadOnly: true),
                                     ),
                                   );
                                 },
