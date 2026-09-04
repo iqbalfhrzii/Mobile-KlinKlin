@@ -1107,7 +1107,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AttendanceScreen())),
       ),
       _MenuGridItem(
-        title: 'Pengajuan Cuti',
+        title: 'Cuti',
         icon: Icons.event_available_rounded,
         iconColor: const Color(0xFF2563EB),
         bgColor: const Color(0xFFEFF6FF),

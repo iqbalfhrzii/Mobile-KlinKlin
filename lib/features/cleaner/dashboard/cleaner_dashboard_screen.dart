@@ -17,6 +17,7 @@ import '../../operasional/screens/operasional_pengumuman_screen.dart';
 import '../../stok_opname/screens/stok_opname_screen.dart';
 import '../../lapor_kecelakaan/screens/lapor_kecelakaan_screen.dart';
 import '../sim/screens/cleaner_sim_screen.dart';
+import '../../profile/screens/leave_request_screen.dart';
 
 class CleanerDashboardScreen extends StatefulWidget {
   const CleanerDashboardScreen({super.key});
@@ -562,23 +563,19 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
           MaterialPageRoute(builder: (_) => const CleanerJobListScreen()),
         ),
       ),
-      if (_isKoor)
-        _QuickActionItem(
-          title: 'Stok Opname',
-          icon: Icons.inventory_2_rounded,
-          color: const Color(0xFF0284C7),
-          bgColor: const Color(0xFFE0F2FE),
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const StokOpnameScreen()),
-          ),
-        ),
       _QuickActionItem(
         title: 'Absensi',
         icon: Icons.fingerprint_rounded,
         color: const Color(0xFFD97706),
         bgColor: const Color(0xFFFEF3C7),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AttendanceScreen())),
+      ),
+      _QuickActionItem(
+        title: 'Cuti',
+        icon: Icons.event_available_rounded,
+        color: const Color(0xFF0284C7),
+        bgColor: const Color(0xFFE0F2FE),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaveRequestScreen())),
       ),
       _QuickActionItem(
         title: 'Tukar Libur',
@@ -615,6 +612,17 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
         bgColor: const Color(0xFFE0F2FE),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CleanerSimScreen())),
       ),
+      if (_isKoor)
+        _QuickActionItem(
+          title: 'Stok Opname',
+          icon: Icons.inventory_2_rounded,
+          color: const Color(0xFF0284C7),
+          bgColor: const Color(0xFFE0F2FE),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const StokOpnameScreen()),
+          ),
+        ),
     ];
 
     // Koor: 2 rows of 3 columns

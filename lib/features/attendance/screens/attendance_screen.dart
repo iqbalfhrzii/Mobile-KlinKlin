@@ -15,7 +15,6 @@ import '../services/mock_location_service.dart';
 import '../data/attendance_model.dart';
 import '../widgets/attendance_day_detail_sheet.dart';
 import '../../profile/screens/leave_request_screen.dart';
-import '../../profile/screens/leave_history_screen.dart';
 import '../../cleaner/tukar_libur/screens/tukar_libur_screen.dart';
 
 class AttendanceScreen extends StatefulWidget {
@@ -1165,15 +1164,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     return Column(
       children: [
         _buildMenuCard(
-          title: 'Pengajuan Cuti / Izin',
-          subtitle: 'Ajukan permohonan libur atau izin kerja',
+          title: 'Cuti & Izin',
+          subtitle: 'Pengajuan dan riwayat permohonan libur atau izin kerja',
           icon: Icons.event_available_rounded,
           iconColor: const Color(0xFF2563EB),
           bgColor: const Color(0xFFEFF6FF),
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaveRequestScreen())),
         ),
-        const SizedBox(height: 10),
-        if (_isCleaner)
+        if (_isCleaner) ...[
+          const SizedBox(height: 10),
           _buildMenuCard(
             title: 'Tukar Libur',
             subtitle: 'Tukar jadwal hari libur dengan sesama cleaner',
@@ -1181,16 +1180,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             iconColor: const Color(0xFF7C3AED),
             bgColor: const Color(0xFFF5F3FF),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TukarLiburScreen())),
-          )
-        else
-          _buildMenuCard(
-            title: 'Riwayat Cuti & Izin',
-            subtitle: 'Lihat status persetujuan cuti dan izin Anda',
-            icon: Icons.history_edu_rounded,
-            iconColor: const Color(0xFF7C3AED),
-            bgColor: const Color(0xFFF5F3FF),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaveHistoryScreen())),
           ),
+        ],
       ],
     );
   }
