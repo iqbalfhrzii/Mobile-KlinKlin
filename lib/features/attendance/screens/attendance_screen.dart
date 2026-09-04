@@ -201,7 +201,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       int tidakAbsen = 0;
       int izinCutiLibur = 0;
 
-      final shiftMasuk = _parseTimeOnly(_status?.jamMasuk, fallback: '08:00');
+      final shiftMasuk = _parseScheduleTime(_status?.jamMasuk, fallback: '08:00');
       final toleransi = _status?.toleransiTelatMenit ?? 15;
       final lateBoundary = _calculateLateBoundary(shiftMasuk, toleransi);
 
@@ -328,6 +328,85 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     return false;
   }
 
+  /// Zona waktu dinamis berdasarkan cabang kerja atau offset perangkat
+  String get _branchTimezoneLabel {
+    final b = (_status?.branchName ?? '').toLowerCase();
+    if (b.contains('denpasar') ||
+        b.contains('bali') ||
+        b.contains('tabanan') ||
+        b.contains('badung') ||
+        b.contains('gianyar') ||
+        b.contains('buleleng') ||
+        b.contains('lombok') ||
+        b.contains('mataram') ||
+        b.contains('makassar') ||
+        b.contains('manado') ||
+        b.contains('balikpapan') ||
+        b.contains('samarinda') ||
+        b.contains('banjarmasin') ||
+        b.contains('palu') ||
+        b.contains('kupan') ||
+        b.contains('kendari') ||
+        b.contains('gorontalo')) {
+      return 'WITA';
+    }
+    if (b.contains('jayapura') ||
+        b.contains('papua') ||
+        b.contains('ambon') ||
+        b.contains('maluku') ||
+        b.contains('sorong') ||
+        b.contains('manokwari') ||
+        b.contains('ternate')) {
+      return 'WIT';
+    }
+    // Fallback: periksa offset perangkat jika nama cabang umum
+    final offsetHours = DateTime.now().timeZoneOffset.inHours;
+    if (offsetHours == 8) return 'WITA';
+    if (offsetHours == 9) return 'WIT';
+    return 'WIB';
+  }
+
+  /// Parsing jam jadwal kerja (jam_masuk, jam_pulang) murni sebagai wall-clock time
+  /// tanpa konversi zona waktu UTC -> local agar tidak tergeser (misal 08:00 tetap 08:00).
+  String _parseScheduleTime(String? raw, {String fallback = '08:00'}) {
+    if (raw == null || raw.trim().isEmpty) return fallback;
+    final str = raw.trim();
+
+    // 1. Jika mengandung 'T' (misal "2026-09-04T08:00:00.000000Z"), ambil jam & menit langsung setelah 'T'
+    if (str.contains('T')) {
+      final timePart = str.split('T')[1];
+      final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(timePart);
+      if (match != null) {
+        final h = match.group(1)!.padLeft(2, '0');
+        final m = match.group(2)!;
+        return '$h:$m';
+      }
+    }
+
+    // 2. Jika format date dan space (misal "2026-09-04 08:00:00")
+    if (str.contains(' ')) {
+      final parts = str.split(' ');
+      if (parts.length >= 2) {
+        final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(parts[1]);
+        if (match != null) {
+          final h = match.group(1)!.padLeft(2, '0');
+          final m = match.group(2)!;
+          return '$h:$m';
+        }
+      }
+    }
+
+    // 3. Simple time format (misal "08:00:00" atau "08:00")
+    final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(str);
+    if (match != null) {
+      final h = match.group(1)!.padLeft(2, '0');
+      final m = match.group(2)!;
+      return '$h:$m';
+    }
+
+    return str.length >= 5 ? str.substring(0, 5) : str;
+  }
+
   String _parseTimeOnly(String? raw, {String fallback = '--:--'}) {
     if (raw == null || raw.trim().isEmpty) return fallback;
     final str = raw.trim();
@@ -378,7 +457,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   String _calculateLateBoundary(String rawJamMasuk, int toleransiMenit) {
-    final parsed = _parseTimeOnly(rawJamMasuk, fallback: '08:00');
+    final parsed = _parseScheduleTime(rawJamMasuk, fallback: '08:00');
     final parts = parsed.split(':');
     if (parts.length >= 2) {
       final h = int.tryParse(parts[0]) ?? 8;
@@ -800,7 +879,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         Expanded(
           child: _buildSingleActionCard(
             label: hasCheckedIn ? 'Sudah Check-In' : 'Check-In',
-            sublabel: hasCheckedIn ? '$inTimeFormatted WIB' : 'Absen Masuk',
+            sublabel: hasCheckedIn ? '$inTimeFormatted $_branchTimezoneLabel' : 'Absen Masuk',
             timePill: hasCheckedIn ? inTimeFormatted : null,
             icon: hasCheckedIn ? Icons.check_circle_rounded : Icons.login_rounded,
             isCompleted: hasCheckedIn,
@@ -816,7 +895,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           child: _buildSingleActionCard(
             label: hasCheckedOut ? 'Sudah Check-Out' : 'Check-Out',
             sublabel: hasCheckedOut
-                ? '$outTimeFormatted WIB'
+                ? '$outTimeFormatted $_branchTimezoneLabel'
                 : (hasCheckedIn ? 'Absen Pulang' : 'Belum Masuk'),
             timePill: hasCheckedOut ? outTimeFormatted : null,
             icon: hasCheckedOut ? Icons.check_circle_rounded : Icons.logout_rounded,
@@ -924,7 +1003,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      '$timePill WIB',
+                      '$timePill $_branchTimezoneLabel',
                       style: GoogleFonts.inter(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
@@ -957,8 +1036,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final rawJamPulang = _status?.jamPulang;
     final toleransiMenit = _status?.toleransiTelatMenit ?? 15;
 
-    final jamMasuk = _parseTimeOnly(rawJamMasuk, fallback: '08:00');
-    final jamPulang = _parseTimeOnly(rawJamPulang, fallback: '17:00');
+    final jamMasuk = _parseScheduleTime(rawJamMasuk, fallback: '08:00');
+    final jamPulang = _parseScheduleTime(rawJamPulang, fallback: '17:00');
     final batasTelat = _calculateLateBoundary(jamMasuk, toleransiMenit);
 
     return Container(
@@ -1001,7 +1080,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               Expanded(
                 child: _buildSchedulePillar(
                   label: 'Jam Masuk',
-                  time: '$jamMasuk WIB',
+                  time: '$jamMasuk $_branchTimezoneLabel',
                   icon: Icons.login_rounded,
                   color: const Color(0xFF059669),
                   bgColor: const Color(0xFFECFDF5),
@@ -1021,7 +1100,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               Expanded(
                 child: _buildSchedulePillar(
                   label: 'Jam Pulang',
-                  time: '$jamPulang WIB',
+                  time: '$jamPulang $_branchTimezoneLabel',
                   icon: Icons.logout_rounded,
                   color: const Color(0xFFDC2626),
                   bgColor: const Color(0xFFFEF2F2),
@@ -1762,7 +1841,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                 const Icon(Icons.login_rounded, size: 13, color: Color(0xFF059669)),
                                 const SizedBox(width: 3),
                                 Text(
-                                  inTime != '--:--' ? '$inTime WIB' : '--:--',
+                                  inTime != '--:--' ? '$inTime $_branchTimezoneLabel' : '--:--',
                                   style: GoogleFonts.inter(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w700,
@@ -1777,7 +1856,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                 const Icon(Icons.logout_rounded, size: 13, color: Color(0xFFD97706)),
                                 const SizedBox(width: 3),
                                 Text(
-                                  outTime != '--:--' ? '$outTime WIB' : '--:--',
+                                  outTime != '--:--' ? '$outTime $_branchTimezoneLabel' : '--:--',
                                   style: GoogleFonts.inter(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w700,

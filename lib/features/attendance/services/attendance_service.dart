@@ -45,9 +45,9 @@ class AttendanceService {
             if (lat != null) branchLat = double.tryParse(lat.toString());
             if (lng != null) branchLng = double.tryParse(lng.toString());
             if (radius != null) maxRadiusMeter = double.tryParse(radius.toString());
-            if (c['jam_masuk'] != null) jamMasuk = c['jam_masuk'].toString();
+            if (c['jam_masuk'] != null) jamMasuk = _cleanScheduleTime(c['jam_masuk']);
             if (c['toleransi_telat_menit'] != null) toleransiTelatMenit = int.tryParse(c['toleransi_telat_menit'].toString());
-            if (c['jam_pulang'] != null) jamPulang = c['jam_pulang'].toString();
+            if (c['jam_pulang'] != null) jamPulang = _cleanScheduleTime(c['jam_pulang']);
 
             if (c['id'] != null) {
               final parsedId = int.tryParse(c['id'].toString());
@@ -83,9 +83,9 @@ class AttendanceService {
                     if (lat != null) branchLat = double.tryParse(lat.toString());
                     if (lng != null) branchLng = double.tryParse(lng.toString());
                     if (radius != null) maxRadiusMeter = double.tryParse(radius.toString());
-                    if (myCabang['jam_masuk'] != null) jamMasuk = myCabang['jam_masuk'].toString();
+                    if (myCabang['jam_masuk'] != null) jamMasuk = _cleanScheduleTime(myCabang['jam_masuk']);
                     if (myCabang['toleransi_telat_menit'] != null) toleransiTelatMenit = int.tryParse(myCabang['toleransi_telat_menit'].toString());
-                    if (myCabang['jam_pulang'] != null) jamPulang = myCabang['jam_pulang'].toString();
+                    if (myCabang['jam_pulang'] != null) jamPulang = _cleanScheduleTime(myCabang['jam_pulang']);
 
                     if (branchName != null) {
                       await prefs.setString('user_branch', branchName);
@@ -341,5 +341,22 @@ class AttendanceService {
     } catch (e) {
       throw Exception('Terjadi kesalahan saat memuat detail: $e');
     }
+  }
+
+  static String? _cleanScheduleTime(dynamic raw) {
+    if (raw == null) return null;
+    final str = raw.toString().trim();
+    if (str.isEmpty) return null;
+    if (str.contains('T')) {
+      final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(str.split('T')[1]);
+      if (match != null) {
+        return '${match.group(1)!.padLeft(2, '0')}:${match.group(2)}';
+      }
+    }
+    final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(str);
+    if (match != null) {
+      return '${match.group(1)!.padLeft(2, '0')}:${match.group(2)}';
+    }
+    return str.length >= 5 ? str.substring(0, 5) : str;
   }
 }
