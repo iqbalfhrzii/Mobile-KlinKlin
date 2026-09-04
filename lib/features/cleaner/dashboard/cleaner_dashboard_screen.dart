@@ -571,7 +571,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AttendanceScreen())),
       ),
       _QuickActionItem(
-        title: 'Cuti',
+        title: 'Cuti & Izin',
         icon: Icons.event_available_rounded,
         color: const Color(0xFF0284C7),
         bgColor: const Color(0xFFE0F2FE),
