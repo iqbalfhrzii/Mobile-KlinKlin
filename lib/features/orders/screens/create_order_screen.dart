@@ -3403,7 +3403,11 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
 
                     final statusLabel = c['status_label']?.toString() ?? 'Tersedia (Bebas)';
                     final statusType = c['status_type']?.toString().toLowerCase() ?? 'tersedia';
-                    final bool isDisabled = c['is_disabled'] == true;
+                    final bool isWorking = statusType == 'in_progress' ||
+                        statusLabel.toLowerCase().contains('mengerjakan') ||
+                        statusLabel.toLowerCase().contains('pengerjaan') ||
+                        statusLabel.toLowerCase().contains('sibuk');
+                    final bool isDisabled = !isWorking && c['is_disabled'] == true;
 
                     final String? foto = c['foto_profil']?.toString().replaceAll('\\', '/').trim();
 
@@ -3541,7 +3545,8 @@ class _Step3CleanerState extends State<_Step3Cleaner> {
       border = const Color(0xFFFECACA);
     } else if (type == 'in_progress' ||
         statusLabel.toLowerCase().contains('sibuk') ||
-        statusLabel.toLowerCase().contains('pengerjaan')) {
+        statusLabel.toLowerCase().contains('pengerjaan') ||
+        statusLabel.toLowerCase().contains('mengerjakan')) {
       bg = const Color(0xFFFFFBEB);
       text = const Color(0xFFD97706);
       border = const Color(0xFFFDE68A);

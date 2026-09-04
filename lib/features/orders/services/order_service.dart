@@ -470,8 +470,10 @@ class OrderService {
               map['name'] = map['name'] ?? map['nama'] ?? '-';
               map['status_label'] = map['status_label'] ?? 'Tersedia (Bebas)';
               map['status_type'] = map['status_type'] ?? 'tersedia';
-              map['is_disabled'] = map['is_disabled'] ?? false;
-              map['badge_color'] = map['badge_color'] ?? '#10B981';
+              final isWorking = map['status_type'] == 'in_progress' ||
+                  (map['status_label']?.toString().toLowerCase().contains('mengerjakan') ?? false);
+              map['is_disabled'] = !isWorking && (map['is_disabled'] == true);
+              map['badge_color'] = map['badge_color'] ?? (isWorking ? '#F59E0B' : '#10B981');
               return map;
             }),
           );
