@@ -5,6 +5,7 @@ import '../../attendance/data/attendance_model.dart';
 import '../../attendance/services/attendance_service.dart';
 import '../../../../core/widgets/gradient_header.dart';
 import 'selfie_viewer_screen.dart';
+import '../../../../core/utils/timezone_helper.dart';
 
 class AttendanceHistoryScreen extends StatefulWidget {
   const AttendanceHistoryScreen({super.key});
@@ -245,7 +246,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            'Waktu: $timeStr WIB \u2022 ${item.tanggal ?? ""}',
+                                            'Waktu: $timeStr ${TimezoneHelper.getTimezoneLabel(item.cabangName)} \u2022 ${item.tanggal ?? ""}',
                                             style: GoogleFonts.inter(
                                               fontSize: 11.5,
                                               color: AppColors.textMuted,

@@ -4,9 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:dio/dio.dart';
-import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/gradient_header.dart';
 import '../../../../../core/data/hrd_models.dart';
+import '../../../../../core/utils/timezone_helper.dart';
 import '../../services/hrd_service.dart';
 import 'cabang_form_sheet.dart';
 import '../karyawan/karyawan_detail_sheet.dart';
@@ -162,7 +162,7 @@ class _CabangDetailScreenState extends State<CabangDetailScreen> with SingleTick
 
       final now = DateTime.now();
       final dt = DateTime(now.year, now.month, now.day, hour, minute).add(Duration(minutes: toleransi));
-      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} WIB';
+      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} ${TimezoneHelper.getTimezoneLabel(_cabang.namaCabang)}';
     } catch (_) {
       return '$jamMasukStr (+$toleransi mnt)';
     }
@@ -1492,7 +1492,7 @@ class _CabangDetailScreenState extends State<CabangDetailScreen> with SingleTick
                       icon: Icons.login_rounded,
                       label: 'Jam Masuk',
                       value: _cabang.jamMasuk ?? '08:00',
-                      subtext: 'WIB',
+                      subtext: TimezoneHelper.getTimezoneLabel(_cabang.namaCabang),
                       color: const Color(0xFF16A34A),
                       bgColor: const Color(0xFFF0FDF4),
                     ),
@@ -1514,7 +1514,7 @@ class _CabangDetailScreenState extends State<CabangDetailScreen> with SingleTick
                       icon: Icons.logout_rounded,
                       label: 'Jam Pulang',
                       value: _cabang.jamPulang ?? '17:00',
-                      subtext: 'WIB',
+                      subtext: TimezoneHelper.getTimezoneLabel(_cabang.namaCabang),
                       color: const Color(0xFFDC2626),
                       bgColor: const Color(0xFFFEF2F2),
                     ),

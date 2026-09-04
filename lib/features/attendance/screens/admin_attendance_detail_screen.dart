@@ -5,6 +5,7 @@ import '../../../../core/widgets/gradient_header.dart';
 import '../data/attendance_model.dart';
 import '../services/attendance_service.dart';
 import '../widgets/attendance_selfie_thumbnail.dart';
+import '../../../../core/utils/timezone_helper.dart';
 
 class AdminAttendanceDetailScreen extends StatefulWidget {
   final GroupedAttendanceItem item;
@@ -40,6 +41,8 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
   final String _jamMasukStandard = '08:00';
   final String _jamPulangStandard = '17:00';
   final int _toleransiTelatMenit = 15;
+
+  String get _tzLabel => TimezoneHelper.getTimezoneLabel(widget.item.cabangName);
 
   @override
   void initState() {
@@ -384,7 +387,7 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                                 Text('Jadwal Kerja Standard', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B), fontWeight: FontWeight.w500)),
                                 const SizedBox(height: 2),
                                 Text(
-                                  'Masuk: $_jamMasukStandard WIB (Toleransi $_toleransiTelatMenit mnt) • Pulang: $_jamPulangStandard WIB',
+                                  'Masuk: $_jamMasukStandard $_tzLabel (Toleransi $_toleransiTelatMenit mnt) • Pulang: $_jamPulangStandard $_tzLabel',
                                   style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
                                 ),
                               ],
@@ -697,7 +700,7 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                 ),
                 if (hasRecord)
                   Text(
-                    '$timeStr WIB',
+                    '$timeStr $_tzLabel',
                     style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: accentColor),
                   ),
               ],
@@ -1104,7 +1107,7 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                                 const Icon(Icons.login_rounded, size: 13, color: Color(0xFF059669)),
                                 const SizedBox(width: 3),
                                 Text(
-                                  inTime != '--:--' ? '$inTime WIB' : '--:--',
+                                  inTime != '--:--' ? '$inTime $_tzLabel' : '--:--',
                                   style: GoogleFonts.inter(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w700,
@@ -1119,7 +1122,7 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                                 const Icon(Icons.logout_rounded, size: 13, color: Color(0xFF2563EB)),
                                 const SizedBox(width: 3),
                                 Text(
-                                  outTime != '--:--' ? '$outTime WIB' : '--:--',
+                                  outTime != '--:--' ? '$outTime $_tzLabel' : '--:--',
                                   style: GoogleFonts.inter(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w700,

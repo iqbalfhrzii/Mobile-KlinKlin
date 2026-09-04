@@ -18,6 +18,7 @@ import '../../stok_opname/screens/stok_opname_screen.dart';
 import '../../lapor_kecelakaan/screens/lapor_kecelakaan_screen.dart';
 import '../sim/screens/cleaner_sim_screen.dart';
 import '../../profile/screens/leave_request_screen.dart';
+import '../../../core/utils/timezone_helper.dart';
 
 class CleanerDashboardScreen extends StatefulWidget {
   const CleanerDashboardScreen({super.key});
@@ -1367,7 +1368,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
                             const Icon(Icons.access_time_rounded, size: 14, color: Color(0xFF64748B)),
                             const SizedBox(width: 5),
                             Text(
-                              time != '-' ? '$time WIB' : 'Jadwal fleksibel',
+                              time != '-' ? '$time ${TimezoneHelper.getTimezoneLabel(_userBranch)}' : 'Jadwal fleksibel',
                               style: GoogleFonts.inter(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w600,

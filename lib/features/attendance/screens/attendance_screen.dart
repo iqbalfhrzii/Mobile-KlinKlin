@@ -9,6 +9,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/gradient_header.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../core/utils/permission_helper.dart';
+import '../../../core/utils/timezone_helper.dart';
 import '../../attendance/services/attendance_service.dart';
 import 'camera_screen.dart';
 import '../services/mock_location_service.dart';
@@ -329,42 +330,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   /// Zona waktu dinamis berdasarkan cabang kerja atau offset perangkat
-  String get _branchTimezoneLabel {
-    final b = (_status?.branchName ?? '').toLowerCase();
-    if (b.contains('denpasar') ||
-        b.contains('bali') ||
-        b.contains('tabanan') ||
-        b.contains('badung') ||
-        b.contains('gianyar') ||
-        b.contains('buleleng') ||
-        b.contains('lombok') ||
-        b.contains('mataram') ||
-        b.contains('makassar') ||
-        b.contains('manado') ||
-        b.contains('balikpapan') ||
-        b.contains('samarinda') ||
-        b.contains('banjarmasin') ||
-        b.contains('palu') ||
-        b.contains('kupan') ||
-        b.contains('kendari') ||
-        b.contains('gorontalo')) {
-      return 'WITA';
-    }
-    if (b.contains('jayapura') ||
-        b.contains('papua') ||
-        b.contains('ambon') ||
-        b.contains('maluku') ||
-        b.contains('sorong') ||
-        b.contains('manokwari') ||
-        b.contains('ternate')) {
-      return 'WIT';
-    }
-    // Fallback: periksa offset perangkat jika nama cabang umum
-    final offsetHours = DateTime.now().timeZoneOffset.inHours;
-    if (offsetHours == 8) return 'WITA';
-    if (offsetHours == 9) return 'WIT';
-    return 'WIB';
-  }
+  String get _branchTimezoneLabel => TimezoneHelper.getTimezoneLabel(_status?.branchName);
 
   /// Parsing jam jadwal kerja (jam_masuk, jam_pulang) murni sebagai wall-clock time
   /// tanpa konversi zona waktu UTC -> local agar tidak tergeser (misal 08:00 tetap 08:00).

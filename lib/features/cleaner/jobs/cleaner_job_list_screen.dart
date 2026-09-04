@@ -9,6 +9,7 @@ import '../../../core/widgets/badges.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/weekly_date_picker.dart';
 import '../../../core/widgets/whatsapp_icon.dart';
+import '../../../core/utils/timezone_helper.dart';
 import '../services/cleaner_job_service.dart';
 import 'cleaner_job_detail_screen.dart';
 
@@ -1048,7 +1049,7 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                '$tanggal · $jam WIB',
+                                '$tanggal · $jam ${TimezoneHelper.getTimezoneLabel()}',
                                 style: GoogleFonts.inter(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w700,

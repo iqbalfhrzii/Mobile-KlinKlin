@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../data/attendance_model.dart';
 import 'attendance_selfie_thumbnail.dart';
+import '../../../core/utils/timezone_helper.dart';
 
 class AttendanceDayDetailSheet extends StatelessWidget {
   final String employeeName;
@@ -422,7 +423,7 @@ class AttendanceDayDetailSheet extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  hasRecord ? '$timeStr WIB' : 'Belum Absen',
+                  hasRecord ? '$timeStr ${TimezoneHelper.getTimezoneLabel(cabangName)}' : 'Belum Absen',
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,

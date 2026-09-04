@@ -9,6 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/whatsapp_icon.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
+import '../../../core/utils/timezone_helper.dart';
 import '../services/cleaner_job_service.dart';
 
 class CleanerJobDetailScreen extends StatefulWidget {
@@ -587,13 +588,14 @@ class _CleanerJobDetailScreenState extends State<CleanerJobDetailScreen> {
   String _formatTimeClean(String rawTime) {
     if (rawTime.isEmpty || rawTime == '-') return '-';
     String t = rawTime.trim();
+    final tz = TimezoneHelper.getTimezoneLabel();
     if (t.contains(':')) {
       final parts = t.split(':');
       if (parts.length >= 2) {
-        return '${parts[0]}:${parts[1]} WIB';
+        return '${parts[0]}:${parts[1]} $tz';
       }
     }
-    return '$t WIB';
+    return '$t $tz';
   }
 
   String _toTitleCase(String text) {
