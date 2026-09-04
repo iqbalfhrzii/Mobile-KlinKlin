@@ -301,21 +301,31 @@ class FcmService {
     final title = (message.notification?.title ?? message.data['title'] ?? '').toString();
     final body = (message.notification?.body ?? message.data['body'] ?? message.data['message'] ?? '').toString();
 
-    // 0. Pembatalan Pesanan / Hasil Audit (Finance)
+    // 0. Pembatalan Pesanan / Hasil Audit (Khusus Finance)
     if (type == 'pembatalan' || type == 'cancel_order' || screen == 'hasil_audit' || screen == 'audit_pesanan' || type == 'approval_edit' || title.toLowerCase().contains('batal') || body.toLowerCase().contains('batal')) {
-      if (currentRole.contains('finance') || currentRole.contains('admin') || currentRole.contains('ceo')) {
+      if (currentRole.contains('finance') || currentRole.contains('admin finance')) {
         navState.push(
           MaterialPageRoute(
             builder: (_) => const FinanceAuditScreen(initialTab: 'hasil-audit'),
           ),
         );
         return;
+      } else {
+        if (navContext.mounted) {
+          ScaffoldMessenger.of(navContext).showSnackBar(
+            SnackBar(
+              content: Text('Notifikasi pembatalan/audit ini khusus untuk bagian Finance. Anda saat ini login sebagai ${prefs.getString('user_role')}.'),
+              backgroundColor: const Color(0xFFDC2626),
+            ),
+          );
+        }
+        return;
       }
     }
 
     // 0b. Approval Pembayaran (Khusus Finance)
     if (type == 'pembayaran_pending' || screen == 'approval_pembayaran') {
-      if (currentRole.contains('finance') || currentRole.contains('admin') || currentRole.contains('ceo')) {
+      if (currentRole.contains('finance') || currentRole.contains('admin finance')) {
         navState.push(
           MaterialPageRoute(
             builder: (_) => const FinanceAuditScreen(),
@@ -326,13 +336,13 @@ class FcmService {
         if (navContext.mounted) {
           ScaffoldMessenger.of(navContext).showSnackBar(
             SnackBar(
-              content: Text('Notifikasi ini untuk Finance. Anda saat ini login sebagai ${prefs.getString('user_role')}.'),
+              content: Text('Notifikasi verifikasi pembayaran ini khusus untuk Finance. Anda saat ini login sebagai ${prefs.getString('user_role')}.'),
               backgroundColor: const Color(0xFFDC2626),
             ),
           );
         }
+        return;
       }
-      return;
     }
 
     // 1. Pengumuman

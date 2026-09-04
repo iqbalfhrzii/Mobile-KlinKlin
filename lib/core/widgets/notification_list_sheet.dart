@@ -362,12 +362,20 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
       return;
     }
 
-    // P. Pembatalan Pesanan / Audit
+    // P. Pembatalan Pesanan / Audit (Khusus Finance)
     if (type.contains('pembatalan') || type.contains('cancel') || screen.contains('hasil_audit') || screen.contains('audit') || title.contains('batal') || message.contains('batal')) {
-      if (currentRole.contains('finance') || currentRole.contains('admin') || currentRole.contains('ceo')) {
+      if (currentRole.contains('finance') || currentRole.contains('admin finance')) {
         nav.push(
           MaterialPageRoute(
             builder: (_) => const FinanceAuditScreen(initialTab: 'hasil-audit'),
+          ),
+        );
+        return;
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Notifikasi audit/pembatalan ini khusus untuk bagian Finance. Anda saat ini login sebagai $currentRole.'),
+            backgroundColor: const Color(0xFFDC2626),
           ),
         );
         return;
