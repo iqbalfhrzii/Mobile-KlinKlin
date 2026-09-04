@@ -163,7 +163,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ]),
                     const SizedBox(height: 12),
                     _buildMenuSection('Tentang', [
-                      _MenuItem(Icons.info_outline_rounded, 'Versi Aplikasi', trailing: '1.0.0'),
+                      _MenuItem(Icons.info_outline_rounded, 'Versi Aplikasi', trailing: '1.0.4'),
                       _MenuItem(Icons.help_outline_rounded, 'Bantuan', onTap: () {}),
                       _MenuItem(Icons.privacy_tip_outlined, 'Kebijakan Privasi', onTap: () {}),
                     ]),
