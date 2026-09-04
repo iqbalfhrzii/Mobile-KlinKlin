@@ -4333,7 +4333,9 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
                                   statusLabel.toLowerCase().contains('mengerjakan') ||
                                   statusLabel.toLowerCase().contains('pengerjaan') ||
                                   statusLabel.toLowerCase().contains('sibuk');
-                              final bool isDisabled = !isWorking && c['is_disabled'] == true;
+                              final bool isLibur = statusType == 'libur' ||
+                                  statusLabel.toLowerCase().contains('libur');
+                              final bool isDisabled = !isWorking && !isLibur && c['is_disabled'] == true;
 
                               return GestureDetector(
                                 onTap: () {

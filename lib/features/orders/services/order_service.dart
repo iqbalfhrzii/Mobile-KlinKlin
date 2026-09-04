@@ -472,8 +472,10 @@ class OrderService {
               map['status_type'] = map['status_type'] ?? 'tersedia';
               final isWorking = map['status_type'] == 'in_progress' ||
                   (map['status_label']?.toString().toLowerCase().contains('mengerjakan') ?? false);
-              map['is_disabled'] = !isWorking && (map['is_disabled'] == true);
-              map['badge_color'] = map['badge_color'] ?? (isWorking ? '#F59E0B' : '#10B981');
+              final isLibur = map['status_type'] == 'libur' ||
+                  (map['status_label']?.toString().toLowerCase().contains('libur') ?? false);
+              map['is_disabled'] = !isWorking && !isLibur && (map['is_disabled'] == true);
+              map['badge_color'] = map['badge_color'] ?? (isWorking ? '#F59E0B' : (isLibur ? '#EF4444' : '#10B981'));
               return map;
             }),
           );
