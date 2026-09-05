@@ -11,6 +11,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/services/customer_service.dart';
 import '../../../core/data/customer_model.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
+import '../../../core/utils/timezone_helper.dart';
 import '../services/finance_service.dart';
 class FinanceAuditScreen extends StatefulWidget {
   final String? initialTab;
@@ -333,12 +334,12 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     );
   }
 
-  Widget _buildPhotoSection(String title, Color color, IconData icon, List<CleanerFoto> photos) {
+  Widget _buildPhotoSection(String title, Color color, IconData icon, List<CleanerFoto> photos, [String? branchName]) {
     if (photos.isEmpty) return const SizedBox();
 
     String formattedDate = '';
     if (photos.first.createdAt != null) {
-      formattedDate = DateFormat('dd MMM yyyy HH:mm').format(photos.first.createdAt!);
+      formattedDate = TimezoneHelper.formatDateTime(photos.first.createdAt!, branchName: branchName);
     }
 
     return Container(
@@ -419,6 +420,24 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                               onPressed: () => Navigator.pop(ctx),
                             ),
                           ),
+                          if (f.createdAt != null)
+                            Positioned(
+                              bottom: 10,
+                              left: 10,
+                              right: 10,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.65),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '$title • ${TimezoneHelper.formatDateTime(f.createdAt, branchName: branchName)}',
+                                  style: GoogleFonts.inter(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -439,7 +458,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     );
   }
 
-  Widget _buildCleanerPhotos(OrderCleaner cleaner) {
+  Widget _buildCleanerPhotos(OrderCleaner cleaner, [String? branchName]) {
     if (cleaner.fotosStart.isEmpty && cleaner.fotosFinish.isEmpty) return const SizedBox();
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -484,6 +503,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                   Colors.blue.shade700,
                   Icons.arrow_circle_down_rounded,
                   cleaner.fotosStart,
+                  branchName,
                 ),
               ],
               if (cleaner.fotosStart.isNotEmpty && cleaner.fotosFinish.isNotEmpty)
@@ -494,6 +514,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                   Colors.green.shade700,
                   Icons.check_circle_outline_rounded,
                   cleaner.fotosFinish,
+                  branchName,
                 ),
               ],
             ],
@@ -501,6 +522,12 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
         ],
       ),
     );
+  }
+
+  String _getBranchNameForOrder(OrderModel order) {
+    if (order.cabangNama.isNotEmpty) return order.cabangNama;
+    final match = _cabangs.where((b) => b.id.toString() == order.cabangId.toString()).firstOrNull;
+    return match?.namaCabang ?? '';
   }
 
   // --- ERROR WIDGET ---
@@ -2745,7 +2772,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                               ),
                             )
                           else
-                            ...order.cleaners.map((c) => _buildCleanerPhotos(c)),
+                            ...order.cleaners.map((c) => _buildCleanerPhotos(c, _getBranchNameForOrder(order))),
                         ],
                       ),
                     ),
@@ -3698,7 +3725,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                               ),
                             )
                           else
-                            ...order.cleaners.map((c) => _buildCleanerPhotos(c)),
+                            ...order.cleaners.map((c) => _buildCleanerPhotos(c, _getBranchNameForOrder(order))),
                         ],
                       ),
                     ),
@@ -4860,7 +4887,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                               ),
                             )
                           else
-                            ...order.cleaners.map((c) => _buildCleanerPhotos(c)),
+                            ...order.cleaners.map((c) => _buildCleanerPhotos(c, _getBranchNameForOrder(order))),
                         ],
                       ),
                     ),
@@ -5970,7 +5997,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                                           ),
                                         )
                                       else
-                                        ...order.cleaners.map((c) => _buildCleanerPhotos(c)),
+                                        ...order.cleaners.map((c) => _buildCleanerPhotos(c, _getBranchNameForOrder(order))),
                                     ],
                                   ),
                                 ),

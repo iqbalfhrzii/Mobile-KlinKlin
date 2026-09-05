@@ -15,6 +15,7 @@ import '../../../core/services/pdf_invoice_service.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/widgets/whatsapp_icon.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/timezone_helper.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   const OrderDetailScreen({super.key, required this.order, this.isReadOnly = false});
@@ -2644,7 +2645,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       context,
                       photoUrl,
                       '$title - $cleanerName (#${idx + 1})',
-                      timestamp,
+                      f.createdAt != null ? _formatPhotoDate(f.createdAt) : timestamp,
                     ),
                     child: Container(
                       width: 78,
@@ -2728,15 +2729,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   String _formatPhotoDate(DateTime? dt) {
     if (dt == null) return '-';
-    final months = [
-      '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
-    ];
-    final day = dt.day.toString().padLeft(2, '0');
-    final month = months[dt.month];
-    final year = dt.year;
-    final hour = dt.hour.toString().padLeft(2, '0');
-    final minute = dt.minute.toString().padLeft(2, '0');
-    return '$day $month $year $hour:$minute';
+    final branch = _o.cabangNama.isNotEmpty ? _o.cabangNama : widget.order.cabangNama;
+    return TimezoneHelper.formatDateTime(dt, branchName: branch);
   }
 
   void _showPhotoModal(BuildContext context, String imageUrl, String title, [String? timestamp]) {

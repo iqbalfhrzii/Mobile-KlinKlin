@@ -109,4 +109,66 @@ class TimezoneHelper {
 
     return 'WIB';
   }
+
+  /// Mendapatkan offset jam (7 untuk WIB, 8 untuk WITA, 9 untuk WIT)
+  static int getTimezoneOffsetHours([String? branchName]) {
+    final tz = getTimezoneLabel(branchName);
+    if (tz == 'WITA') return 8;
+    if (tz == 'WIT') return 9;
+    return 7;
+  }
+
+  /// Melakukan parsing timestamp UTC dari server Laravel (baik format ISO dengan 'Z'
+  /// maupun format datetime biasa "YYYY-MM-DD HH:mm:ss") ke DateTime UTC.
+  static DateTime? parseServerTimestamp(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is DateTime) {
+      if (raw.isUtc) return raw;
+      return DateTime.utc(
+        raw.year,
+        raw.month,
+        raw.day,
+        raw.hour,
+        raw.minute,
+        raw.second,
+        raw.millisecond,
+        raw.microsecond,
+      );
+    }
+    String str = raw.toString().trim();
+    if (str.isEmpty || str == '-') return null;
+    if (!str.endsWith('Z') && !str.contains('+') && !RegExp(r'-\d{2}:\d{2}$').hasMatch(str)) {
+      if (str.contains(' ')) {
+        str = '${str.replaceFirst(' ', 'T')}Z';
+      } else if (str.contains('T')) {
+        str = '${str}Z';
+      }
+    }
+    return DateTime.tryParse(str)?.toUtc();
+  }
+
+  /// Memformat timestamp server UTC ke string tanggal & jam lokal cabang (WIB / WITA / WIT).
+  /// Contoh: "04 Sep 2026 15:30 WITA"
+  static String formatDateTime(dynamic rawDate, {String? branchName, bool includeTimezone = true}) {
+    final utc = parseServerTimestamp(rawDate);
+    if (utc == null) return '-';
+
+    final offsetHours = getTimezoneOffsetHours(branchName);
+    final localDt = utc.add(Duration(hours: offsetHours));
+    final tzLabel = getTimezoneLabel(branchName);
+
+    const months = [
+      '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+    ];
+    final day = localDt.day.toString().padLeft(2, '0');
+    final month = months[localDt.month];
+    final year = localDt.year;
+    final hour = localDt.hour.toString().padLeft(2, '0');
+    final minute = localDt.minute.toString().padLeft(2, '0');
+
+    if (includeTimezone) {
+      return '$day $month $year $hour:$minute $tzLabel';
+    }
+    return '$day $month $year $hour:$minute';
+  }
 }

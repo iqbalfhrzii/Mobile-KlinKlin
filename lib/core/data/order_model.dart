@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../utils/timezone_helper.dart';
 
 enum OrderStatus {
   draft,
@@ -267,7 +268,7 @@ class CleanerFoto {
       url: json['foto_url']?.toString() ?? json['url']?.toString() ?? rawPath,
       path: rawPath,
       tipe: json['tipe']?.toString() ?? 'start',
-      createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) : null,
+      createdAt: TimezoneHelper.parseServerTimestamp(json['created_at']),
     );
   }
 }
@@ -357,8 +358,8 @@ class OrderCleaner {
       phone: cleaner['no_wa']?.toString() ?? cleaner['no_hp']?.toString() ?? cleaner['phone']?.toString() ?? '',
       fotosStart: pFotosStart,
       fotosFinish: pFotosFinish,
-      startedAt: json['started_at'] != null ? DateTime.tryParse(json['started_at'].toString()) : null,
-      finishedAt: json['finished_at'] != null ? DateTime.tryParse(json['finished_at'].toString()) : null,
+      startedAt: TimezoneHelper.parseServerTimestamp(json['started_at']),
+      finishedAt: TimezoneHelper.parseServerTimestamp(json['finished_at']),
     );
   }
 }
@@ -419,6 +420,7 @@ class OrderModel {
     required this.id,
     this.nomorPesanan = '',
     required this.cabangId,
+    this.cabangNama = '',
     required this.customer,
     this.chatDari = ChatSource.organik,
     this.tipeCustomer = CustomerType.baru,
@@ -454,6 +456,7 @@ class OrderModel {
   String id;
   String nomorPesanan;
   String cabangId;
+  String cabangNama;
   OrderCustomer customer;
   ChatSource chatDari;
   CustomerType tipeCustomer;
@@ -763,6 +766,7 @@ class OrderModel {
       id: orderJson['id']?.toString() ?? json['pesanan_id']?.toString() ?? json['id']?.toString() ?? '',
       nomorPesanan: orderJson['nomor_pesanan']?.toString() ?? orderJson['id']?.toString() ?? '',
       cabangId: orderJson['cabang_id']?.toString() ?? json['cabang_id']?.toString() ?? '',
+      cabangNama: (cabangData is Map ? (cabangData['nama_cabang'] ?? cabangData['nama'])?.toString() : null) ?? orderJson['cabang_nama']?.toString() ?? json['cabang_nama']?.toString() ?? '',
       customer: OrderCustomer.fromJson(customerData, orderJson),
       chatDari: _parseChatSource(orderJson['chat_dari'] ?? json['chat_dari']),
       tipeCustomer: _parseCustomerType(orderJson['tipe_customer'] ?? json['tipe_customer']),
