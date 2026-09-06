@@ -70,9 +70,10 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
     _userCabangName = prefs.getString('user_cabang_name') ?? '';
 
     final r = _userRole.toLowerCase();
-    _isOperasionalOrAdmin = r.contains('operasional') || r.contains('admin') || r.contains('ceo') || r.contains('superadmin');
+    final bool canAccessAllBranches = r.contains('operasional') || r.contains('admin') || r.contains('ceo') || r.contains('superadmin');
+    _isOperasionalOrAdmin = (r.contains('operasional') || r.contains('admin') || r.contains('superadmin')) && !r.contains('ceo');
 
-    if (!_isOperasionalOrAdmin && _userCabangId != null) {
+    if (!canAccessAllBranches && _userCabangId != null) {
       _selectedCabangId = _userCabangId;
     }
 

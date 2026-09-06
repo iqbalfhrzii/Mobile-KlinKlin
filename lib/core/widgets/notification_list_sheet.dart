@@ -24,6 +24,7 @@ import '../../features/orders/screens/order_detail_screen.dart';
 import '../../features/orders/services/order_service.dart';
 import '../../features/cleaner/jobs/cleaner_job_detail_screen.dart';
 import '../../features/finance/screens/finance_audit_screen.dart';
+import '../../features/ceo/screens/ceo_karyawan_screen.dart';
 
 class NotificationListSheet extends StatefulWidget {
   const NotificationListSheet({super.key});
@@ -164,32 +165,44 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
     final prefs = await SharedPreferences.getInstance();
     final currentRole = (prefs.getString('user_role') ?? '').toLowerCase();
 
-    // 0. Approval Pembayaran (Khusus Finance)
+    // 0. Approval Pembayaran (Khusus Finance & Monitoring CEO)
     if (type.contains('pembayaran') || screen.contains('approval_pembayaran')) {
       if (currentRole.contains('finance') || currentRole.contains('admin') || currentRole.contains('ceo')) {
         nav.push(
           MaterialPageRoute(
-            builder: (_) => const FinanceAuditScreen(),
+            builder: (_) => FinanceAuditScreen(isReadOnly: currentRole.contains('ceo')),
           ),
         );
         return;
       }
     }
 
-    // A. Karyawan Baru / Acc Karyawan
+    // A. Karyawan Baru / Acc Karyawan / Status Nonaktif
     if (type.contains('karyawan') ||
         screen.contains('karyawan') ||
         title.contains('karyawan baru') ||
+        title.contains('pegawai') ||
+        title.contains('non-aktif') ||
+        title.contains('cleaner') ||
         message.contains('karyawan baru') ||
+        message.contains('pegawai') ||
+        message.contains('non-aktif') ||
         data['action'] == 'acc') {
-      if (currentRole.contains('hrd') || currentRole.contains('admin') || currentRole.contains('ceo')) {
+      if (currentRole.contains('ceo')) {
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => const CeoKaryawanScreen(),
+          ),
+        );
+        return;
+      } else if (currentRole.contains('hrd') || currentRole.contains('admin')) {
         nav.push(
           MaterialPageRoute(
             builder: (_) => const KaryawanListScreen(initialTabIndex: 1),
           ),
         );
+        return;
       }
-      return;
     }
 
     // B. Pengumuman
@@ -214,7 +227,7 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
 
     // D. Approval Pengajuan / BHP
     if (type.contains('approval') || type.contains('pengajuan') || type.contains('bhp')) {
-      final isCeo = currentRole == 'ceo';
+      final isCeo = currentRole.contains('ceo');
       nav.push(
         MaterialPageRoute(
           builder: (_) => OperasionalApprovalPengajuanScreen(isReadOnly: isCeo),
@@ -265,9 +278,10 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
 
     // I. Purchase Order
     if (type.contains('purchase_order') || type.contains('po')) {
+      final isCeo = currentRole.contains('ceo');
       nav.push(
         MaterialPageRoute(
-          builder: (_) => const OperasionalPurchaseOrderScreen(),
+          builder: (_) => OperasionalPurchaseOrderScreen(isReadOnly: isCeo),
         ),
       );
       return;

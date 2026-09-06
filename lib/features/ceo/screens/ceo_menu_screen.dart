@@ -8,6 +8,9 @@ import '../../operasional/screens/operasional_purchase_order_screen.dart';
 import '../../operasional/screens/operasional_pengumuman_screen.dart';
 import '../../operasional/screens/operasional_permintaan_design_screen.dart';
 import 'ceo_data_chat_screen.dart';
+import 'ceo_karyawan_screen.dart';
+import '../../hrd/screens/gaji_karyawan/gaji_karyawan_list_screen.dart';
+import '../../hrd/screens/insentif/insentif_cleaner_list_screen.dart';
 
 class CeoMenuScreen extends StatelessWidget {
   const CeoMenuScreen({super.key});
@@ -129,8 +132,58 @@ class CeoMenuScreen extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => const OperasionalPurchaseOrderScreen(
-                    isReadOnly: false,
+                    isReadOnly: true,
                   ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      _MenuSection(
+        title: 'SDM & Kompensasi Cabang',
+        subtitle: 'Direktori pegawai, rekap gaji & bonus cleaner',
+        sectionIcon: Icons.people_alt_rounded,
+        sectionColor: const Color(0xFF0D9488),
+        items: [
+          _MenuItem(
+            icon: Icons.badge_rounded,
+            title: 'Data Karyawan & Cleaner',
+            iconColor: const Color(0xFF0F172A),
+            bgColor: const Color(0xFFF1F5F9),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CeoKaryawanScreen(),
+                ),
+              );
+            },
+          ),
+          _MenuItem(
+            icon: Icons.receipt_long_rounded,
+            title: 'Rekap Gaji Karyawan',
+            iconColor: const Color(0xFF2563EB),
+            bgColor: const Color(0xFFEFF6FF),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const GajiKaryawanListScreen(),
+                ),
+              );
+            },
+          ),
+          _MenuItem(
+            icon: Icons.paid_rounded,
+            title: 'Bonus & Insentif Cleaner',
+            iconColor: const Color(0xFF059669),
+            bgColor: const Color(0xFFECFDF5),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const InsentifCleanerListScreen(showHeader: true),
                 ),
               );
             },

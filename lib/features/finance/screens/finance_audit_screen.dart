@@ -13,9 +13,12 @@ import '../../../core/data/customer_model.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../core/utils/timezone_helper.dart';
 import '../services/finance_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 class FinanceAuditScreen extends StatefulWidget {
   final String? initialTab;
-  const FinanceAuditScreen({super.key, this.initialTab});
+  final bool isReadOnly;
+  const FinanceAuditScreen({super.key, this.initialTab, this.isReadOnly = false});
 
   @override
   State<FinanceAuditScreen> createState() => _FinanceAuditScreenState();
@@ -25,6 +28,8 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
   final OrderService _orderService = OrderService();
   final HrdService _hrdService = HrdService();
   final FinanceService _financeService = FinanceService();
+
+  bool _isCeo = false;
 
   List<OrderModel> _orders = [];
   List<CabangModel> _cabangs = [];
@@ -70,7 +75,18 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     if (widget.initialTab != null && widget.initialTab!.isNotEmpty) {
       _auditTab = widget.initialTab!;
     }
+    _loadUserRole();
     _fetchData();
+  }
+
+  Future<void> _loadUserRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    final role = prefs.getString('user_role') ?? '';
+    if (mounted) {
+      setState(() {
+        _isCeo = role.toLowerCase().contains('ceo') || widget.isReadOnly;
+      });
+    }
   }
 
   bool _isLoadingSecondary = false;
@@ -2167,58 +2183,73 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                   if (customAction != null)
                     customAction
                   else if (isPending) ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: OutlinedButton.icon(
-                            onPressed: () => _showDetailModal(order),
-                            icon: const Icon(Icons.description_outlined, size: 14),
-                            label: Text('Periksa', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 9),
-                              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
+                    if (widget.isReadOnly || _isCeo)
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _showDetailModal(order),
+                          icon: const Icon(Icons.description_outlined, size: 14),
+                          label: Text('Lihat Detail', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 9),
+                            side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          flex: 4,
-                          child: ElevatedButton.icon(
-                            onPressed: () => _showApproveConfirm(order),
-                            icon: const Icon(Icons.check_circle_rounded, size: 14),
-                            label: Text('Approve', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF059669),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 9),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              elevation: 0,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          flex: 3,
-                          child: ElevatedButton.icon(
-                            onPressed: () => _showRejectModal(order),
-                            icon: const Icon(Icons.cancel_outlined, size: 14),
-                            label: Text('Tolak', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFEF2F2),
-                              foregroundColor: const Color(0xFFDC2626),
-                              padding: const EdgeInsets.symmetric(vertical: 9),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                side: const BorderSide(color: Color(0xFFFECACA)),
+                      )
+                    else
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _showDetailModal(order),
+                              icon: const Icon(Icons.description_outlined, size: 14),
+                              label: Text('Periksa', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 9),
+                                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
-                              elevation: 0,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            flex: 4,
+                            child: ElevatedButton.icon(
+                              onPressed: () => _showApproveConfirm(order),
+                              icon: const Icon(Icons.check_circle_rounded, size: 14),
+                              label: Text('Approve', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF059669),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 9),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                elevation: 0,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            flex: 3,
+                            child: ElevatedButton.icon(
+                              onPressed: () => _showRejectModal(order),
+                              icon: const Icon(Icons.cancel_outlined, size: 14),
+                              label: Text('Tolak', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFFEF2F2),
+                                foregroundColor: const Color(0xFFDC2626),
+                                padding: const EdgeInsets.symmetric(vertical: 9),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  side: const BorderSide(color: Color(0xFFFECACA)),
+                                ),
+                                elevation: 0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                   ] else ...[
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -2783,7 +2814,7 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
             ),
 
             // Sticky Bottom Action Bar (Persis Image 1)
-            if (_approvalTableMode == 'pending')
+            if (_approvalTableMode == 'pending' && !widget.isReadOnly && !_isCeo)
               Container(
                 padding: EdgeInsets.fromLTRB(20, 14, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
                 decoration: BoxDecoration(
@@ -3362,51 +3393,67 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => _showEditDetailModal(order, csName, alasanStr),
-                          icon: const Icon(Icons.visibility_rounded, size: 14),
-                          label: Text('Detail', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.primary,
-                            padding: const EdgeInsets.symmetric(vertical: 9),
-                            side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
+                  if (widget.isReadOnly || _isCeo)
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _showEditDetailModal(order, csName, alasanStr),
+                        icon: const Icon(Icons.visibility_rounded, size: 14),
+                        label: Text('Lihat Detail Pengajuan', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => _showApproveEditConfirm(order),
-                          icon: const Icon(Icons.check_rounded, size: 14),
-                          label: Text('Setujui', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF059669),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 9),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    )
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _showEditDetailModal(order, csName, alasanStr),
+                            icon: const Icon(Icons.visibility_rounded, size: 14),
+                            label: Text('Detail', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      InkWell(
-                        onTap: () => _showRejectEditModal(order),
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          padding: const EdgeInsets.all(9),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade50,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.red.shade200),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => _showApproveEditConfirm(order),
+                            icon: const Icon(Icons.check_rounded, size: 14),
+                            label: Text('Setujui', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF059669),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
                           ),
-                          child: const Icon(Icons.close_rounded, size: 16, color: Color(0xFFDC2626)),
                         ),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () => _showRejectEditModal(order),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.all(9),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.red.shade200),
+                            ),
+                            child: const Icon(Icons.close_rounded, size: 16, color: Color(0xFFDC2626)),
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),
@@ -3736,7 +3783,8 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
             ),
 
             // Sticky Bottom Action Bar
-            Container(
+            if (!widget.isReadOnly && !_isCeo)
+              Container(
               padding: EdgeInsets.fromLTRB(20, 14, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 16),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -4356,37 +4404,53 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
           padding: const EdgeInsets.only(bottom: 8),
           child: _buildProMaxOrderCard(
             order,
-            customAction: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () => _openFinanceEditOrderBebasModal(order),
-                  icon: const Icon(Icons.edit_note_rounded, size: 16),
-                  label: Text('Edit', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0F52BA),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    elevation: 0,
+            customAction: (widget.isReadOnly || _isCeo)
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () => _showDetailModal(order),
+                        icon: const Icon(Icons.description_outlined, size: 14),
+                        label: Text('Lihat Detail', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ],
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () => _openFinanceEditOrderBebasModal(order),
+                        icon: const Icon(Icons.edit_note_rounded, size: 16),
+                        label: Text('Edit', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0F52BA),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          elevation: 0,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: () => _confirmDeleteOrder(order),
+                        icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFDC2626)),
+                        label: Text('Hapus', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626))),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFDC2626),
+                          side: const BorderSide(color: Color(0xFFFCA5A5)),
+                          backgroundColor: const Color(0xFFFEF2F2),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          elevation: 0,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                OutlinedButton.icon(
-                  onPressed: () => _confirmDeleteOrder(order),
-                  icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFDC2626)),
-                  label: Text('Hapus', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626))),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFDC2626),
-                    side: const BorderSide(color: Color(0xFFFCA5A5)),
-                    backgroundColor: const Color(0xFFFEF2F2),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    elevation: 0,
-                  ),
-                ),
-              ],
-            ),
           ),
         )),
         _buildLoadMoreButton(
