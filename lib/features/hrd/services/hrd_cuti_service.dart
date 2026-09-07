@@ -23,12 +23,38 @@ class HrdCutiService {
     return response.data['data'];
   }
 
-  Future<void> updateKaryawanCuti(int karyawanId, int jatahCuti, int sisaCuti) async {
+  Future<void> updateKaryawanCuti(
+    int karyawanId,
+    int jatahCuti,
+    int sisaCuti, {
+    int? bulanMulai,
+    int? tahunMulai,
+    int? bulanReset,
+    int? tahunReset,
+  }) async {
     await _dio.put('/cuti/karyawans/$karyawanId', data: {
       'jatah_cuti': jatahCuti,
       'sisa_cuti': sisaCuti,
+      if (bulanMulai != null) 'bulan_mulai_cuti': bulanMulai,
+      if (tahunMulai != null) 'tahun_mulai_cuti': tahunMulai,
+      if (bulanReset != null) 'bulan_reset_cuti': bulanReset,
+      if (tahunReset != null) 'tahun_reset_cuti': tahunReset,
     });
   }
+
+  Future<Map<String, dynamic>> inputManualCuti({
+    required int karyawanId,
+    required dynamic tanggalList,
+    required String alasan,
+  }) async {
+    final response = await _dio.post('/cuti/input-manual', data: {
+      'karyawan_id': karyawanId,
+      'tanggal_list': tanggalList,
+      'alasan': alasan,
+    });
+    return response.data;
+  }
+
 
   // --- Pengajuan Cuti & Izin ---
   Future<Map<String, dynamic>> fetchPengajuan({

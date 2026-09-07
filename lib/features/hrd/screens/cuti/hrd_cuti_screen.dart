@@ -8,6 +8,8 @@ import '../../services/hrd_cuti_service.dart';
 import '../../services/hrd_service.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:math' as math;
+import 'package:intl/intl.dart';
 import '../../../../core/widgets/whatsapp_icon.dart';
 
 class HrdCutiScreen extends StatefulWidget {
@@ -200,10 +202,33 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
   }
 
   // --- ACTIONS ---
-  Future<void> _updateJatahCuti(int karyawanId, int jatah, int sisa) async {
+  Future<void> _updateJatahCuti(
+    int karyawanId,
+    int jatah,
+    int sisa, {
+    int? bulanMulai,
+    int? tahunMulai,
+    int? bulanReset,
+    int? tahunReset,
+  }) async {
     try {
-      await _service.updateKaryawanCuti(karyawanId, jatah, sisa);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Data cuti berhasil diperbarui')));
+      await _service.updateKaryawanCuti(
+        karyawanId,
+        jatah,
+        sisa,
+        bulanMulai: bulanMulai,
+        tahunMulai: tahunMulai,
+        bulanReset: bulanReset,
+        tahunReset: tahunReset,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Data cuti berhasil diperbarui'),
+            backgroundColor: Color(0xFF059669),
+          ),
+        );
+      }
       _fetchKaryawans();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -614,9 +639,42 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
 
     return Column(
       children: [
+        // Header Section with Input Cuti Lampau Button
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Jatah & Sisa Cuti',
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF0F172A),
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: _showInputManualCutiModal,
+                icon: const Icon(Icons.add_rounded, size: 16, color: Colors.white),
+                label: Text(
+                  'Input Cuti Lampau',
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F172A),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ),
+        ),
+
         // Search Bar & Filter Button Row
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
           child: Row(
             children: [
               Expanded(
@@ -2104,131 +2162,866 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
   }
 
   // ==========================================
-  // MODAL EDIT JATAH & SISA CUTI
+  // MODAL EDIT JATAH & SISA CUTI (SESUAI SCREENSHOT)
   // ==========================================
   void _showEditCuti(Map<String, dynamic> k) {
     final int karyawanId = int.tryParse(k['id']?.toString() ?? '0') ?? 0;
     final int jatah = int.tryParse(k['jatah_cuti']?.toString() ?? '0') ?? 0;
     final int sisa = int.tryParse(k['sisa_cuti']?.toString() ?? '0') ?? 0;
+
+    final now = DateTime.now();
+    final int defaultBulanMulai = int.tryParse(k['bulan_mulai_cuti']?.toString() ?? '') ?? now.month;
+    final int defaultTahunMulai = int.tryParse(k['tahun_mulai_cuti']?.toString() ?? '') ?? now.year;
+    final int defaultBulanReset = int.tryParse(k['bulan_reset_cuti']?.toString() ?? '') ?? defaultBulanMulai;
+    final int defaultTahunReset = int.tryParse(k['tahun_reset_cuti']?.toString() ?? '') ?? (defaultTahunMulai + 1);
+
+    final bulanMulaiCtrl = TextEditingController(text: defaultBulanMulai.toString());
+    final tahunMulaiCtrl = TextEditingController(text: defaultTahunMulai.toString());
+    final bulanResetCtrl = TextEditingController(text: defaultBulanReset.toString());
+    final tahunResetCtrl = TextEditingController(text: defaultTahunReset.toString());
     final jatahCtrl = TextEditingController(text: jatah.toString());
     final sisaCtrl = TextEditingController(text: sisa.toString());
 
-    showModalBottomSheet(
-      useSafeArea: true,
+    String? modalMessage;
+    String? modalError;
+
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+      barrierDismissible: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              backgroundColor: Colors.white,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header Modal
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Edit Cuti - ${k['nama'] ?? '-'}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF005696),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Container(
+                                  width: 80,
+                                  height: 2.5,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF93C5FD),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, size: 22, color: Color(0xFF94A3B8)),
+                            onPressed: () => Navigator.pop(ctx),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Notification Messages
+                      if (modalMessage != null) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFECFDF5),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFA7F3D0)),
+                          ),
+                          child: Text(
+                            modalMessage!,
+                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF047857)),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+                      if (modalError != null) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFFCA5A5)),
+                          ),
+                          child: Text(
+                            modalError!,
+                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFFDC2626)),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+
+                      // Row 1: Bulan Mulai & Tahun Mulai
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Bulan Mulai Cuti', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF334155))),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: bulanMulaiCtrl,
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    hintText: '1-12',
+                                    filled: true,
+                                    fillColor: const Color(0xFFF8FAFC),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Tahun Mulai', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF334155))),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: tahunMulaiCtrl,
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    hintText: '2026',
+                                    filled: true,
+                                    fillColor: const Color(0xFFF8FAFC),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Row 2: Bulan Reset & Tahun Reset
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Bulan Reset', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF334155))),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: bulanResetCtrl,
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    hintText: '1-12',
+                                    filled: true,
+                                    fillColor: const Color(0xFFF8FAFC),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Tahun Reset', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF334155))),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: tahunResetCtrl,
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    hintText: '2027',
+                                    filled: true,
+                                    fillColor: const Color(0xFFF8FAFC),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Tombol Kalkulasi Pro-rata
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF005696),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            elevation: 0,
+                          ),
+                          onPressed: () {
+                            final bMulai = int.tryParse(bulanMulaiCtrl.text) ?? 1;
+                            final tMulai = int.tryParse(tahunMulaiCtrl.text) ?? now.year;
+                            final bReset = int.tryParse(bulanResetCtrl.text) ?? 1;
+                            final tReset = int.tryParse(tahunResetCtrl.text) ?? (now.year + 1);
+
+                            final dMulai = DateTime(tMulai, bMulai, 1);
+                            final dReset = DateTime(tReset, bReset, 1);
+
+                            if (dReset.isAfter(dMulai)) {
+                              final diffMonths = (tReset - tMulai) * 12 + (bReset - bMulai);
+                              final defaultJatah = _defaultJatahCuti > 0 ? _defaultJatahCuti : 12;
+                              final calculatedJatah = math.min(defaultJatah, diffMonths);
+                              jatahCtrl.text = calculatedJatah.toString();
+                              sisaCtrl.text = calculatedJatah.toString();
+                              setModalState(() {
+                                modalMessage = 'Kalkulasi berhasil: Karyawan mendapat jatah $calculatedJatah hari.';
+                                modalError = null;
+                              });
+                            } else {
+                              setModalState(() {
+                                modalError = 'Waktu reset harus lebih besar dari waktu mulai.';
+                                modalMessage = null;
+                              });
+                            }
+                          },
+                          child: Text(
+                            'Kalkulasi Pro-rata',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                      const SizedBox(height: 16),
+
+                      // Row 3: Jatah Cuti Keseluruhan & Sisa Cuti Saat Ini
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Jatah Cuti Keseluruhan', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF334155))),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: jatahCtrl,
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    filled: true,
+                                    fillColor: const Color(0xFFF8FAFC),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Sisa Cuti Saat Ini', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF334155))),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: sisaCtrl,
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    filled: true,
+                                    fillColor: const Color(0xFFF8FAFC),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Action Buttons
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            onPressed: () => Navigator.pop(ctx),
+                            child: Text('Batal', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: const Color(0xFF475569))),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF005696),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              elevation: 0,
+                            ),
+                            onPressed: () {
+                              final newJatah = int.tryParse(jatahCtrl.text) ?? jatah;
+                              final newSisa = int.tryParse(sisaCtrl.text) ?? sisa;
+                              final newBulanMulai = int.tryParse(bulanMulaiCtrl.text);
+                              final newTahunMulai = int.tryParse(tahunMulaiCtrl.text);
+                              final newBulanReset = int.tryParse(bulanResetCtrl.text);
+                              final newTahunReset = int.tryParse(tahunResetCtrl.text);
+
+                              Navigator.pop(ctx);
+                              _updateJatahCuti(
+                                karyawanId,
+                                newJatah,
+                                newSisa,
+                                bulanMulai: newBulanMulai,
+                                tahunMulai: newTahunMulai,
+                                bulanReset: newBulanReset,
+                                tahunReset: newTahunReset,
+                              );
+                            },
+                            child: Text('Simpan', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  _buildAvatar(k, size: 44, radius: 12),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ==========================================
+  // MODAL INPUT CUTI LAMPAU (SESUAI SCREENSHOT)
+  // ==========================================
+  void _showInputManualCutiModal() {
+    int? selectedKaryawanId;
+    final Set<String> selectedDates = {};
+    final tanggalCtrl = TextEditingController();
+    final alasanCtrl = TextEditingController(text: 'Cuti Lampau (Sebelum ERP)');
+    String? formError;
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              backgroundColor: Colors.white,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header Modal
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Input Cuti Lampau',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF005696),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Container(
+                                  width: 80,
+                                  height: 2.5,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF93C5FD),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, size: 22, color: Color(0xFF94A3B8)),
+                            onPressed: () => Navigator.pop(ctx),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+
+                      if (formError != null) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFFCA5A5)),
+                          ),
+                          child: Text(
+                            formError!,
+                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFFDC2626)),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+
+                      // Field Karyawan
+                      Text(
+                        'Karyawan',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF334155),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFCBD5E1)),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            isExpanded: true,
+                            hint: Text(
+                              'Pilih Karyawan',
+                              style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
+                            ),
+                            value: selectedKaryawanId,
+                            items: _karyawans.map((emp) {
+                              final id = int.tryParse(emp['id']?.toString() ?? '0') ?? 0;
+                              final nama = emp['nama'] ?? '-';
+                              final jabatan = emp['jabatan']?['nama_jabatan'] ?? 'Cleaner';
+                              return DropdownMenuItem<int>(
+                                value: id,
+                                child: Text(
+                                  '$nama - $jabatan',
+                                  style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF0F172A)),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              setModalState(() {
+                                selectedKaryawanId = val;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Field Pilih Tanggal Cuti
+                      Text(
+                        'Pilih Tanggal Cuti',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF334155),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      InkWell(
+                        onTap: () async {
+                          await _openMultiDatePickerDialog(selectedDates);
+                          final sorted = selectedDates.toList()..sort();
+                          setModalState(() {
+                            tanggalCtrl.text = sorted.join(', ');
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(10),
+                        child: IgnorePointer(
+                          child: TextFormField(
+                            controller: tanggalCtrl,
+                            decoration: InputDecoration(
+                              hintText: 'Klik untuk memilih tanggal...',
+                              hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
+                              suffixIcon: const Icon(Icons.calendar_month_rounded, size: 20, color: Color(0xFF005696)),
+                              filled: true,
+                              fillColor: const Color(0xFFF8FAFC),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Anda dapat memilih lebih dari satu tanggal pada kalender dengan mengklik tanggal-tanggal yang diinginkan.',
+                        style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B), height: 1.3),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Field Alasan / Catatan
+                      Text(
+                        'Alasan / Catatan',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF334155),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: alasanCtrl,
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Info Banner
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.info_outline_rounded, size: 18, color: Color(0xFF1D4ED8)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Data ini akan otomatis disetujui dan memotong sisa cuti karyawan yang bersangkutan.',
+                                style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF1E40AF), height: 1.3),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+
+                      // Action Buttons
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+                            child: Text('Batal', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: const Color(0xFF475569))),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF005696),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              elevation: 0,
+                            ),
+                            onPressed: isSubmitting
+                                ? null
+                                : () async {
+                                    if (selectedKaryawanId == null) {
+                                      setModalState(() {
+                                        formError = 'Silakan pilih karyawan terlebih dahulu.';
+                                      });
+                                      return;
+                                    }
+                                    if (selectedDates.isEmpty) {
+                                      setModalState(() {
+                                        formError = 'Silakan pilih minimal 1 tanggal cuti.';
+                                      });
+                                      return;
+                                    }
+
+                                    setModalState(() {
+                                      isSubmitting = true;
+                                      formError = null;
+                                    });
+
+                                    try {
+                                      final sorted = selectedDates.toList()..sort();
+                                      await _service.inputManualCuti(
+                                        karyawanId: selectedKaryawanId!,
+                                        tanggalList: sorted.join(','),
+                                        alasan: alasanCtrl.text.trim(),
+                                      );
+                                      if (ctx.mounted) Navigator.pop(ctx);
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Riwayat cuti lampau berhasil disimpan untuk ${sorted.length} hari'),
+                                            backgroundColor: const Color(0xFF059669),
+                                          ),
+                                        );
+                                      }
+                                      _fetchKaryawans();
+                                      _fetchPengajuan();
+                                    } catch (e) {
+                                      setModalState(() {
+                                        isSubmitting = false;
+                                        formError = 'Gagal menyimpan: $e';
+                                      });
+                                    }
+                                  },
+                            child: isSubmitting
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : Text('Simpan', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ==========================================
+  // MULTI-DATE PICKER CALENDAR DIALOG
+  // ==========================================
+  Future<void> _openMultiDatePickerDialog(Set<String> selectedDates) async {
+    DateTime displayedMonth = DateTime.now();
+    if (selectedDates.isNotEmpty) {
+      try {
+        final sorted = selectedDates.toList()..sort();
+        displayedMonth = DateTime.parse(sorted.last);
+      } catch (_) {}
+    }
+    displayedMonth = DateTime(displayedMonth.year, displayedMonth.month, 1);
+
+    await showDialog(
+      context: context,
+      builder: (calCtx) {
+        return StatefulBuilder(
+          builder: (calCtx, setCalState) {
+            final daysInMonth = DateTime(displayedMonth.year, displayedMonth.month + 1, 0).day;
+            // Monday as 1, Sunday as 7 -> adjust so 1 is Monday
+            final firstWeekday = DateTime(displayedMonth.year, displayedMonth.month, 1).weekday; // 1 = Monday, 7 = Sunday
+            final prefixEmptyDays = firstWeekday - 1; // 0 for Monday
+
+            final monthYearStr = DateFormat('MMMM yyyy', 'id').format(displayedMonth);
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              backgroundColor: Colors.white,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Month Navigation Header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Edit Cuti Karyawan', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
-                        Text(k['nama'] ?? '-', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B))),
+                        IconButton(
+                          icon: const Icon(Icons.chevron_left_rounded, size: 26, color: Color(0xFF334155)),
+                          onPressed: () {
+                            setCalState(() {
+                              displayedMonth = DateTime(displayedMonth.year, displayedMonth.month - 1, 1);
+                            });
+                          },
+                        ),
+                        Text(
+                          monthYearStr,
+                          style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.chevron_right_rounded, size: 26, color: Color(0xFF334155)),
+                          onPressed: () {
+                            setCalState(() {
+                              displayedMonth = DateTime(displayedMonth.year, displayedMonth.month + 1, 1);
+                            });
+                          },
+                        ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              const Divider(height: 1, color: Color(0xFFF1F5F9)),
-              const SizedBox(height: 18),
+                    const SizedBox(height: 10),
 
-              Text('Jatah Cuti Keseluruhan', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF475569))),
-              const SizedBox(height: 6),
-              TextFormField(
-                controller: jatahCtrl,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  suffixText: 'Hari',
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              Text('Sisa Cuti Saat Ini', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF475569))),
-              const SizedBox(height: 6),
-              TextFormField(
-                controller: sisaCtrl,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  suffixText: 'Hari',
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                ),
-              ),
-              const SizedBox(height: 22),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        side: const BorderSide(color: Color(0xFFCBD5E1)),
-                      ),
-                      onPressed: () => Navigator.pop(ctx),
-                      child: Text('Batal', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: const Color(0xFF64748B))),
+                    // Day of Week Header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map((day) {
+                        return Expanded(
+                          child: Center(
+                            child: Text(
+                              day,
+                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
+                    const SizedBox(height: 8),
+
+                    // Calendar Grid
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 7,
+                        mainAxisSpacing: 6,
+                        crossAxisSpacing: 6,
+                        childAspectRatio: 1.1,
                       ),
-                      onPressed: () {
-                        final newJatah = int.tryParse(jatahCtrl.text) ?? jatah;
-                        final newSisa = int.tryParse(sisaCtrl.text) ?? sisa;
-                        Navigator.pop(ctx);
-                        _updateJatahCuti(karyawanId, newJatah, newSisa);
+                      itemCount: prefixEmptyDays + daysInMonth,
+                      itemBuilder: (context, index) {
+                        if (index < prefixEmptyDays) {
+                          return const SizedBox.shrink();
+                        }
+                        final dayNum = index - prefixEmptyDays + 1;
+                        final d = DateTime(displayedMonth.year, displayedMonth.month, dayNum);
+                        final dateKey = '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+                        final isSelected = selectedDates.contains(dateKey);
+
+                        return InkWell(
+                          onTap: () {
+                            setCalState(() {
+                              if (isSelected) {
+                                selectedDates.remove(dateKey);
+                              } else {
+                                selectedDates.add(dateKey);
+                              }
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: isSelected ? const Color(0xFF005696) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isSelected ? const Color(0xFF005696) : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: Text(
+                              dayNum.toString(),
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected ? Colors.white : const Color(0xFF1E293B),
+                              ),
+                            ),
+                          ),
+                        );
                       },
-                      child: Text('Simpan Perubahan', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                    const SizedBox(height: 12),
+
+                    // Footer count and Done button
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '${selectedDates.length} dipilih',
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF1D4ED8)),
+                              ),
+                            ),
+                            if (selectedDates.isNotEmpty) ...[
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () {
+                                  setCalState(() {
+                                    selectedDates.clear();
+                                  });
+                                },
+                                child: Text(
+                                  'Hapus Semua',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFFDC2626)),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF005696),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            elevation: 0,
+                          ),
+                          onPressed: () => Navigator.pop(calCtx),
+                          child: Text('Selesai', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
-        ),
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
