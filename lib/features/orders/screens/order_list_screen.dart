@@ -1161,18 +1161,18 @@ class _OrderCard extends StatelessWidget {
         'Sabtu',
       ];
       final months = [
-        'Januari',
-        'Februari',
-        'Maret',
-        'April',
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
         'Mei',
-        'Juni',
-        'Juli',
-        'Agustus',
-        'September',
-        'Oktober',
-        'November',
-        'Desember',
+        'Jun',
+        'Jul',
+        'Agu',
+        'Sep',
+        'Okt',
+        'Nov',
+        'Des',
       ];
       final dayNameReal = days[dt.weekday == 7 ? 0 : dt.weekday];
       final monthName = months[dt.month - 1];

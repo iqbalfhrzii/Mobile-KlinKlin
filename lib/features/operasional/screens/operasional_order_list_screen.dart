@@ -476,8 +476,8 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
       final dt = DateTime.parse(datePart);
       final days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
       final months = [
-        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+        'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+        'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
       ];
       final dayNameReal = days[dt.weekday == 7 ? 0 : dt.weekday];
       final monthName = months[dt.month - 1];
