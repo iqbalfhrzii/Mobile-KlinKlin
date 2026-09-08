@@ -514,8 +514,10 @@ class _OperasionalPengumumanScreenState extends State<OperasionalPengumumanScree
           GradientHeader(
             child: Row(
               children: [
-                HeaderBackButton(onTap: () => Navigator.pop(context)),
-                const SizedBox(width: 12),
+                if (Navigator.canPop(context)) ...[
+                  HeaderBackButton(onTap: () => Navigator.pop(context)),
+                  const SizedBox(width: 12),
+                ],
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

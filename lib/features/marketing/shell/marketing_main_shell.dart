@@ -3,11 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../auth/screens/change_pin_screen.dart';
-import '../../profile/screens/profile_screen.dart';
-import '../../operasional/screens/operasional_pengumuman_screen.dart';
-import '../../operasional/screens/operasional_permintaan_design_screen.dart';
+import '../../konten_marketing/screens/konten_marketing_screen.dart';
 import '../screens/marketing_spend_ads_screen.dart';
 import '../screens/marketing_progress_screen.dart';
+import '../screens/marketing_notulensi_rapat_screen.dart';
+import '../screens/marketing_menu_screen.dart';
 
 class MarketingMainShell extends StatefulWidget {
   const MarketingMainShell({
@@ -37,18 +37,22 @@ class _MarketingMainShellState extends State<MarketingMainShell> {
 
   List<Widget> get _screens => [
     const MarketingSpendAdsScreen(),
-    const OperasionalPermintaanDesignScreen(department: 'marketing'),
     const MarketingProgressScreen(),
-    const OperasionalPengumumanScreen(),
-    const ProfileScreen(),
+    const KontenMarketingScreen(),
+    const MarketingNotulensiRapatScreen(),
+    MarketingMenuScreen(
+      onSelectTab: (index) {
+        setState(() => _currentIndex = index);
+      },
+    ),
   ];
 
   static const _navItems = [
     _NavItem(Icons.paid_outlined, Icons.paid_rounded, 'Spend Ads'),
-    _NavItem(Icons.palette_outlined, Icons.palette_rounded, 'Desain'),
     _NavItem(Icons.insights_outlined, Icons.insights_rounded, 'Progress'),
-    _NavItem(Icons.campaign_outlined, Icons.campaign_rounded, 'Pengumuman'),
-    _NavItem(Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
+    _NavItem(Icons.perm_media_outlined, Icons.perm_media_rounded, 'Konten'),
+    _NavItem(Icons.event_note_outlined, Icons.event_note_rounded, 'Notulensi'),
+    _NavItem(Icons.grid_view_outlined, Icons.grid_view_rounded, 'Menu'),
   ];
 
   @override

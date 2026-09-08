@@ -9,7 +9,8 @@ import '../services/operasional_strategi_rapat_service.dart';
 import 'operasional_strategi_rapat_form_sheet.dart';
 
 class OperasionalStrategiRapatScreen extends StatefulWidget {
-  const OperasionalStrategiRapatScreen({super.key});
+  final bool showHeader;
+  const OperasionalStrategiRapatScreen({super.key, this.showHeader = true});
 
   @override
   State<OperasionalStrategiRapatScreen> createState() => _OperasionalStrategiRapatScreenState();
@@ -803,30 +804,33 @@ class _OperasionalStrategiRapatScreenState extends State<OperasionalStrategiRapa
       backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
-          GradientHeader(
-            child: Row(
-              children: [
-                const AppBackButton(),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Rapat Harian',
-                        style: GoogleFonts.inter(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Kelola data rapat harian operasional',
-                        style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.85)),
-                      ),
-                    ],
+          if (widget.showHeader)
+            GradientHeader(
+              child: Row(
+                children: [
+                  if (Navigator.canPop(context)) ...[
+                    const AppBackButton(),
+                    const SizedBox(width: 14),
+                  ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Rapat Harian',
+                          style: GoogleFonts.inter(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Kelola data rapat harian operasional',
+                          style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.85)),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
           
           // Search & Filter Single Row
           Container(

@@ -9,7 +9,8 @@ import '../services/operasional_evaluasi_rapat_service.dart';
 import 'operasional_evaluasi_rapat_form_sheet.dart';
 
 class OperasionalEvaluasiRapatScreen extends StatefulWidget {
-  const OperasionalEvaluasiRapatScreen({super.key});
+  final bool showHeader;
+  const OperasionalEvaluasiRapatScreen({super.key, this.showHeader = true});
 
   @override
   State<OperasionalEvaluasiRapatScreen> createState() => _OperasionalEvaluasiRapatScreenState();
@@ -818,30 +819,33 @@ class _OperasionalEvaluasiRapatScreenState extends State<OperasionalEvaluasiRapa
       backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
-          GradientHeader(
-            child: Row(
-              children: [
-                const AppBackButton(),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Rapat Bulanan',
-                        style: GoogleFonts.inter(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Kelola data rapat bulanan & tindak lanjut operasional',
-                        style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.85)),
-                      ),
-                    ],
+          if (widget.showHeader)
+            GradientHeader(
+              child: Row(
+                children: [
+                  if (Navigator.canPop(context)) ...[
+                    const AppBackButton(),
+                    const SizedBox(width: 14),
+                  ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Rapat Bulanan',
+                          style: GoogleFonts.inter(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Kelola data rapat bulanan & tindak lanjut operasional',
+                          style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.85)),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
           
           // Search & Filter Single Row
           Container(

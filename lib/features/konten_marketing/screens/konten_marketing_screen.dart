@@ -235,8 +235,10 @@ class _KontenMarketingScreenState extends State<KontenMarketingScreen> with Sing
               children: [
                 Row(
                   children: [
-                    const AppBackButton(),
-                    const SizedBox(width: 12),
+                    if (Navigator.canPop(context)) ...[
+                      const AppBackButton(),
+                      const SizedBox(width: 12),
+                    ],
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
