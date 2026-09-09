@@ -69,13 +69,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // Ignore if fetch fails
     }
 
-    if (_isCleanerRole()) {
+    if (_canAccessJadwalLibur()) {
       _loadJadwalLibur();
     }
   }
 
-  bool _isCleanerRole() {
-    return _userRole.toLowerCase().contains('cleaner');
+
+  bool _canAccessJadwalLibur() {
+    final role = _userRole.toLowerCase();
+    final branch = _userBranch.toLowerCase();
+    final isCleaner = role.contains('cleaner');
+    final isBojonegoroCs = (role.contains('cs') || role.contains('customer service')) && branch.contains('bojonegoro');
+    return isCleaner || isBojonegoroCs;
   }
 
   bool _isFinanceOrAdmin() {
@@ -144,8 +149,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _buildInfoCard(),
                     const SizedBox(height: 14),
 
-                    // Section Khusus Cleaner: Informasi Jadwal Libur
-                    if (_isCleanerRole()) ...[
+                    // Section Khusus Cleaner & CS Bojonegoro: Informasi Jadwal Libur
+                    if (_canAccessJadwalLibur()) ...[
                       _buildJadwalLiburCard(),
                       const SizedBox(height: 14),
                     ],

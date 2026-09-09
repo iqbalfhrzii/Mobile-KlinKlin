@@ -33,6 +33,7 @@ import '../../operasional/screens/operasional_pengumuman_screen.dart';
 import '../../lapor_kecelakaan/screens/lapor_kecelakaan_screen.dart';
 import '../../cs/screens/cs_izin_tukar_libur_screen.dart';
 import '../../profile/screens/leave_request_screen.dart';
+import '../../cleaner/tukar_libur/screens/tukar_libur_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -1098,6 +1099,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCsMenuGrid() {
+    final bool isBojonegoro = _userBranch.toLowerCase().contains('bojonegoro');
     final menus = [
       _MenuGridItem(
         title: 'Absensi',
@@ -1113,6 +1115,14 @@ class _HomeScreenState extends State<HomeScreen> {
         bgColor: const Color(0xFFEFF6FF),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaveRequestScreen())),
       ),
+      if (isBojonegoro)
+        _MenuGridItem(
+          title: 'Tukar Libur',
+          icon: Icons.swap_horiz_rounded,
+          iconColor: const Color(0xFF0284C7),
+          bgColor: const Color(0xFFE0F2FE),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TukarLiburScreen())),
+        ),
       _MenuGridItem(
         title: 'Buat Pesanan',
         icon: Icons.add_circle_outline_rounded,

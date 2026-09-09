@@ -61,6 +61,11 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
         _liburSaya = dataRekan['libur_saya'] ?? [];
         _riwayat = riwayat;
         _isLoading = false;
+
+        // Auto-select jika hanya ada 1 pilihan yaitu Self-Swap
+        if (_rekan.length == 1 && _rekan.first['is_self'] == true) {
+          _selectedRekan = _rekan.first;
+        }
       });
     } catch (e) {
       setState(() {
@@ -79,8 +84,9 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
       _showError('Pilih rekan kerja pengganti');
       return;
     }
+    final bool isSelfSwap = _selectedRekan != null && _selectedRekan['is_self'] == true;
     if (_selectedLiburTarget == null) {
-      _showError('Pilih tanggal libur rekan kerja pada kalender');
+      _showError(isSelfSwap ? 'Pilih tanggal libur baru pengganti pada kalender' : 'Pilih tanggal libur rekan kerja pada kalender');
       return;
     }
     if (_alasanController.text.trim().isEmpty) {
@@ -350,8 +356,8 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
           // ================= STEP 2: PILIH REKAN KERJA =================
           _buildStepHeader(
             stepNumber: '2',
-            title: 'Pilih Rekan Kerja Pengganti',
-            subtitle: 'Pilih Cleaner rekan kerja yang akan diajak bertukar jadwal',
+            title: isSelfSwap ? 'Metode Penukaran Jadwal' : 'Pilih Rekan Kerja Pengganti',
+            subtitle: isSelfSwap ? 'Tukar libur mandiri untuk cabang solo (Diri Sendiri)' : 'Pilih Cleaner rekan kerja yang akan diajak bertukar jadwal',
           ),
           const SizedBox(height: 10),
 
@@ -367,9 +373,9 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
             child: DropdownButtonFormField<dynamic>(
               value: _selectedRekan,
               decoration: InputDecoration(
-                hintText: 'Pilih rekan kerja Cleaner',
+                hintText: isSelfSwap ? '🌟 Diri Sendiri (Tukar Libur Mandiri)' : 'Pilih rekan kerja Cleaner',
                 hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 14),
-                prefixIcon: const Icon(Icons.people_alt_rounded, color: Color(0xFF64748B), size: 20),
+                prefixIcon: Icon(isSelfSwap ? Icons.person_pin_circle_rounded : Icons.people_alt_rounded, color: const Color(0xFF64748B), size: 20),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
