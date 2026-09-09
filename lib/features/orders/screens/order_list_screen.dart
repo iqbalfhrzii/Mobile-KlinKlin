@@ -259,15 +259,17 @@ class _OrderListScreenState extends State<OrderListScreen> {
     final startDay = DateTime(start.year, start.month, start.day, 0, 0, 0);
     final endDay = DateTime(end.year, end.month, end.day, 23, 59, 59, 999);
 
-    // 1. Cek apakah ada jadwal pengerjaan layanan yang masuk rentang
-    final matchService = o.services.any((s) {
-      final sDt = _parseServiceDate(s.tanggalPengerjaan);
-      if (sDt == null) return false;
-      return !sDt.isBefore(startDay) && !sDt.isAfter(endDay);
-    });
-    if (matchService) return true;
+    // 1. Jika pesanan memiliki tanggal pengerjaan layanan yang valid, wajib cocok dengan rentang
+    final hasValidServiceDate = o.services.any((s) => _parseServiceDate(s.tanggalPengerjaan) != null);
+    if (hasValidServiceDate) {
+      return o.services.any((s) {
+        final sDt = _parseServiceDate(s.tanggalPengerjaan);
+        if (sDt == null) return false;
+        return !sDt.isBefore(startDay) && !sDt.isAfter(endDay);
+      });
+    }
 
-    // 2. Cek juga apakah tanggalInput masuk rentang
+    // 2. Fallback: hanya gunakan tanggalInput jika pesanan tidak memiliki tanggal pengerjaan pada layanannya
     final dtInput = o.tanggalInput;
     return !dtInput.isBefore(startDay) && !dtInput.isAfter(endDay);
   }

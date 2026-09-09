@@ -155,30 +155,29 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
       final matchStatus = _selectedStatus == 'Semua Status Utama' ||
           o.statusUtamaLabel.toLowerCase() == _selectedStatus.toLowerCase();
 
-      // Date: check both service schedule (tanggalPengerjaan) and tanggalInput
+      // Date: prioritize service schedule (tanggalPengerjaan), fallback to tanggalInput only if no service dates
       bool matchDate = true;
       final now = DateTime.now();
+      bool checkMatch(bool Function(DateTime) checkFn) {
+        final hasValidServiceDate = o.services.any((s) => _parseServiceDate(s.tanggalPengerjaan) != null);
+        if (hasValidServiceDate) {
+          return o.services.any((s) {
+            final dt = _parseServiceDate(s.tanggalPengerjaan);
+            return dt != null && checkFn(dt);
+          });
+        }
+        return checkFn(o.tanggalInput);
+      }
+
       if (_selectedDayFilter == 'Hari Ini') {
-        bool isSameDay(DateTime d) => d.year == now.year && d.month == now.month && d.day == now.day;
-        matchDate = isSameDay(o.tanggalInput) || o.services.any((s) {
-          final dt = _parseServiceDate(s.tanggalPengerjaan);
-          return dt != null && isSameDay(dt);
-        });
+        matchDate = checkMatch((d) => d.year == now.year && d.month == now.month && d.day == now.day);
       } else if (_selectedDayFilter == 'Kemarin') {
         final yesterday = now.subtract(const Duration(days: 1));
-        bool isSameDay(DateTime d) => d.year == yesterday.year && d.month == yesterday.month && d.day == yesterday.day;
-        matchDate = isSameDay(o.tanggalInput) || o.services.any((s) {
-          final dt = _parseServiceDate(s.tanggalPengerjaan);
-          return dt != null && isSameDay(dt);
-        });
+        matchDate = checkMatch((d) => d.year == yesterday.year && d.month == yesterday.month && d.day == yesterday.day);
       } else if (_selectedDayFilter == 'Kustom Tanggal' && _filterStartDate != null && _filterEndDate != null) {
         final startDay = DateTime(_filterStartDate!.year, _filterStartDate!.month, _filterStartDate!.day, 0, 0, 0);
         final endDay = DateTime(_filterEndDate!.year, _filterEndDate!.month, _filterEndDate!.day, 23, 59, 59, 999);
-        bool inRange(DateTime d) => !d.isBefore(startDay) && !d.isAfter(endDay);
-        matchDate = inRange(o.tanggalInput) || o.services.any((s) {
-          final dt = _parseServiceDate(s.tanggalPengerjaan);
-          return dt != null && inRange(dt);
-        });
+        matchDate = checkMatch((d) => !d.isBefore(startDay) && !d.isAfter(endDay));
       }
 
       return matchQ && matchCabang && matchStatus && matchDate;
