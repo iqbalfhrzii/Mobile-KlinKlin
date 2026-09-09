@@ -428,7 +428,7 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
               _buildStepHeader(
                 stepNumber: '3',
                 title: 'Pilih Tanggal Libur Baru (Pengganti)',
-                subtitle: 'Khusus Denpasar/Tabanan: Pilih hari kerja yang ingin dijadikan libur baru',
+                subtitle: 'Khusus Denpasar/Tabanan/Bojonegoro: Pilih hari kerja yang ingin dijadikan libur baru',
               ),
               const SizedBox(height: 10),
               InkWell(
