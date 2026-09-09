@@ -202,9 +202,36 @@ class _OrderListScreenState extends State<OrderListScreen> {
 
   DateTime? _parseServiceDate(String raw) {
     if (raw.trim().isEmpty) return null;
-    final direct = DateTime.tryParse(raw.trim());
+    final trimmed = raw.trim();
+
+    // 1. Direct parse (ISO 8601)
+    final direct = DateTime.tryParse(trimmed);
     if (direct != null) return direct;
-    final parts = raw.trim().split(' ');
+
+    // 2. Match DD-MM-YYYY or DD/MM/YYYY inside the string (e.g., "Minggu, 06-09-2026 - 13:30" or "06-09-2026")
+    final dmyMatch = RegExp(r'(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})').firstMatch(trimmed);
+    if (dmyMatch != null) {
+      final d = int.tryParse(dmyMatch.group(1)!);
+      final m = int.tryParse(dmyMatch.group(2)!);
+      final y = int.tryParse(dmyMatch.group(3)!);
+      if (d != null && m != null && y != null && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+        return DateTime(y, m, d);
+      }
+    }
+
+    // 3. Match YYYY-MM-DD inside the string
+    final ymdMatch = RegExp(r'(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})').firstMatch(trimmed);
+    if (ymdMatch != null) {
+      final y = int.tryParse(ymdMatch.group(1)!);
+      final m = int.tryParse(ymdMatch.group(2)!);
+      final d = int.tryParse(ymdMatch.group(3)!);
+      if (d != null && m != null && y != null && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+        return DateTime(y, m, d);
+      }
+    }
+
+    // 4. Fallback: Parse space-separated Indonesian words (e.g. "6 September 2026")
+    final parts = trimmed.split(' ');
     int? y, m, d;
     const mMap = {
       'januari': 1, 'jan': 1, 'februari': 2, 'feb': 2, 'maret': 3, 'mar': 3,
@@ -229,16 +256,20 @@ class _OrderListScreenState extends State<OrderListScreen> {
   }
 
   bool _matchesOrderDate(OrderModel o, DateTime start, DateTime end) {
-    final hasServiceDates = o.services.any((s) => s.tanggalPengerjaan.trim().isNotEmpty);
-    if (hasServiceDates) {
-      return o.services.any((s) {
-        final sDt = _parseServiceDate(s.tanggalPengerjaan);
-        if (sDt == null) return false;
-        return !sDt.isBefore(start) && !sDt.isAfter(end);
-      });
-    }
+    final startDay = DateTime(start.year, start.month, start.day, 0, 0, 0);
+    final endDay = DateTime(end.year, end.month, end.day, 23, 59, 59, 999);
+
+    // 1. Cek apakah ada jadwal pengerjaan layanan yang masuk rentang
+    final matchService = o.services.any((s) {
+      final sDt = _parseServiceDate(s.tanggalPengerjaan);
+      if (sDt == null) return false;
+      return !sDt.isBefore(startDay) && !sDt.isAfter(endDay);
+    });
+    if (matchService) return true;
+
+    // 2. Cek juga apakah tanggalInput masuk rentang
     final dtInput = o.tanggalInput;
-    return !dtInput.isBefore(start) && !dtInput.isAfter(end);
+    return !dtInput.isBefore(startDay) && !dtInput.isAfter(endDay);
   }
 
   List<OrderModel> get _filtered {

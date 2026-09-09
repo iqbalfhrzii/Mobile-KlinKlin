@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/data/order_model.dart';
@@ -89,6 +88,57 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
     return cabangs.toList();
   }
 
+  DateTime? _parseServiceDate(String raw) {
+    if (raw.trim().isEmpty) return null;
+    final trimmed = raw.trim();
+
+    final direct = DateTime.tryParse(trimmed);
+    if (direct != null) return direct;
+
+    final dmyMatch = RegExp(r'(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})').firstMatch(trimmed);
+    if (dmyMatch != null) {
+      final d = int.tryParse(dmyMatch.group(1)!);
+      final m = int.tryParse(dmyMatch.group(2)!);
+      final y = int.tryParse(dmyMatch.group(3)!);
+      if (d != null && m != null && y != null && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+        return DateTime(y, m, d);
+      }
+    }
+
+    final ymdMatch = RegExp(r'(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})').firstMatch(trimmed);
+    if (ymdMatch != null) {
+      final y = int.tryParse(ymdMatch.group(1)!);
+      final m = int.tryParse(ymdMatch.group(2)!);
+      final d = int.tryParse(ymdMatch.group(3)!);
+      if (d != null && m != null && y != null && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+        return DateTime(y, m, d);
+      }
+    }
+
+    final parts = trimmed.split(' ');
+    int? y, m, d;
+    const mMap = {
+      'januari': 1, 'jan': 1, 'februari': 2, 'feb': 2, 'maret': 3, 'mar': 3,
+      'april': 4, 'apr': 4, 'mei': 5, 'may': 5, 'juni': 6, 'jun': 6,
+      'juli': 7, 'jul': 7, 'agustus': 8, 'agu': 8, 'aug': 8, 'september': 9, 'sep': 9,
+      'oktober': 10, 'okt': 10, 'oct': 10, 'november': 11, 'nov': 11, 'desember': 12, 'des': 12, 'dec': 12
+    };
+    for (final p in parts) {
+      final clean = p.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toLowerCase();
+      if (RegExp(r'^\d{4}$').hasMatch(clean)) {
+        y = int.tryParse(clean);
+      } else if (RegExp(r'^\d{1,2}$').hasMatch(clean) && d == null) {
+        d = int.tryParse(clean);
+      } else if (mMap.containsKey(clean)) {
+        m = mMap[clean];
+      }
+    }
+    if (y != null && m != null && d != null) {
+      return DateTime(y, m, d);
+    }
+    return null;
+  }
+
   List<OrderModel> get _filteredOrders {
     final list = _orders.where((o) {
       // Search
@@ -105,18 +155,30 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
       final matchStatus = _selectedStatus == 'Semua Status Utama' ||
           o.statusUtamaLabel.toLowerCase() == _selectedStatus.toLowerCase();
 
-      // Date
+      // Date: check both service schedule (tanggalPengerjaan) and tanggalInput
       bool matchDate = true;
-      final orderDate = o.tanggalInput;
       final now = DateTime.now();
       if (_selectedDayFilter == 'Hari Ini') {
-        matchDate = orderDate.year == now.year && orderDate.month == now.month && orderDate.day == now.day;
+        bool isSameDay(DateTime d) => d.year == now.year && d.month == now.month && d.day == now.day;
+        matchDate = isSameDay(o.tanggalInput) || o.services.any((s) {
+          final dt = _parseServiceDate(s.tanggalPengerjaan);
+          return dt != null && isSameDay(dt);
+        });
       } else if (_selectedDayFilter == 'Kemarin') {
         final yesterday = now.subtract(const Duration(days: 1));
-        matchDate = orderDate.year == yesterday.year && orderDate.month == yesterday.month && orderDate.day == yesterday.day;
+        bool isSameDay(DateTime d) => d.year == yesterday.year && d.month == yesterday.month && d.day == yesterday.day;
+        matchDate = isSameDay(o.tanggalInput) || o.services.any((s) {
+          final dt = _parseServiceDate(s.tanggalPengerjaan);
+          return dt != null && isSameDay(dt);
+        });
       } else if (_selectedDayFilter == 'Kustom Tanggal' && _filterStartDate != null && _filterEndDate != null) {
-        matchDate = orderDate.isAfter(_filterStartDate!.subtract(const Duration(days: 1))) &&
-            orderDate.isBefore(_filterEndDate!.add(const Duration(days: 1)));
+        final startDay = DateTime(_filterStartDate!.year, _filterStartDate!.month, _filterStartDate!.day, 0, 0, 0);
+        final endDay = DateTime(_filterEndDate!.year, _filterEndDate!.month, _filterEndDate!.day, 23, 59, 59, 999);
+        bool inRange(DateTime d) => !d.isBefore(startDay) && !d.isAfter(endDay);
+        matchDate = inRange(o.tanggalInput) || o.services.any((s) {
+          final dt = _parseServiceDate(s.tanggalPengerjaan);
+          return dt != null && inRange(dt);
+        });
       }
 
       return matchQ && matchCabang && matchStatus && matchDate;
