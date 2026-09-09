@@ -323,6 +323,33 @@ class FcmService {
       }
     }
 
+    // 0a. Notifikasi Transaksi Pembayaran Besar (> 1 Jt) untuk CEO & Admin
+    if (type == 'pembayaran_besar' ||
+        title.toLowerCase().contains('1 jt') ||
+        title.toLowerCase().contains('1jt') ||
+        body.toLowerCase().contains('1 jt') ||
+        body.toLowerCase().contains('1jt')) {
+      final pesananId = message.data['pesanan_id'] ?? message.data['id'];
+      if (pesananId != null && pesananId.toString().isNotEmpty && pesananId.toString() != 'null') {
+        try {
+          final order = await OrderService().fetchOrderDetail(pesananId.toString());
+          if (navigatorKey?.currentContext != null) {
+            Navigator.of(navigatorKey!.currentContext!).push(
+              MaterialPageRoute(
+                builder: (_) => OrderDetailScreen(
+                  order: order,
+                  isReadOnly: currentRole.contains('ceo') || !currentRole.contains('cs'),
+                ),
+              ),
+            );
+          }
+          return;
+        } catch (e) {
+          debugPrint('Error fetching order detail from FCM pembayaran_besar: $e');
+        }
+      }
+    }
+
     // 0b. Approval Pembayaran (Khusus Finance)
     if (type == 'pembayaran_pending' || screen == 'approval_pembayaran') {
       if (currentRole.contains('finance') || currentRole.contains('admin finance')) {
@@ -563,14 +590,17 @@ class FcmService {
 
       // Jika yang login adalah CS / Admin / CEO
       if (currentRole.contains('cs') || currentRole.contains('customer service') || currentRole.contains('admin') || currentRole.contains('ceo')) {
-        final pesananId = message.data['pesanan_id'];
-        if (pesananId != null && pesananId.toString().isNotEmpty) {
+        final pesananId = message.data['pesanan_id'] ?? message.data['id'];
+        if (pesananId != null && pesananId.toString().isNotEmpty && pesananId.toString() != 'null') {
           try {
             final order = await OrderService().fetchOrderDetail(pesananId.toString());
             if (navigatorKey?.currentContext != null) {
               Navigator.of(navigatorKey!.currentContext!).push(
                 MaterialPageRoute(
-                  builder: (_) => OrderDetailScreen(order: order),
+                  builder: (_) => OrderDetailScreen(
+                    order: order,
+                    isReadOnly: currentRole.contains('ceo') || !currentRole.contains('cs'),
+                  ),
                 ),
               );
             }

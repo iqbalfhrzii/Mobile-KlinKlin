@@ -165,8 +165,50 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
     final prefs = await SharedPreferences.getInstance();
     final currentRole = (prefs.getString('user_role') ?? '').toLowerCase();
 
-    // 0. Approval Pembayaran (Khusus Finance & Monitoring CEO)
-    if (type.contains('pembayaran') || screen.contains('approval_pembayaran')) {
+    // 0a. Notifikasi Transaksi Pembayaran Besar (> 1 Jt) atau Order Detail Spesifik
+    final pesananId = data['pesanan_id'] ?? data['id'];
+    final bool hasPesananId = pesananId != null &&
+        pesananId.toString().isNotEmpty &&
+        pesananId.toString() != 'null' &&
+        pesananId.toString() != '0';
+
+    if (type == 'pembayaran_besar' ||
+        type.contains('pembayaran_besar') ||
+        title.contains('1 jt') ||
+        title.contains('1jt') ||
+        message.contains('1 jt') ||
+        message.contains('1jt') ||
+        (screen == 'order_detail' && hasPesananId)) {
+      if (hasPesananId) {
+        try {
+          final order = await OrderService().fetchOrderDetail(pesananId.toString());
+          nav.push(
+            MaterialPageRoute(
+              builder: (_) => OrderDetailScreen(
+                order: order,
+                isReadOnly: currentRole.contains('ceo') || !currentRole.contains('cs'),
+              ),
+            ),
+          );
+          return;
+        } catch (e) {
+          debugPrint('Gagal membuka order detail dari notifikasi pembayaran besar: $e');
+        }
+      } else if (currentRole.contains('ceo')) {
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => const FinanceAuditScreen(
+              initialTab: 'hasil-audit',
+              isReadOnly: true,
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
+    // 0b. Approval Pembayaran (Khusus Finance & Monitoring CEO jika berupa list approval)
+    if (type == 'pembayaran_pending' || screen == 'approval_pembayaran' || (type.contains('pembayaran') && !hasPesananId)) {
       if (currentRole.contains('finance') || currentRole.contains('admin') || currentRole.contains('ceo')) {
         nav.push(
           MaterialPageRoute(
@@ -387,12 +429,14 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
         );
         return;
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Notifikasi audit/pembatalan ini khusus untuk bagian Finance. Anda saat ini login sebagai $currentRole.'),
-            backgroundColor: const Color(0xFFDC2626),
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Notifikasi audit/pembatalan ini khusus untuk bagian Finance. Anda saat ini login sebagai $currentRole.'),
+              backgroundColor: const Color(0xFFDC2626),
+            ),
+          );
+        }
         return;
       }
     }
@@ -415,7 +459,10 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
             final order = await OrderService().fetchOrderDetail(id.toString());
             nav.push(
               MaterialPageRoute(
-                builder: (_) => OrderDetailScreen(order: order),
+                builder: (_) => OrderDetailScreen(
+                  order: order,
+                  isReadOnly: currentRole.contains('ceo') || !currentRole.contains('cs'),
+                ),
               ),
             );
           } catch (_) {}

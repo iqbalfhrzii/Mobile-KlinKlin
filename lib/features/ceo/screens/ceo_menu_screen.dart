@@ -9,6 +9,7 @@ import '../../operasional/screens/operasional_pengumuman_screen.dart';
 import '../../operasional/screens/operasional_permintaan_design_screen.dart';
 import 'ceo_data_chat_screen.dart';
 import 'ceo_karyawan_screen.dart';
+import 'ceo_spend_ads_screen.dart';
 import '../../hrd/screens/gaji_karyawan/gaji_karyawan_list_screen.dart';
 import '../../hrd/screens/insentif/insentif_cleaner_list_screen.dart';
 
@@ -191,8 +192,8 @@ class CeoMenuScreen extends StatelessWidget {
         ],
       ),
       _MenuSection(
-        title: 'Komunikasi & Modul Tambahan',
-        subtitle: 'Informasi pengumuman, materi promosi & data chat',
+        title: 'Komunikasi & Pemasaran',
+        subtitle: 'Informasi pengumuman, materi promosi, spend ads & chat',
         sectionIcon: Icons.campaign_rounded,
         sectionColor: const Color(0xFFEA580C),
         items: [
@@ -220,6 +221,20 @@ class CeoMenuScreen extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => const OperasionalPermintaanDesignScreen(),
+                ),
+              );
+            },
+          ),
+          _MenuItem(
+            icon: Icons.insights_rounded,
+            title: 'Spend Ads',
+            iconColor: const Color(0xFF2563EB),
+            bgColor: const Color(0xFFEFF6FF),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CeoSpendAdsScreen(),
                 ),
               );
             },
