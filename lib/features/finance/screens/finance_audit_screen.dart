@@ -1864,7 +1864,8 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
         final matchCust = o.customer.name.toLowerCase().contains(q);
         final matchId = o.nomorPesanan.toLowerCase().contains(q);
         final matchCleaners = o.cleaners.any((c) => c.name.toLowerCase().contains(q));
-        if (!matchCust && !matchId && !matchCleaners) return false;
+        final matchService = o.services.any((s) => s.name.toLowerCase().contains(q));
+        if (!matchCust && !matchId && !matchCleaners && !matchService) return false;
       }
       return true;
     }).toList();
@@ -1932,7 +1933,8 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
         final q = _searchQuery.toLowerCase();
         final matchCust = o.customer.name.toLowerCase().contains(q);
         final matchId = o.nomorPesanan.toLowerCase().contains(q);
-        if (!matchCust && !matchId) return false;
+        final matchService = o.services.any((s) => s.name.toLowerCase().contains(q));
+        if (!matchCust && !matchId && !matchService) return false;
       }
       return true;
     }).toList();
@@ -2139,6 +2141,58 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Services / Layanan Info
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F7FF),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFBAE6FD).withValues(alpha: 0.8)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(top: 1.5),
+                          child: Icon(Icons.cleaning_services_rounded, size: 14, color: Color(0xFF0284C7)),
+                        ),
+                        const SizedBox(width: 7),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Layanan / Jenis Order',
+                                style: GoogleFonts.inter(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF0284C7),
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                order.services.isNotEmpty
+                                    ? order.services.map((s) {
+                                        final q = s.qty.trim();
+                                        return (q.isNotEmpty && q != '1') ? '${s.name} (${q}x)' : s.name;
+                                      }).join(', ')
+                                    : 'Belum ada rincian layanan',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF0C4A6E),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 10),
 
@@ -4225,7 +4279,8 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
         final matchCust = o.customer.name.toLowerCase().contains(q);
         final matchId = o.nomorPesanan.toLowerCase().contains(q);
         final matchPhone = o.customer.phone.contains(q);
-        if (!matchCust && !matchId && !matchPhone) return false;
+        final matchService = o.services.any((s) => s.name.toLowerCase().contains(q));
+        if (!matchCust && !matchId && !matchPhone && !matchService) return false;
       }
       return true;
     }).toList();
@@ -4362,7 +4417,8 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
         final matchCust = o.customer.name.toLowerCase().contains(q);
         final matchId = o.nomorPesanan.toLowerCase().contains(q);
         final matchPhone = o.customer.phone.contains(q);
-        if (!matchCust && !matchId && !matchPhone) return false;
+        final matchService = o.services.any((s) => s.name.toLowerCase().contains(q));
+        if (!matchCust && !matchId && !matchPhone && !matchService) return false;
       }
       return true;
     }).toList();
