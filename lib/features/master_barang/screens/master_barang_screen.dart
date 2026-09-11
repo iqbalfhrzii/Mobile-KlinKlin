@@ -1421,42 +1421,6 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                         ),
                       ],
                     ),
-                    if (_canModify) ...[
-                      const SizedBox(height: 12),
-                      const Divider(height: 1, color: Color(0xFFF1F5F9)),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _showAddEditKategoriDialog(kategori: k),
-                              icon: const Icon(Icons.edit_outlined, size: 15, color: Color(0xFF2563EB)),
-                              label: Text('Edit', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF2563EB))),
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: const Color(0xFFEFF6FF),
-                                side: const BorderSide(color: Color(0xFFBFDBFE)),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _deleteKategori(k['id']),
-                              icon: const Icon(Icons.delete_outline_rounded, size: 15, color: Color(0xFFDC2626)),
-                              label: Text('Hapus', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFFDC2626))),
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: const Color(0xFFFEF2F2),
-                                side: const BorderSide(color: Color(0xFFFECACA)),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
                   ],
                 ),
               );
@@ -1464,39 +1428,6 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
         ],
       ),
     );
-  }
-
-  Future<void> _deleteKategori(int id) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Hapus Kategori?', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Text('Kategori ini akan dihapus dari daftar master data sistem.', style: GoogleFonts.inter(fontSize: 13)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, elevation: 0),
-            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-    if (!mounted) return;
-
-    final success = await MasterBarangService.deleteKategori(id);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success ? 'Kategori berhasil dihapus' : 'Gagal menghapus kategori'),
-          backgroundColor: success ? Colors.green : Colors.red,
-        ),
-      );
-      if (success) _loadKategori();
-    }
   }
 
   // ==========================================
@@ -1706,42 +1637,6 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                         ),
                       ],
                     ),
-                    if (_canModify) ...[
-                      const SizedBox(height: 12),
-                      const Divider(height: 1, color: Color(0xFFF1F5F9)),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _showAddEditBarangDialog(barang: b),
-                              icon: const Icon(Icons.edit_outlined, size: 15, color: Color(0xFF2563EB)),
-                              label: Text('Edit', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF2563EB))),
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: const Color(0xFFEFF6FF),
-                                side: const BorderSide(color: Color(0xFFBFDBFE)),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _deleteBarang(b['id']),
-                              icon: const Icon(Icons.delete_outline_rounded, size: 15, color: Color(0xFFDC2626)),
-                              label: Text('Hapus', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFFDC2626))),
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: const Color(0xFFFEF2F2),
-                                side: const BorderSide(color: Color(0xFFFECACA)),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
                   ],
                 ),
               );
@@ -1749,39 +1644,6 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
         ],
       ),
     );
-  }
-
-  Future<void> _deleteBarang(int id) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Hapus Barang?', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Text('Barang ini akan dihapus dari sistem master data.', style: GoogleFonts.inter(fontSize: 13)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, elevation: 0),
-            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-    if (!mounted) return;
-
-    final success = await MasterBarangService.deleteBarang(id);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success ? 'Barang berhasil dihapus' : 'Gagal menghapus barang'),
-          backgroundColor: success ? Colors.green : Colors.red,
-        ),
-      );
-      if (success) _loadBarang();
-    }
   }
 
   // ==========================================
@@ -2151,21 +2013,6 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                             visualDensity: VisualDensity.compact,
                           ),
                         ),
-                        if (_canModify) ...[
-                          const SizedBox(width: 8),
-                          OutlinedButton.icon(
-                            onPressed: () => _deleteItemFisik(item['id']),
-                            icon: const Icon(Icons.delete_outline_rounded, size: 14, color: Color(0xFFDC2626)),
-                            label: Text('Hapus', style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFFDC2626))),
-                            style: OutlinedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFEF2F2),
-                              side: const BorderSide(color: Color(0xFFFECACA)),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              visualDensity: VisualDensity.compact,
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ],
@@ -2175,34 +2022,6 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
         ],
       ),
     );
-  }
-
-  Future<void> _deleteItemFisik(int id) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Hapus Item Fisik?', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Text('Item fisik dan kode QR ini akan dihapus dari sistem.', style: GoogleFonts.inter(fontSize: 13)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hapus', style: TextStyle(color: Colors.red))),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-    if (!mounted) return;
-
-    final success = await MasterBarangService.deleteItemFisik(id);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success ? 'Item fisik berhasil dihapus' : 'Gagal menghapus item fisik'),
-          backgroundColor: success ? Colors.green : Colors.red,
-        ),
-      );
-      if (success) _loadItemFisik();
-    }
   }
 
   // ==========================================
