@@ -85,6 +85,8 @@ class KaryawanModel {
   final CabangModel? cabang;
   final JabatanModel? jabatan;
 
+  String get namaLengkap => nama;
+
   KaryawanModel({
     required this.id,
     this.cabangId = 0,
@@ -212,6 +214,8 @@ class PelangganHrdModel {
   final String? catatan;
   final String status;
   final CabangModel? cabang;
+
+  String? get telepon => noWa;
 
   PelangganHrdModel({
     required this.id,
@@ -514,5 +518,77 @@ class InsentifItemModel {
   static int _parseInt(dynamic value) {
     if (value == null) return 0;
     return double.tryParse(value.toString())?.toInt() ?? 0;
+  }
+}
+
+
+class CatatanHrdModel {
+  final int id;
+  final String jenis; // 'komplain', 'sakit', 'individu'
+  final int karyawanId;
+  final int? pelangganId;
+  final DateTime tanggal;
+  final String keterangan;
+  final String? tindakan;
+  final int? pengajuanIzinCutiId;
+  final KaryawanModel? karyawan;
+  final PelangganHrdModel? pelanggan;
+  final Map<String, dynamic>? pengajuanIzinCuti;
+  final DateTime? createdAt;
+
+  CatatanHrdModel({
+    required this.id,
+    required this.jenis,
+    required this.karyawanId,
+    this.pelangganId,
+    required this.tanggal,
+    required this.keterangan,
+    this.tindakan,
+    this.pengajuanIzinCutiId,
+    this.karyawan,
+    this.pelanggan,
+    this.pengajuanIzinCuti,
+    this.createdAt,
+  });
+
+  factory CatatanHrdModel.fromJson(Map<String, dynamic> json) {
+    return CatatanHrdModel(
+      id: json['id'] != null ? (int.tryParse(json['id'].toString()) ?? 0) : 0,
+      jenis: json['jenis']?.toString().toLowerCase() ?? 'individu',
+      karyawanId: json['karyawan_id'] != null ? (int.tryParse(json['karyawan_id'].toString()) ?? 0) : 0,
+      pelangganId: json['pelanggan_id'] != null ? int.tryParse(json['pelanggan_id'].toString()) : null,
+      tanggal: json['tanggal'] != null
+          ? (DateTime.tryParse(json['tanggal'].toString()) ?? DateTime.now())
+          : DateTime.now(),
+      keterangan: json['keterangan']?.toString() ?? '',
+      tindakan: json['tindakan']?.toString(),
+      pengajuanIzinCutiId: json['pengajuan_izin_cuti_id'] != null
+          ? int.tryParse(json['pengajuan_izin_cuti_id'].toString())
+          : null,
+      karyawan: json['karyawan'] != null && json['karyawan'] is Map<String, dynamic>
+          ? KaryawanModel.fromJson(json['karyawan'])
+          : null,
+      pelanggan: json['pelanggan'] != null && json['pelanggan'] is Map<String, dynamic>
+          ? PelangganHrdModel.fromJson(json['pelanggan'])
+          : null,
+      pengajuanIzinCuti: json['pengajuan_izin_cuti'] is Map<String, dynamic>
+          ? json['pengajuan_izin_cuti']
+          : null,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString())
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'jenis': jenis,
+      'karyawan_id': karyawanId,
+      if (pelangganId != null) 'pelanggan_id': pelangganId,
+      'tanggal': tanggal.toIso8601String().split('T').first,
+      'keterangan': keterangan,
+      if (tindakan != null && tindakan!.isNotEmpty) 'tindakan': tindakan,
+      if (pengajuanIzinCutiId != null) 'pengajuan_izin_cuti_id': pengajuanIzinCutiId,
+    };
   }
 }

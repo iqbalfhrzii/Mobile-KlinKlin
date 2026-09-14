@@ -19,6 +19,9 @@ import 'tukar_libur/hrd_tukar_libur_screen.dart';
 import 'cuti/hrd_cuti_screen.dart';
 import 'cabang/cabang_list_screen.dart';
 import 'hrd_data_master_screen.dart';
+import 'catatan/hrd_catatan_screen.dart';
+import '../../operasional/screens/operasional_data_kecelakaan_screen.dart';
+
 
 class HrdDashboardScreen extends StatefulWidget {
   const HrdDashboardScreen({super.key});
@@ -354,6 +357,34 @@ class _HrdDashboardScreenState extends State<HrdDashboardScreen> {
         color: const Color(0xFF7C3AED),
         bgColor: const Color(0xFFF3E8FF),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CabangListScreen())),
+      ),
+      _FastButtonItem(
+        title: 'Komplain',
+        icon: Icons.report_problem_rounded,
+        color: const Color(0xFFE11D48),
+        bgColor: const Color(0xFFFFE4E6),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HrdCatatanScreen(initialTab: 0))),
+      ),
+      _FastButtonItem(
+        title: 'Catatan Sakit',
+        icon: Icons.healing_rounded,
+        color: const Color(0xFF0D9488),
+        bgColor: const Color(0xFFCCFBF1),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HrdCatatanScreen(initialTab: 1))),
+      ),
+      _FastButtonItem(
+        title: 'Catatan Individu',
+        icon: Icons.assignment_ind_rounded,
+        color: const Color(0xFF6366F1),
+        bgColor: const Color(0xFFEEF2FF),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HrdCatatanScreen(initialTab: 2))),
+      ),
+      _FastButtonItem(
+        title: 'Kecelakaan',
+        icon: Icons.warning_amber_rounded,
+        color: const Color(0xFFD97706),
+        bgColor: const Color(0xFFFEF3C7),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalDataKecelakaanScreen())),
       ),
     ];
 

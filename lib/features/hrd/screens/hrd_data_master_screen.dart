@@ -15,6 +15,9 @@ import 'insentif/insentif_cleaner_list_screen.dart';
 import 'tukar_libur/hrd_tukar_libur_screen.dart';
 import 'jadwal_libur/hrd_jadwal_libur_screen.dart';
 import 'cuti/hrd_cuti_screen.dart';
+import 'catatan/hrd_catatan_screen.dart';
+import '../../operasional/screens/operasional_data_kecelakaan_screen.dart';
+
 
 class HrdDataMasterScreen extends StatelessWidget {
   const HrdDataMasterScreen({super.key});
@@ -83,7 +86,7 @@ class HrdDataMasterScreen extends StatelessWidget {
                       const Icon(Icons.widgets_rounded, size: 14, color: Colors.white),
                       const SizedBox(width: 4),
                       Text(
-                        '13 Modul',
+                        '17 Modul',
                         style: GoogleFonts.inter(
                           fontSize: 11.5,
                           fontWeight: FontWeight.bold,
@@ -231,6 +234,46 @@ class HrdDataMasterScreen extends StatelessWidget {
                       color: const Color(0xFFE11D48),
                       bgColor: const Color(0xFFFFE4E6),
                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPengumumanScreen())),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // 4. Catatan SDM & K3 (Req HRD)
+                _buildMenuSection(
+                  context,
+                  title: 'Catatan SDM & Keselamatan',
+                  subtitle: 'Evaluasi cleaner, sakit, komplain & kecelakaan',
+                  sectionIcon: Icons.rate_review_rounded,
+                  sectionColor: const Color(0xFFE11D48),
+                  items: [
+                    _HrdMenuItem(
+                      title: 'Komplain',
+                      icon: Icons.report_problem_rounded,
+                      color: const Color(0xFFE11D48),
+                      bgColor: const Color(0xFFFFE4E6),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HrdCatatanScreen(initialTab: 0))),
+                    ),
+                    _HrdMenuItem(
+                      title: 'Catatan Sakit',
+                      icon: Icons.healing_rounded,
+                      color: const Color(0xFF0D9488),
+                      bgColor: const Color(0xFFCCFBF1),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HrdCatatanScreen(initialTab: 1))),
+                    ),
+                    _HrdMenuItem(
+                      title: 'Catatan Individu',
+                      icon: Icons.assignment_ind_rounded,
+                      color: const Color(0xFF6366F1),
+                      bgColor: const Color(0xFFEEF2FF),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HrdCatatanScreen(initialTab: 2))),
+                    ),
+                    _HrdMenuItem(
+                      title: 'Kecelakaan Kerja',
+                      icon: Icons.warning_amber_rounded,
+                      color: const Color(0xFFD97706),
+                      bgColor: const Color(0xFFFEF3C7),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalDataKecelakaanScreen())),
                     ),
                   ],
                 ),

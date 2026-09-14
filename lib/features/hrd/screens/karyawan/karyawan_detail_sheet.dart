@@ -1,3 +1,4 @@
+import '../catatan/hrd_catatan_screen.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -376,6 +377,67 @@ class KaryawanDetailSheet extends StatelessWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 14),
+
+                  // Catatan & Rekam Jejak Cleaner
+                  InkWell(
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => HrdCatatanScreen(preselectedKaryawanId: karyawan.id),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2563EB),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.rate_review_rounded, color: Colors.white, size: 18),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Catatan & Rekam Jejak',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF1E40AF),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Lihat riwayat komplain, sakit & catatan individu',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11.5,
+                                    color: const Color(0xFF3B82F6),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF2563EB), size: 14),
+                        ],
+                      ),
+                    ),
+                  ),
+
                 ],
               ),
             ),
