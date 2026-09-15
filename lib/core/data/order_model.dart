@@ -912,11 +912,17 @@ class OrderDraft {
 
   Map<String, dynamic> toJson() {
     final cleanId = customer?.id.replaceAll(RegExp(r'[^0-9]'), '');
+    final cIds = cleaners
+        .map((c) => int.tryParse(c.id.replaceAll(RegExp(r'[^0-9]'), '')))
+        .where((id) => id != null)
+        .toList();
+
     return {
       'pelanggan_id': cleanId != null && cleanId.isNotEmpty ? int.parse(cleanId) : null,
       'chat_dari': chatDari.name,
       'tipe_customer': tipeCustomer.name,
       'keterangan_order': notes,
+      if (cIds.isNotEmpty) 'cleaner_ids': cIds,
       'details': services.map((e) {
          final detailJson = e.toJson();
          if (tanggalPengerjaan.isNotEmpty) detailJson['tanggal_pengerjaan'] = _formatDate(tanggalPengerjaan);

@@ -718,10 +718,14 @@ klinklin.co.id/aduanpayment''';
       if (widget.existingOrder == null) {
         createdOrderId = await _orderService.createOrder(_draft);
         if (_draft.cleaners.isNotEmpty) {
-          await _orderService.assignCleaner(
-            createdOrderId,
-            _draft.cleaners.map((c) => c.id).toList(),
-          );
+          try {
+            await _orderService.assignCleaner(
+              createdOrderId,
+              _draft.cleaners.map((c) => c.id).toList(),
+            );
+          } catch (_) {
+            // Cleaners already assigned atomically during createOrder
+          }
         }
         if (sendWa && createdOrderId.isNotEmpty) {
           try {
