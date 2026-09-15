@@ -3,7 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'dart:io';
 
 class MockLocationService {
-  static const MethodChannel _channel = MethodChannel('com.example.klinklin/location');
+  static const MethodChannel _channel = MethodChannel('com.klinklin.app/location');
 
   static Future<bool> isMockLocation(Position position) async {
     // Geolocator built-in check for Android & iOS

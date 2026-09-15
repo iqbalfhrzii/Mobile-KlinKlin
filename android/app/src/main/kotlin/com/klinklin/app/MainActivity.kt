@@ -1,4 +1,4 @@
-package com.example.klinklin
+package com.klinklin.app
 
 import android.content.Context
 import android.location.Location
@@ -9,7 +9,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity: FlutterActivity() {
-    private val CHANNEL = "com.example.klinklin/location"
+    private val CHANNEL = "com.klinklin.app/location"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
