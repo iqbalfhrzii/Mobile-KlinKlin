@@ -251,16 +251,23 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                               : (_o.services.isNotEmpty
                                   ? _o.services.fold(0, (sum, s) => sum + s.subtotal)
                                   : _o.total);
-                          final double diskonPersen =
-                              _o.pembayaran?.diskonPersen ?? 0.0;
+                          final double diskonPersen = _o.diskonPersen;
                           final int diskonValue =
                               (baseSubtotal * (diskonPersen / 100)).round();
-                          final int totalSetelahDiskon = baseSubtotal - diskonValue;
+                          final int totalSetelahDiskon = (baseSubtotal - diskonValue) > 0
+                              ? (baseSubtotal - diskonValue)
+                              : 0;
                           final int ppnPersen =
-                              _o.ppn ?? _o.pembayaran?.ppn ?? 0;
+                              _o.ppn ?? (_o.pembayaran?.ppn ?? (_o.isWajibPpn ? 11 : 0));
                           final int ppnValue =
                               (totalSetelahDiskon * (ppnPersen / 100)).round();
-                          final int totalAkhir = totalSetelahDiskon + ppnValue;
+                          final int pphPersen =
+                              _o.pph ?? (_o.pembayaran?.pph ?? 0);
+                          final int pphValue =
+                              (totalSetelahDiskon * (pphPersen / 100)).round();
+                          final int totalAkhir = (_o.pembayaran?.total != null && _o.pembayaran!.total! > 0)
+                              ? _o.pembayaran!.total!
+                              : (totalSetelahDiskon + ppnValue - pphValue);
                           return Text(
                             _fmt(totalAkhir),
                             style: GoogleFonts.inter(
@@ -598,13 +605,16 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                   : (_o.services.isNotEmpty
                       ? _o.services.fold(0, (sum, s) => sum + s.subtotal)
                       : _o.total);
-              final double diskonPersen = _o.pembayaran?.diskonPersen ?? 0.0;
+              final double diskonPersen = _o.diskonPersen;
               final int diskonValue = (baseSubtotal * (diskonPersen / 100)).round();
-              final int totalSetelahDiskon = baseSubtotal - diskonValue;
-              final int ppnPersen = _o.ppn ?? _o.pembayaran?.ppn ?? 0;
-              final int ppnValue = (totalSetelahDiskon * (ppnPersen / 100))
-                  .round();
-              final int totalAkhir = totalSetelahDiskon + ppnValue;
+              final int totalSetelahDiskon = (baseSubtotal - diskonValue) > 0 ? (baseSubtotal - diskonValue) : 0;
+              final int ppnPersen = _o.ppn ?? (_o.pembayaran?.ppn ?? (_o.isWajibPpn ? 11 : 0));
+              final int ppnValue = (totalSetelahDiskon * (ppnPersen / 100)).round();
+              final int pphPersen = _o.pph ?? (_o.pembayaran?.pph ?? 0);
+              final int pphValue = (totalSetelahDiskon * (pphPersen / 100)).round();
+              final int totalAkhir = (_o.pembayaran?.total != null && _o.pembayaran!.total! > 0)
+                  ? _o.pembayaran!.total!
+                  : (totalSetelahDiskon + ppnValue - pphValue);
 
               return Column(
                 children: [
@@ -637,7 +647,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                           'Diskon ${diskonPersen == diskonPersen.toInt() ? diskonPersen.toInt() : diskonPersen}%',
                           style: GoogleFonts.inter(
                             fontSize: 13,
-                            color: AppColors.textMuted,
+                            color: const Color(0xFF059669),
                           ),
                         ),
                         Text(
@@ -645,7 +655,28 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                           style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.error,
+                            color: const Color(0xFF059669),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Subtotal Setelah Diskon',
+                          style: GoogleFonts.inter(
+                            fontSize: 12.5,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                        Text(
+                          _fmt(totalSetelahDiskon),
+                          style: GoogleFonts.inter(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textDark,
                           ),
                         ),
                       ],
@@ -663,15 +694,38 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                         ),
                       ),
                       Text(
-                        _fmt(ppnValue),
+                        ppnValue > 0 ? '+${_fmt(ppnValue)}' : _fmt(ppnValue),
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
+                          color: ppnValue > 0 ? const Color(0xFF16A34A) : AppColors.textDark,
                         ),
                       ),
                     ],
                   ),
+                  if (pphValue > 0) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'PPh ($pphPersen%)',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                        Text(
+                          '-${_fmt(pphValue)}',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.error,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 10),
                     child: Divider(height: 1, color: AppColors.border),
@@ -1550,27 +1604,19 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
       final s = _o.services.fold(0, (sum, item) => sum + item.subtotal);
       if (s > 0) return s;
     }
-    // Jika subtotal belum terisi dan order sudah ada PPN, kurangi PPN untuk mendapatkan DPP
-    final ppnRate = _o.ppn ?? _o.pembayaran?.ppn ?? (_o.isWajibPpn ? 11 : 0);
-    if (ppnRate > 0 && _o.total > 0) {
-      return (_o.total / (1 + (ppnRate / 100.0))).round();
-    }
     return _o.total;
   }
 
   // ─── PPN SELECTION MODAL (Matching Web CS PesananDetailPage) ───────────
   void _showPpnSelectionModal(BuildContext context) {
     final int rawSubtotal = _serviceSubtotal;
-    final double diskonPersen = _o.pembayaran?.diskonPersen ??
-        (_o.discount != null && _o.subtotal > 0
-            ? (_o.discount! / _o.subtotal * 100)
-            : 0.0);
-    final int diskonNominal = (rawSubtotal * diskonPersen / 100).round();
-    final int subtotal = rawSubtotal - diskonNominal;
+    final double diskonPersen = _o.diskonPersen;
+    final int diskonNominal = (rawSubtotal * (diskonPersen / 100)).round();
+    final int setelahDiskon = (rawSubtotal - diskonNominal) > 0 ? (rawSubtotal - diskonNominal) : 0;
 
-    final int nominalPpn = (subtotal * 0.11).round();
-    final int totalDenganPpn = subtotal + nominalPpn;
-    final int totalTanpaPpn = subtotal;
+    final int nominalPpn = (setelahDiskon * 0.11).round();
+    final int totalDenganPpn = setelahDiskon + nominalPpn;
+    final int totalTanpaPpn = setelahDiskon;
     final bool isWajibPpn = _o.isWajibPpn;
 
     showModalBottomSheet(
@@ -1718,9 +1764,33 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('Subtotal', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
-                        Text(_fmt(subtotal), style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                        Text(_fmt(rawSubtotal), style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
                       ],
                     ),
+                    if (diskonNominal > 0) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Diskon (${diskonPersen == diskonPersen.toInt() ? diskonPersen.toInt() : diskonPersen}%)',
+                            style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF059669)),
+                          ),
+                          Text(
+                            '-${_fmt(diskonNominal)}',
+                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF059669)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Subtotal Setelah Diskon', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                          Text(_fmt(setelahDiskon), style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 4),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1803,9 +1873,33 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('Subtotal', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
-                        Text(_fmt(subtotal), style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                        Text(_fmt(rawSubtotal), style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
                       ],
                     ),
+                    if (diskonNominal > 0) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Diskon (${diskonPersen == diskonPersen.toInt() ? diskonPersen.toInt() : diskonPersen}%)',
+                            style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF059669)),
+                          ),
+                          Text(
+                            '-${_fmt(diskonNominal)}',
+                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF059669)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Subtotal Setelah Diskon', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                          Text(_fmt(setelahDiskon), style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 4),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

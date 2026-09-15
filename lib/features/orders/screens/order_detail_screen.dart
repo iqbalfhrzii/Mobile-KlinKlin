@@ -781,7 +781,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     _buildServicesCard(o),
                     const SizedBox(height: 12),
                     if (o.cleaners.isNotEmpty) ...[
-                      if (!widget.isReadOnly && !_isCancelled && o.cleaners.length > 1) ...[
+                      if (!widget.isReadOnly && o.cleaners.length > 1) ...[
                         _buildBeriBonusSekaligusButton(o),
                         const SizedBox(height: 12),
                       ],
@@ -794,7 +794,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           )
                           .take(o.cleaners.length * 2 - 1),
                       if (!widget.isReadOnly &&
-                          !_isCancelled &&
                           o.services.any((s) => s.bonusLayanan > 0)) ...[
                         const SizedBox(height: 12),
                         _buildAlokasiBonusButton(o),
@@ -2270,49 +2269,53 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ),
             ),
           ],
-          if (!widget.isReadOnly && !_isCancelled) ...[
-            const SizedBox(height: 12),
-            const Divider(color: AppColors.border, height: 1),
-            const SizedBox(height: 8),
-            // Toggle Switch Row for WA Sharing
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const WhatsAppIcon(
-                      size: 18,
-                      color: Color(0xFF25D366),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Bagikan WA Customer ke Cleaner',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textDark,
+          if (!widget.isReadOnly) ...[
+            if (!_isCancelled) ...[
+              const SizedBox(height: 12),
+              const Divider(color: AppColors.border, height: 1),
+              const SizedBox(height: 8),
+              // Toggle Switch Row for WA Sharing
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const WhatsAppIcon(
+                        size: 18,
+                        color: Color(0xFF25D366),
                       ),
-                    ),
-                  ],
-                ),
-                IconButton(
-                  icon: Icon(
-                    cleaner.showWa
-                        ? Icons.visibility_rounded
-                        : Icons.visibility_off_rounded,
-                    color: cleaner.showWa
-                        ? AppColors.statusDone
-                        : AppColors.textMuted,
-                    size: 22,
+                      const SizedBox(width: 8),
+                      Text(
+                        'Bagikan WA Customer ke Cleaner',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                    ],
                   ),
-                  onPressed: () => _toggleWa(cleaner),
-                  tooltip: cleaner.showWa ? 'Sembunyikan WA' : 'Bagikan WA',
-                  constraints: const BoxConstraints(),
-                  padding: const EdgeInsets.all(4),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
+                  IconButton(
+                    icon: Icon(
+                      cleaner.showWa
+                          ? Icons.visibility_rounded
+                          : Icons.visibility_off_rounded,
+                      color: cleaner.showWa
+                          ? AppColors.statusDone
+                          : AppColors.textMuted,
+                      size: 22,
+                    ),
+                    onPressed: () => _toggleWa(cleaner),
+                    tooltip: cleaner.showWa ? 'Sembunyikan WA' : 'Bagikan WA',
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(4),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ] else ...[
+              const SizedBox(height: 12),
+            ],
             const Divider(color: AppColors.border, height: 1),
             const SizedBox(height: 10),
             // Action Buttons: Tambah Bonus & Selesai Input Bonus

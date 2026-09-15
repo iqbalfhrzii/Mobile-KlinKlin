@@ -45,7 +45,9 @@ class PdfInvoiceService {
         ? order.nomorPesanan
         : (order.id.isNotEmpty ? order.id : 'INV-${DateTime.now().millisecondsSinceEpoch}');
 
-    final tglInput = DateFormat('dd/MM/yyyy').format(order.tanggalInput);
+    // Tanggal Invoice selalu mengacu pada kapan pesanan dibuat (bukan tanggal cetak, bukan tanggal pengerjaan)
+    final invoiceDate = order.tanggalDibuat;
+    final tglInput = DateFormat('dd/MM/yyyy').format(invoiceDate);
 
     String formatRupiah(num amount) {
       final formatter = NumberFormat.currency(

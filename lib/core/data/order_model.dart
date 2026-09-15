@@ -433,6 +433,7 @@ class OrderModel {
     required this.paymentStatus,
     required this.notes,
     required this.tanggalInput,
+    this.createdAt,
     this.cancelReason,
     this.cancelProof,
     this.paymentProof,
@@ -469,6 +470,7 @@ class OrderModel {
   String paymentStatus; // unpaid | paid | cancelled
   String notes;
   DateTime tanggalInput;
+  DateTime? createdAt;
   String? cancelReason;
   String? cancelProof;
   String? paymentProof;
@@ -545,9 +547,31 @@ class OrderModel {
 
   String get branch => customer.area;
 
-  double get diskonPersen => (discount ?? (pembayaran?.diskonPersen?.toInt() ?? 0)).toDouble();
-  int get diskonAmount => ((subtotal * diskonPersen) / 100).round();
-  int get totalSetelahDiskon => (subtotal - diskonAmount) > 0 ? (subtotal - diskonAmount) : 0;
+  double get diskonPersen {
+    if (pembayaran?.diskonPersen != null && pembayaran!.diskonPersen! > 0) {
+      return pembayaran!.diskonPersen!;
+    }
+    if (discount != null && discount! > 0) {
+      return discount!.toDouble();
+    }
+    return (pembayaran?.diskonPersen ?? (discount?.toDouble() ?? 0.0));
+  }
+
+  int get baseSubtotal => (subtotal > 0)
+      ? subtotal
+      : (services.isNotEmpty
+          ? services.fold(0, (sum, s) => sum + s.subtotal)
+          : total);
+
+  int get diskonAmount => ((baseSubtotal * diskonPersen) / 100).round();
+  int get totalSetelahDiskon => (baseSubtotal - diskonAmount) > 0 ? (baseSubtotal - diskonAmount) : 0;
+  int get ppnPersen => ppn ?? (pembayaran?.ppn ?? (isWajibPpn ? 11 : 0));
+  int get ppnAmount => (totalSetelahDiskon * (ppnPersen / 100)).round();
+  int get pphPersen => pph ?? (pembayaran?.pph ?? 0);
+  int get pphAmount => (totalSetelahDiskon * (pphPersen / 100)).round();
+  int get calculatedTotalAkhir => totalSetelahDiskon + ppnAmount - pphAmount;
+
+  DateTime get tanggalDibuat => createdAt ?? tanggalInput;
 
   String get schedule {
     if (services.isEmpty) return "-";
@@ -774,11 +798,31 @@ class OrderModel {
       cleaners: parsedCleaners,
       status: finalStatus,
       total: parseTotal(),
-      subtotal: computedTotal,
+      subtotal: computedTotal > 0 ? computedTotal : (orderJson['subtotal'] != null ? (double.tryParse(orderJson['subtotal'].toString())?.toInt() ?? 0) : 0),
       paymentMethod: (orderJson['pembayaran']?['metode_pembayaran'] ?? orderJson['metode_pembayaran'] ?? json['metode_pembayaran'] ?? '-').toString(),
       paymentStatus: parsedPaymentStatus,
       notes: (orderJson['keterangan_order'] ?? json['keterangan_order'] ?? '').toString(),
-      tanggalInput: orderJson['tanggal_input'] != null ? (DateTime.tryParse(orderJson['tanggal_input'].toString()) ?? DateTime.now()) : (json['created_at'] != null ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()) : DateTime.now()),
+      tanggalInput: () {
+        final raw = orderJson['tanggal_input'] ?? 
+                    orderJson['created_at'] ?? 
+                    json['tanggal_input'] ?? 
+                    json['created_at'];
+        if (raw != null) {
+          final dt = DateTime.tryParse(raw.toString());
+          if (dt != null) return dt;
+        }
+        return DateTime.now();
+      }(),
+      createdAt: () {
+        final raw = orderJson['created_at'] ?? 
+                    orderJson['tanggal_input'] ?? 
+                    json['created_at'] ?? 
+                    json['tanggal_input'];
+        if (raw != null) {
+          return DateTime.tryParse(raw.toString());
+        }
+        return null;
+      }(),
       cancelReason: (orderJson['alasan_batal'] ?? orderJson['pembatalan']?['alasan_batal'] ?? orderJson['pembatalan']?['alasan_cancel'] ?? json['alasan_batal'] ?? json['alasan_cancel'] ?? json['alasan_penolakan'])?.toString(),
       cancelProof: () {
         final raw = orderJson['bukti_batal'] ?? orderJson['pembatalan']?['bukti_batal'] ?? orderJson['pembatalan']?['bukti_cancel'] ?? json['bukti_cancel'];
