@@ -675,16 +675,18 @@ Tanggal : $tanggal
 --------------------------------
 Total Awal : ${CurrencyInputFormatter.format(baseSubtotal)}
 Diskon : ${diskonValue > 0 ? CurrencyInputFormatter.format(diskonValue) : '0'}
-PPn : ${CurrencyInputFormatter.format(ppnValue)}
+Tax : ${CurrencyInputFormatter.format(ppnValue)}
 ${pphValue > 0 ? 'PPh : -${CurrencyInputFormatter.format(pphValue)}\n' : ''}*TOTAL BAYAR : ${CurrencyInputFormatter.format(totalAkhir)}*
 --------------------------------
+Bagi customer yang membutuhkan *faktur pajak*, mohon mengirimkan *NPWP* untuk keperluan penerbitan faktur pajak.
+
+Apabila NPWP tidak dikirimkan, transaksi akan dicatat sebagai *faktur pajak digunggung*.
+Terima kasih atas perhatian dan kerja samanya. 🙏
 
 Transfer hanya ke No. Rekening Berikut:
 *Mandiri 1780022255554*
 *BCA 8640679949*
 an. KLINKLIN INDONESIA GROUP
-
-
 
 
 ⚠️ *PENTING & HARAP DIBACA :*
