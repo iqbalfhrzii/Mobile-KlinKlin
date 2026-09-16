@@ -806,7 +806,6 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
 
               // Bottom Action Footer
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
@@ -814,12 +813,16 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                     BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, -2)),
                   ],
                 ),
-                child: Builder(
-                  builder: (context) {
-                    final isMenunggu = item['status'] == 'Menunggu' || item['status'] == 'Dibuat' || item['status'] == 'Pending';
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
+                child: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Builder(
+                      builder: (context) {
+                        final isMenunggu = item['status'] == 'Menunggu' || item['status'] == 'Dibuat' || item['status'] == 'Pending';
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
                     Row(
                       children: [
                         // 1. Cetak PDF Button
@@ -921,10 +924,11 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                                 Navigator.pop(context);
                                 _openApprovalDialog(item, 'Disetujui');
                               },
-                              icon: const Icon(Icons.check_circle_outline_rounded, size: 15, color: Colors.white),
+                              icon: const Icon(Icons.check_rounded, size: 14, color: Colors.white),
                               label: Text('Setujui Penawaran', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0284C7),
+                                backgroundColor: AppColors.primaryMid,
+                                foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -939,9 +943,11 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
               },
             ),
           ),
-        ],
+        ),
       ),
-    );
+    ],
+  ),
+);
       },
     );
   }
