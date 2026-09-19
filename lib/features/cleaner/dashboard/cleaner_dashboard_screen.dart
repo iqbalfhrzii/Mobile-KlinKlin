@@ -27,7 +27,7 @@ class CleanerDashboardScreen extends StatefulWidget {
   State<CleanerDashboardScreen> createState() => _CleanerDashboardScreenState();
 }
 
-class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
+class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with WidgetsBindingObserver {
   final CleanerJobService _service = CleanerJobService();
   String _userName = 'Cleaner';
   String? _userPhoto;
@@ -50,18 +50,42 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadProfile();
     _fetchData();
-    // Auto reload every 15 seconds
-    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
-      _fetchData(isSilent: true);
-    });
+    _startTimer();
   }
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _stopTimer();
     super.dispose();
+  }
+
+  void _startTimer() {
+    _refreshTimer?.cancel();
+    // Auto reload setiap 3 menit saat aplikasi aktif di foreground
+    _refreshTimer = Timer.periodic(const Duration(minutes: 3), (_) {
+      if (mounted) _fetchData(isSilent: true);
+    });
+  }
+
+  void _stopTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (mounted) {
+        _fetchData(isSilent: true);
+        _startTimer();
+      }
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _stopTimer();
+    }
   }
 
   Future<void> _loadProfile() async {
@@ -88,35 +112,37 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> {
       });
     }
     try {
-      // Ambil data profil terbaru dari API
-      try {
-        final meResponse = await AuthService.getMe();
-        final me = meResponse['data'] ?? meResponse;
-        if (mounted) {
-          final prefs = await SharedPreferences.getInstance();
-          final cachedCustomName = prefs.getString('user_custom_name');
+      // Ambil data profil terbaru dari API hanya jika bukan silent refresh (hemat kuota)
+      if (!isSilent) {
+        try {
+          final meResponse = await AuthService.getMe();
+          final me = meResponse['data'] ?? meResponse;
+          if (mounted) {
+            final prefs = await SharedPreferences.getInstance();
+            final cachedCustomName = prefs.getString('user_custom_name');
 
-          final roleName = me['jabatan'] is Map ? me['jabatan']['nama_jabatan'] ?? _userRole : _userRole;
-          final branchName = me['cabang'] is Map ? me['cabang']['nama_cabang'] ?? _userBranch : _userBranch;
-          final statusPeg = (me['status_karyawan'] ?? me['status_pegawai'] ?? _userStatusPegawai).toString();
-          final isKoorBool = (me['is_koor'] == true) || 
-              roleName.toString().toLowerCase().contains('koor') || 
-              statusPeg.toLowerCase().contains('koor');
+            final roleName = me['jabatan'] is Map ? me['jabatan']['nama_jabatan'] ?? _userRole : _userRole;
+            final branchName = me['cabang'] is Map ? me['cabang']['nama_cabang'] ?? _userBranch : _userBranch;
+            final statusPeg = (me['status_karyawan'] ?? me['status_pegawai'] ?? _userStatusPegawai).toString();
+            final isKoorBool = (me['is_koor'] == true) || 
+                roleName.toString().toLowerCase().contains('koor') || 
+                statusPeg.toLowerCase().contains('koor');
 
-          setState(() {
-            _userName = cachedCustomName ?? me['nama'] ?? _userName;
-            _userPhoto = me['foto_profil'];
-            _userRole = roleName;
-            _userBranch = branchName;
-            _userStatusPegawai = statusPeg;
-            _isKoor = isKoorBool;
-          });
+            setState(() {
+              _userName = cachedCustomName ?? me['nama'] ?? _userName;
+              _userPhoto = me['foto_profil'];
+              _userRole = roleName;
+              _userBranch = branchName;
+              _userStatusPegawai = statusPeg;
+              _isKoor = isKoorBool;
+            });
 
-          prefs.setString('user_status_pegawai', _userStatusPegawai);
-          prefs.setBool('is_koor', _isKoor);
+            prefs.setString('user_status_pegawai', _userStatusPegawai);
+            prefs.setBool('is_koor', _isKoor);
+          }
+        } catch (_) {
+          // Abaikan jika gagal ambil profil
         }
-      } catch (_) {
-        // Abaikan jika gagal ambil profil
       }
 
       final jobs = await _service.fetchJobs();

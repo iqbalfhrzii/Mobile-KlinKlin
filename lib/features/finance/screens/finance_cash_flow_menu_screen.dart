@@ -19,7 +19,7 @@ class FinanceCashFlowMenuScreen extends StatefulWidget {
   State<FinanceCashFlowMenuScreen> createState() => _FinanceCashFlowMenuScreenState();
 }
 
-class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
+class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> with WidgetsBindingObserver {
   String _query = '';
   DateTime? _filterStart;
   DateTime? _filterEnd;
@@ -39,13 +39,38 @@ class _FinanceCashFlowMenuScreenState extends State<FinanceCashFlowMenuScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadData();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) => _loadData(silent: true));
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _refreshTimer?.cancel();
+    // Auto reload setiap 3 menit saat aplikasi aktif di foreground
+    _refreshTimer = Timer.periodic(const Duration(minutes: 3), (_) => _loadData(silent: true));
+  }
+
+  void _stopTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (mounted) {
+        _loadData(silent: true);
+        _startTimer();
+      }
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _stopTimer();
+    }
   }
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _stopTimer();
     super.dispose();
   }
 

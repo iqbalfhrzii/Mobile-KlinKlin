@@ -51,13 +51,7 @@ class _AnimatedNotificationBellState extends State<AnimatedNotificationBell>
 
     // Initial fetch of notifications
     NotificationService.instance.refreshUnreadCount();
-
-    // Periodic check every 25 seconds
-    _pollingTimer = Timer.periodic(const Duration(seconds: 25), (_) {
-      if (mounted) {
-        NotificationService.instance.refreshUnreadCount();
-      }
-    });
+    _startTimer();
 
     // Listen to changes in unread count to start/stop shake animation
     NotificationService.unreadCountNotifier.addListener(_onUnreadCountChanged);
@@ -67,10 +61,30 @@ class _AnimatedNotificationBellState extends State<AnimatedNotificationBell>
     }
   }
 
+  void _startTimer() {
+    _pollingTimer?.cancel();
+    // Periodic check every 3 minutes while app is in foreground
+    _pollingTimer = Timer.periodic(const Duration(minutes: 3), (_) {
+      if (mounted) {
+        NotificationService.instance.refreshUnreadCount();
+      }
+    });
+  }
+
+  void _stopTimer() {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      NotificationService.instance.refreshUnreadCount();
+      if (mounted) {
+        NotificationService.instance.refreshUnreadCount();
+        _startTimer();
+      }
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _stopTimer();
     }
   }
 
@@ -89,7 +103,7 @@ class _AnimatedNotificationBellState extends State<AnimatedNotificationBell>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _pollingTimer?.cancel();
+    _stopTimer();
     NotificationService.unreadCountNotifier.removeListener(_onUnreadCountChanged);
     _controller.dispose();
     super.dispose();

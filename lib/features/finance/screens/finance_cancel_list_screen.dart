@@ -15,7 +15,7 @@ class FinanceCancelListScreen extends StatefulWidget {
   State<FinanceCancelListScreen> createState() => _FinanceCancelListScreenState();
 }
 
-class _FinanceCancelListScreenState extends State<FinanceCancelListScreen> {
+class _FinanceCancelListScreenState extends State<FinanceCancelListScreen> with WidgetsBindingObserver {
   final FinanceService _financeService = FinanceService();
   bool _isLoading = true;
   String _error = '';
@@ -25,13 +25,38 @@ class _FinanceCancelListScreenState extends State<FinanceCancelListScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _fetchOrders();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) => _fetchOrders(silent: true));
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _refreshTimer?.cancel();
+    // Auto reload setiap 3 menit saat aplikasi aktif di foreground
+    _refreshTimer = Timer.periodic(const Duration(minutes: 3), (_) => _fetchOrders(silent: true));
+  }
+
+  void _stopTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (mounted) {
+        _fetchOrders(silent: true);
+        _startTimer();
+      }
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _stopTimer();
+    }
   }
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _stopTimer();
     super.dispose();
   }
 

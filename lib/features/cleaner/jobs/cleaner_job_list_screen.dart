@@ -27,7 +27,7 @@ class CleanerJobListScreen extends StatefulWidget {
   State<CleanerJobListScreen> createState() => CleanerJobListScreenState();
 }
 
-class CleanerJobListScreenState extends State<CleanerJobListScreen> {
+class CleanerJobListScreenState extends State<CleanerJobListScreen> with WidgetsBindingObserver {
   final CleanerJobService _service = CleanerJobService();
   bool _isLoading = true;
   String _error = '';
@@ -60,13 +60,37 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (widget.initialStatusFilter != null) {
       _statusFilter = widget.initialStatusFilter!;
     }
     _fetchJobs();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
-      _fetchJobs(isSilent: true);
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _refreshTimer?.cancel();
+    // Auto reload setiap 3 menit saat aplikasi aktif di foreground
+    _refreshTimer = Timer.periodic(const Duration(minutes: 3), (_) {
+      if (mounted) _fetchJobs(isSilent: true);
     });
+  }
+
+  void _stopTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (mounted) {
+        _fetchJobs(isSilent: true);
+        _startTimer();
+      }
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _stopTimer();
+    }
   }
 
   void applyFilter({String? statusFilter, bool isTodayOnly = false}) {
@@ -87,7 +111,9 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> {
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _stopTimer();
+    _searchCtrl.dispose();
     super.dispose();
   }
 

@@ -28,6 +28,7 @@ class ApiInterceptor extends Interceptor {
 
     options.headers['Accept'] = 'application/json';
     options.headers['Content-Type'] = 'application/json';
+    options.headers['Accept-Encoding'] = 'gzip, deflate';
 
     return handler.next(options);
   }
