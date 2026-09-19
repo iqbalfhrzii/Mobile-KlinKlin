@@ -90,28 +90,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ? DateFormat('yyyy-MM-dd').format(_customEndDate!)
           : null;
 
-      final results = await Future.wait([
-        DashboardService().fetchCsDashboard(
-          periode: _selectedOmzetPeriode,
-          tanggalMulai: startStr,
-          tanggalSelesai: endStr,
-        ),
-        OrderService().fetchOrders(fetchAllPages: false, perPage: 3).catchError((err) {
-          debugPrint('Error fetching recent orders for home: $err');
-          return <OrderModel>[];
-        }),
-      ]);
-
-      final dbData = results[0] as Map<String, dynamic>;
-      final orders = results[1] as List<OrderModel>;
-
-      if (mounted) {
-        if (orders.isNotEmpty) {
-          _allOrders = orders;
-          _recentOrders = orders.take(3).toList();
-        }
-
-        if (dbData.isNotEmpty) {
+      // 1. Fetch dashboard metrics immediately
+      final dashboardFuture = DashboardService().fetchCsDashboard(
+        periode: _selectedOmzetPeriode,
+        tanggalMulai: startStr,
+        tanggalSelesai: endStr,
+      ).then((dbData) {
+        if (mounted && dbData.isNotEmpty) {
           _dashboardData = dbData;
 
           dynamic rawOmzet;
@@ -160,13 +145,35 @@ class _HomeScreenState extends State<HomeScreen> {
             _isLoadingStats = false;
             _isLoadingOmzet = false;
           });
-        } else {
+        } else if (mounted) {
           setState(() {
             _isLoadingStats = false;
             _isLoadingOmzet = false;
           });
         }
-      }
+      }).catchError((err) {
+        debugPrint('Error fetching CS dashboard: $err');
+        if (mounted) {
+          setState(() {
+            _isLoadingStats = false;
+            _isLoadingOmzet = false;
+          });
+        }
+      });
+
+      // 2. Fetch recent orders in parallel (does not block metrics display)
+      final ordersFuture = OrderService().fetchOrders(fetchAllPages: false, perPage: 3).then((orders) {
+        if (mounted && orders.isNotEmpty) {
+          setState(() {
+            _allOrders = orders;
+            _recentOrders = orders.take(3).toList();
+          });
+        }
+      }).catchError((err) {
+        debugPrint('Error fetching recent orders for home: $err');
+      });
+
+      await Future.wait([dashboardFuture, ordersFuture]);
     } catch (e) {
       if (mounted) {
         setState(() {

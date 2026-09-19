@@ -27,21 +27,32 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   late int _currentIndex;
+  late final Set<int> _loadedIndices;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    _loadedIndices = {_currentIndex};
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
   }
 
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    OrderListScreen(),
-    CustomerListScreen(),
-    UangKasScreen(),
-    ProfileScreen(),
-  ];
+  Widget _buildScreen(int index) {
+    switch (index) {
+      case 0:
+        return const HomeScreen();
+      case 1:
+        return const OrderListScreen();
+      case 2:
+        return const CustomerListScreen();
+      case 3:
+        return const UangKasScreen();
+      case 4:
+        return const ProfileScreen();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
 
   static const _navItems = [
     _NavItem(Icons.grid_view_rounded, Icons.grid_view_rounded, 'Dashboard'),
@@ -58,7 +69,12 @@ class _MainShellState extends State<MainShell> {
         Scaffold(
           body: IndexedStack(
             index: _currentIndex,
-            children: _screens,
+            children: List.generate(5, (index) {
+              if (_loadedIndices.contains(index)) {
+                return _buildScreen(index);
+              }
+              return const SizedBox.shrink();
+            }),
           ),
           bottomNavigationBar: _buildNavBar(),
         ),
@@ -182,7 +198,10 @@ class _MainShellState extends State<MainShell> {
               final selected = _currentIndex == i;
               return Expanded(
                 child: GestureDetector(
-                  onTap: () => setState(() => _currentIndex = i),
+                  onTap: () => setState(() {
+                    _currentIndex = i;
+                    _loadedIndices.add(i);
+                  }),
                   behavior: HitTestBehavior.opaque,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,

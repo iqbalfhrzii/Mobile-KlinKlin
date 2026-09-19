@@ -29,6 +29,7 @@ class _PinScreenState extends State<PinScreen> {
   bool _isLoading = false;
 
   void _onKeyPress(String digit) {
+    if (_isLoading) return;
     if (_pin.length < 6) {
       setState(() {
         _pin += digit;
@@ -41,6 +42,7 @@ class _PinScreenState extends State<PinScreen> {
   }
 
   void _onDelete() {
+    if (_isLoading) return;
     if (_pin.isNotEmpty) {
       setState(() {
         _pin = _pin.substring(0, _pin.length - 1);
@@ -50,6 +52,7 @@ class _PinScreenState extends State<PinScreen> {
   }
 
   Future<void> _submitPin() async {
+    if (_isLoading) return;
     setState(() => _isLoading = true);
     try {
       final res = await AuthService.login(widget.email, _pin);
@@ -266,18 +269,38 @@ class _PinScreenState extends State<PinScreen> {
 
               const SizedBox(height: 16),
 
-              // Error message
-              AnimatedOpacity(
-                opacity: _error.isEmpty ? 0 : 1,
-                duration: const Duration(milliseconds: 200),
-                child: Text(
-                  _error,
+              if (_isLoading) ...[
+                const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Memverifikasi PIN...',
                   style: GoogleFonts.inter(
-                    fontSize: 13, color: const Color(0xFFFF6B6B),
+                    fontSize: 12,
+                    color: Colors.white70,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-              ),
+              ] else ...[
+                // Error message
+                AnimatedOpacity(
+                  opacity: _error.isEmpty ? 0 : 1,
+                  duration: const Duration(milliseconds: 200),
+                  child: Text(
+                    _error,
+                    style: GoogleFonts.inter(
+                      fontSize: 13, color: const Color(0xFFFF6B6B),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
 
               const Spacer(),
 
