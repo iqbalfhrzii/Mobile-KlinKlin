@@ -15,8 +15,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Verify Xcode Version
+      - name: Select Latest Xcode (Xcode 26+)
         run: |
+          echo "=== Available Xcode versions ==="
+          ls -ld /Applications/Xcode* || true
+          LATEST_XCODE=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -n 1)
+          if [ -n "$LATEST_XCODE" ]; then
+            echo "Selecting latest Xcode: $LATEST_XCODE"
+            sudo xcode-select -s "$LATEST_XCODE"
+          fi
           xcodebuild -version
 
       - name: Set up Java 17
