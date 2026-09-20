@@ -25,6 +25,7 @@ import '../../features/orders/services/order_service.dart';
 import '../../features/cleaner/jobs/cleaner_job_detail_screen.dart';
 import '../../features/finance/screens/finance_audit_screen.dart';
 import '../../features/ceo/screens/ceo_karyawan_screen.dart';
+import '../../features/ceo/screens/ceo_transaksi_besar_screen.dart';
 
 class NotificationListSheet extends StatefulWidget {
   const NotificationListSheet({super.key});
@@ -69,13 +70,50 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
     }
   }
 
+  String? _extractPesananId(Map<String, dynamic> data, {String? title, String? message}) {
+    // 1. Direct pesanan_id
+    final pId = data['pesanan_id'];
+    if (pId != null && pId.toString().isNotEmpty && pId.toString() != 'null' && pId.toString() != '0') {
+      return pId.toString();
+    }
+    // 2. Nested in data['data']
+    if (data['data'] is Map) {
+      final inner = data['data'] as Map;
+      final innerPid = inner['pesanan_id'] ?? inner['id'];
+      if (innerPid != null && innerPid.toString().isNotEmpty && innerPid.toString() != 'null' && innerPid.toString() != '0') {
+        return innerPid.toString();
+      }
+    }
+    // 3. Direct id
+    final directId = data['id'];
+    if (directId != null && directId.toString().isNotEmpty && directId.toString() != 'null' && directId.toString() != '0') {
+      // Pastikan bukan ID UUID notifikasi (UUID biasanya panjang dan ada dash)
+      final strId = directId.toString();
+      if (!strId.contains('-') || strId.length < 15) {
+        return strId;
+      }
+    }
+    // 4. Regex from message / title jika format "pesanan #123"
+    if (message != null) {
+      final match = RegExp(r'pesanan\s*#(\d+)', caseSensitive: false).firstMatch(message);
+      if (match != null) return match.group(1);
+    }
+    if (title != null) {
+      final match = RegExp(r'pesanan\s*#(\d+)', caseSensitive: false).firstMatch(title);
+      if (match != null) return match.group(1);
+    }
+    return null;
+  }
+
   Future<void> _resolveMissingOrderNumbers(List<NotificationItem> items) async {
     final Set<String> idsToFetch = {};
     final idRegex = RegExp(r'pesanan\s*#(\d+)', caseSensitive: false);
 
     for (final item in items) {
-      final explicitNomor = item.data['nomor_pesanan']?.toString().trim();
-      final pesananId = item.data['pesanan_id']?.toString().trim();
+      final explicitNomor = item.data['nomor_pesanan']?.toString().trim() ??
+          (item.data['data'] is Map ? (item.data['data'] as Map)['nomor_pesanan']?.toString().trim() : null);
+      final pesananId = _extractPesananId(item.data, title: item.title, message: item.message);
+
       if (pesananId != null && explicitNomor != null && explicitNomor.isNotEmpty && !explicitNomor.startsWith('#')) {
         _orderNumberCache[pesananId] = explicitNomor;
       }
@@ -164,29 +202,44 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
 
     final prefs = await SharedPreferences.getInstance();
     final currentRole = (prefs.getString('user_role') ?? '').toLowerCase();
+    final isCeo = currentRole.contains('ceo') || currentRole.contains('owner') || currentRole.contains('direktur');
 
-    // 0a. Notifikasi Transaksi Pembayaran Besar (> 1 Jt) atau Order Detail Spesifik
-    final pesananId = data['pesanan_id'] ?? data['id'];
-    final bool hasPesananId = pesananId != null &&
-        pesananId.toString().isNotEmpty &&
-        pesananId.toString() != 'null' &&
-        pesananId.toString() != '0';
+    // 0a. Ekstraksi ID Pesanan secara robust (mendukung payload bersarang & regex)
+    final extractedPesananId = _extractPesananId(data, title: notification.title, message: notification.message);
+    final bool hasPesananId = extractedPesananId != null &&
+        extractedPesananId.isNotEmpty &&
+        extractedPesananId != 'null' &&
+        extractedPesananId != '0';
 
-    if (type == 'pembayaran_besar' ||
+    // 0b. Notifikasi Transaksi Pembayaran Besar (> 1 Jt)
+    final bool isTransaksiBesar = type == 'pembayaran_besar' ||
         type.contains('pembayaran_besar') ||
         title.contains('1 jt') ||
         title.contains('1jt') ||
         message.contains('1 jt') ||
-        message.contains('1jt') ||
-        (screen == 'order_detail' && hasPesananId)) {
+        message.contains('1jt');
+
+    if (isTransaksiBesar) {
+      // Jika role adalah CEO / Eksekutif, BUKA HALAMAN TERPISAH Transaksi Besar CEO!
+      // Jangan pernah diarahkan ke menu audit Finance!
+      if (isCeo) {
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => CeoTransaksiBesarScreen(initialPesananId: extractedPesananId),
+          ),
+        );
+        return;
+      }
+
+      // Untuk role operasional / CS / Finance, buka OrderDetailScreen jika ada ID pesanan
       if (hasPesananId) {
         try {
-          final order = await OrderService().fetchOrderDetail(pesananId.toString());
+          final order = await OrderService().fetchOrderDetail(extractedPesananId);
           nav.push(
             MaterialPageRoute(
               builder: (_) => OrderDetailScreen(
                 order: order,
-                isReadOnly: currentRole.contains('ceo') || !currentRole.contains('cs'),
+                isReadOnly: !currentRole.contains('cs'),
               ),
             ),
           );
@@ -194,25 +247,49 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
         } catch (e) {
           debugPrint('Gagal membuka order detail dari notifikasi pembayaran besar: $e');
         }
-      } else if (currentRole.contains('ceo')) {
+      }
+    }
+
+    // 0c. Order Detail Spesifik (bukan transaksi besar)
+    if (screen == 'order_detail' && hasPesananId) {
+      if (isCeo) {
         nav.push(
           MaterialPageRoute(
-            builder: (_) => const FinanceAuditScreen(
-              initialTab: 'hasil-audit',
-              isReadOnly: true,
-            ),
+            builder: (_) => CeoTransaksiBesarScreen(initialPesananId: extractedPesananId),
           ),
         );
         return;
       }
-    }
-
-    // 0b. Approval Pembayaran (Khusus Finance & Monitoring CEO jika berupa list approval)
-    if (type == 'pembayaran_pending' || screen == 'approval_pembayaran' || (type.contains('pembayaran') && !hasPesananId)) {
-      if (currentRole.contains('finance') || currentRole.contains('admin') || currentRole.contains('ceo')) {
+      try {
+        final order = await OrderService().fetchOrderDetail(extractedPesananId);
         nav.push(
           MaterialPageRoute(
-            builder: (_) => FinanceAuditScreen(isReadOnly: currentRole.contains('ceo')),
+            builder: (_) => OrderDetailScreen(
+              order: order,
+              isReadOnly: !currentRole.contains('cs'),
+            ),
+          ),
+        );
+        return;
+      } catch (e) {
+        debugPrint('Gagal membuka order detail dari notifikasi: $e');
+      }
+    }
+
+    // 0d. Approval Pembayaran (Khusus Finance & Monitoring CEO)
+    if (type == 'pembayaran_pending' || screen == 'approval_pembayaran' || (type.contains('pembayaran') && !hasPesananId)) {
+      if (isCeo) {
+        // CEO dialihkan ke pemantauan transaksi, BUKAN ke halaman audit finance
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => CeoTransaksiBesarScreen(initialPesananId: extractedPesananId),
+          ),
+        );
+        return;
+      } else if (currentRole.contains('finance') || currentRole.contains('admin')) {
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => const FinanceAuditScreen(),
           ),
         );
         return;
@@ -740,6 +817,9 @@ class _NotificationListSheetState extends State<NotificationListSheet> {
     final type = item.type.toLowerCase();
     final title = item.title.toLowerCase();
 
+    if (type.contains('pembayaran_besar') || title.contains('1 jt') || title.contains('1jt')) {
+      return (Icons.monetization_on_rounded, const Color(0xFFD97706), const Color(0xFFFEF3C7));
+    }
     if (type.contains('karyawan') || title.contains('karyawan')) {
       return (Icons.how_to_reg_rounded, const Color(0xFF16A34A), const Color(0xFFDCFCE7));
     }

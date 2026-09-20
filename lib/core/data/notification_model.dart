@@ -26,7 +26,8 @@ class NotificationItem {
   bool get isRead => readAt != null;
 
   String get displayTitle {
-    final nomorPesanan = data['nomor_pesanan']?.toString().trim();
+    final nomorPesanan = data['nomor_pesanan']?.toString().trim() ??
+        (data['data'] is Map ? (data['data'] as Map)['nomor_pesanan']?.toString().trim() : null);
     if (nomorPesanan != null && nomorPesanan.isNotEmpty && !nomorPesanan.startsWith('#')) {
       return title.replaceAll(RegExp(r'pesanan\s*#\d+', caseSensitive: false), 'pesanan $nomorPesanan');
     }
@@ -34,7 +35,8 @@ class NotificationItem {
   }
 
   String get displayMessage {
-    final nomorPesanan = data['nomor_pesanan']?.toString().trim();
+    final nomorPesanan = data['nomor_pesanan']?.toString().trim() ??
+        (data['data'] is Map ? (data['data'] as Map)['nomor_pesanan']?.toString().trim() : null);
     if (nomorPesanan != null && nomorPesanan.isNotEmpty && !nomorPesanan.startsWith('#')) {
       return message.replaceAll(RegExp(r'pesanan\s*#\d+', caseSensitive: false), 'pesanan $nomorPesanan');
     }

@@ -28,6 +28,7 @@ import '../../features/orders/screens/order_detail_screen.dart';
 import '../../features/orders/services/order_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/finance/screens/finance_audit_screen.dart';
+import '../../features/ceo/screens/ceo_transaksi_besar_screen.dart';
 
 // Top-level background message handler
 @pragma('vm:entry-point')
@@ -141,7 +142,10 @@ class FcmService {
           IconData iconData = Icons.notifications_active_rounded;
           Color iconColor = const Color(0xFF38BDF8);
 
-          if (type.contains('batal') || type.contains('cancel') || screen.contains('audit') || (message.notification?.title ?? '').toLowerCase().contains('batal')) {
+          if (type.contains('pembayaran_besar') || (message.notification?.title ?? '').toLowerCase().contains('1 jt') || (message.notification?.body ?? '').toLowerCase().contains('1 jt')) {
+            iconData = Icons.monetization_on_rounded;
+            iconColor = const Color(0xFFF59E0B);
+          } else if (type.contains('batal') || type.contains('cancel') || screen.contains('audit') || (message.notification?.title ?? '').toLowerCase().contains('batal')) {
             iconData = Icons.cancel_rounded;
             iconColor = const Color(0xFFEF4444);
           } else if (type.contains('pengumuman')) {
@@ -301,12 +305,52 @@ class FcmService {
     final title = (message.notification?.title ?? message.data['title'] ?? '').toString();
     final body = (message.notification?.body ?? message.data['body'] ?? message.data['message'] ?? '').toString();
 
+    String? extractPesananId(Map<String, dynamic> data, {String? title, String? body}) {
+      final pId = data['pesanan_id'];
+      if (pId != null && pId.toString().isNotEmpty && pId.toString() != 'null' && pId.toString() != '0') {
+        return pId.toString();
+      }
+      if (data['data'] is Map) {
+        final inner = data['data'] as Map;
+        final innerPid = inner['pesanan_id'] ?? inner['id'];
+        if (innerPid != null && innerPid.toString().isNotEmpty && innerPid.toString() != 'null' && innerPid.toString() != '0') {
+          return innerPid.toString();
+        }
+      }
+      final directId = data['id'];
+      if (directId != null && directId.toString().isNotEmpty && directId.toString() != 'null' && directId.toString() != '0') {
+        final strId = directId.toString();
+        if (!strId.contains('-') || strId.length < 15) {
+          return strId;
+        }
+      }
+      if (body != null) {
+        final match = RegExp(r'pesanan\s*#(\d+)', caseSensitive: false).firstMatch(body);
+        if (match != null) return match.group(1);
+      }
+      if (title != null) {
+        final match = RegExp(r'pesanan\s*#(\d+)', caseSensitive: false).firstMatch(title);
+        if (match != null) return match.group(1);
+      }
+      return null;
+    }
+
+    final isCeo = currentRole.contains('ceo') || currentRole.contains('owner') || currentRole.contains('direktur');
+    final extractedPesananId = extractPesananId(message.data, title: title, body: body);
+
     // 0. Pembatalan Pesanan / Hasil Audit (Khusus Finance)
     if (type == 'pembatalan' || type == 'cancel_order' || screen == 'hasil_audit' || screen == 'audit_pesanan' || type == 'approval_edit' || title.toLowerCase().contains('batal') || body.toLowerCase().contains('batal')) {
       if (currentRole.contains('finance') || currentRole.contains('admin finance')) {
         navState.push(
           MaterialPageRoute(
             builder: (_) => const FinanceAuditScreen(initialTab: 'hasil-audit'),
+          ),
+        );
+        return;
+      } else if (isCeo) {
+        navState.push(
+          MaterialPageRoute(
+            builder: (_) => CeoTransaksiBesarScreen(initialPesananId: extractedPesananId),
           ),
         );
         return;
@@ -329,16 +373,24 @@ class FcmService {
         title.toLowerCase().contains('1jt') ||
         body.toLowerCase().contains('1 jt') ||
         body.toLowerCase().contains('1jt')) {
-      final pesananId = message.data['pesanan_id'] ?? message.data['id'];
-      if (pesananId != null && pesananId.toString().isNotEmpty && pesananId.toString() != 'null') {
+      if (isCeo) {
+        navState.push(
+          MaterialPageRoute(
+            builder: (_) => CeoTransaksiBesarScreen(initialPesananId: extractedPesananId),
+          ),
+        );
+        return;
+      }
+
+      if (extractedPesananId != null && extractedPesananId.isNotEmpty) {
         try {
-          final order = await OrderService().fetchOrderDetail(pesananId.toString());
+          final order = await OrderService().fetchOrderDetail(extractedPesananId);
           if (navigatorKey?.currentContext != null) {
             Navigator.of(navigatorKey!.currentContext!).push(
               MaterialPageRoute(
                 builder: (_) => OrderDetailScreen(
                   order: order,
-                  isReadOnly: currentRole.contains('ceo') || !currentRole.contains('cs'),
+                  isReadOnly: !currentRole.contains('cs'),
                 ),
               ),
             );
@@ -350,9 +402,16 @@ class FcmService {
       }
     }
 
-    // 0b. Approval Pembayaran (Khusus Finance)
+    // 0b. Approval Pembayaran (Khusus Finance & CEO)
     if (type == 'pembayaran_pending' || screen == 'approval_pembayaran') {
-      if (currentRole.contains('finance') || currentRole.contains('admin finance')) {
+      if (isCeo) {
+        navState.push(
+          MaterialPageRoute(
+            builder: (_) => CeoTransaksiBesarScreen(initialPesananId: extractedPesananId),
+          ),
+        );
+        return;
+      } else if (currentRole.contains('finance') || currentRole.contains('admin finance')) {
         navState.push(
           MaterialPageRoute(
             builder: (_) => const FinanceAuditScreen(),
@@ -588,18 +647,28 @@ class FcmService {
         return;
       }
 
-      // Jika yang login adalah CS / Admin / CEO
-      if (currentRole.contains('cs') || currentRole.contains('customer service') || currentRole.contains('admin') || currentRole.contains('ceo')) {
-        final pesananId = message.data['pesanan_id'] ?? message.data['id'];
-        if (pesananId != null && pesananId.toString().isNotEmpty && pesananId.toString() != 'null') {
+      // Jika yang login adalah CEO
+      if (isCeo) {
+        navState.push(
+          MaterialPageRoute(
+            builder: (_) => CeoTransaksiBesarScreen(initialPesananId: extractedPesananId),
+          ),
+        );
+        return;
+      }
+
+      // Jika yang login adalah CS / Admin
+      if (currentRole.contains('cs') || currentRole.contains('customer service') || currentRole.contains('admin')) {
+        final targetId = extractedPesananId ?? message.data['pesanan_id']?.toString() ?? message.data['id']?.toString();
+        if (targetId != null && targetId.isNotEmpty && targetId != 'null') {
           try {
-            final order = await OrderService().fetchOrderDetail(pesananId.toString());
+            final order = await OrderService().fetchOrderDetail(targetId);
             if (navigatorKey?.currentContext != null) {
               Navigator.of(navigatorKey!.currentContext!).push(
                 MaterialPageRoute(
                   builder: (_) => OrderDetailScreen(
                     order: order,
-                    isReadOnly: currentRole.contains('ceo') || !currentRole.contains('cs'),
+                    isReadOnly: !currentRole.contains('cs'),
                   ),
                 ),
               );

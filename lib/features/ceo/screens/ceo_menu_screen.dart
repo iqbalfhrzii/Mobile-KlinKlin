@@ -10,6 +10,7 @@ import '../../operasional/screens/operasional_permintaan_design_screen.dart';
 import 'ceo_data_chat_screen.dart';
 import 'ceo_karyawan_screen.dart';
 import 'ceo_spend_ads_screen.dart';
+import 'ceo_transaksi_besar_screen.dart';
 import '../../hrd/screens/gaji_karyawan/gaji_karyawan_list_screen.dart';
 import '../../hrd/screens/insentif/insentif_cleaner_list_screen.dart';
 
@@ -67,10 +68,24 @@ class CeoMenuScreen extends StatelessWidget {
     final menus = [
       _MenuSection(
         title: 'Operasional & Keuangan Cabang',
-        subtitle: 'Monitoring inventaris & arus kas operasional',
+        subtitle: 'Monitoring transaksi besar, stok inventaris & arus kas',
         sectionIcon: Icons.storefront_rounded,
         sectionColor: const Color(0xFF0284C7),
         items: [
+          _MenuItem(
+            icon: Icons.monetization_on_rounded,
+            title: 'Transaksi > Rp 1 Jt',
+            iconColor: const Color(0xFFD97706),
+            bgColor: const Color(0xFFFEF3C7),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CeoTransaksiBesarScreen(),
+                ),
+              );
+            },
+          ),
           _MenuItem(
             icon: Icons.fact_check_rounded,
             title: 'Stok Opname',
