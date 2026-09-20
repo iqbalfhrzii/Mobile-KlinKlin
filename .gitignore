@@ -54,3 +54,13 @@ app.*.map.json
 # Tester exports
 *testers*
 
+# Certificates & Private Keys (iOS & Android)
+*.p12
+*.cer
+*.key
+*.pem
+*.certSigningRequest
+*.mobileprovision
+*.keystore
+*.jks
+
