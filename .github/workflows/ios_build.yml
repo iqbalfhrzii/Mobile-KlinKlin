@@ -97,6 +97,8 @@ jobs:
 
       - name: Build IPA Release
         run: |
+          echo "=== Building Version ==="
+          grep "version:" pubspec.yaml
           flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
 
       - name: Upload iOS App Artifact
@@ -125,9 +127,10 @@ jobs:
             exit 1
           fi
           echo "Ditemukan file IPA: $IPA_PATH"
+          echo "Mengunggah file ke App Store Connect..."
 
           # Upload ke App Store Connect
-          xcrun altool --upload-app -f "$IPA_PATH" -t ios --apiKey "$APPSTORE_KEY_ID" --apiIssuer "$APPSTORE_ISSUER_ID"
+          xcrun altool --upload-app -f "$IPA_PATH" -t ios --apiKey "$APPSTORE_KEY_ID" --apiIssuer "$APPSTORE_ISSUER_ID" --show-progress
 
       - name: Clean up Keychain & API Keys
         if: always()
