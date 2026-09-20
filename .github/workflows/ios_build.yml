@@ -80,6 +80,10 @@ jobs:
           fi
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
 
+          # Verifikasi identitas sertifikat di keychain
+          echo "=== Available Code Signing Identities ==="
+          security find-identity -v -p codesigning $KEYCHAIN_PATH
+
       - name: Build IPA Release
         run: |
           flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
@@ -99,7 +103,9 @@ jobs:
         run: |
           # Buat direktori dan simpan App Store Connect API Key
           mkdir -p ~/.appstoreconnect/private_keys
+          mkdir -p ~/private_keys
           echo "$APPSTORE_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+          echo "$APPSTORE_PRIVATE_KEY" > ~/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
 
           # Cari file .ipa hasil build
           IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -n 1)
@@ -117,4 +123,4 @@ jobs:
         run: |
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db 2>/dev/null || true
           rm -f ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null || true
-          rm -rf ~/.appstoreconnect/private_keys 2>/dev/null || true
+          rm -rf ~/.appstoreconnect/private_keys ~/private_keys 2>/dev/null || true
