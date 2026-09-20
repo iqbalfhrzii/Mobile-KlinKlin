@@ -63,4 +63,6 @@ app.*.map.json
 *.mobileprovision
 *.keystore
 *.jks
+*.p8
+*_base64.txt
 
