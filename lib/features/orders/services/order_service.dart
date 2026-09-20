@@ -24,6 +24,7 @@ class OrderService {
     bool fetchAllPages = false,
     int perPage = 50,
     int? page,
+    num? minTotal,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -37,6 +38,7 @@ class OrderService {
         'per_page': perPage,
       };
       if (page != null) queryParams['page'] = page;
+      if (minTotal != null) queryParams['min_total'] = minTotal;
       if (statusPesanan != null && statusPesanan != 'Semua') {
         queryParams['status_pesanan'] = statusPesanan;
       }

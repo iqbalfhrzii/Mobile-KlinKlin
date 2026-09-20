@@ -30,6 +30,7 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
   int _currentPage = 1;
   bool _hasMore = true;
   bool _isLoadingMore = false;
+  String _selectedFilterNominal = 'besar'; // 'besar' (> 1 Juta) atau 'semua' (Semua Transaksi seperti Finance)
 
   List<OrderModel> _allOrders = [];
   List<CabangModel> _cabangList = [];
@@ -47,6 +48,14 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialPesananId != null && widget.initialPesananId!.isNotEmpty) {
+      _selectedFilterNominal = 'besar';
+    }
+    // INSTANT LOAD (0 ms): Tampilkan data dari memory cache seketika agar CEO tidak pernah melihat layar putih kosong berputar
+    if (OrderService.cachedOrders.isNotEmpty) {
+      _allOrders = List.from(OrderService.cachedOrders);
+      _isLoading = false;
+    }
     _loadData();
   }
 
@@ -91,6 +100,7 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
               fetchAllPages: false,
               perPage: 50,
               page: 1,
+              minTotal: _selectedFilterNominal == 'besar' ? 1000000 : null,
             )
             .timeout(const Duration(seconds: 12))
             .catchError((e) {
@@ -146,6 +156,7 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
             fetchAllPages: false,
             perPage: 50,
             page: nextPage,
+            minTotal: _selectedFilterNominal == 'besar' ? 1000000 : null,
           )
           .timeout(const Duration(seconds: 12));
 
@@ -196,9 +207,11 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
     final now = DateTime.now();
 
     return _allOrders.where((order) {
-      // 1. Hanya transaksi > 1 Juta (atau target order dari notifikasi)
-      if (!_isTransaksiBesar(order)) {
-        return false;
+      // 1. Filter Nominal (> 1 Juta jika mode 'besar' aktif)
+      if (_selectedFilterNominal == 'besar') {
+        if (!_isTransaksiBesar(order)) {
+          return false;
+        }
       }
 
       // 2. Filter Cabang
@@ -264,6 +277,12 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
       body: Column(
         children: [
           _buildHeader(context),
+          if (_isLoading && _allOrders.isNotEmpty)
+            const LinearProgressIndicator(
+              minHeight: 2.5,
+              backgroundColor: Colors.transparent,
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+            ),
           Expanded(
             child: RefreshIndicator(
               onRefresh: _loadData,
@@ -283,9 +302,9 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
                     const SizedBox(height: 16),
 
                     // Content Area
-                    if (_isLoading)
+                    if (_isLoading && _allOrders.isEmpty)
                       _buildLoadingIndicator()
-                    else if (_errorMessage.isNotEmpty)
+                    else if (_errorMessage.isNotEmpty && _allOrders.isEmpty)
                       _buildErrorWidget()
                     else if (filtered.isEmpty)
                       _buildEmptyState()
@@ -302,6 +321,7 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final isModeBesar = _selectedFilterNominal == 'besar';
     return GradientHeader(
       padding: const EdgeInsets.fromLTRB(16, 52, 16, 20),
       child: Row(
@@ -321,7 +341,7 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
                 Row(
                   children: [
                     Text(
-                      'Transaksi > Rp 1 Jt',
+                      isModeBesar ? 'Transaksi > Rp 1 Jt' : 'Semua Transaksi',
                       style: GoogleFonts.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -349,7 +369,9 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Monitoring pembayaran & pesanan bernilai tinggi',
+                  isModeBesar
+                      ? 'Monitoring pembayaran & pesanan bernilai tinggi'
+                      : 'Monitoring seluruh transaksi operasional',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: Colors.white.withValues(alpha: 0.85),
@@ -495,6 +517,118 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Segmented Switcher: > Rp 1 Juta vs Semua Transaksi
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      if (_selectedFilterNominal != 'besar') {
+                        setState(() {
+                          _selectedFilterNominal = 'besar';
+                        });
+                        _loadData();
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(9),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _selectedFilterNominal == 'besar' ? Colors.white : Colors.transparent,
+                        borderRadius: BorderRadius.circular(9),
+                        boxShadow: _selectedFilterNominal == 'besar'
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.06),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.star_rounded,
+                            size: 16,
+                            color: _selectedFilterNominal == 'besar' ? const Color(0xFFD97706) : const Color(0xFF64748B),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '> Rp 1 Juta',
+                            style: GoogleFonts.inter(
+                              fontSize: 12.5,
+                              fontWeight: _selectedFilterNominal == 'besar' ? FontWeight.bold : FontWeight.w600,
+                              color: _selectedFilterNominal == 'besar' ? const Color(0xFF1E293B) : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      if (_selectedFilterNominal != 'semua') {
+                        setState(() {
+                          _selectedFilterNominal = 'semua';
+                        });
+                        _loadData();
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(9),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _selectedFilterNominal == 'semua' ? Colors.white : Colors.transparent,
+                        borderRadius: BorderRadius.circular(9),
+                        boxShadow: _selectedFilterNominal == 'semua'
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.06),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.receipt_long_rounded,
+                            size: 16,
+                            color: _selectedFilterNominal == 'semua' ? AppColors.primary : const Color(0xFF64748B),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Semua Transaksi',
+                            style: GoogleFonts.inter(
+                              fontSize: 12.5,
+                              fontWeight: _selectedFilterNominal == 'semua' ? FontWeight.bold : FontWeight.w600,
+                              color: _selectedFilterNominal == 'semua' ? const Color(0xFF1E293B) : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
           // Search Input
           TextField(
             onChanged: (val) => setState(() => _searchQuery = val.trim()),
@@ -659,6 +793,7 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
 
   Widget _buildOrderCard(OrderModel order, bool isTarget) {
     final nominal = _getOrderNominal(order);
+    final isBesar = _isTransaksiBesar(order);
     final formattedDate = DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(order.tanggalInput);
 
     return Container(
@@ -666,8 +801,10 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isTarget ? const Color(0xFFF59E0B) : const Color(0xFFE2E8F0),
-          width: isTarget ? 2 : 1,
+          color: isTarget
+              ? const Color(0xFFF59E0B)
+              : (isBesar && _selectedFilterNominal == 'semua' ? const Color(0xFFFDE68A) : const Color(0xFFE2E8F0)),
+          width: isTarget ? 2 : (isBesar && _selectedFilterNominal == 'semua' ? 1.5 : 1),
         ),
         boxShadow: [
           BoxShadow(
@@ -764,24 +901,29 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
                     ),
                     const SizedBox(width: 10),
 
-                    // Badge Nominal Utama (> 1 Juta)
+                    // Badge Nominal Utama
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFECFDF5),
+                        color: isBesar ? const Color(0xFFECFDF5) : const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFA7F3D0)),
+                        border: Border.all(color: isBesar ? const Color(0xFFA7F3D0) : const Color(0xFFE2E8F0)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.attach_money_rounded, size: 16, color: Color(0xFF059669)),
+                          Icon(
+                            isBesar ? Icons.star_rounded : Icons.payments_outlined,
+                            size: 15,
+                            color: isBesar ? const Color(0xFF059669) : const Color(0xFF64748B),
+                          ),
+                          const SizedBox(width: 4),
                           Text(
                             _currencyFormat.format(nominal),
                             style: GoogleFonts.inter(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w800,
-                              color: const Color(0xFF047857),
+                              color: isBesar ? const Color(0xFF047857) : const Color(0xFF334155),
                             ),
                           ),
                         ],
