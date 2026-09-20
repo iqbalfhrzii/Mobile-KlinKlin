@@ -27,6 +27,9 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
 
   bool _isLoading = true;
   String _errorMessage = '';
+  int _currentPage = 1;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
 
   List<OrderModel> _allOrders = [];
   List<CabangModel> _cabangList = [];
@@ -49,50 +52,120 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
 
   Future<void> _loadData() async {
     setState(() {
-      _isLoading = true;
+      _isLoading = _allOrders.isEmpty;
       _errorMessage = '';
+      _currentPage = 1;
+      _hasMore = true;
     });
 
-    try {
-      // 1. Ambil data cabang
-      try {
-        final cabangs = await _hrdService.fetchCabang();
-        _cabangList = cabangs;
-      } catch (e) {
-        debugPrint('Gagal memuat cabang: $e');
-      }
-
-      // 2. Ambil list order secara global (tanpa filter cabang untuk CEO)
-      final orders = await _orderService.fetchOrders(
-        fetchAllPages: true,
-        perPage: 100,
-      );
-
-      // 3. Jika ada initialPesananId dari notifikasi, pastikan order tersebut ada di list
-      if (widget.initialPesananId != null && widget.initialPesananId!.isNotEmpty) {
-        final exists = orders.any((o) => o.id == widget.initialPesananId);
-        if (!exists) {
-          try {
-            final specificOrder = await _orderService.fetchOrderDetail(widget.initialPesananId!);
-            orders.insert(0, specificOrder);
-          } catch (e) {
-            debugPrint('Gagal mengambil order spesifik dari notifikasi: $e');
+    // PRIORITAS 1: Jika dibuka dari notifikasi transaksi besar, langsung ambil order spesifik dulu!
+    // Ini membuat order target langsung muncul seketika (~200ms) tanpa menunggu load banyak order.
+    if (widget.initialPesananId != null && widget.initialPesananId!.isNotEmpty) {
+      final alreadyLoaded = _allOrders.any((o) => o.id == widget.initialPesananId);
+      if (!alreadyLoaded) {
+        try {
+          final specificOrder = await _orderService
+              .fetchOrderDetail(widget.initialPesananId!)
+              .timeout(const Duration(seconds: 8));
+          if (mounted) {
+            setState(() {
+              _allOrders = [specificOrder, ..._allOrders.where((o) => o.id != specificOrder.id)];
+              _isLoading = false;
+            });
           }
+        } catch (e) {
+          debugPrint('Gagal mengambil target order spesifik: $e');
         }
       }
+    }
+
+    try {
+      // Ambil data cabang dan list order (page 1, perPage: 50) secara paralel dengan timeout aman
+      final results = await Future.wait([
+        _hrdService.fetchCabang().catchError((e) {
+          debugPrint('Gagal memuat cabang: $e');
+          return <CabangModel>[];
+        }),
+        _orderService
+            .fetchOrders(
+              fetchAllPages: false,
+              perPage: 50,
+              page: 1,
+            )
+            .timeout(const Duration(seconds: 12))
+            .catchError((e) {
+              debugPrint('Gagal memuat orders: $e');
+              return <OrderModel>[];
+            }),
+      ]);
+
+      final cabangs = results[0] as List<CabangModel>;
+      final orders = results[1] as List<OrderModel>;
 
       if (mounted) {
         setState(() {
-          _allOrders = orders;
+          if (cabangs.isNotEmpty) _cabangList = cabangs;
+
+          final Map<String, OrderModel> map = {};
+          // Jaga order spesifik dari notifikasi agar tetap ada di list
+          for (var o in _allOrders) {
+            map[o.id] = o;
+          }
+          for (var o in orders) {
+            map[o.id] = o;
+          }
+          _allOrders = map.values.toList();
+          _hasMore = orders.length >= 50;
           _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Gagal memuat data transaksi: $e';
+          if (_allOrders.isEmpty) {
+            _errorMessage = 'Gagal memuat data transaksi: $e';
+          }
           _isLoading = false;
         });
+      }
+    } finally {
+      if (mounted && _isLoading) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || !_hasMore) return;
+    setState(() => _isLoadingMore = true);
+
+    try {
+      final nextPage = _currentPage + 1;
+      final nextOrders = await _orderService
+          .fetchOrders(
+            fetchAllPages: false,
+            perPage: 50,
+            page: nextPage,
+          )
+          .timeout(const Duration(seconds: 12));
+
+      if (mounted) {
+        setState(() {
+          _currentPage = nextPage;
+          if (nextOrders.isEmpty || nextOrders.length < 50) {
+            _hasMore = false;
+          }
+          final Map<String, OrderModel> map = {for (var o in _allOrders) o.id: o};
+          for (var o in nextOrders) {
+            map[o.id] = o;
+          }
+          _allOrders = map.values.toList();
+          _isLoadingMore = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingMore = false);
       }
     }
   }
@@ -560,6 +633,26 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
             return _buildOrderCard(order, isTargetFromNotification);
           },
         ),
+        if (_hasMore) ...[
+          const SizedBox(height: 16),
+          Center(
+            child: _isLoadingMore
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primary),
+                  )
+                : TextButton.icon(
+                    onPressed: _loadMore,
+                    icon: const Icon(Icons.expand_more_rounded, size: 18),
+                    label: const Text('Muat Lebih Banyak Transaksi'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                  ),
+          ),
+        ],
       ],
     );
   }

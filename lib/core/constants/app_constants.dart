@@ -5,8 +5,8 @@ class AppConstants {
   static const String baseUrl = 'https://erp.klinklin.online/api';
 
   // Timeout dalam milidetik
-  static const int connectTimeout = 30000;
-  static const int receiveTimeout = 30000;
+  static const int connectTimeout = 15000;
+  static const int receiveTimeout = 15000;
 
   // Shared Preferences keys
   static const String tokenKey = 'auth_token';

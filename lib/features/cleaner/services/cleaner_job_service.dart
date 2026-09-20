@@ -2,14 +2,44 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/api/api_client.dart';
+import '../../../core/services/auth_service.dart';
 
 class CleanerJobService {
   final Dio _dio = ApiClient.instance;
 
   Future<String?> _getCleanerId() async {
     final prefs = await SharedPreferences.getInstance();
-    // In auth_service.dart, we stored karyawan_id if data.id exists
-    return prefs.getString('karyawan_id');
+    final id = prefs.getString('karyawan_id');
+    if (id != null && id.isNotEmpty) return id;
+
+    final idInt = prefs.getInt('karyawan_id');
+    if (idInt != null) return idInt.toString();
+
+    // Fallback 1: periksa user_id jika tersimpan format digit
+    final userId = prefs.getString('user_id');
+    if (userId != null && userId.isNotEmpty) {
+      final digits = RegExp(r'\d+').allMatches(userId).map((m) => m.group(0)).join();
+      if (digits.isNotEmpty) {
+        final parsed = int.tryParse(digits)?.toString();
+        if (parsed != null && parsed != '0') {
+          await prefs.setString('karyawan_id', parsed);
+          return parsed;
+        }
+      }
+    }
+
+    // Fallback 2: ambil dari AuthService.getMe()
+    try {
+      final me = await AuthService.getMe().timeout(const Duration(seconds: 5));
+      final data = me['data'] ?? me;
+      if (data is Map && data['id'] != null) {
+        final kId = data['id'].toString();
+        await prefs.setString('karyawan_id', kId);
+        return kId;
+      }
+    } catch (_) {}
+
+    return null;
   }
 
   Future<List<dynamic>> fetchJobs() async {
@@ -17,15 +47,25 @@ class CleanerJobService {
     if (cleanerId == null) throw Exception('Cleaner ID tidak ditemukan');
 
     try {
-      final response = await _dio.get('/cleaner/jobs', queryParameters: {
-        'cleaner_id': cleanerId,
-      });
+      final response = await _dio.get(
+        '/cleaner/jobs',
+        queryParameters: {
+          'cleaner_id': cleanerId,
+        },
+        options: Options(
+          sendTimeout: const Duration(seconds: 12),
+          receiveTimeout: const Duration(seconds: 12),
+        ),
+      );
 
       if (response.data['status'] == true) {
         return response.data['data'] as List<dynamic>;
       }
       throw Exception(response.data['message'] ?? 'Gagal mengambil data job');
     } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionTimeout || e.type == DioExceptionType.receiveTimeout) {
+        throw Exception('Koneksi server lambat. Silakan coba lagi.');
+      }
       if (e.response != null && e.response?.data != null) {
         throw Exception(e.response?.data['message'] ?? 'Gagal mengambil data job');
       }
@@ -38,15 +78,25 @@ class CleanerJobService {
     if (cleanerId == null) throw Exception('Cleaner ID tidak ditemukan');
 
     try {
-      final response = await _dio.get('/cleaner/jobs/$pesananCleanerId', queryParameters: {
-        'cleaner_id': cleanerId,
-      });
+      final response = await _dio.get(
+        '/cleaner/jobs/$pesananCleanerId',
+        queryParameters: {
+          'cleaner_id': cleanerId,
+        },
+        options: Options(
+          sendTimeout: const Duration(seconds: 12),
+          receiveTimeout: const Duration(seconds: 12),
+        ),
+      );
 
       if (response.data['status'] == true) {
         return response.data['data'] as Map<String, dynamic>;
       }
       throw Exception(response.data['message'] ?? 'Gagal mengambil detail job');
     } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionTimeout || e.type == DioExceptionType.receiveTimeout) {
+        throw Exception('Koneksi server lambat. Silakan coba lagi.');
+      }
       if (e.response != null && e.response?.data != null) {
         throw Exception(e.response?.data['message'] ?? 'Gagal mengambil detail job');
       }
@@ -75,12 +125,19 @@ class CleanerJobService {
         '/cleaner/jobs/$pesananCleanerId/start',
         queryParameters: {'cleaner_id': cleanerId},
         data: formData,
+        options: Options(
+          sendTimeout: const Duration(seconds: 20),
+          receiveTimeout: const Duration(seconds: 20),
+        ),
       );
 
       if (response.data['status'] != true) {
         throw Exception(response.data['message'] ?? 'Gagal memulai job');
       }
     } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionTimeout || e.type == DioExceptionType.receiveTimeout) {
+        throw Exception('Gagal mengupload foto: koneksi lambat');
+      }
       if (e.response != null && e.response?.data != null) {
         final data = e.response?.data;
         if (data is Map) {
@@ -130,12 +187,19 @@ class CleanerJobService {
         '/cleaner/jobs/$pesananCleanerId/finish',
         queryParameters: {'cleaner_id': cleanerId},
         data: formData,
+        options: Options(
+          sendTimeout: const Duration(seconds: 20),
+          receiveTimeout: const Duration(seconds: 20),
+        ),
       );
 
       if (response.data['status'] != true) {
         throw Exception(response.data['message'] ?? 'Gagal menyelesaikan job');
       }
     } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionTimeout || e.type == DioExceptionType.receiveTimeout) {
+        throw Exception('Gagal mengupload foto: koneksi lambat');
+      }
       if (e.response != null && e.response?.data != null) {
         final data = e.response?.data;
         if (data is Map) {
@@ -169,17 +233,27 @@ class CleanerJobService {
     if (cleanerId == null) throw Exception('Cleaner ID tidak ditemukan');
 
     try {
-      final response = await _dio.get('/cleaner/jobs/history', queryParameters: {
-        'cleaner_id': cleanerId,
-        if (month != null) 'month': month,
-        if (year != null) 'year': year,
-      });
+      final response = await _dio.get(
+        '/cleaner/jobs/history',
+        queryParameters: {
+          'cleaner_id': cleanerId,
+          if (month != null) 'month': month,
+          if (year != null) 'year': year,
+        },
+        options: Options(
+          sendTimeout: const Duration(seconds: 12),
+          receiveTimeout: const Duration(seconds: 12),
+        ),
+      );
 
       if (response.data['status'] == true) {
         return response.data['data'];
       }
       throw Exception(response.data['message'] ?? 'Gagal mengambil riwayat pekerjaan');
     } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionTimeout || e.type == DioExceptionType.receiveTimeout) {
+        throw Exception('Koneksi server lambat. Silakan coba lagi.');
+      }
       if (e.response != null && e.response?.data != null) {
         throw Exception(e.response?.data['message'] ?? 'Gagal mengambil riwayat pekerjaan');
       }

@@ -112,40 +112,48 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
       });
     }
     try {
-      // Ambil data profil terbaru dari API hanya jika bukan silent refresh (hemat kuota)
-      if (!isSilent) {
-        try {
-          final meResponse = await AuthService.getMe();
-          final me = meResponse['data'] ?? meResponse;
-          if (mounted) {
-            final prefs = await SharedPreferences.getInstance();
-            final cachedCustomName = prefs.getString('user_custom_name');
+      // Jalankan fetch profil & fetch jobs secara PARALEL dengan timeout
+      final meFuture = !isSilent
+          ? AuthService.getMe().timeout(const Duration(seconds: 8)).catchError((e) {
+              debugPrint('Gagal fetch me: $e');
+              return <String, dynamic>{};
+            })
+          : Future.value(<String, dynamic>{});
 
-            final roleName = me['jabatan'] is Map ? me['jabatan']['nama_jabatan'] ?? _userRole : _userRole;
-            final branchName = me['cabang'] is Map ? me['cabang']['nama_cabang'] ?? _userBranch : _userBranch;
-            final statusPeg = (me['status_karyawan'] ?? me['status_pegawai'] ?? _userStatusPegawai).toString();
-            final isKoorBool = (me['is_koor'] == true) || 
-                roleName.toString().toLowerCase().contains('koor') || 
-                statusPeg.toLowerCase().contains('koor');
+      final jobsFuture = _service.fetchJobs().timeout(const Duration(seconds: 12));
 
-            setState(() {
-              _userName = cachedCustomName ?? me['nama'] ?? _userName;
-              _userPhoto = me['foto_profil'];
-              _userRole = roleName;
-              _userBranch = branchName;
-              _userStatusPegawai = statusPeg;
-              _isKoor = isKoorBool;
-            });
+      final results = await Future.wait([meFuture, jobsFuture]);
+      final meResponse = results[0] as Map<String, dynamic>;
+      final jobs = results[1] as List<dynamic>;
 
-            prefs.setString('user_status_pegawai', _userStatusPegawai);
-            prefs.setBool('is_koor', _isKoor);
-          }
-        } catch (_) {
-          // Abaikan jika gagal ambil profil
+      if (meResponse.isNotEmpty && mounted) {
+        final me = meResponse['data'] ?? meResponse;
+        final prefs = await SharedPreferences.getInstance();
+        final cachedCustomName = prefs.getString('user_custom_name');
+
+        final roleName = me['jabatan'] is Map ? me['jabatan']['nama_jabatan'] ?? _userRole : _userRole;
+        final branchName = me['cabang'] is Map ? me['cabang']['nama_cabang'] ?? _userBranch : _userBranch;
+        final statusPeg = (me['status_karyawan'] ?? me['status_pegawai'] ?? _userStatusPegawai).toString();
+        final isKoorBool = (me['is_koor'] == true) || 
+            roleName.toString().toLowerCase().contains('koor') || 
+            statusPeg.toLowerCase().contains('koor');
+
+        setState(() {
+          _userName = cachedCustomName ?? me['nama'] ?? _userName;
+          _userPhoto = me['foto_profil'];
+          _userRole = roleName;
+          _userBranch = branchName;
+          _userStatusPegawai = statusPeg;
+          _isKoor = isKoorBool;
+        });
+
+        prefs.setString('user_status_pegawai', _userStatusPegawai);
+        prefs.setBool('is_koor', _isKoor);
+        if (me['id'] != null) {
+          prefs.setString('karyawan_id', me['id'].toString());
         }
       }
 
-      final jobs = await _service.fetchJobs();
       final now = DateTime.now();
       
       int todayCount = 0;
@@ -215,7 +223,6 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
           _completedJobsCount = completedCount;
           _bonusThisMonth = bonusMonth;
           _recentJobs = recentJobs.take(3).toList();
-          if (!isSilent) _isLoading = false;
         });
       }
     } catch (e) {
@@ -223,8 +230,13 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
         setState(() {
           if (!isSilent) {
             _error = e.toString().replaceAll('Exception: ', '');
-            _isLoading = false;
           }
+        });
+      }
+    } finally {
+      if (mounted && !isSilent) {
+        setState(() {
+          _isLoading = false;
         });
       }
     }
@@ -233,6 +245,43 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
   String _formatRupiah(int n) =>
       'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
+  Widget _buildErrorBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.wifi_off_rounded, size: 18, color: Colors.amber.shade800),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _error.isNotEmpty ? _error : 'Gagal memperbarui data tugas.',
+              style: GoogleFonts.inter(fontSize: 12, color: Colors.amber.shade900),
+            ),
+          ),
+          InkWell(
+            onTap: () => _fetchData(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              child: Text(
+                'Coba Lagi',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryMid,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -240,81 +289,51 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
       body: Column(
         children: [
           _buildHeader(),
+          if (_isLoading)
+            const LinearProgressIndicator(
+              minHeight: 3,
+              color: AppColors.primaryMid,
+              backgroundColor: Colors.transparent,
+            ),
           Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.primaryMid),
-                  )
-                : _error.isNotEmpty
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.shade50,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(Icons.error_outline_rounded, color: Colors.red, size: 36),
-                              ),
-                              const SizedBox(height: 14),
-                              Text(
-                                _error,
-                                style: GoogleFonts.inter(color: Colors.red.shade700, fontSize: 13),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 16),
-                              ElevatedButton.icon(
-                                onPressed: () => _fetchData(),
-                                icon: const Icon(Icons.refresh_rounded, size: 16, color: Colors.white),
-                                label: const Text('Coba Lagi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primaryMid,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: _fetchData,
-                        color: AppColors.primaryMid,
-                        backgroundColor: Colors.white,
-                        child: SingleChildScrollView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // 1. Quick Actions Hub
-                              _buildQuickActions(),
-                              const SizedBox(height: 16),
+            child: RefreshIndicator(
+              onRefresh: _fetchData,
+              color: AppColors.primaryMid,
+              backgroundColor: Colors.white,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_error.isNotEmpty && _recentJobs.isEmpty) ...[
+                      _buildErrorBanner(),
+                      const SizedBox(height: 14),
+                    ],
+                    // 1. Quick Actions Hub (Selalu siap dipakai untuk Absensi dll)
+                    _buildQuickActions(),
+                    const SizedBox(height: 16),
 
-                              // 1.5. Featured Coordinator Card (Khusus Cleaner Koor)
-                              if (_isKoor) ...[
-                                _buildKoorStokOpnameBanner(),
-                                const SizedBox(height: 16),
-                              ],
+                    // 1.5. Featured Coordinator Card (Khusus Cleaner Koor)
+                    if (_isKoor) ...[
+                      _buildKoorStokOpnameBanner(),
+                      const SizedBox(height: 16),
+                    ],
 
-                              // 2. Ringkasan Tugas Grid (2x2 KPI)
-                              _buildTaskSummary(),
-                              const SizedBox(height: 16),
+                    // 2. Ringkasan Tugas Grid (2x2 KPI)
+                    _buildTaskSummary(),
+                    const SizedBox(height: 16),
 
-                              // 3. Bonus Bulan Ini Card
-                              _buildBonusCard(),
-                              const SizedBox(height: 20),
+                    // 3. Bonus Bulan Ini Card
+                    _buildBonusCard(),
+                    const SizedBox(height: 20),
 
-                              // 4. Tugas Aktif & Mendatang
-                              _buildRecentJobs(),
-                            ],
-                          ),
-                        ),
-                      ),
+                    // 4. Tugas Aktif & Mendatang
+                    _buildRecentJobs(),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),

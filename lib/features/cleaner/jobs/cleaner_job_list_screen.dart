@@ -125,7 +125,7 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> with Widgets
       });
     }
     try {
-      final jobs = await _service.fetchJobs();
+      final jobs = await _service.fetchJobs().timeout(const Duration(seconds: 12));
       if (mounted) {
         setState(() {
           _allJobs = jobs;
@@ -137,9 +137,12 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> with Widgets
         setState(() {
           if (!isSilent) {
             _error = e.toString().replaceAll('Exception: ', '');
-            _isLoading = false;
           }
         });
+      }
+    } finally {
+      if (mounted && !isSilent && _isLoading) {
+        setState(() => _isLoading = false);
       }
     }
   }

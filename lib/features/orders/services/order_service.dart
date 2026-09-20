@@ -23,6 +23,7 @@ class OrderService {
     String? endDate,
     bool fetchAllPages = false,
     int perPage = 50,
+    int? page,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -35,6 +36,7 @@ class OrderService {
       final Map<String, dynamic> queryParams = {
         'per_page': perPage,
       };
+      if (page != null) queryParams['page'] = page;
       if (statusPesanan != null && statusPesanan != 'Semua') {
         queryParams['status_pesanan'] = statusPesanan;
       }
@@ -61,7 +63,7 @@ class OrderService {
         lastPage = responseData['last_page'] is int ? responseData['last_page'] : 1;
 
         if (fetchAllPages && lastPage > 1) {
-          final targetLastPage = lastPage > 10 ? 10 : lastPage;
+          final targetLastPage = lastPage > 3 ? 3 : lastPage;
           final futures = <Future<Response>>[];
           for (int p = 2; p <= targetLastPage; p++) {
             final pParams = Map<String, dynamic>.from(queryParams);
