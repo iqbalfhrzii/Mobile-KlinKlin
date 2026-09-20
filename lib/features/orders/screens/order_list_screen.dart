@@ -39,6 +39,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
   String _statusUtamaFilter = 'Semua';
   String _statusPembayaranFilter = 'Semua';
   String _statusBonusFilter = 'Semua';
+  bool _onlyTransaksiBesar = false;
   String _periodFilter = 'weekly_date';
   DateTimeRange? _customRange;
 
@@ -360,11 +361,18 @@ class _OrderListScreenState extends State<OrderListScreen> {
           matchDate = _matchesOrderDate(o, start, end);
         }
       }
+
+      final nominal = (o.pembayaran?.total != null && o.pembayaran!.total! > 0)
+          ? o.pembayaran!.total!
+          : (o.total > 0 ? o.total : o.subtotal);
+      final matchNominal = !_onlyTransaksiBesar || nominal >= 1000000;
+
       return matchQ &&
           matchStatusUtama &&
           matchStatusPengerjaan &&
           matchStatusPembayaran &&
           matchStatusBonus &&
+          matchNominal &&
           matchDate;
     }).toList();
 
@@ -470,6 +478,41 @@ class _OrderListScreenState extends State<OrderListScreen> {
                       },
                       trailingWidget: _buildFilterButton(),
                     ),
+                    if (_onlyTransaksiBesar) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFFBEB),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFFFDE68A)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.star_rounded, size: 14, color: Color(0xFFD97706)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Filter Aktif: Transaksi > Rp 1 Juta',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFFB45309),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                InkWell(
+                                  onTap: () => setState(() => _onlyTransaksiBesar = false),
+                                  child: const Icon(Icons.close_rounded, size: 14, color: Color(0xFFB45309)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     if (_isLoading && _orders.isEmpty)
                       const Padding(
@@ -929,7 +972,90 @@ class _OrderListScreenState extends State<OrderListScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // 5. Rentang Waktu
+                    // 5. Nominal Transaksi
+                    Text(
+                      'Nominal Transaksi',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('Semua Nominal'),
+                          selected: !_onlyTransaksiBesar,
+                          onSelected: (val) {
+                            if (val) {
+                              setModalState(() => _onlyTransaksiBesar = false);
+                              setState(() => _onlyTransaksiBesar = false);
+                            }
+                          },
+                          selectedColor: const Color(0xFFEFF6FF),
+                          labelStyle: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: !_onlyTransaksiBesar
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            color: !_onlyTransaksiBesar
+                                ? const Color(0xFF1D4ED8)
+                                : AppColors.textDark,
+                          ),
+                          side: BorderSide(
+                            color: !_onlyTransaksiBesar
+                                ? const Color(0xFF3B82F6)
+                                : Colors.grey.shade300,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          showCheckmark: false,
+                        ),
+                        ChoiceChip(
+                          label: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.star_rounded, size: 15, color: Color(0xFFD97706)),
+                              SizedBox(width: 4),
+                              Text('> Rp 1 Juta'),
+                            ],
+                          ),
+                          selected: _onlyTransaksiBesar,
+                          onSelected: (val) {
+                            if (val) {
+                              setModalState(() => _onlyTransaksiBesar = true);
+                              setState(() => _onlyTransaksiBesar = true);
+                            }
+                          },
+                          selectedColor: const Color(0xFFFEF3C7),
+                          labelStyle: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: _onlyTransaksiBesar
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            color: _onlyTransaksiBesar
+                                ? const Color(0xFFB45309)
+                                : AppColors.textDark,
+                          ),
+                          side: BorderSide(
+                            color: _onlyTransaksiBesar
+                                ? const Color(0xFFF59E0B)
+                                : Colors.grey.shade300,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          showCheckmark: false,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // 6. Rentang Waktu
                     Text(
                       'Rentang Waktu',
                       style: GoogleFonts.inter(
@@ -1055,6 +1181,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                                 _statusUtamaFilter = 'Semua';
                                 _statusPembayaranFilter = 'Semua';
                                 _statusBonusFilter = 'Semua';
+                                _onlyTransaksiBesar = false;
                                 _periodFilter = 'weekly_date';
                                 _customRange = null;
                                 _filterStart = null;
@@ -1065,6 +1192,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                                 _statusUtamaFilter = 'Semua';
                                 _statusPembayaranFilter = 'Semua';
                                 _statusBonusFilter = 'Semua';
+                                _onlyTransaksiBesar = false;
                                 _periodFilter = 'weekly_date';
                                 _customRange = null;
                                 _filterStart = null;
@@ -1127,28 +1255,51 @@ class _OrderListScreenState extends State<OrderListScreen> {
   }
 
   Widget _buildFilterButton() {
+    final hasActiveFilter = _statusFilter != 'Semua' ||
+        _statusUtamaFilter != 'Semua' ||
+        _statusPembayaranFilter != 'Semua' ||
+        _statusBonusFilter != 'Semua' ||
+        _onlyTransaksiBesar;
+
     return GestureDetector(
       onTap: _showFilterBottomSheet,
       child: Container(
         height: 38,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: hasActiveFilter ? const Color(0xFFEFF6FF) : AppColors.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(
+            color: hasActiveFilter ? AppColors.primary : AppColors.border,
+          ),
         ),
         child: Row(
           children: [
-            const Icon(Icons.tune_rounded, size: 16, color: AppColors.textDark),
+            Icon(
+              Icons.tune_rounded,
+              size: 16,
+              color: hasActiveFilter ? AppColors.primary : AppColors.textDark,
+            ),
             const SizedBox(width: 6),
             Text(
               'Filter',
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textDark,
+                color: hasActiveFilter ? AppColors.primary : AppColors.textDark,
               ),
             ),
+            if (hasActiveFilter) ...[
+              const SizedBox(width: 5),
+              Container(
+                width: 6,
+                height: 6,
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
           ],
         ),
       ),
