@@ -117,9 +117,11 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
           if (cabangs.isNotEmpty) _cabangList = cabangs;
 
           final Map<String, OrderModel> map = {};
-          // Jaga order spesifik dari notifikasi agar tetap ada di list
-          for (var o in _allOrders) {
-            map[o.id] = o;
+          // Jaga order spesifik dari notifikasi jika ada
+          if (widget.initialPesananId != null) {
+            for (var o in _allOrders.where((item) => item.id == widget.initialPesananId)) {
+              map[o.id] = o;
+            }
           }
           for (var o in orders) {
             map[o.id] = o;
@@ -338,28 +340,30 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 6,
+                  runSpacing: 4,
                   children: [
                     Text(
                       isModeBesar ? 'Transaksi > Rp 1 Jt' : 'Semua Transaksi',
                       style: GoogleFonts.inter(
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF59E0B).withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: const Color(0xFFFBBF24).withValues(alpha: 0.6)),
                       ),
                       child: Text(
                         'CEO / Eksekutif',
                         style: GoogleFonts.inter(
-                          fontSize: 10,
+                          fontSize: 9.5,
                           fontWeight: FontWeight.bold,
                           color: const Color(0xFFFEF3C7),
                         ),
@@ -532,6 +536,7 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
                       if (_selectedFilterNominal != 'besar') {
                         setState(() {
                           _selectedFilterNominal = 'besar';
+                          _allOrders = [];
                         });
                         _loadData();
                       }
@@ -581,6 +586,7 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
                       if (_selectedFilterNominal != 'semua') {
                         setState(() {
                           _selectedFilterNominal = 'semua';
+                          _allOrders = [];
                         });
                         _loadData();
                       }
@@ -1192,9 +1198,10 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
   }
 
   Widget _buildEmptyState() {
+    final isModeBesar = _selectedFilterNominal == 'besar';
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 20),
+      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -1212,7 +1219,7 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
           ),
           const SizedBox(height: 14),
           Text(
-            'Tidak Ada Transaksi > Rp 1 Juta',
+            isModeBesar ? 'Tidak Ada Transaksi > Rp 1 Juta' : 'Tidak Ada Transaksi',
             style: GoogleFonts.inter(
               fontSize: 15,
               fontWeight: FontWeight.bold,
@@ -1223,7 +1230,9 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
           Text(
             _searchQuery.isNotEmpty || _selectedCabangId != null || _selectedPeriode != 'Semua'
                 ? 'Tidak ditemukan transaksi yang cocok dengan filter yang Anda pilih.'
-                : 'Belum ada transaksi pesanan senilai di atas Rp 1.000.000.',
+                : (isModeBesar
+                    ? 'Belum ada transaksi pesanan senilai di atas Rp 1.000.000.'
+                    : 'Belum ada transaksi pesanan yang tercatat.'),
             style: GoogleFonts.inter(
               fontSize: 12.5,
               color: const Color(0xFF64748B),
