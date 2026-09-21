@@ -14,6 +14,7 @@ import '../../operasional/shell/operasional_main_shell.dart';
 import '../../designer/shell/designer_main_shell.dart';
 import '../../marketing/shell/marketing_main_shell.dart';
 import '../../ceo/shell/ceo_main_shell.dart';
+import '../../superadmin/shell/superadmin_main_shell.dart';
 
 class PinScreen extends StatefulWidget {
   const PinScreen({super.key, required this.email});
@@ -63,6 +64,7 @@ class _PinScreenState extends State<PinScreen> {
         
         debugPrint('DEBUG LOGIN ROLENAME: $roleName');
         
+        final isSuperadmin = roleName.contains('superadmin') || (prefs.getString('user_email') ?? '').toLowerCase() == 'superadmin@klinklin.com';
         final isCleaner = roleName.contains('cleaner');
         final isFinance = roleName.contains('finance') || roleName.contains('keuangan');
         final isHrd = roleName == 'hrd' || roleName.contains('hrd');
@@ -71,14 +73,21 @@ class _PinScreenState extends State<PinScreen> {
         final isMarketing = roleName.contains('marketing');
         final isCeo = roleName.contains('ceo') || roleName.contains('owner');
 
-        debugPrint('DEBUG LOGIN isMarketing: $isMarketing, isCeo: $isCeo');
+        debugPrint('DEBUG LOGIN isMarketing: $isMarketing, isCeo: $isCeo, isSuperadmin: $isSuperadmin');
 
         // Send FCM token to backend for all roles & request initial permissions
         FcmService.instance.updateTokenToServer();
         PermissionHelper.requestInitialPermissions();
 
+        if (!mounted) return;
+
         if (res['wajib_ganti_pin'] == true) {
-          if (isCleaner) {
+          if (isSuperadmin) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const SuperadminMainShell()),
+              (route) => false,
+            );
+          } else if (isCleaner) {
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => CleanerMainShell(
                 requirePinChange: true,
@@ -141,7 +150,12 @@ class _PinScreenState extends State<PinScreen> {
             );
           }
         } else {
-          if (isCleaner) {
+          if (isSuperadmin) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const SuperadminMainShell()),
+              (route) => false,
+            );
+          } else if (isCleaner) {
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => const CleanerMainShell()),
               (route) => false,
