@@ -48,6 +48,13 @@ class _CeoGrafikScreenState extends State<CeoGrafikScreen>
   List<dynamic> _rawChatsList = [];
   Map<String, dynamic>? _peringkatData;
 
+  // Static In-Memory Cache (Instant 0ms display for CEO)
+  static Map<String, dynamic>? _cachedKomposisiData;
+  static List<Map<String, dynamic>>? _cachedDailyOrderData;
+  static List<Map<String, dynamic>>? _cachedDailyChatData;
+  static List<dynamic>? _cachedRawChatsList;
+  static Map<String, dynamic>? _cachedPeringkatData;
+
   final List<Color> _chartColors = [
     const Color(0xFF14264A), // Dark navy
     const Color(0xFF5B9BD5), // Sky blue
@@ -82,6 +89,17 @@ class _CeoGrafikScreenState extends State<CeoGrafikScreen>
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
+
+    // INSTANT RENDER (0ms): Tampilkan data dari cache memory
+    if (_cachedKomposisiData != null) {
+      _komposisiData = _cachedKomposisiData;
+      _dailyOrderData = _cachedDailyOrderData ?? [];
+      _dailyChatData = _cachedDailyChatData ?? [];
+      _rawChatsList = _cachedRawChatsList ?? [];
+      _peringkatData = _cachedPeringkatData;
+      _isLoading = false;
+    }
+
     _loadProfile();
     _fetchGrafikData();
   }
@@ -105,7 +123,7 @@ class _CeoGrafikScreenState extends State<CeoGrafikScreen>
 
   Future<void> _fetchGrafikData() async {
     setState(() {
-      _isLoading = true;
+      _isLoading = _komposisiData == null;
       _error = '';
       _selectedOrderIndex = null;
       _selectedChatIndex = null;
@@ -287,6 +305,12 @@ class _CeoGrafikScreenState extends State<CeoGrafikScreen>
             };
             _isLoading = false;
           });
+
+          _cachedKomposisiData = _komposisiData;
+          _cachedDailyOrderData = _dailyOrderData;
+          _cachedDailyChatData = _dailyChatData;
+          _cachedRawChatsList = _rawChatsList;
+          _cachedPeringkatData = _peringkatData;
 
           // Scroll to end of chart (current days)
           WidgetsBinding.instance.addPostFrameCallback((_) {

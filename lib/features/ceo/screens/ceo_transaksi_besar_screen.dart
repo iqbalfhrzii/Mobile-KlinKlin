@@ -89,7 +89,7 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
     }
 
     try {
-      // Ambil data cabang dan list order (page 1, perPage: 50) secara paralel dengan timeout aman
+      // Ambil data cabang dan list order (page 1, perPage: 25) secara paralel dengan timeout aman
       final results = await Future.wait([
         _hrdService.fetchCabang().catchError((e) {
           debugPrint('Gagal memuat cabang: $e');
@@ -98,7 +98,7 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
         _orderService
             .fetchOrders(
               fetchAllPages: false,
-              perPage: 50,
+              perPage: 25,
               page: 1,
               minTotal: _selectedFilterNominal == 'besar' ? 1000000 : null,
             )
@@ -127,7 +127,7 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
             map[o.id] = o;
           }
           _allOrders = map.values.toList();
-          _hasMore = orders.length >= 50;
+          _hasMore = orders.length >= 25;
           _isLoading = false;
         });
       }
@@ -156,7 +156,7 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
       final nextOrders = await _orderService
           .fetchOrders(
             fetchAllPages: false,
-            perPage: 50,
+            perPage: 25,
             page: nextPage,
             minTotal: _selectedFilterNominal == 'besar' ? 1000000 : null,
           )
@@ -165,7 +165,7 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
       if (mounted) {
         setState(() {
           _currentPage = nextPage;
-          if (nextOrders.isEmpty || nextOrders.length < 50) {
+          if (nextOrders.isEmpty || nextOrders.length < 25) {
             _hasMore = false;
           }
           final Map<String, OrderModel> map = {for (var o in _allOrders) o.id: o};

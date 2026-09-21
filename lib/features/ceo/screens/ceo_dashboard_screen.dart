@@ -36,6 +36,12 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
   Map<String, dynamic>? _data;
   Map<String, dynamic>? _kpiData;
 
+  // Static In-Memory Cache (Instant 0ms display for CEO)
+  static Map<String, dynamic>? _cachedData;
+  static Map<String, dynamic>? _cachedKpiData;
+  static List<dynamic>? _cachedSpendAdsList;
+  static Map<String, dynamic>? _cachedSpendAdsSummary;
+
   // Marketing Spend Ads State
   bool _isLoadingMarketing = false;
   String _marketingError = '';
@@ -82,6 +88,18 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
+
+    // INSTANT RENDER (0ms): Tampilkan data dari cache memory agar CEO tidak menunggu
+    if (_cachedData != null) {
+      _data = _cachedData;
+      _kpiData = _cachedKpiData;
+      _isLoading = false;
+    }
+    if (_cachedSpendAdsList != null) {
+      _spendAdsList = _cachedSpendAdsList!;
+      _spendAdsSummary = _cachedSpendAdsSummary;
+    }
+
     _fetchData();
     _fetchMarketingData();
   }
@@ -105,7 +123,7 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
 
   Future<void> _fetchData() async {
     setState(() {
-      _isLoading = true;
+      _isLoading = _data == null;
       _error = '';
     });
 
@@ -168,6 +186,8 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
             _kpiData = resKpi['data'];
           }
         });
+        _cachedData = _data;
+        _cachedKpiData = _kpiData;
       } else {
         setState(() => _error = resOmzet['message'] ?? 'Unknown error');
       }
@@ -180,7 +200,7 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
 
   Future<void> _fetchMarketingData() async {
     setState(() {
-      _isLoadingMarketing = true;
+      _isLoadingMarketing = _spendAdsList.isEmpty;
       _marketingError = '';
     });
 
@@ -216,6 +236,8 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
             _spendAdsList = list;
             _spendAdsSummary = summary;
           });
+          _cachedSpendAdsList = list;
+          _cachedSpendAdsSummary = summary;
         } else {
           setState(() => _marketingError = res['message'] ?? 'Gagal mengambil data spend ads');
         }
