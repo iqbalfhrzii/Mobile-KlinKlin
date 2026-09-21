@@ -82,8 +82,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     setState(() => _isLoading = true);
     try {
       final status = await _service.getTodayStatus();
-      if (mounted) setState(() => _status = status);
-      await _fetchLocation();
+      if (mounted) {
+        setState(() {
+          _status = status;
+          _isLoading = false;
+        });
+      }
+      _fetchLocation();
       await _fetchHistory();
     } catch (e) {
       if (mounted) {
