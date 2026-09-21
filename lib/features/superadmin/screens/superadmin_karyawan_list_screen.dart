@@ -81,10 +81,10 @@ class _SuperadminKaryawanListScreenState
 
     final confirm = await AppConfirmationDialog.show(
       context,
-      title: 'Masuk Sebagai $nama?',
+      title: 'Masuk ke Akun $nama?',
       message:
-          'Anda akan beralih akun ke $nama ($jabatan • $cabang) tanpa memerlukan PIN. Anda dapat kembali ke Superadmin kapan saja.',
-      confirmText: 'Masuk Akun Ini',
+          'Anda akan langsung masuk ke akun $nama ($jabatan • $cabang).',
+      confirmText: 'Masuk Akun',
       cancelText: 'Batal',
     );
 
@@ -116,7 +116,7 @@ class _SuperadminKaryawanListScreenState
                     const CircularProgressIndicator(color: AppColors.primary),
                     const SizedBox(height: 16),
                     Text(
-                      'Menghubungkan ke akun $nama...',
+                      'Masuk ke akun $nama...',
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -132,7 +132,7 @@ class _SuperadminKaryawanListScreenState
 
     try {
       final targetId = int.tryParse(karyawan['id'].toString()) ?? 0;
-      final targetRole = await SuperadminService.impersonate(targetId);
+      final targetRole = await SuperadminService.loginAs(targetId);
 
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop(); // Tutup loading
@@ -141,7 +141,7 @@ class _SuperadminKaryawanListScreenState
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Berhasil masuk sebagai $nama ($targetRole)'),
+          content: Text('Berhasil masuk ke akun $nama ($targetRole)'),
           backgroundColor: const Color(0xFF10B981),
           behavior: SnackBarBehavior.floating,
         ),

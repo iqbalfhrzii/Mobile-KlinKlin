@@ -11,8 +11,6 @@ import '../features/designer/shell/designer_main_shell.dart';
 import '../features/marketing/shell/marketing_main_shell.dart';
 import '../features/ceo/shell/ceo_main_shell.dart';
 import '../features/superadmin/shell/superadmin_main_shell.dart';
-import '../features/superadmin/services/superadmin_service.dart';
-import '../core/widgets/impersonation_banner.dart';
 import '../core/services/fcm_service.dart';
 
 final GlobalKey<NavigatorState> globalNavigatorKey = GlobalKey<NavigatorState>();
@@ -32,7 +30,6 @@ class _KlinklinAppState extends State<KlinklinApp> {
   void initState() {
     super.initState();
     FcmService.instance.init(globalNavigatorKey);
-    SuperadminService.initStatus();
   }
 
   Widget _getInitialShell(String role) {
@@ -72,14 +69,6 @@ class _KlinklinAppState extends State<KlinklinApp> {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      builder: (context, child) {
-        return Stack(
-          children: [
-            if (child != null) child,
-            const ImpersonationBannerOverlay(),
-          ],
-        );
-      },
       // Route based on role if logged in
       home: widget.isLoggedIn ? _getInitialShell(widget.userRole) : const LoginScreen(),
     );
