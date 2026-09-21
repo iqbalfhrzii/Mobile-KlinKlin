@@ -751,7 +751,7 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 2),
           child: Text(
             'Daftar Transaksi (${orders.length})',
             style: GoogleFonts.inter(
@@ -761,8 +761,9 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         ListView.separated(
+          padding: EdgeInsets.zero,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: orders.length,
