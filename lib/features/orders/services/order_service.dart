@@ -22,16 +22,18 @@ class OrderService {
     String? startDate,
     String? endDate,
     bool fetchAllPages = false,
-    int perPage = 50,
+    int perPage = 25,
     int? page,
     num? minTotal,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final role = prefs.getString('user_role')?.toLowerCase() ?? '';
-      
-      if (cabangId == null && (role.contains('cs') || role.contains('customer service'))) {
-        cabangId = prefs.getInt('user_cabang_id');
+      final userCabangId = prefs.getInt('user_cabang_id');
+      final role = (prefs.getString('user_role') ?? '').toLowerCase();
+      final isGlobal = role.contains('superadmin') || role.contains('ceo') || role.contains('owner') || role.contains('marketing');
+
+      if (cabangId == null && userCabangId != null && userCabangId > 0 && !isGlobal) {
+        cabangId = userCabangId;
       }
 
       final Map<String, dynamic> queryParams = {
@@ -55,7 +57,7 @@ class OrderService {
         firstParams['page'] = 1;
       }
 
-      final response = await _dio.get('/pesanan', queryParameters: firstParams);
+      final response = await _dio.get('/pesanan', queryParameters: firstParams).timeout(const Duration(seconds: 15));
       final rawBody = response.data;
       var responseData = rawBody['data'] ?? rawBody;
 

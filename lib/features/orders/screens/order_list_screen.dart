@@ -90,6 +90,8 @@ class _OrderListScreenState extends State<OrderListScreen> {
 
   static const _statusBonusFilters = ['Semua', 'Pending', 'Selesai'];
 
+  bool _isFetching = false;
+
   @override
   void initState() {
     super.initState();
@@ -103,7 +105,8 @@ class _OrderListScreenState extends State<OrderListScreen> {
       _orders = List.from(OrderService.cachedOrders);
       _isLoading = false;
     }
-    _fetchData();
+    // Tidak memanggil _fetchData() ganda di sini, karena WeeklyDatePicker
+    // akan otomatis memanggil onFilterChanged pada frame pertama.
   }
 
   @override
@@ -126,6 +129,9 @@ class _OrderListScreenState extends State<OrderListScreen> {
   }
 
   Future<void> _fetchData({DateTime? customStart, DateTime? customEnd}) async {
+    if (_isFetching) return;
+    _isFetching = true;
+
     if (_orders.isEmpty) {
       setState(() {
         _isLoading = true;
@@ -176,10 +182,10 @@ class _OrderListScreenState extends State<OrderListScreen> {
         );
       }
 
-      // Ambil data spesifik tanggal/bulan secara instan (<100ms)
+      // Ambil data spesifik tanggal/bulan secara instan (<100ms, perPage: 25)
       final initialOrders = await _orderService.fetchOrders(
         fetchAllPages: false,
-        perPage: 100,
+        perPage: 25,
         statusPesanan: _statusFilter != 'Semua' ? _statusFilter : null,
         startDate: startStr,
         endDate: endStr,
@@ -189,6 +195,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
         setState(() {
           _orders = initialOrders;
           _isLoading = false;
+          _error = '';
         });
       }
     } catch (e) {
@@ -198,6 +205,8 @@ class _OrderListScreenState extends State<OrderListScreen> {
           _isLoading = false;
         });
       }
+    } finally {
+      _isFetching = false;
     }
   }
 
