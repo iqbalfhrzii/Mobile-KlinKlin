@@ -582,13 +582,55 @@ class OrderModel {
 
   DateTime get scheduleDateTime {
     if (services.isEmpty || services.first.tanggalPengerjaan.isEmpty) {
-      return tanggalInput; // Fallback to input date if no service date is set
-    }
-    try {
-      return DateTime.parse(services.first.tanggalPengerjaan);
-    } catch (e) {
       return tanggalInput;
     }
+    final raw = services.first.tanggalPengerjaan.trim();
+    final direct = DateTime.tryParse(raw);
+    if (direct != null) return direct;
+
+    final dmyMatch = RegExp(r'(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})').firstMatch(raw);
+    if (dmyMatch != null) {
+      final d = int.tryParse(dmyMatch.group(1)!);
+      final m = int.tryParse(dmyMatch.group(2)!);
+      final y = int.tryParse(dmyMatch.group(3)!);
+      if (d != null && m != null && y != null) return DateTime(y, m, d);
+    }
+
+    final ymdMatch = RegExp(r'(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})').firstMatch(raw);
+    if (ymdMatch != null) {
+      final y = int.tryParse(ymdMatch.group(1)!);
+      final m = int.tryParse(ymdMatch.group(2)!);
+      final d = int.tryParse(ymdMatch.group(3)!);
+      if (d != null && m != null && y != null) return DateTime(y, m, d);
+    }
+
+    final parts = raw.split(' ');
+    int? y, m, d;
+    const mMap = {
+      'januari': 1, 'jan': 1, 'februari': 2, 'feb': 2, 'maret': 3, 'mar': 3,
+      'april': 4, 'apr': 4, 'mei': 5, 'may': 5, 'juni': 6, 'jun': 6,
+      'juli': 7, 'jul': 7, 'agustus': 8, 'agu': 8, 'aug': 8, 'september': 9, 'sep': 9,
+      'oktober': 10, 'okt': 10, 'oct': 10, 'november': 11, 'nov': 11, 'desember': 12, 'des': 12, 'dec': 12
+    };
+    for (final p in parts) {
+      if (p.contains(':')) continue;
+      final clean = p.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toLowerCase();
+      final val = int.tryParse(clean);
+      if (val != null) {
+        if (clean.length == 4 && val >= 2000 && val <= 2100) {
+          y = val;
+        } else if (val >= 1 && val <= 31 && d == null) {
+          d = val;
+        }
+      } else if (mMap.containsKey(clean)) {
+        m = mMap[clean];
+      }
+    }
+    if (y != null && m != null && d != null) {
+      return DateTime(y, m, d);
+    }
+
+    return tanggalInput;
   }
 
   DateTime get scheduleFullDateTime {

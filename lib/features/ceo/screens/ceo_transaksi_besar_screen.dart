@@ -5,6 +5,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/data/order_model.dart';
 import '../../../core/data/hrd_models.dart';
+import '../services/ceo_privacy_controller.dart';
+import '../widgets/ceo_privacy_eye_button.dart';
 import '../../orders/services/order_service.dart';
 import '../../orders/screens/order_detail_screen.dart';
 import '../../hrd/services/hrd_service.dart';
@@ -39,12 +41,6 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
   int? _selectedCabangId;
   String _selectedPeriode = 'Semua'; // 'Semua', 'Hari Ini', 'Bulan Ini', '30 Hari'
 
-  final NumberFormat _currencyFormat = NumberFormat.currency(
-    locale: 'id_ID',
-    symbol: 'Rp ',
-    decimalDigits: 0,
-  );
-
   @override
   void initState() {
     super.initState();
@@ -57,6 +53,21 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
       _isLoading = false;
     }
     _loadData();
+    CeoPrivacyController.instance.addListener(_onPrivacyChanged);
+  }
+
+  void _onPrivacyChanged() {
+    if (mounted) setState(() {});
+  }
+
+  String _formatCurrency(dynamic value) {
+    return CeoPrivacyController.instance.formatCurrency(value);
+  }
+
+  @override
+  void dispose() {
+    CeoPrivacyController.instance.removeListener(_onPrivacyChanged);
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -384,6 +395,8 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
               ],
             ),
           ),
+          const CeoPrivacyEyeButton(),
+          const SizedBox(width: 4),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 22),
             onPressed: _loadData,
@@ -411,7 +424,7 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
         Expanded(
           child: _buildMetricCard(
             label: 'Total Nilai',
-            value: _currencyFormat.format(totalNominal),
+            value: _formatCurrency(totalNominal),
             icon: Icons.payments_rounded,
             iconColor: const Color(0xFF10B981),
             bgColor: const Color(0xFFECFDF5),
@@ -423,7 +436,7 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
         Expanded(
           child: _buildMetricCard(
             label: 'Rata-rata',
-            value: _currencyFormat.format(avgNominal),
+            value: _formatCurrency(avgNominal),
             icon: Icons.analytics_rounded,
             iconColor: const Color(0xFF3B82F6),
             bgColor: const Color(0xFFEFF6FF),
@@ -926,7 +939,7 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            _currencyFormat.format(nominal),
+                            _formatCurrency(nominal),
                             style: GoogleFonts.inter(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w800,
@@ -1025,7 +1038,7 @@ class _CeoTransaksiBesarScreenState extends State<CeoTransaksiBesarScreen> {
                                     ),
                                   ),
                                   Text(
-                                    _currencyFormat.format(s.price),
+                                    _formatCurrency(s.price),
                                     style: GoogleFonts.inter(
                                       fontSize: 11.5,
                                       fontWeight: FontWeight.w600,

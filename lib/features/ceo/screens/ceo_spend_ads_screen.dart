@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../services/ceo_service.dart';
+import '../services/ceo_privacy_controller.dart';
+import '../widgets/ceo_privacy_eye_button.dart';
 
 class CeoSpendAdsScreen extends StatefulWidget {
   const CeoSpendAdsScreen({super.key});
@@ -30,10 +32,16 @@ class _CeoSpendAdsScreenState extends State<CeoSpendAdsScreen> {
   void initState() {
     super.initState();
     _fetchMarketingData();
+    CeoPrivacyController.instance.addListener(_onPrivacyChanged);
+  }
+
+  void _onPrivacyChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    CeoPrivacyController.instance.removeListener(_onPrivacyChanged);
     _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
@@ -100,11 +108,7 @@ class _CeoSpendAdsScreenState extends State<CeoSpendAdsScreen> {
   }
 
   String _formatCurrency(double amount) {
-    return NumberFormat.currency(
-      locale: 'id_ID',
-      symbol: 'Rp ',
-      decimalDigits: 0,
-    ).format(amount);
+    return CeoPrivacyController.instance.formatCurrency(amount);
   }
 
   void _pickMarketingMonth() async {
@@ -627,6 +631,9 @@ class _CeoSpendAdsScreenState extends State<CeoSpendAdsScreen> {
               ],
             ),
           ),
+          const SizedBox(width: 8),
+          const CeoPrivacyEyeButton(),
+          const SizedBox(width: 8),
           GestureDetector(
             onTap: _fetchMarketingData,
             child: Container(

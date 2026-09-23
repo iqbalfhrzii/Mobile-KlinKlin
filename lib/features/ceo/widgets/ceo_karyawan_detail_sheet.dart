@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import '../../../core/data/hrd_models.dart';
 import '../../hrd/services/hrd_service.dart';
+import '../services/ceo_privacy_controller.dart';
+import 'ceo_privacy_eye_button.dart';
 import '../../hrd/screens/gaji_karyawan/gaji_karyawan_list_screen.dart';
 import '../../hrd/screens/insentif/insentif_cleaner_list_screen.dart';
 
@@ -29,11 +30,6 @@ class CeoKaryawanDetailSheet extends StatefulWidget {
 
 class _CeoKaryawanDetailSheetState extends State<CeoKaryawanDetailSheet> {
   final HrdService _hrdService = HrdService();
-  final NumberFormat _currencyFormat = NumberFormat.currency(
-    locale: 'id_ID',
-    symbol: 'Rp ',
-    decimalDigits: 0,
-  );
 
   bool _isLoading = true;
   GajiKaryawanModel? _latestGaji;
@@ -55,6 +51,21 @@ class _CeoKaryawanDetailSheetState extends State<CeoKaryawanDetailSheet> {
   void initState() {
     super.initState();
     _loadExecutiveFinancialData();
+    CeoPrivacyController.instance.addListener(_onPrivacyChanged);
+  }
+
+  void _onPrivacyChanged() {
+    if (mounted) setState(() {});
+  }
+
+  String _formatCurrency(dynamic value) {
+    return CeoPrivacyController.instance.formatCurrency(value);
+  }
+
+  @override
+  void dispose() {
+    CeoPrivacyController.instance.removeListener(_onPrivacyChanged);
+    super.dispose();
   }
 
   Future<void> _loadExecutiveFinancialData() async {
@@ -493,7 +504,7 @@ class _CeoKaryawanDetailSheetState extends State<CeoKaryawanDetailSheet> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      _isLoading ? 'Memuat...' : _currencyFormat.format(takeHomePay),
+                      _isLoading ? 'Memuat...' : _formatCurrency(takeHomePay),
                       style: GoogleFonts.inter(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -502,21 +513,28 @@ class _CeoKaryawanDetailSheetState extends State<CeoKaryawanDetailSheet> {
                     ),
                   ],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF059669).withValues(alpha: 0.25),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
-                  ),
-                  child: Text(
-                    'Bulan Berjalan',
-                    style: GoogleFonts.inter(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF6EE7B7),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CeoPrivacyEyeButton.mini(),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF059669).withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+                      ),
+                      child: Text(
+                        'Bulan Berjalan',
+                        style: GoogleFonts.inter(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF6EE7B7),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -546,7 +564,7 @@ class _CeoKaryawanDetailSheetState extends State<CeoKaryawanDetailSheet> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _isLoading ? '...' : _currencyFormat.format(gajiPokokNominal),
+                        _isLoading ? '...' : _formatCurrency(gajiPokokNominal),
                         style: GoogleFonts.inter(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
@@ -581,7 +599,7 @@ class _CeoKaryawanDetailSheetState extends State<CeoKaryawanDetailSheet> {
                       Text(
                         _isLoading
                             ? '...'
-                            : _currencyFormat.format(_isCleaner
+                            : _formatCurrency(_isCleaner
                                 ? _totalBonusBulanIni
                                 : totalTunjangan),
                         style: GoogleFonts.inter(
@@ -813,7 +831,7 @@ class _CeoKaryawanDetailSheetState extends State<CeoKaryawanDetailSheet> {
                       ),
                     ),
                     Text(
-                      _currencyFormat.format(item.totalNominal),
+                      _formatCurrency(item.totalNominal),
                       style: GoogleFonts.inter(
                         fontSize: 12.5,
                         fontWeight: FontWeight.bold,

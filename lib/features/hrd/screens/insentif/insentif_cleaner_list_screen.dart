@@ -5,6 +5,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/data/hrd_models.dart';
 import '../../../../core/widgets/gradient_header.dart';
 import '../../services/hrd_service.dart';
+import '../../../ceo/services/ceo_privacy_controller.dart';
+import '../../../ceo/widgets/ceo_privacy_eye_button.dart';
 
 class InsentifCleanerListScreen extends StatefulWidget {
   final bool showHeader;
@@ -17,6 +19,13 @@ class InsentifCleanerListScreen extends StatefulWidget {
 class _InsentifCleanerListScreenState extends State<InsentifCleanerListScreen> {
   final HrdService _hrdService = HrdService();
   final currencyFormatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+
+  String _formatCurrency(dynamic value) {
+    if (CeoPrivacyController.instance.isCeo && CeoPrivacyController.instance.isMasked) {
+      return CeoPrivacyController.maskedPlaceholder;
+    }
+    return currencyFormatter.format(value);
+  }
 
   bool _isLoading = true;
   String _filterWaktu = 'bulan_ini'; // bulan_ini, hari_ini, kemarin, semua
@@ -37,6 +46,18 @@ class _InsentifCleanerListScreenState extends State<InsentifCleanerListScreen> {
     super.initState();
     _loadCabangs();
     _fetchData();
+    CeoPrivacyController.instance.addListener(_onPrivacyChanged);
+  }
+
+  void _onPrivacyChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    CeoPrivacyController.instance.removeListener(_onPrivacyChanged);
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _loadCabangs() async {
@@ -152,7 +173,7 @@ class _InsentifCleanerListScreenState extends State<InsentifCleanerListScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                currencyFormatter.format(_totalInsentifGlobal),
+                                _formatCurrency(_totalInsentifGlobal),
                                 style: GoogleFonts.inter(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
@@ -367,7 +388,7 @@ class _InsentifCleanerListScreenState extends State<InsentifCleanerListScreen> {
                                           const SizedBox(width: 4),
                                         ],
                                         Text(
-                                          currencyFormatter.format(item.totalInsentif),
+                                          _formatCurrency(item.totalInsentif),
                                           style: GoogleFonts.inter(
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,
@@ -439,14 +460,20 @@ class _InsentifCleanerListScreenState extends State<InsentifCleanerListScreen> {
                       ),
                       const SizedBox(width: 12),
                     ],
-                    Text(
-                      'Insentif Cleaner',
-                      style: GoogleFonts.inter(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                    Expanded(
+                      child: Text(
+                        'Insentif Cleaner',
+                        style: GoogleFonts.inter(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
+                    if (CeoPrivacyController.instance.isCeo) ...[
+                      const SizedBox(width: 8),
+                      const CeoPrivacyEyeButton(),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -967,6 +994,17 @@ class _InsentifDetailBottomSheetState extends State<_InsentifDetailBottomSheet> 
   void initState() {
     super.initState();
     _loadDetail();
+    CeoPrivacyController.instance.addListener(_onPrivacyChanged);
+  }
+
+  void _onPrivacyChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    CeoPrivacyController.instance.removeListener(_onPrivacyChanged);
+    super.dispose();
   }
 
   Future<void> _loadDetail() async {
@@ -1117,7 +1155,9 @@ class _InsentifDetailBottomSheetState extends State<_InsentifDetailBottomSheet> 
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                widget.currencyFormatter.format(data.totalInsentif),
+                                CeoPrivacyController.instance.isCeo && CeoPrivacyController.instance.isMasked
+                                    ? CeoPrivacyController.maskedPlaceholder
+                                    : widget.currencyFormatter.format(data.totalInsentif),
                                 style: GoogleFonts.inter(
                                   fontSize: 22,
                                   fontWeight: FontWeight.w900,
@@ -1280,7 +1320,9 @@ class _InsentifDetailBottomSheetState extends State<_InsentifDetailBottomSheet> 
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Text(
-                                      widget.currencyFormatter.format(r.totalNominal),
+                                      CeoPrivacyController.instance.isCeo && CeoPrivacyController.instance.isMasked
+                                          ? CeoPrivacyController.maskedPlaceholder
+                                          : widget.currencyFormatter.format(r.totalNominal),
                                       style: GoogleFonts.inter(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w800,
@@ -1345,7 +1387,9 @@ class _InsentifDetailBottomSheetState extends State<_InsentifDetailBottomSheet> 
                                             ),
                                           ),
                                           Text(
-                                            widget.currencyFormatter.format(item.nominal),
+                                            CeoPrivacyController.instance.isCeo && CeoPrivacyController.instance.isMasked
+                                                ? CeoPrivacyController.maskedPlaceholder
+                                                : widget.currencyFormatter.format(item.nominal),
                                             style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
                                           ),
                                         ],

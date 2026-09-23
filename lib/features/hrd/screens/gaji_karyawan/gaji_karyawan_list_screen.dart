@@ -8,6 +8,8 @@ import '../../../../../core/widgets/gradient_header.dart';
 import '../../../../../core/data/hrd_models.dart';
 import '../../../../../core/services/pdf_slip_gaji_service.dart';
 import '../../services/hrd_service.dart';
+import '../../../ceo/services/ceo_privacy_controller.dart';
+import '../../../ceo/widgets/ceo_privacy_eye_button.dart';
 import 'gaji_karyawan_form_screen.dart';
 import '../insentif/insentif_cleaner_list_screen.dart';
 import 'gaji_karyawan_detail_screen.dart';
@@ -22,6 +24,13 @@ class GajiKaryawanListScreen extends StatefulWidget {
 class _GajiKaryawanListScreenState extends State<GajiKaryawanListScreen> with SingleTickerProviderStateMixin {
   final HrdService _hrdService = HrdService();
   final currencyFormatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+
+  String _formatCurrency(dynamic value) {
+    if (CeoPrivacyController.instance.isCeo && CeoPrivacyController.instance.isMasked) {
+      return CeoPrivacyController.maskedPlaceholder;
+    }
+    return currencyFormatter.format(value);
+  }
 
   bool _isLoading = true;
   List<GajiKaryawanModel> _allData = [];
@@ -72,10 +81,16 @@ class _GajiKaryawanListScreenState extends State<GajiKaryawanListScreen> with Si
     });
     _loadCabangs();
     _fetchData();
+    CeoPrivacyController.instance.addListener(_onPrivacyChanged);
+  }
+
+  void _onPrivacyChanged() {
+    if (mounted) setState(() {});
   }
   
   @override
   void dispose() {
+    CeoPrivacyController.instance.removeListener(_onPrivacyChanged);
     _tabController.dispose();
     _searchCtrl.dispose();
     super.dispose();
@@ -831,7 +846,7 @@ class _GajiKaryawanListScreenState extends State<GajiKaryawanListScreen> with Si
                                     const Icon(Icons.account_balance_wallet_rounded, size: 12, color: Color(0xFF059669)),
                                     const SizedBox(width: 4),
                                     Text(
-                                      currencyFormatter.format(gaji.takeHomePay),
+                                      _formatCurrency(gaji.takeHomePay),
                                       style: GoogleFonts.inter(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w800,
@@ -993,6 +1008,10 @@ class _GajiKaryawanListScreenState extends State<GajiKaryawanListScreen> with Si
                         ],
                       ),
                     ),
+                    if (CeoPrivacyController.instance.isCeo) ...[
+                      const CeoPrivacyEyeButton(),
+                      const SizedBox(width: 8),
+                    ],
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(

@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
+import '../../../core/widgets/gradient_header.dart';
 import '../services/superadmin_service.dart';
 
 class SuperadminKaryawanListScreen extends StatefulWidget {
@@ -25,6 +27,7 @@ class SuperadminKaryawanListScreen extends StatefulWidget {
 class _SuperadminKaryawanListScreenState
     extends State<SuperadminKaryawanListScreen> {
   final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
   List<Map<String, dynamic>> _karyawans = [];
   bool _isLoading = true;
   String? _errorMessage;
@@ -37,6 +40,7 @@ class _SuperadminKaryawanListScreenState
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -169,79 +173,109 @@ class _SuperadminKaryawanListScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0.5,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          color: AppColors.textDark,
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.groupTitle,
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textDark,
-              ),
-            ),
-            Text(
-              '${_karyawans.length} Karyawan Terdaftar',
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: AppColors.textMuted,
-              ),
-            ),
-          ],
-        ),
-      ),
       body: Column(
         children: [
-          // Search bar
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-            child: Container(
-              height: 44,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: TextField(
-                controller: _searchController,
-                textInputAction: TextInputAction.search,
-                onSubmitted: (_) => _loadKaryawans(),
-                decoration: InputDecoration(
-                  hintText: 'Cari nama, email, jabatan...',
-                  hintStyle: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: AppColors.textMuted,
-                  ),
-                  prefixIcon: const Icon(
-                    Icons.search_rounded,
-                    size: 20,
-                    color: AppColors.textMuted,
-                  ),
-                  suffixIcon:
-                      _searchController.text.isNotEmpty
-                          ? IconButton(
-                            icon: const Icon(Icons.clear_rounded, size: 18),
-                            onPressed: () {
-                              _searchController.clear();
-                              _loadKaryawans();
-                            },
-                          )
-                          : null,
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+          // Gradient Header
+          GradientHeader(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const AppBackButton(),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.groupTitle,
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${_karyawans.length} Karyawan Terdaftar',
+                            style: GoogleFonts.inter(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white.withValues(alpha: 0.85),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: _loadKaryawans,
+                      icon: const Icon(
+                        Icons.refresh_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                      tooltip: 'Refresh Data',
+                    ),
+                  ],
                 ),
-              ),
+                const SizedBox(height: 14),
+                // Search bar
+                Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: (_) => _loadKaryawans(),
+                    onChanged: (val) {
+                      setState(() {});
+                      _searchDebounce?.cancel();
+                      _searchDebounce = Timer(
+                        const Duration(milliseconds: 400),
+                        () {
+                          if (mounted) _loadKaryawans();
+                        },
+                      );
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Cari nama, email, jabatan...',
+                      hintStyle: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: AppColors.textMuted,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
+                        size: 20,
+                        color: AppColors.primary,
+                      ),
+                      suffixIcon:
+                          _searchController.text.isNotEmpty
+                              ? IconButton(
+                                icon: const Icon(Icons.clear_rounded, size: 18),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {});
+                                  _loadKaryawans();
+                                },
+                              )
+                              : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 

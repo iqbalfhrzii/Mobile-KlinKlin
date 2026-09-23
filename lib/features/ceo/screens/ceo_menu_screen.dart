@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/widgets/gradient_header.dart';
+import '../widgets/ceo_privacy_eye_button.dart';
 import '../../operasional/screens/monitoring_stok_opname_screen.dart';
 import '../../operasional/screens/operasional_cashflow_cabang_screen.dart';
 import '../../operasional/screens/operasional_approval_pengajuan_screen.dart';
@@ -52,6 +53,8 @@ class CeoMenuScreen extends StatelessWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(width: 12),
+                  const CeoPrivacyEyeButton(),
                 ],
               ),
             ),

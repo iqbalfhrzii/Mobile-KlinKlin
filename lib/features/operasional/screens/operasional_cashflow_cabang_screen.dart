@@ -10,6 +10,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/api/api_client.dart';
 import '../services/operasional_cashflow_cabang_service.dart';
+import '../../ceo/services/ceo_privacy_controller.dart';
+import '../../ceo/widgets/ceo_privacy_eye_button.dart';
 
 class OperasionalCashflowCabangScreen extends StatefulWidget {
   const OperasionalCashflowCabangScreen({super.key});
@@ -41,10 +43,16 @@ class _OperasionalCashflowCabangScreenState extends State<OperasionalCashflowCab
     _loadAuthToken();
     _fetchCabangList();
     _fetchData();
+    CeoPrivacyController.instance.addListener(_onPrivacyChanged);
+  }
+
+  void _onPrivacyChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    CeoPrivacyController.instance.removeListener(_onPrivacyChanged);
     _searchController.dispose();
     _debounce?.cancel();
     super.dispose();
@@ -215,6 +223,9 @@ class _OperasionalCashflowCabangScreenState extends State<OperasionalCashflowCab
   }
 
   String _formatCurrency(dynamic value) {
+    if (CeoPrivacyController.instance.isCeo && CeoPrivacyController.instance.isMasked) {
+      return CeoPrivacyController.maskedPlaceholder;
+    }
     if (value == null) return 'Rp 0';
     try {
       double parsedValue = double.parse(value.toString());
@@ -333,6 +344,10 @@ class _OperasionalCashflowCabangScreenState extends State<OperasionalCashflowCab
                     ],
                   ),
                 ),
+                if (CeoPrivacyController.instance.isCeo) ...[
+                  const SizedBox(width: 8),
+                  const CeoPrivacyEyeButton(),
+                ],
               ],
             ),
           ),

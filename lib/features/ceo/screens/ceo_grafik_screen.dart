@@ -5,6 +5,8 @@ import 'package:intl/intl.dart' hide TextDirection;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../services/ceo_service.dart';
+import '../services/ceo_privacy_controller.dart';
+import '../widgets/ceo_privacy_eye_button.dart';
 import '../../../core/widgets/gradient_header.dart';
 
 class CeoGrafikScreen extends StatefulWidget {
@@ -102,10 +104,16 @@ class _CeoGrafikScreenState extends State<CeoGrafikScreen>
 
     _loadProfile();
     _fetchGrafikData();
+    CeoPrivacyController.instance.addListener(_onPrivacyChanged);
+  }
+
+  void _onPrivacyChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    CeoPrivacyController.instance.removeListener(_onPrivacyChanged);
     _tabController.dispose();
     _orderScrollController.dispose();
     _chatScrollController.dispose();
@@ -369,11 +377,7 @@ class _CeoGrafikScreenState extends State<CeoGrafikScreen>
 
   String _formatCurrency(dynamic value) {
     final num numValue = _parseDouble(value);
-    return NumberFormat.currency(
-      locale: 'id_ID',
-      symbol: 'Rp ',
-      decimalDigits: 0,
-    ).format(numValue);
+    return CeoPrivacyController.instance.formatCurrency(numValue);
   }
 
   String _formatDateClean(String? raw) {
@@ -511,28 +515,35 @@ class _CeoGrafikScreenState extends State<CeoGrafikScreen>
                 ),
               ),
               const SizedBox(width: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.shield_rounded, color: Colors.white, size: 13),
-                    const SizedBox(width: 5),
-                    Text(
-                      'CEO / Owner',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CeoPrivacyEyeButton(),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                     ),
-                  ],
-                ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.shield_rounded, color: Colors.white, size: 13),
+                        const SizedBox(width: 5),
+                        Text(
+                          'CEO / Owner',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

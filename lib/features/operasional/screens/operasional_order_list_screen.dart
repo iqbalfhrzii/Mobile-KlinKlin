@@ -124,11 +124,15 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
       'oktober': 10, 'okt': 10, 'oct': 10, 'november': 11, 'nov': 11, 'desember': 12, 'des': 12, 'dec': 12
     };
     for (final p in parts) {
+      if (p.contains(':')) continue;
       final clean = p.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toLowerCase();
-      if (RegExp(r'^\d{4}$').hasMatch(clean)) {
-        y = int.tryParse(clean);
-      } else if (RegExp(r'^\d{1,2}$').hasMatch(clean) && d == null) {
-        d = int.tryParse(clean);
+      final val = int.tryParse(clean);
+      if (val != null) {
+        if (clean.length == 4 && val >= 2000 && val <= 2100) {
+          y = val;
+        } else if (val >= 1 && val <= 31 && d == null) {
+          d = val;
+        }
       } else if (mMap.containsKey(clean)) {
         m = mMap[clean];
       }

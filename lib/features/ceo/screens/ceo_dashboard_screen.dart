@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../services/ceo_service.dart';
+import '../services/ceo_privacy_controller.dart';
+import '../widgets/ceo_privacy_eye_button.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/animated_notification_bell.dart';
 import '../../operasional/screens/operasional_approval_pengajuan_screen.dart';
@@ -102,10 +104,16 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
 
     _fetchData();
     _fetchMarketingData();
+    CeoPrivacyController.instance.addListener(_onPrivacyChanged);
+  }
+
+  void _onPrivacyChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    CeoPrivacyController.instance.removeListener(_onPrivacyChanged);
     _tabController.dispose();
     _marketingSearchController.dispose();
     _marketingSearchDebounce?.cancel();
@@ -274,13 +282,9 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
     }
   }
 
-  String _formatCurrency(dynamic value) {
+  String _formatCurrency(dynamic value, {String? itemKey}) {
     final num numValue = _parseDouble(value);
-    return NumberFormat.currency(
-      locale: 'id_ID',
-      symbol: 'Rp ',
-      decimalDigits: 0,
-    ).format(numValue);
+    return CeoPrivacyController.instance.formatCurrency(numValue, itemKey: itemKey);
   }
 
   @override
@@ -502,6 +506,8 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  const CeoPrivacyEyeButton(),
+                  const SizedBox(width: 8),
                   const AnimatedNotificationBell(size: 24),
                   const SizedBox(width: 8),
                   Container(
@@ -565,16 +571,18 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
                       Expanded(
                         child: _buildSummaryCard(
                           'OMZET PERIODE INI',
-                          _formatCurrency(omzetIni),
+                          _formatCurrency(omzetIni, itemKey: 'omzet_periode_ini'),
                           null,
+                          itemKey: 'omzet_periode_ini',
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: _buildSummaryCard(
                           'OMZET PERIODE LALU',
-                          _formatCurrency(omzetLalu),
+                          _formatCurrency(omzetLalu, itemKey: 'omzet_periode_lalu'),
                           null,
+                          itemKey: 'omzet_periode_lalu',
                         ),
                       ),
                     ],
@@ -588,11 +596,12 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
                       Expanded(
                         child: _buildSummaryCard(
                           'GROWTH VS LALU',
-                          _formatCurrency(omzetIni - omzetLalu),
+                          _formatCurrency(omzetIni - omzetLalu, itemKey: 'growth_vs_lalu'),
                           isGrowthPos
                               ? '+${growth.toStringAsFixed(1)}%'
                               : '${growth.toStringAsFixed(1)}%',
                           valueColor: isGrowthPos ? Colors.green : Colors.red,
+                          itemKey: 'growth_vs_lalu',
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -870,9 +879,10 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
     String value,
     String? subValue, {
     Color valueColor = AppColors.textDark,
+    String? itemKey,
   }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -887,13 +897,33 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textMuted,
+          SizedBox(
+            height: 24,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textMuted,
+                      letterSpacing: 0.2,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (itemKey != null) ...[
+                  const SizedBox(width: 4),
+                  CeoPrivacyEyeButton.mini(
+                    itemKey: itemKey,
+                    isWhiteTheme: false,
+                  ),
+                ],
+              ],
             ),
           ),
           const SizedBox(height: 6),
@@ -1045,14 +1075,23 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'TOTAL OMZET GABUNGAN',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white70,
-                      letterSpacing: 0.5,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'TOTAL OMZET GABUNGAN',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white70,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      CeoPrivacyEyeButton.mini(
+                        itemKey: 'total_omzet_gabungan',
+                      ),
+                    ],
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -1097,7 +1136,7 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                _formatCurrency(totalIni),
+                _formatCurrency(totalIni, itemKey: 'total_omzet_gabungan'),
                 style: GoogleFonts.inter(
                   fontSize: 26,
                   fontWeight: FontWeight.w900,
@@ -1106,7 +1145,7 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
               ),
               const SizedBox(height: 4),
               Text(
-                'Periode Lalu: ${_formatCurrency(totalLalu)}',
+                'Periode Lalu: ${_formatCurrency(totalLalu, itemKey: 'total_omzet_gabungan')}',
                 style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
               ),
               const SizedBox(height: 16),
@@ -1119,14 +1158,20 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildMiniStatWhite('ADS', _formatCurrency(totalAds)),
+                    _buildMiniStatWhite(
+                      'ADS',
+                      _formatCurrency(totalAds, itemKey: 'total_omzet_gabungan'),
+                    ),
                     Container(width: 1, height: 28, color: Colors.white24),
                     _buildMiniStatWhite(
                       'ORGANIK',
-                      _formatCurrency(totalOrganik),
+                      _formatCurrency(totalOrganik, itemKey: 'total_omzet_gabungan'),
                     ),
                     Container(width: 1, height: 28, color: Colors.white24),
-                    _buildMiniStatWhite('LAMA', _formatCurrency(totalLama)),
+                    _buildMiniStatWhite(
+                      'LAMA',
+                      _formatCurrency(totalLama, itemKey: 'total_omzet_gabungan'),
+                    ),
                   ],
                 ),
               ),

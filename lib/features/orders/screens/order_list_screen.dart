@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:async';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_header.dart';
 import '../../../core/widgets/badges.dart';
@@ -91,6 +92,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
   static const _statusBonusFilters = ['Semua', 'Pending', 'Selesai'];
 
   bool _isFetching = false;
+  Timer? _searchDebounce;
 
   @override
   void initState() {
@@ -111,6 +113,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -182,13 +185,19 @@ class _OrderListScreenState extends State<OrderListScreen> {
         );
       }
 
-      // Ambil data spesifik tanggal/bulan secara instan (<100ms, perPage: 25)
+      final isSingleDate = _periodFilter == 'weekly_date' ||
+          _periodFilter == 'hari_ini' ||
+          _periodFilter == 'kemarin' ||
+          _periodFilter == 'besok';
+
+      // Ambil data spesifik tanggal/bulan secara instan (<100ms, perPage: 25/50)
       final initialOrders = await _orderService.fetchOrders(
-        fetchAllPages: false,
-        perPage: 25,
+        fetchAllPages: isSingleDate,
+        perPage: isSingleDate ? 50 : 25,
         statusPesanan: _statusFilter != 'Semua' ? _statusFilter : null,
         startDate: startStr,
         endDate: endStr,
+        search: _query.isNotEmpty ? _query : null,
       );
 
       if (mounted) {
@@ -240,7 +249,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
       }
     }
 
-    // 4. Fallback: Parse space-separated Indonesian words (e.g. "6 September 2026")
+    // 4. Fallback: Parse space-separated Indonesian words (e.g. "6 September 2026" or "Selasa, 22 Sep 2026 - 09:00")
     final parts = trimmed.split(' ');
     int? y, m, d;
     const mMap = {
@@ -250,11 +259,15 @@ class _OrderListScreenState extends State<OrderListScreen> {
       'oktober': 10, 'okt': 10, 'oct': 10, 'november': 11, 'nov': 11, 'desember': 12, 'des': 12, 'dec': 12
     };
     for (final p in parts) {
+      if (p.contains(':')) continue;
       final clean = p.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toLowerCase();
-      if (RegExp(r'^\d{4}$').hasMatch(clean)) {
-        y = int.tryParse(clean);
-      } else if (RegExp(r'^\d{1,2}$').hasMatch(clean) && d == null) {
-        d = int.tryParse(clean);
+      final val = int.tryParse(clean);
+      if (val != null) {
+        if (clean.length == 4 && val >= 2000 && val <= 2100) {
+          y = val;
+        } else if (val >= 1 && val <= 31 && d == null) {
+          d = val;
+        }
       } else if (mMap.containsKey(clean)) {
         m = mMap[clean];
       }
@@ -472,10 +485,18 @@ class _OrderListScreenState extends State<OrderListScreen> {
                       showAllMonthButton: true,
                       searchQuery: _query,
                       initialDate: widget.isTodayOnly ? DateTime.now() : null,
-                      onSearchChanged: (val) => setState(() {
-                        _query = val;
-                        _limit = 10;
-                      }),
+                      onSearchChanged: (val) {
+                        setState(() {
+                          _query = val;
+                          _limit = 10;
+                        });
+                        _searchDebounce?.cancel();
+                        _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+                          if (mounted) {
+                            _fetchData();
+                          }
+                        });
+                      },
                       onFilterChanged: (start, end) {
                         setState(() {
                           _filterStart = start;

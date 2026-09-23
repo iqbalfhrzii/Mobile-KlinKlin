@@ -25,6 +25,7 @@ class OrderService {
     int perPage = 25,
     int? page,
     num? minTotal,
+    String? search,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -41,6 +42,9 @@ class OrderService {
       };
       if (page != null) queryParams['page'] = page;
       if (minTotal != null) queryParams['min_total'] = minTotal;
+      if (search != null && search.trim().isNotEmpty) {
+        queryParams['search'] = search.trim();
+      }
       if (statusPesanan != null && statusPesanan != 'Semua') {
         queryParams['status_pesanan'] = statusPesanan;
       }
@@ -67,7 +71,7 @@ class OrderService {
         lastPage = responseData['last_page'] is int ? responseData['last_page'] : 1;
 
         if (fetchAllPages && lastPage > 1) {
-          final targetLastPage = lastPage > 3 ? 3 : lastPage;
+          final targetLastPage = lastPage > 5 ? 5 : lastPage;
           final futures = <Future<Response>>[];
           for (int p = 2; p <= targetLastPage; p++) {
             final pParams = Map<String, dynamic>.from(queryParams);
