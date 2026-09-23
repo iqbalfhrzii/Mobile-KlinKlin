@@ -1452,13 +1452,13 @@ class _OrderCard extends StatelessWidget {
     }
     final int totalSetelahDiskon = (baseSubtotal - diskonValue) > 0 ? (baseSubtotal - diskonValue) : 0;
 
-    final int ppnPersen = o.ppn ?? (o.pembayaran?.ppn ?? (o.isWajibPpn ? 11 : 0));
-    final int ppnValue = (o.pembayaran != null || o.ppn != null || o.isWajibPpn)
-        ? (totalSetelahDiskon * (ppnPersen / 100)).round()
-        : 0;
+    final int ppnPersen = o.ppn ?? (o.pembayaran?.ppn ?? 11);
+    final int ppnValue = (totalSetelahDiskon * (ppnPersen / 100)).round();
     final int pphPersen = o.pph ?? o.pembayaran?.pph ?? 0;
     final int pphValue = (totalSetelahDiskon * (pphPersen / 100)).round();
-    final int totalAkhir = totalSetelahDiskon + ppnValue - pphValue;
+    final int totalAkhir = (o.pembayaran?.total != null && o.pembayaran!.total! > 0)
+        ? o.pembayaran!.total!
+        : (totalSetelahDiskon + ppnValue - pphValue);
 
     return '''Halo Kak $customerName
 Terimakasih sudah melakukan pemesanan di Klinklin $branchName, Berikut Rinciannya :
@@ -1753,19 +1753,9 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
     final o = order;
 
     // Calculate total price accurately
-    final int baseSubtotal = (o.subtotal > 0)
-        ? o.subtotal
-        : (o.services.isNotEmpty
-            ? o.services.fold(0, (sum, s) => sum + s.subtotal)
-            : o.total);
-    final double diskonPersen = o.diskonPersen;
-    final int diskonValue = (baseSubtotal * (diskonPersen / 100)).round();
-    final int totalSetelahDiskon = (baseSubtotal - diskonValue) > 0 ? (baseSubtotal - diskonValue) : 0;
-    final int ppnPersen = o.ppn ?? o.pembayaran?.ppn ?? 0;
-    final int ppnValue = (o.pembayaran != null || o.ppn != null)
-        ? (totalSetelahDiskon * (ppnPersen / 100)).round()
-        : 0;
-    final int totalAkhir = totalSetelahDiskon + ppnValue;
+    final int totalAkhir = (o.pembayaran?.total != null && o.pembayaran!.total! > 0)
+        ? o.pembayaran!.total!
+        : (o.total > 0 ? o.total : o.calculatedTotalAkhir);
 
     String dateStr = _formatDisplayDate(o.schedule);
 

@@ -258,7 +258,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                               ? (baseSubtotal - diskonValue)
                               : 0;
                           final int ppnPersen =
-                              _o.ppn ?? (_o.pembayaran?.ppn ?? (_o.isWajibPpn ? 11 : 0));
+                              _o.ppn ?? (_o.pembayaran?.ppn ?? 11);
                           final int ppnValue =
                               (totalSetelahDiskon * (ppnPersen / 100)).round();
                           final int pphPersen =
@@ -608,7 +608,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
               final double diskonPersen = _o.diskonPersen;
               final int diskonValue = (baseSubtotal * (diskonPersen / 100)).round();
               final int totalSetelahDiskon = (baseSubtotal - diskonValue) > 0 ? (baseSubtotal - diskonValue) : 0;
-              final int ppnPersen = _o.ppn ?? (_o.pembayaran?.ppn ?? (_o.isWajibPpn ? 11 : 0));
+              final int ppnPersen = _o.ppn ?? (_o.pembayaran?.ppn ?? 11);
               final int ppnValue = (totalSetelahDiskon * (ppnPersen / 100)).round();
               final int pphPersen = _o.pph ?? (_o.pembayaran?.pph ?? 0);
               final int pphValue = (totalSetelahDiskon * (pphPersen / 100)).round();

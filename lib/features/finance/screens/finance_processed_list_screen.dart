@@ -144,7 +144,7 @@ class _FinanceProcessedListScreenState extends State<FinanceProcessedListScreen>
 
   Widget _buildOrderItem(OrderModel order, BuildContext context) {
     final payment = order.pembayaran;
-    final int grandTotal = payment?.total ?? (order.total + (order.total * 0.11).round());
+    final int grandTotal = payment?.total ?? order.total;
     final formatCurrency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
     

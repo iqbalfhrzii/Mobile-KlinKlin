@@ -564,12 +564,13 @@ class OrderModel {
           : total);
 
   int get diskonAmount => ((baseSubtotal * diskonPersen) / 100).round();
-  int get totalSetelahDiskon => (baseSubtotal - diskonAmount) > 0 ? (baseSubtotal - diskonAmount) : 0;
-  int get ppnPersen => ppn ?? (pembayaran?.ppn ?? (isWajibPpn ? 11 : 0));
+  int get ppnPersen => ppn ?? (pembayaran?.ppn ?? 11);
   int get ppnAmount => (totalSetelahDiskon * (ppnPersen / 100)).round();
   int get pphPersen => pph ?? (pembayaran?.pph ?? 0);
   int get pphAmount => (totalSetelahDiskon * (pphPersen / 100)).round();
-  int get calculatedTotalAkhir => totalSetelahDiskon + ppnAmount - pphAmount;
+  int get calculatedTotalAkhir => (pembayaran?.total != null && pembayaran!.total! > 0)
+      ? pembayaran!.total!
+      : (totalSetelahDiskon + ppnAmount - pphAmount);
 
   DateTime get tanggalDibuat => createdAt ?? tanggalInput;
 
@@ -700,38 +701,49 @@ class OrderModel {
     }
 
     int parseTotal() {
-      final p = json['pembayaran'] != null && json['pembayaran'] is Map ? json['pembayaran'] : (json['pesanan'] != null ? json : null);
+      final rawP = orderJson['pembayaran'] ?? json['pembayaran'];
+      final p = rawP != null && rawP is Map ? rawP as Map<String, dynamic> : null;
       if (p != null) {
         if (p['total_akhir'] != null) {
           final v = double.tryParse(p['total_akhir'].toString())?.toInt();
-          if (v != null && v > 0) return v;
-        }
-        if (p['total_setelah_diskon'] != null) {
-          final v = double.tryParse(p['total_setelah_diskon'].toString())?.toInt();
           if (v != null && v > 0) return v;
         }
         if (p['total'] != null) {
           final v = double.tryParse(p['total'].toString())?.toInt();
           if (v != null && v > 0) return v;
         }
+        if (p['total_setelah_diskon'] != null) {
+          final v = double.tryParse(p['total_setelah_diskon'].toString())?.toInt();
+          if (v != null && v > 0) return v;
+        }
       }
+
       if (orderJson['total_akhir'] != null) {
         final v = double.tryParse(orderJson['total_akhir'].toString())?.toInt();
         if (v != null && v > 0) return v;
       }
-      if (orderJson['total_setelah_diskon'] != null) {
-        final v = double.tryParse(orderJson['total_setelah_diskon'].toString())?.toInt();
-        if (v != null && v > 0) return v;
-      }
-      if (orderJson['total'] != null) {
-        final v = double.tryParse(orderJson['total'].toString())?.toInt();
-        if (v != null && v > 0) return v;
-      }
-      if (orderJson['subtotal'] != null) {
-        final v = double.tryParse(orderJson['subtotal'].toString())?.toInt();
-        if (v != null && v > 0) return v;
-      }
-      return computedTotal;
+
+      final int baseSub = (orderJson['subtotal'] != null ? (double.tryParse(orderJson['subtotal'].toString())?.toInt() ?? 0) : 0);
+      final int rawSub = baseSub > 0 ? baseSub : computedTotal;
+
+      final double discPct = orderJson['diskon_persen'] != null 
+          ? (double.tryParse(orderJson['diskon_persen'].toString()) ?? 0.0)
+          : (orderJson['discount'] != null ? (double.tryParse(orderJson['discount'].toString()) ?? 0.0) : 0.0);
+      final int discVal = (rawSub * (discPct / 100)).round();
+      final int afterDisc = (rawSub - discVal) > 0 ? (rawSub - discVal) : 0;
+
+      final rawPpn = orderJson['ppn'] ?? json['ppn'];
+      final int ppnRate = rawPpn != null ? (double.tryParse(rawPpn.toString())?.toInt() ?? 11) : 11;
+      final int ppnVal = (afterDisc * (ppnRate / 100)).round();
+
+      final rawPph = orderJson['pph'] ?? json['pph'];
+      final int pphRate = rawPph != null ? (double.tryParse(rawPph.toString())?.toInt() ?? 0) : 0;
+      final int pphVal = (afterDisc * (pphRate / 100)).round();
+
+      final int calcTotal = afterDisc + ppnVal - pphVal;
+      if (calcTotal > 0) return calcTotal;
+
+      return rawSub;
     }
 
     final rawPayment = orderJson['pembayaran'] ?? json['pembayaran'];
@@ -843,7 +855,7 @@ class OrderModel {
         if (raw != null) {
           return double.tryParse(raw.toString())?.toInt();
         }
-        return wajibPpn ? 11 : null;
+        return 11;
       }(),
       pph: orderJson['pembayaran']?['pph'] != null ? (double.tryParse(orderJson['pembayaran']['pph'].toString())?.toInt()) : (orderJson['pph'] != null ? (double.tryParse(orderJson['pph'].toString())?.toInt()) : (json['pembayaran']?['pph'] != null ? double.tryParse(json['pembayaran']['pph'].toString())?.toInt() : (json['pph'] != null ? double.tryParse(json['pph'].toString())?.toInt() : null))),
       discount: orderJson['diskon_persen'] != null ? (double.tryParse(orderJson['diskon_persen'].toString())?.toInt()) : (orderJson['pembayaran']?['diskon_persen'] != null ? (double.tryParse(orderJson['pembayaran']['diskon_persen'].toString())?.toInt()) : (json['diskon_persen'] != null ? double.tryParse(json['diskon_persen'].toString())?.toInt() : (json['pembayaran']?['diskon_persen'] != null ? double.tryParse(json['pembayaran']['diskon_persen'].toString())?.toInt() : 0))),

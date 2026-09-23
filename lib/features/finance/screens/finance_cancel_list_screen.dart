@@ -145,7 +145,7 @@ class _FinanceCancelListScreenState extends State<FinanceCancelListScreen> with 
     final statusText = order.status == OrderStatus.cancelled ? 'Dibatalkan' : 'Menunggu Approval Batal';
     
     final payment = order.pembayaran;
-    final int grandTotal = payment?.total ?? (order.total + (order.total * 0.11).round());
+    final int grandTotal = payment?.total ?? order.total;
     final formatCurrency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
     

@@ -64,7 +64,7 @@ class PdfInvoiceService {
     final num diskonAmount = (subtotal * (diskonPersen / 100)).round();
 
     final num afterDiscount = (subtotal - diskonAmount) > 0 ? (subtotal - diskonAmount) : 0;
-    final num ppnPersen = order.pembayaran?.ppn ?? order.ppn ?? (order.isWajibPpn ? 11 : 0);
+    final num ppnPersen = order.pembayaran?.ppn ?? order.ppn ?? 11;
     final num ppnAmount = (afterDiscount * (ppnPersen / 100)).round();
     final num pphPersen = order.pembayaran?.pph ?? order.pph ?? 0;
     final num pphAmount = (afterDiscount * (pphPersen / 100)).round();

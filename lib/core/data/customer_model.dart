@@ -115,7 +115,8 @@ class CustomerOrder {
       final val = json['pembayaran']['total_akhir'] ?? json['pembayaran']['total_tagihan'];
       amount = val != null ? int.tryParse(val.toString()) ?? 0 : 0;
     } else {
-      amount = json['subtotal'] != null ? int.tryParse(json['subtotal'].toString()) ?? 0 : 0;
+      final val = json['total_akhir'] ?? json['subtotal'];
+      amount = val != null ? int.tryParse(val.toString()) ?? 0 : 0;
     }
 
     return CustomerOrder(
