@@ -111,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
           } else {
             rawOmzet = dbData['omzet_bulan_ini'] ?? 0;
           }
-          final omzetVal = rawOmzet is int ? rawOmzet : (double.tryParse(rawOmzet.toString())?.toInt() ?? 0);
+          final omzetVal = rawOmzet is int ? rawOmzet : (double.tryParse(rawOmzet.toString())?.round() ?? 0);
 
           final rawJumlah = dbData['jumlah_order'] ?? 0;
           final jumlahVal = rawJumlah is int ? rawJumlah : (int.tryParse(rawJumlah.toString()) ?? 0);
@@ -120,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
           final rataVal = rawRata is double ? rawRata : (double.tryParse(rawRata.toString()) ?? 0.0);
 
           final rawOmzetHari = dbData['omzet_hari_ini'] ?? 0;
-          final omzetHariVal = rawOmzetHari is int ? rawOmzetHari : (double.tryParse(rawOmzetHari.toString())?.toInt() ?? 0);
+          final omzetHariVal = rawOmzetHari is int ? rawOmzetHari : (double.tryParse(rawOmzetHari.toString())?.round() ?? 0);
 
           final rawTarget = dbData['target_omzet'] ?? 130000000;
           final targetVal = rawTarget is int ? rawTarget : (double.tryParse(rawTarget.toString())?.toInt() ?? 130000000);
