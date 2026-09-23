@@ -564,6 +564,7 @@ class OrderModel {
           : total);
 
   int get diskonAmount => ((baseSubtotal * diskonPersen) / 100).round();
+  int get totalSetelahDiskon => (baseSubtotal - diskonAmount) > 0 ? (baseSubtotal - diskonAmount) : 0;
   int get ppnPersen => ppn ?? (pembayaran?.ppn ?? 11);
   int get ppnAmount => (totalSetelahDiskon * (ppnPersen / 100)).round();
   int get pphPersen => pph ?? (pembayaran?.pph ?? 0);
