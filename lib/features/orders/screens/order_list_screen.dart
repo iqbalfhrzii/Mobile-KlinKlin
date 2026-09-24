@@ -92,6 +92,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
   static const _statusBonusFilters = ['Semua', 'Pending', 'Selesai'];
 
   bool _isFetching = false;
+  int _fetchRequestId = 0;
   Timer? _searchDebounce;
 
   @override
@@ -132,7 +133,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
   }
 
   Future<void> _fetchData({DateTime? customStart, DateTime? customEnd}) async {
-    if (_isFetching) return;
+    final int currentRequestId = ++_fetchRequestId;
     _isFetching = true;
 
     if (_orders.isEmpty) {
@@ -140,6 +141,8 @@ class _OrderListScreenState extends State<OrderListScreen> {
         _isLoading = true;
         _error = '';
       });
+    } else {
+      if (mounted) setState(() {});
     }
     try {
       final start = customStart ?? _filterStart;
@@ -200,6 +203,9 @@ class _OrderListScreenState extends State<OrderListScreen> {
         search: _query.isNotEmpty ? _query : null,
       );
 
+      // If another request was dispatched after this one, drop this stale response!
+      if (currentRequestId != _fetchRequestId) return;
+
       if (mounted) {
         setState(() {
           _orders = initialOrders;
@@ -208,6 +214,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
         });
       }
     } catch (e) {
+      if (currentRequestId != _fetchRequestId) return;
       if (mounted) {
         setState(() {
           _error = e.toString();
@@ -215,11 +222,19 @@ class _OrderListScreenState extends State<OrderListScreen> {
         });
       }
     } finally {
-      _isFetching = false;
+      if (currentRequestId == _fetchRequestId) {
+        if (mounted) {
+          setState(() {
+            _isFetching = false;
+          });
+        } else {
+          _isFetching = false;
+        }
+      }
     }
   }
 
-  DateTime? _parseServiceDate(String raw) {
+  static DateTime? parseServiceDate(String raw) {
     if (raw.trim().isEmpty) return null;
     final trimmed = raw.trim();
 
@@ -283,10 +298,10 @@ class _OrderListScreenState extends State<OrderListScreen> {
     final endDay = DateTime(end.year, end.month, end.day, 23, 59, 59, 999);
 
     // 1. Jika pesanan memiliki tanggal pengerjaan layanan yang valid, wajib cocok dengan rentang
-    final hasValidServiceDate = o.services.any((s) => _parseServiceDate(s.tanggalPengerjaan) != null);
+    final hasValidServiceDate = o.services.any((s) => parseServiceDate(s.tanggalPengerjaan) != null);
     if (hasValidServiceDate) {
       return o.services.any((s) {
-        final sDt = _parseServiceDate(s.tanggalPengerjaan);
+        final sDt = parseServiceDate(s.tanggalPengerjaan);
         if (sDt == null) return false;
         return !sDt.isBefore(startDay) && !sDt.isAfter(endDay);
       });
@@ -465,6 +480,21 @@ class _OrderListScreenState extends State<OrderListScreen> {
     final totalCount = filteredList.length;
     final displayedList = filteredList.take(_limit).toList();
 
+    final DateTime? activeFilterDate = () {
+      if (_periodFilter == 'hari_ini') return DateTime.now();
+      if (_periodFilter == 'kemarin') return DateTime.now().subtract(const Duration(days: 1));
+      if (_periodFilter == 'besok') return DateTime.now().add(const Duration(days: 1));
+      if (_periodFilter == 'weekly_date' && _filterStart != null) {
+        if (_filterEnd == null ||
+            (_filterStart!.year == _filterEnd!.year &&
+                _filterStart!.month == _filterEnd!.month &&
+                _filterStart!.day == _filterEnd!.day)) {
+          return _filterStart;
+        }
+      }
+      return null;
+    }();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Column(
@@ -508,6 +538,17 @@ class _OrderListScreenState extends State<OrderListScreen> {
                       },
                       trailingWidget: _buildFilterButton(),
                     ),
+                    if (_isFetching && _orders.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      const ClipRRect(
+                        borderRadius: BorderRadius.all(Radius.circular(4)),
+                        child: LinearProgressIndicator(
+                          minHeight: 3,
+                          backgroundColor: Color(0xFFE2E8F0),
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        ),
+                      ),
+                    ],
                     if (_onlyTransaksiBesar) ...[
                       const SizedBox(height: 8),
                       Row(
@@ -631,6 +672,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                       ...displayedList.map(
                         (o) => _OrderCard(
                           order: o,
+                          filterDate: activeFilterDate,
                           onTap: () async {
                             await Navigator.push(
                               context,
@@ -1342,10 +1384,12 @@ class _OrderCard extends StatelessWidget {
     required this.order,
     required this.onTap,
     required this.onRefresh,
+    this.filterDate,
   });
   final OrderModel order;
   final VoidCallback onTap;
   final VoidCallback onRefresh;
+  final DateTime? filterDate;
 
   String _fmt(int n) =>
       'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
@@ -1778,7 +1822,45 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
         ? o.pembayaran!.total!
         : (o.total > 0 ? o.total : o.calculatedTotalAkhir);
 
-    String dateStr = _formatDisplayDate(o.schedule);
+    // Tentukan schedule dan layanan mana yang relevan dengan tanggal filter aktif
+    String scheduleToShow = o.schedule;
+    String servicesTextToShow = o.services.isNotEmpty
+        ? o.services.map((s) => s.name).join(', ')
+        : '-';
+
+    if (filterDate != null && o.services.isNotEmpty) {
+      final matchingServices = o.services.where((s) {
+        final dt = _OrderListScreenState.parseServiceDate(s.tanggalPengerjaan);
+        if (dt == null) return false;
+        return dt.year == filterDate!.year &&
+            dt.month == filterDate!.month &&
+            dt.day == filterDate!.day;
+      }).toList();
+
+      if (matchingServices.isNotEmpty) {
+        final firstMatch = matchingServices.first;
+        if (firstMatch.tanggalPengerjaan.isNotEmpty) {
+          scheduleToShow = '${firstMatch.tanggalPengerjaan} · ${firstMatch.waktuPengerjaan}';
+        }
+        if (o.services.length > matchingServices.length) {
+          servicesTextToShow = matchingServices.map((s) => s.name).join(', ');
+        }
+      }
+    }
+
+    String dateStr = _formatDisplayDate(scheduleToShow);
+
+    // Cek apakah pesanan ini memiliki jadwal pengerjaan di beberapa tanggal berbeda
+    final distinctDatesCount = o.services
+        .map((s) => _OrderListScreenState.parseServiceDate(s.tanggalPengerjaan))
+        .where((dt) => dt != null)
+        .map((dt) => '${dt!.year}-${dt.month}-${dt.day}')
+        .toSet()
+        .length;
+
+    if (distinctDatesCount > 1) {
+      dateStr = '$dateStr ($distinctDatesCount Hari)';
+    }
 
     return GestureDetector(
       onTap: onTap,
@@ -1894,9 +1976,7 @@ Semangat ya kerjanya! Tolong foto before after jangan lupa.''';
                       _buildInfoItem(
                         Icons.cleaning_services_rounded,
                         Colors.blue,
-                        o.services.isNotEmpty
-                            ? o.services.map((s) => s.name).join(', ')
-                            : '-',
+                        servicesTextToShow,
                       ),
                     ],
                   ),
