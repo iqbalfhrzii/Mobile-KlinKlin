@@ -120,7 +120,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
             })
           : Future.value(<String, dynamic>{});
 
-      final jobsFuture = _service.fetchJobs().timeout(const Duration(seconds: 12));
+      final jobsFuture = _service.fetchJobs().timeout(const Duration(seconds: 35));
 
       final results = await Future.wait([meFuture, jobsFuture]);
       final meResponse = results[0] as Map<String, dynamic>;
@@ -229,7 +229,12 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
       if (mounted) {
         setState(() {
           if (!isSilent) {
-            _error = e.toString().replaceAll('Exception: ', '');
+            final errStr = e.toString();
+            if (errStr.contains('TimeoutException') || errStr.contains('Future not completed') || errStr.contains('timeout')) {
+              _error = 'Koneksi internet lambat. Ketuk Coba Lagi untuk memuat data tugas.';
+            } else {
+              _error = e.toString().replaceAll('Exception: ', '');
+            }
           }
         });
       }

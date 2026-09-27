@@ -53,8 +53,8 @@ class CleanerJobService {
           'cleaner_id': cleanerId,
         },
         options: Options(
-          sendTimeout: const Duration(seconds: 12),
-          receiveTimeout: const Duration(seconds: 12),
+          sendTimeout: const Duration(seconds: 35),
+          receiveTimeout: const Duration(seconds: 35),
         ),
       );
 
@@ -84,8 +84,8 @@ class CleanerJobService {
           'cleaner_id': cleanerId,
         },
         options: Options(
-          sendTimeout: const Duration(seconds: 12),
-          receiveTimeout: const Duration(seconds: 12),
+          sendTimeout: const Duration(seconds: 35),
+          receiveTimeout: const Duration(seconds: 35),
         ),
       );
 

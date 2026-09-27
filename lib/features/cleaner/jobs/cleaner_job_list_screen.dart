@@ -125,7 +125,7 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> with Widgets
       });
     }
     try {
-      final jobs = await _service.fetchJobs().timeout(const Duration(seconds: 12));
+      final jobs = await _service.fetchJobs().timeout(const Duration(seconds: 35));
       if (mounted) {
         setState(() {
           _allJobs = jobs;
@@ -136,7 +136,12 @@ class CleanerJobListScreenState extends State<CleanerJobListScreen> with Widgets
       if (mounted) {
         setState(() {
           if (!isSilent) {
-            _error = e.toString().replaceAll('Exception: ', '');
+            final errStr = e.toString();
+            if (errStr.contains('TimeoutException') || errStr.contains('Future not completed') || errStr.contains('timeout')) {
+              _error = 'Koneksi internet lambat. Silakan ketuk Coba Lagi.';
+            } else {
+              _error = e.toString().replaceAll('Exception: ', '');
+            }
           }
         });
       }

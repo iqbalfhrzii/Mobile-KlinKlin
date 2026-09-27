@@ -11,8 +11,8 @@ class ApiClient {
       Dio(
           BaseOptions(
             baseUrl: baseUrl,
-            connectTimeout: const Duration(seconds: 15),
-            receiveTimeout: const Duration(seconds: 15),
+            connectTimeout: const Duration(seconds: 35),
+            receiveTimeout: const Duration(seconds: 35),
             followRedirects: true,
             maxRedirects: 5,
             headers: {

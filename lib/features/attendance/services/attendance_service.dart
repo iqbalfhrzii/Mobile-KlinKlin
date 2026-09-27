@@ -227,14 +227,29 @@ class AttendanceService {
         'selfie': await MultipartFile.fromFile(photoFile.path, filename: 'selfie_${DateTime.now().millisecondsSinceEpoch}.jpg'),
       });
 
-      final response = await _dio.post(endpoint, data: formData);
+      final response = await _dio.post(
+        endpoint,
+        data: formData,
+        options: Options(
+          sendTimeout: const Duration(seconds: 45),
+          receiveTimeout: const Duration(seconds: 45),
+        ),
+      );
       if (response.statusCode != 200 && response.statusCode != 201) {
-        final message = response.data['message'] ?? 'Gagal memproses absensi';
-        throw Exception(message);
+        final message = response.data is Map ? response.data['message'] : null;
+        throw Exception(message ?? 'Gagal memproses absensi');
       }
     } on DioException catch (e) {
-      final message = e.response?.data['message'] ?? 'Terjadi kesalahan pada server';
-      throw Exception(message);
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.sendTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        throw Exception('Koneksi internet lambat / waktu habis saat mengirim absensi. Silakan coba lagi.');
+      }
+      String? message;
+      if (e.response?.data is Map) {
+        message = e.response?.data['message']?.toString();
+      }
+      throw Exception(message ?? 'Terjadi kesalahan pada server (${e.response?.statusCode ?? "koneksi terputus"}).');
     } catch (e) {
       throw Exception('Gagal mengirim absensi: $e');
     }
