@@ -216,7 +216,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       for (int day = maxDayToEvaluate; day >= 1; day--) {
         final dStr = "${_selectedMonth.year}-${_selectedMonth.month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}";
         final existing = grouped[dStr];
-        final dt = DateTime(_selectedMonth.year, _selectedMonth.month, day);
 
         if (existing != null && (existing.checkIn != null || existing.checkOut != null)) {
           // --- 1. Karyawan Hadir (Ada Check-in atau Check-out) ---
@@ -276,7 +275,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               status: jenisCapital,
             ));
           } else if (myLiburs.contains(dStr)) {
-            // Memiliki jadwal libur resmi (JadwalLibur) -> TIDAK dihitung sebagai "Tidak Absen"!
+            // Memiliki jadwal libur resmi dari HRD (JadwalLibur) -> TIDAK dihitung sebagai "Tidak Absen"!
             izinCutiLibur++;
             fullList.add(GroupedAttendanceItem(
               tanggal: dStr,
@@ -284,24 +283,27 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               namaCleaner: 'Anda',
               status: 'Libur',
             ));
-          } else if (dt.weekday == DateTime.sunday) {
-            // Hari Minggu (Libur Mingguan) -> TIDAK dihitung sebagai "Tidak Absen"!
-            izinCutiLibur++;
-            fullList.add(GroupedAttendanceItem(
-              tanggal: dStr,
-              karyawanId: 0,
-              namaCleaner: 'Anda',
-              status: 'Libur Mingguan',
-            ));
           } else {
-            // Hari kerja aktif yang terlewat tanpa izin/libur -> DIHITUNG SEBAGAI TIDAK ABSEN!
-            tidakAbsen++;
-            fullList.add(GroupedAttendanceItem(
-              tanggal: dStr,
-              karyawanId: 0,
-              namaCleaner: 'Anda',
-              status: 'Tidak Absen',
-            ));
+            // Bukan hari libur dan tidak ada izin/cuti resmi
+            final bool isToday = isCurrentMonth && day == now.day;
+            if (isToday) {
+              // Hari ini masih berjalan dan karyawan belum melakukan absensi
+              fullList.add(GroupedAttendanceItem(
+                tanggal: dStr,
+                karyawanId: 0,
+                namaCleaner: 'Anda',
+                status: 'Belum Absen',
+              ));
+            } else {
+              // Hari kerja lampau yang terlewat tanpa izin/libur -> DIHITUNG SEBAGAI TIDAK ABSEN!
+              tidakAbsen++;
+              fullList.add(GroupedAttendanceItem(
+                tanggal: dStr,
+                karyawanId: 0,
+                namaCleaner: 'Anda',
+                status: 'Tidak Absen',
+              ));
+            }
           }
         }
       }
@@ -1494,7 +1496,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       } else if (_activeFilter == 'telat') {
         return s == 'telat';
       } else if (_activeFilter == 'tidak_absen') {
-        return s == 'tidak absen';
+        return s == 'tidak absen' || s == 'belum absen';
       } else if (_activeFilter == 'libur_cuti') {
         return s.contains('libur') || s.contains('cuti') || s.contains('izin');
       }
@@ -1710,6 +1712,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
     final status = group.status ?? 'Tepat Waktu';
     final bool isAbsent = status == 'Tidak Absen';
+    final bool isNotYet = status == 'Belum Absen';
     final bool isHolidayOrLeave = status.contains('Libur') || status.contains('Cuti') || status.contains('Izin');
 
     Color dateBgColor = const Color(0xFFF1F5F9);
@@ -1720,6 +1723,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       dateBgColor = const Color(0xFFFEF2F2);
       dateTextColor = const Color(0xFFDC2626);
       customBorder = Border.all(color: const Color(0xFFFCA5A5), width: 1.2);
+    } else if (isNotYet) {
+      dateBgColor = const Color(0xFFFFFBEB);
+      dateTextColor = const Color(0xFFD97706);
+      customBorder = Border.all(color: const Color(0xFFFDE68A), width: 1.2);
     } else if (isHolidayOrLeave) {
       dateBgColor = const Color(0xFFF5F3FF);
       dateTextColor = const Color(0xFF7C3AED);
@@ -1795,6 +1802,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             fontStyle: FontStyle.italic,
                           ),
                         )
+                      else if (isNotYet)
+                        Text(
+                          'Belum melakukan absensi hari ini',
+                          style: GoogleFonts.inter(
+                            fontSize: 11.5,
+                            color: const Color(0xFFD97706),
+                            fontStyle: FontStyle.italic,
+                          ),
+                        )
                       else if (isHolidayOrLeave)
                         Text(
                           status.contains('Libur') ? 'Jadwal hari libur kerja' : 'Izin / Cuti disetujui',
@@ -1860,7 +1876,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _renderStatusPill(String status) {
-    if (status == 'Tidak Absen') {
+    if (status == 'Belum Absen') {
+      return _buildStatusPill('Belum Absen', const Color(0xFFD97706), const Color(0xFFFEF3C7));
+    } else if (status == 'Tidak Absen') {
       return _buildStatusPill('Tidak Absen', const Color(0xFFDC2626), const Color(0xFFFEF2F2));
     } else if (status.contains('Libur')) {
       return _buildStatusPill(status, const Color(0xFF2563EB), const Color(0xFFEFF6FF));

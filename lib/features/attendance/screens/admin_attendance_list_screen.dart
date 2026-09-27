@@ -299,9 +299,11 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
           }
           hadir++;
         } else {
-          if (date.weekday == DateTime.sunday) {
-            status = 'Libur';
-            cutiLibur++;
+          final isToday = date.year == DateTime.now().year &&
+              date.month == DateTime.now().month &&
+              date.day == DateTime.now().day;
+          if (isToday) {
+            status = 'Belum Absen';
           } else {
             status = 'Tidak Absen';
             tidakAbsen++;

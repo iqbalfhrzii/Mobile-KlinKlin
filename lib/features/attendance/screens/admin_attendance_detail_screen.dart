@@ -64,11 +64,25 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
     try {
       final monthStr = DateFormat('yyyy-MM').format(_selectedMonth);
       
-      // Fetch attendance records from backend
-      final historyList = await _service.getAllAbsensi(
-        karyawanId: widget.item.karyawanId,
-        month: monthStr,
-      );
+      // Fetch attendance records and monthly details (which already has JadwalLibur & Cuti from backend)
+      final results = await Future.wait([
+        _service.getAllAbsensi(
+          karyawanId: widget.item.karyawanId,
+          month: monthStr,
+        ),
+        _service.getDetailBulanan(
+          karyawanId: widget.item.karyawanId,
+          month: monthStr,
+        ),
+      ]);
+
+      final historyList = results[0] as List<AttendanceHistoryItem>;
+      final detailBulanan = results[1] as Map<String, dynamic>;
+      final riwayatList = (detailBulanan['riwayat'] as List? ?? []);
+      final Map<String, String> backendStatusMap = {
+        for (var r in riwayatList)
+          if (r['tanggal'] != null) r['tanggal'].toString(): r['status']?.toString() ?? ''
+      };
 
       final grouped = <String, GroupedAttendanceItem>{};
       for (var item in historyList) {
@@ -143,7 +157,6 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
       for (int day = maxDayToEvaluate; day >= 1; day--) {
         final dStr = "${_selectedMonth.year}-${_selectedMonth.month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}";
         final existing = grouped[dStr];
-        final dt = DateTime(_selectedMonth.year, _selectedMonth.month, day);
 
         if (existing != null && (existing.checkIn != null || existing.checkOut != null)) {
           String itemStatus = 'Tepat Waktu';
@@ -174,14 +187,32 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
             status: itemStatus,
           ));
         } else {
-          if (dt.weekday == DateTime.sunday) {
+          final backendStatus = backendStatusMap[dStr] ?? '';
+          if (backendStatus.contains('Libur')) {
             izinCutiLibur++;
             fullList.add(GroupedAttendanceItem(
               tanggal: dStr,
               karyawanId: widget.item.karyawanId,
               namaCleaner: widget.item.namaCleaner,
               cabangName: widget.item.cabangName,
-              status: 'Libur Mingguan',
+              status: 'Libur',
+            ));
+          } else if (backendStatus.contains('Cuti') || backendStatus.contains('Izin')) {
+            izinCutiLibur++;
+            fullList.add(GroupedAttendanceItem(
+              tanggal: dStr,
+              karyawanId: widget.item.karyawanId,
+              namaCleaner: widget.item.namaCleaner,
+              cabangName: widget.item.cabangName,
+              status: backendStatus,
+            ));
+          } else if (isCurrentMonth && day == now.day) {
+            fullList.add(GroupedAttendanceItem(
+              tanggal: dStr,
+              karyawanId: widget.item.karyawanId,
+              namaCleaner: widget.item.namaCleaner,
+              cabangName: widget.item.cabangName,
+              status: 'Belum Absen',
             ));
           } else {
             tidakAbsen++;
@@ -977,6 +1008,7 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
 
     final status = group.status ?? 'Tepat Waktu';
     final bool isAbsent = status == 'Tidak Absen';
+    final bool isNotYet = status == 'Belum Absen';
     final bool isHolidayOrLeave = status.contains('Libur') || status.contains('Cuti') || status.contains('Izin');
     final bool isSelectedDate = group.tanggal == _inspectedDateStr;
 
@@ -992,7 +1024,7 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
       statusColor = const Color(0xFFDC2626);
       statusBg = const Color(0xFFFEF2F2);
       statusBorder = const Color(0xFFFECACA);
-    } else if (status == 'Telat') {
+    } else if (isNotYet || status == 'Telat') {
       dateBgColor = const Color(0xFFFFFBEB);
       dateTextColor = const Color(0xFFD97706);
       statusColor = const Color(0xFFD97706);
@@ -1087,6 +1119,15 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                           style: GoogleFonts.inter(
                             fontSize: 11.5,
                             color: const Color(0xFFDC2626),
+                            fontStyle: FontStyle.italic,
+                          ),
+                        )
+                      else if (isNotYet)
+                        Text(
+                          'Belum melakukan absensi hari ini',
+                          style: GoogleFonts.inter(
+                            fontSize: 11.5,
+                            color: const Color(0xFFD97706),
                             fontStyle: FontStyle.italic,
                           ),
                         )

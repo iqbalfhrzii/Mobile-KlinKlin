@@ -108,6 +108,7 @@ class AttendanceDayDetailSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final fullDateText = _formatIndonesianDate(date, dateStr);
     final isAbsent = status == 'Tidak Absen';
+    final isNotYet = status == 'Belum Absen';
     final isHolidayOrLeave = status.contains('Libur') || status.contains('Cuti') || status.contains('Izin');
 
     Color statusColor = const Color(0xFF059669);
@@ -118,7 +119,7 @@ class AttendanceDayDetailSheet extends StatelessWidget {
       statusColor = const Color(0xFFDC2626);
       statusBg = const Color(0xFFFEF2F2);
       statusBorder = const Color(0xFFFECACA);
-    } else if (status == 'Telat') {
+    } else if (isNotYet || status == 'Telat') {
       statusColor = const Color(0xFFD97706);
       statusBg = const Color(0xFFFFFBEB);
       statusBorder = const Color(0xFFFDE68A);
@@ -272,6 +273,49 @@ class AttendanceDayDetailSheet extends StatelessWidget {
                                 Text(
                                   'Karyawan tidak memiliki catatan check-in maupun check-out pada hari kerja ini.',
                                   style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF991B1B)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ] else if (isNotYet) ...[
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFFBEB),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFFDE68A)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFEF3C7),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.timer_outlined, color: Color(0xFFD97706), size: 18),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Belum Melakukan Absensi',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFFD97706),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Hari ini adalah hari kerja aktif. Karyawan belum melakukan absensi.',
+                                  style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF334155)),
                                 ),
                               ],
                             ),
