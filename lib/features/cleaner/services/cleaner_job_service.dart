@@ -241,8 +241,8 @@ class CleanerJobService {
           if (year != null) 'year': year,
         },
         options: Options(
-          sendTimeout: const Duration(seconds: 12),
-          receiveTimeout: const Duration(seconds: 12),
+          sendTimeout: const Duration(seconds: 35),
+          receiveTimeout: const Duration(seconds: 35),
         ),
       );
 

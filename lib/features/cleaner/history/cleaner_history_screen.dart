@@ -49,18 +49,25 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
       _error = '';
     });
     try {
-      DateTime currentMonth = DateTime(_startDate.year, _startDate.month, 1);
+      List<DateTime> monthsToFetch = [];
+      DateTime cur = DateTime(_startDate.year, _startDate.month, 1);
       final endMonth = DateTime(_endDate.year, _endDate.month, 1);
+      while (!cur.isAfter(endMonth)) {
+        monthsToFetch.add(cur);
+        cur = DateTime(cur.year, cur.month + 1, 1);
+      }
 
-      List<dynamic> allPesanans = [];
+      final List<dynamic> allPesanans = [];
       num totalBonus = 0;
 
-      while (!currentMonth.isAfter(endMonth)) {
-        final data = await _service.fetchHistory(month: currentMonth.month, year: currentMonth.year);
+      final results = await Future.wait(
+        monthsToFetch.map((m) => _service.fetchHistory(month: m.month, year: m.year)),
+      );
+
+      for (final data in results) {
         if (data['pesanans'] != null) {
           allPesanans.addAll(data['pesanans']);
         }
-        currentMonth = DateTime(currentMonth.year, currentMonth.month + 1, 1);
       }
 
       // Filter exactly by _startDate (00:00:00) and _endDate (23:59:59)
