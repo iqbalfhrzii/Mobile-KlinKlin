@@ -99,23 +99,27 @@ class AttendanceService {
         }
       } catch (_) {}
 
-      // 2. Fetch today's attendance status from /absensi/saya
+      // 2. Fetch today's attendance status from /absensi/saya (instan dengan parameter tanggal)
       try {
-        final response = await _dio.get('/absensi/saya');
+        final now = DateTime.now();
+        final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+        final response = await _dio.get(
+          '/absensi/saya',
+          queryParameters: {'tanggal': todayStr},
+          options: Options(
+            sendTimeout: const Duration(seconds: 10),
+            receiveTimeout: const Duration(seconds: 10),
+          ),
+        );
         if (response.statusCode == 200) {
           final List data = response.data['data'] ?? [];
-          final now = DateTime.now();
-          final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-
           for (var item in data) {
-            if (item['tanggal'] == todayStr) {
-              if (item['tipe'] == 'masuk') {
-                hasCheckedIn = true;
-                checkInTime = item['waktu_server'];
-              } else if (item['tipe'] == 'pulang') {
-                hasCheckedOut = true;
-                checkOutTime = item['waktu_server'];
-              }
+            if (item['tipe'] == 'masuk') {
+              hasCheckedIn = true;
+              checkInTime = item['waktu_server'];
+            } else if (item['tipe'] == 'pulang') {
+              hasCheckedOut = true;
+              checkOutTime = item['waktu_server'];
             }
           }
         }
@@ -148,9 +152,14 @@ class AttendanceService {
       if (date != null) query['tanggal'] = date;
       if (month != null) query['bulan'] = month;
 
-      // Some backend APIs might not support filtering by month on the /saya endpoint
-      // We'll fetch all and filter locally if needed, or just rely on what the API returns.
-      final response = await _dio.get('/absensi/saya');
+      final response = await _dio.get(
+        '/absensi/saya',
+        queryParameters: query.isNotEmpty ? query : null,
+        options: Options(
+          sendTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+        ),
+      );
       if (response.statusCode == 200) {
         final List data = response.data['data'] ?? [];
         var history = data.map((item) => AttendanceHistoryItem.fromJson(item)).toList();
