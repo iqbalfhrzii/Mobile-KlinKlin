@@ -114,7 +114,7 @@ class OperasionalPengumumanService {
         );
       }
 
-      final formData = FormData.fromMap(map);
+      final formData = FormData.fromMap(map, ListFormat.multiCompatible);
 
       final res = await _dio.post(
         '/operasional/pengumuman',
