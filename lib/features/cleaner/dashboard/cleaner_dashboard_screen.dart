@@ -47,9 +47,20 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
   List<dynamic> _recentJobs = [];
   Timer? _refreshTimer;
 
+  DateTime _startDate = DateTime.now();
+  DateTime _endDate = DateTime.now();
+
   @override
   void initState() {
     super.initState();
+    final now = DateTime.now();
+    if (now.day >= 28) {
+      _startDate = DateTime(now.year, now.month, 28);
+      _endDate = DateTime(now.year, now.month + 1, 27);
+    } else {
+      _startDate = DateTime(now.year, now.month - 1, 28);
+      _endDate = DateTime(now.year, now.month, 27);
+    }
     WidgetsBinding.instance.addObserver(this);
     _loadProfile();
     _fetchData();
@@ -112,7 +123,29 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
       });
     }
     try {
-      // Jalankan fetch profil & fetch jobs secara PARALEL dengan timeout
+      final now = DateTime.now();
+      final DateTime startPeriod;
+      final DateTime endPeriod;
+      if (now.day >= 28) {
+        startPeriod = DateTime(now.year, now.month, 28);
+        endPeriod = DateTime(now.year, now.month + 1, 27);
+      } else {
+        startPeriod = DateTime(now.year, now.month - 1, 28);
+        endPeriod = DateTime(now.year, now.month, 27);
+      }
+      _startDate = startPeriod;
+      _endDate = endPeriod;
+
+      // Tentukan bulan-bulan yang dicakup siklus 28 - 27 untuk fetch history
+      List<DateTime> monthsToFetch = [];
+      DateTime cur = DateTime(startPeriod.year, startPeriod.month, 1);
+      final endMonth = DateTime(endPeriod.year, endPeriod.month, 1);
+      while (!cur.isAfter(endMonth)) {
+        monthsToFetch.add(cur);
+        cur = DateTime(cur.year, cur.month + 1, 1);
+      }
+
+      // Jalankan fetch profil, fetch jobs aktif, & fetch history bonus secara PARALEL dengan timeout
       final meFuture = !isSilent
           ? AuthService.getMe().timeout(const Duration(seconds: 8)).catchError((e) {
               debugPrint('Gagal fetch me: $e');
@@ -122,9 +155,17 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
 
       final jobsFuture = _service.fetchJobs().timeout(const Duration(seconds: 35));
 
-      final results = await Future.wait([meFuture, jobsFuture]);
+      final historyFuture = Future.wait(
+        monthsToFetch.map((m) => _service.fetchHistory(month: m.month, year: m.year)),
+      ).timeout(const Duration(seconds: 25)).catchError((e) {
+        debugPrint('Gagal fetch history untuk bonus dashboard: $e');
+        return <Map<String, dynamic>>[];
+      });
+
+      final results = await Future.wait([meFuture, jobsFuture, historyFuture]);
       final meResponse = results[0] as Map<String, dynamic>;
       final jobs = results[1] as List<dynamic>;
+      final historyResults = results[2] as List<dynamic>;
 
       if (meResponse.isNotEmpty && mounted) {
         final me = meResponse['data'] ?? meResponse;
@@ -154,13 +195,47 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
         }
       }
 
-      final now = DateTime.now();
-      
+      // Kumpulkan dan filter pekerjaan selesai sesuai rentang tanggal 28 - 27
+      final List<dynamic> allHistoryPesanans = [];
+      for (final data in historyResults) {
+        if (data is Map && data['pesanans'] != null && data['pesanans'] is List) {
+          allHistoryPesanans.addAll(data['pesanans']);
+        }
+      }
+
+      final startFilter = DateTime(startPeriod.year, startPeriod.month, startPeriod.day);
+      final endFilter = DateTime(endPeriod.year, endPeriod.month, endPeriod.day, 23, 59, 59, 999);
+
+      final filteredHistoryPesanans = allHistoryPesanans.where((job) {
+        if (job['finished_at'] == null) {
+          final details = job['pesanan']?['details'] as List?;
+          if (details != null && details.isNotEmpty && details[0]['tanggal_pengerjaan'] != null) {
+            final tgl = DateTime.tryParse(details[0]['tanggal_pengerjaan'].toString())?.toLocal();
+            if (tgl != null) {
+              return !tgl.isBefore(startFilter) && !tgl.isAfter(endFilter);
+            }
+          }
+          return false;
+        }
+        final finishedAt = DateTime.tryParse(job['finished_at'].toString())?.toLocal();
+        if (finishedAt == null) return false;
+        return !finishedAt.isBefore(startFilter) && !finishedAt.isAfter(endFilter);
+      }).toList();
+
+      int bonusPeriod = 0;
+      for (var job in filteredHistoryPesanans) {
+        final b = job['total_bonus'];
+        if (b is num) {
+          bonusPeriod += b.toInt();
+        } else if (b != null) {
+          bonusPeriod += (double.tryParse(b.toString()) ?? 0).toInt();
+        }
+      }
+
       int todayCount = 0;
       int activeCount = 0;
       int inProgressCount = 0;
       int completedCount = 0;
-      int bonusMonth = 0;
       List<dynamic> recentJobs = [];
 
       for (var job in jobs) {
@@ -186,7 +261,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
           completedCount++;
         }
         
-        // Cek tanggal pengerjaan di pesanan.details
+        // Cek tanggal pengerjaan di pesanan.details untuk tugas hari ini
         if (job['pesanan'] != null && job['pesanan']['details'] != null) {
           final details = job['pesanan']['details'] as List;
           if (details.isNotEmpty) {
@@ -197,15 +272,45 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                 if (jobDate.year == now.year && jobDate.month == now.month && jobDate.day == now.day) {
                   todayCount++;
                 }
-                
-                // Jika job selesai dan di bulan ini, tambahkan bonus
-                if (status == 'finished' && jobDate.year == now.year && jobDate.month == now.month) {
-                  bonusMonth += int.tryParse(job['total_bonus']?.toString() ?? '0') ?? 0;
-                }
               }
             }
           }
         }
+      }
+
+      // Fallback jika history kosong atau tidak berhasil diambil: hitung dari jobs aktif rentang 28-27
+      if (allHistoryPesanans.isEmpty) {
+        int fallbackBonus = 0;
+        int fallbackCompleted = 0;
+        for (var job in jobs) {
+          final status = job['status_pengerjaan'];
+          if (status != 'finished') continue;
+
+          DateTime? jobDate;
+          if (job['finished_at'] != null) {
+            jobDate = DateTime.tryParse(job['finished_at'].toString())?.toLocal();
+          }
+          if (jobDate == null && job['pesanan'] != null && job['pesanan']['details'] != null) {
+            final details = job['pesanan']['details'] as List;
+            if (details.isNotEmpty && details[0]['tanggal_pengerjaan'] != null) {
+              jobDate = DateTime.tryParse(details[0]['tanggal_pengerjaan'].toString())?.toLocal();
+            }
+          }
+
+          if (jobDate != null && !jobDate.isBefore(startFilter) && !jobDate.isAfter(endFilter)) {
+            fallbackCompleted++;
+            final b = job['total_bonus'];
+            if (b is num) {
+              fallbackBonus += b.toInt();
+            } else if (b != null) {
+              fallbackBonus += (double.tryParse(b.toString()) ?? 0).toInt();
+            }
+          }
+        }
+        bonusPeriod = fallbackBonus;
+        completedCount = fallbackCompleted;
+      } else {
+        completedCount = filteredHistoryPesanans.length;
       }
 
       // Sort recent jobs: in_progress first, then assigned
@@ -221,7 +326,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
           _activeJobsCount = activeCount;
           _inProgressJobsCount = inProgressCount;
           _completedJobsCount = completedCount;
-          _bonusThisMonth = bonusMonth;
+          _bonusThisMonth = bonusPeriod;
           _recentJobs = recentJobs.take(3).toList();
         });
       }
@@ -245,6 +350,19 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
         });
       }
     }
+  }
+
+  static const _monthNames = [
+    '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+  ];
+
+  String _formatPayrollPeriod(DateTime start, DateTime end) {
+    final startMonthName = _monthNames[start.month];
+    final endMonthName = _monthNames[end.month];
+    if (start.year == end.year) {
+      return '${start.day} $startMonthName - ${end.day} $endMonthName ${end.year}';
+    }
+    return '${start.day} $startMonthName ${start.year} - ${end.day} $endMonthName ${end.year}';
   }
 
   String _formatRupiah(int n) =>
@@ -992,7 +1110,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
               child: _buildModernStatCard(
                 title: 'Selesai',
                 value: '$_completedJobsCount',
-                badgeText: 'Bulan Ini',
+                badgeText: 'Periode Ini',
                 icon: Icons.check_circle_rounded,
                 primaryColor: const Color(0xFF10B981),
                 bgColor: const Color(0xFFECFDF5),
@@ -1001,7 +1119,9 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                   MaterialPageRoute(
                     builder: (_) => const CleanerJobListScreen(initialStatusFilter: 'finished'),
                   ),
-                ),
+                ).then((_) {
+                  if (mounted) _fetchData(isSilent: true);
+                }),
               ),
             ),
           ],
@@ -1099,7 +1219,9 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const CleanerHistoryScreen()),
-      ),
+      ).then((_) {
+        if (mounted) _fetchData(isSilent: true);
+      }),
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.all(18),
@@ -1153,7 +1275,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                         const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 13),
                         const SizedBox(width: 5),
                         Text(
-                          'ESTIMASI BONUS BULAN INI',
+                          'TOTAL BONUS BULANAN',
                           style: GoogleFonts.inter(
                             fontSize: 10,
                             fontWeight: FontWeight.w900,
@@ -1179,7 +1301,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
               ),
               const SizedBox(height: 4),
               Text(
-                'Akumulasi bonus dari tugas yang telah selesai di bulan ini.',
+                'Akumulasi bonus periode ${_formatPayrollPeriod(_startDate, _endDate)}.',
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   color: Colors.white.withValues(alpha: 0.9),
