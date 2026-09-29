@@ -290,7 +290,6 @@ class _OperasionalPengumumanFormSheetState extends State<OperasionalPengumumanFo
                                         } else {
                                           _selectedRoles.addAll(_jabatanList);
                                         }
-                                        _syncCabangWithSelectedRoles();
                                       });
                                     },
                                     child: Text(
