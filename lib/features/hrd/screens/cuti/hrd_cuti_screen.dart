@@ -34,7 +34,7 @@ class _HrdCutiScreenState extends State<HrdCutiScreen> with SingleTickerProvider
 
   // Pengajuan State
   List<Map<String, dynamic>> _pengajuan = [];
-  Map<String, dynamic> _pengajuanStats = {'pending': 0, 'disetujui': 0, 'ditolak': 0};
+  Map<String, dynamic> _pengajuanStats = {'pending': 0, 'disetujui': 0, 'ditolak': 0, 'dibatalkan': 0};
   bool _isLoadingPengajuan = true;
   String _statusFilter = 'pending';
 
@@ -524,6 +524,29 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
     try {
       await _service.rejectPengajuan(id, catatan);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengajuan telah ditolak')));
+      _fetchPengajuan();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  Future<void> _cancel(int id, String catatan) async {
+    try {
+      await _service.cancelPengajuan(id, catatan);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Expanded(child: Text('Pengajuan dibatalkan & sisa cuti dikembalikan')),
+              ],
+            ),
+            backgroundColor: Color(0xFFE11D48),
+          ),
+        );
+      }
       _fetchPengajuan();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -1253,11 +1276,13 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
           child: Row(
             children: [
-              _buildStatCard('Pending', _pengajuanStats['pending'].toString(), const Color(0xFFD97706), const Color(0xFFFEF3C7), Icons.hourglass_top_rounded),
+              _buildStatCard('Pending', (_pengajuanStats['pending'] ?? 0).toString(), const Color(0xFFD97706), const Color(0xFFFEF3C7), Icons.hourglass_top_rounded),
               const SizedBox(width: 8),
-              _buildStatCard('Disetujui', _pengajuanStats['disetujui'].toString(), const Color(0xFF059669), const Color(0xFFD1FAE5), Icons.check_circle_rounded),
+              _buildStatCard('Disetujui', (_pengajuanStats['disetujui'] ?? 0).toString(), const Color(0xFF059669), const Color(0xFFD1FAE5), Icons.check_circle_rounded),
               const SizedBox(width: 8),
-              _buildStatCard('Ditolak', _pengajuanStats['ditolak'].toString(), const Color(0xFFDC2626), const Color(0xFFFEE2E2), Icons.cancel_rounded),
+              _buildStatCard('Ditolak', (_pengajuanStats['ditolak'] ?? 0).toString(), const Color(0xFFDC2626), const Color(0xFFFEE2E2), Icons.cancel_rounded),
+              const SizedBox(width: 8),
+              _buildStatCard('Dibatalkan', (_pengajuanStats['dibatalkan'] ?? 0).toString(), const Color(0xFFE11D48), const Color(0xFFFFF1F2), Icons.remove_circle_outline_rounded),
             ],
           ),
         ),
@@ -1265,7 +1290,7 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
-            children: ['pending', 'disetujui', 'ditolak', 'semua'].map((status) {
+            children: ['pending', 'disetujui', 'ditolak', 'dibatalkan', 'semua'].map((status) {
               final isSelected = _statusFilter == status;
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
@@ -1371,10 +1396,29 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
     final isPending = p['status'] == 'pending';
     final isApproved = p['status'] == 'disetujui';
     final isRejected = p['status'] == 'ditolak';
+    final isCancelled = p['status'] == 'dibatalkan';
 
-    final statusColor = isPending ? const Color(0xFFD97706) : isApproved ? const Color(0xFF059669) : const Color(0xFFDC2626);
-    final statusBg = isPending ? const Color(0xFFFFFBEB) : isApproved ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2);
-    final statusBorder = isPending ? const Color(0xFFFDE68A) : isApproved ? const Color(0xFFA7F3D0) : const Color(0xFFFECACA);
+    final statusColor = isPending
+        ? const Color(0xFFD97706)
+        : isApproved
+            ? const Color(0xFF059669)
+            : isCancelled
+                ? const Color(0xFFE11D48)
+                : const Color(0xFFDC2626);
+    final statusBg = isPending
+        ? const Color(0xFFFFFBEB)
+        : isApproved
+            ? const Color(0xFFECFDF5)
+            : isCancelled
+                ? const Color(0xFFFFF1F2)
+                : const Color(0xFFFEF2F2);
+    final statusBorder = isPending
+        ? const Color(0xFFFDE68A)
+        : isApproved
+            ? const Color(0xFFA7F3D0)
+            : isCancelled
+                ? const Color(0xFFFECDD3)
+                : const Color(0xFFFECACA);
 
     final typeInfo = _getLeaveTypeInfo(
       p['jenis']?.toString(),
@@ -1454,7 +1498,11 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
                         border: Border.all(color: statusBorder),
                       ),
                       child: Text(
-                        isApproved ? 'DISETUJUI' : (isRejected ? 'DITOLAK' : 'PENDING'),
+                        isApproved
+                            ? 'DISETUJUI'
+                            : (isRejected
+                                ? 'DITOLAK'
+                                : (isCancelled ? 'DIBATALKAN' : 'PENDING')),
                         style: GoogleFonts.inter(
                           color: statusColor,
                           fontWeight: FontWeight.bold,
@@ -1563,20 +1611,38 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
                   ),
                 ] else if (isApproved) ...[
                   const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0284C7),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFFE11D48),
+                            side: const BorderSide(color: Color(0xFFFDA4AF)),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: () => _showCancelModal(p['id'], p),
+                          icon: const Icon(Icons.cancel_outlined, size: 16),
+                          label: Text('Batalkan', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
+                        ),
                       ),
-                      onPressed: () => _showNotifyCsOptions(p),
-                      icon: const Icon(Icons.campaign_rounded, size: 16),
-                      label: Text('Beritahu CS', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
-                    ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0284C7),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: () => _showNotifyCsOptions(p),
+                          icon: const Icon(Icons.campaign_rounded, size: 16),
+                          label: Text('Beritahu CS', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
 
@@ -3150,6 +3216,140 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
     );
   }
 
+  void _showCancelModal(int id, Map<String, dynamic> p) {
+    String catatan = '';
+    final k = p['karyawan'];
+    final namaKaryawan = k?['nama'] ?? 'Cleaner';
+    final isCuti = (p['jenis'] ?? '').toString().toLowerCase() == 'cuti';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFFF1F2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.cancel_outlined, color: Color(0xFFE11D48), size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Batalkan Izin/Cuti', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFFE11D48))),
+                        Text(namaKaryawan, style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFDE68A)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline_rounded, size: 18, color: Color(0xFFD97706)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        isCuti
+                            ? 'Pembatalan cuti tahunan ini akan otomatis mengembalikan kuota sisa cuti karyawan, serta mengirimkan notifikasi pembatalan ke cleaner dan CS cabang.'
+                            : 'Pembatalan izin ini akan otomatis mengirimkan notifikasi ke cleaner dan CS cabang agar cleaner dapat kembali dijadwalkan.',
+                        style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF92400E), height: 1.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text('Alasan Pembatalan (Opsional)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF334155))),
+              const SizedBox(height: 6),
+              TextFormField(
+                decoration: InputDecoration(
+                  hintText: 'Contoh: Karyawan membatalkan libur / penyesuaian operasional...',
+                  hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE11D48), width: 1.5)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                ),
+                maxLines: 3,
+                onChanged: (v) => catatan = v,
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      ),
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text('Tutup', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: const Color(0xFF64748B))),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE11D48),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _cancel(id, catatan.trim());
+                      },
+                      child: Text('Konfirmasi Batalkan', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showDetailPengajuanModal(Map<String, dynamic> p) {
     final k = p['karyawan'];
     final tglMulai = _formatDate(p['tanggal_mulai']);
@@ -3168,16 +3368,23 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
     final isPending = (p['status']?.toString().toLowerCase() ?? '') == 'pending';
     final isApproved = (p['status']?.toString().toLowerCase() ?? '') == 'disetujui';
     final isRejected = (p['status']?.toString().toLowerCase() ?? '') == 'ditolak';
+    final isCancelled = (p['status']?.toString().toLowerCase() ?? '') == 'dibatalkan';
 
     final statusColor = isApproved
         ? const Color(0xFF059669)
-        : (isRejected ? const Color(0xFFDC2626) : const Color(0xFFD97706));
+        : (isRejected
+            ? const Color(0xFFDC2626)
+            : (isCancelled ? const Color(0xFFE11D48) : const Color(0xFFD97706)));
     final statusBg = isApproved
         ? const Color(0xFFECFDF5)
-        : (isRejected ? const Color(0xFFFEF2F2) : const Color(0xFFFFFBEB));
+        : (isRejected
+            ? const Color(0xFFFEF2F2)
+            : (isCancelled ? const Color(0xFFFFF1F2) : const Color(0xFFFFFBEB)));
     final statusBorder = isApproved
         ? const Color(0xFFA7F3D0)
-        : (isRejected ? const Color(0xFFFECACA) : const Color(0xFFFDE68A));
+        : (isRejected
+            ? const Color(0xFFFECACA)
+            : (isCancelled ? const Color(0xFFFECDD3) : const Color(0xFFFDE68A)));
 
     final typeInfo = _getLeaveTypeInfo(
       p['jenis']?.toString(),
@@ -3443,7 +3650,11 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
                                         border: Border.all(color: statusBorder),
                                       ),
                                       child: Text(
-                                        isApproved ? 'Disetujui' : (isRejected ? 'Ditolak' : 'Pending'),
+                                        isApproved
+                                            ? 'Disetujui'
+                                            : (isRejected
+                                                ? 'Ditolak'
+                                                : (isCancelled ? 'Dibatalkan' : 'Pending')),
                                         style: GoogleFonts.inter(
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
@@ -3538,23 +3749,43 @@ Mohon tidak mengalokasikan / menjadwalkan pesanan kepada cleaner tersebut pada t
                       ),
                     ] else if (isApproved) ...[
                       const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF0284C7),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFFE11D48),
+                                side: const BorderSide(color: Color(0xFFFDA4AF)),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                _showCancelModal(p['id'], p);
+                              },
+                              icon: const Icon(Icons.cancel_outlined, size: 18),
+                              label: Text('Batalkan Izin/Cuti', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
+                            ),
                           ),
-                          onPressed: () {
-                            Navigator.pop(ctx);
-                            _showNotifyCsOptions(p);
-                          },
-                          icon: const Icon(Icons.campaign_rounded, size: 18),
-                          label: Text('Beritahu CS (Notif / WhatsApp)', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14)),
-                        ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0284C7),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                _showNotifyCsOptions(p);
+                              },
+                              icon: const Icon(Icons.campaign_rounded, size: 18),
+                              label: Text('Beritahu CS', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ],

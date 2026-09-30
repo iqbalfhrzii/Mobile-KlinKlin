@@ -80,6 +80,12 @@ class HrdCutiService {
     });
   }
 
+  Future<void> cancelPengajuan(int pengajuanId, String catatan) async {
+    await _dio.put('/cuti/pengajuan/$pengajuanId/cancel', data: {
+      'catatan_hrd': catatan,
+    });
+  }
+
   Future<void> notifyCs(int pengajuanId) async {
     await _dio.post('/cuti/pengajuan/$pengajuanId/notify-cs');
   }

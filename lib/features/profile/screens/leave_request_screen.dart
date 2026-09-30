@@ -411,6 +411,8 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
       return const Color(0xFF059669);
     } else if (s == 'ditolak' || s == 'rejected') {
       return const Color(0xFFDC2626);
+    } else if (s == 'dibatalkan' || s == 'cancelled' || s == 'batal') {
+      return const Color(0xFFE11D48);
     }
     return const Color(0xFFD97706); // pending / menunggu
   }
@@ -421,6 +423,8 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
       return const Color(0xFFECFDF5);
     } else if (s == 'ditolak' || s == 'rejected') {
       return const Color(0xFFFEF2F2);
+    } else if (s == 'dibatalkan' || s == 'cancelled' || s == 'batal') {
+      return const Color(0xFFFFF1F2);
     }
     return const Color(0xFFFFFBEB); // pending
   }
@@ -431,6 +435,8 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
       return 'DISETUJUI';
     } else if (s == 'ditolak' || s == 'rejected') {
       return 'DITOLAK';
+    } else if (s == 'dibatalkan' || s == 'cancelled' || s == 'batal') {
+      return 'DIBATALKAN';
     }
     return 'MENUNGGU';
   }
