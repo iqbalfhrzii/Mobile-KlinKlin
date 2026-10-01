@@ -22,6 +22,7 @@ class _PengajuanFiturScreenState extends State<PengajuanFiturScreen> with Single
 
   bool _isLoading = true;
   bool _isSuperadmin = false;
+  int? _currentUserId;
   String _selectedKategori = 'semua'; // 'semua', 'website', 'aplikasi'
 
   List<PengajuanFiturModel> _antriList = [];
@@ -54,6 +55,9 @@ class _PengajuanFiturScreenState extends State<PengajuanFiturScreen> with Single
         _isLoading = false;
         if (result['success'] == true) {
           _isSuperadmin = result['is_superadmin'] == true;
+          _currentUserId = result['current_user_id'] is int
+              ? result['current_user_id'] as int
+              : int.tryParse(result['current_user_id']?.toString() ?? '');
           _antriList = result['antri'] as List<PengajuanFiturModel>;
           _prosesList = result['proses'] as List<PengajuanFiturModel>;
           _selesaiList = result['selesai'] as List<PengajuanFiturModel>;
@@ -98,6 +102,91 @@ class _PengajuanFiturScreenState extends State<PengajuanFiturScreen> with Single
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(res['message'] ?? 'Gagal mengubah status'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _approvePengajuan(PengajuanFiturModel item) async {
+    setState(() => _isLoading = true);
+    final res = await _service.approve(item.id);
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (res['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? 'Pengajuan telah Anda setujui.'),
+          backgroundColor: const Color(0xFF059669),
+        ),
+      );
+      _loadData();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? 'Gagal menyetujui pengajuan'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _rejectPengajuan(PengajuanFiturModel item) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Tolak Hasil Perbaikan?',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
+        content: Text(
+          'Pengajuan akan dikembalikan ke status Proses agar tim developer memperbaiki kembali.',
+          style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF475569)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'Batal',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE11D48),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'Ya, Kembalikan ke Proses',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isLoading = true);
+    final res = await _service.reject(item.id);
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (res['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? 'Pengajuan dikembalikan ke tahap proses.'),
+          backgroundColor: const Color(0xFF0284C7),
+        ),
+      );
+      _loadData();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? 'Gagal menolak pengajuan'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -247,9 +336,7 @@ class _PengajuanFiturScreenState extends State<PengajuanFiturScreen> with Single
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  _isSuperadmin
-                      ? 'Kelola & tindak lanjuti antrian pengajuan'
-                      : 'Kirim & pantau progres pengajuan Anda',
+                  'Lihat status antrian dan progres pengajuan fitur & bug Anda.',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w400,
@@ -357,7 +444,7 @@ class _PengajuanFiturScreenState extends State<PengajuanFiturScreen> with Single
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('Diproses'),
+                const Text('Sedang Diproses'),
                 const SizedBox(width: 6),
                 _buildTabBadge(_countProses, const Color(0xFF3B82F6)),
               ],
@@ -367,7 +454,7 @@ class _PengajuanFiturScreenState extends State<PengajuanFiturScreen> with Single
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('Selesai'),
+                const Text('Selesai (Terbaru)'),
                 const SizedBox(width: 6),
                 _buildTabBadge(_countSelesai, const Color(0xFF10B981)),
               ],
@@ -462,247 +549,814 @@ class _PengajuanFiturScreenState extends State<PengajuanFiturScreen> with Single
   Widget _buildPengajuanCard(PengajuanFiturModel item) {
     final isFitur = item.isFitur;
     final isAplikasi = item.isAplikasi;
+    final bool isMine = (_currentUserId != null && item.karyawanId == _currentUserId);
 
     final formattedDate = item.createdAt != null
         ? DateFormat('d MMM yyyy, HH:mm').format(item.createdAt!)
         : '-';
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+        onTap: () => _showDetailPengajuanSheet(item),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isMine && item.status == 'selesai' ? const Color(0xFFF8FAFC) : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isMine && item.status == 'selesai'
+                  ? const Color(0xFFBAE6FD)
+                  : const Color(0xFFE2E8F0),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Row 1: Badges & Date
-            Row(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      // Badge Jenis
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: isFitur
-                              ? const Color(0xFFECFDF5)
-                              : const Color(0xFFFFF1F2),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: isFitur
-                                ? const Color(0xFFA7F3D0)
-                                : const Color(0xFFFECDD3),
+                // Row 1: Badges & Date
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          // Badge Jenis
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isFitur
+                                  ? const Color(0xFFECFDF5)
+                                  : const Color(0xFFFFF1F2),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: isFitur
+                                    ? const Color(0xFFA7F3D0)
+                                    : const Color(0xFFFECDD3),
+                              ),
+                            ),
+                            child: Text(
+                              item.jenisLabel,
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: isFitur
+                                    ? const Color(0xFF047857)
+                                    : const Color(0xFFBE123C),
+                              ),
+                            ),
                           ),
-                        ),
-                        child: Text(
-                          item.jenisLabel,
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: isFitur
-                                ? const Color(0xFF047857)
-                                : const Color(0xFFBE123C),
+                          // Badge Kategori
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isAplikasi
+                                  ? const Color(0xFFF5F3FF)
+                                  : const Color(0xFFF0F9FF),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: isAplikasi
+                                    ? const Color(0xFFDDD6FE)
+                                    : const Color(0xFFBAE6FD),
+                              ),
+                            ),
+                            child: Text(
+                              isAplikasi ? '📱 Aplikasi' : '🌐 Website',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: isAplikasi
+                                    ? const Color(0xFF6D28D9)
+                                    : const Color(0xFF0369A1),
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                      // Badge Kategori
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: isAplikasi
-                              ? const Color(0xFFF5F3FF)
-                              : const Color(0xFFF0F9FF),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: isAplikasi
-                                ? const Color(0xFFDDD6FE)
-                                : const Color(0xFFBAE6FD),
-                          ),
-                        ),
-                        child: Text(
-                          isAplikasi ? '📱 Aplikasi' : '🌐 Website',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: isAplikasi
-                                ? const Color(0xFF6D28D9)
-                                : const Color(0xFF0369A1),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Text(
-                  formattedDate,
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF94A3B8),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            // Title: Kendala Utama
-            Text(
-              item.kendalaUtama,
-              style: GoogleFonts.inter(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF0F172A),
-                letterSpacing: -0.2,
-              ),
-            ),
-            const SizedBox(height: 6),
-
-            // Description
-            Text(
-              item.deskripsi,
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w400,
-                color: const Color(0xFF475569),
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Photo Button
-            if (item.fotoHalamanUrl != null && item.fotoHalamanUrl!.isNotEmpty) ...[
-              InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: () => _openDetailPhoto(item.fotoHalamanUrl!),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEFF6FF),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFDBEAFE)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.attach_file_rounded, size: 16, color: Color(0xFF2563EB)),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Lihat Lampiran Foto',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF2563EB),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-
-            // Footer: Submitter info & Action (Superadmin)
-            Container(
-              padding: const EdgeInsets.only(top: 12),
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 14,
-                    backgroundColor: const Color(0xFFE2E8F0),
-                    child: Text(
-                      item.namaKaryawan != null && item.namaKaryawan!.isNotEmpty
-                          ? item.namaKaryawan![0].toUpperCase()
-                          : 'U',
+                    ),
+                    Text(
+                      formattedDate,
                       style: GoogleFonts.inter(
                         fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF334155),
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF94A3B8),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Title: Kendala Utama
+                Text(
+                  item.kendalaUtama,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 6),
+
+                // Description
+                Text(
+                  item.deskripsi,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF475569),
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Photo Button
+                if (item.fotoHalamanUrl != null && item.fotoHalamanUrl!.isNotEmpty) ...[
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => _openDetailPhoto(item.fotoHalamanUrl!),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFDBEAFE)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.attach_file_rounded, size: 16, color: Color(0xFF2563EB)),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Lihat Lampiran Foto',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF2563EB),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 12),
+                ],
+
+                // Indicator if rejected and in proses
+                if (item.status == 'proses' && item.isRejected) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF1F2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFECDD3)),
+                    ),
+                    child: Row(
                       children: [
-                        Text(
-                          item.namaKaryawan ?? 'Pengguna',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF1E293B),
+                        const Icon(Icons.replay_rounded, color: Color(0xFFE11D48), size: 15),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Perlu perbaikan ulang dari hasil review pemohon',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFFBE123C),
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          '${item.jabatanKaryawan ?? '-'}${item.cabangKaryawan != null ? ' • ${item.cabangKaryawan}' : ''}',
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            color: const Color(0xFF64748B),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
+                ],
 
-                  // Action Button for Superadmin
-                  if (_isSuperadmin && item.status == 'antri') ...[
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                // Footer: Submitter info & Action (Superadmin)
+                Container(
+                  padding: const EdgeInsets.only(top: 12),
+                  decoration: const BoxDecoration(
+                    border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 14,
+                        backgroundColor: isMine ? const Color(0xFFDBEAFE) : const Color(0xFFE2E8F0),
+                        child: Text(
+                          item.namaKaryawan != null && item.namaKaryawan!.isNotEmpty
+                              ? item.namaKaryawan![0].toUpperCase()
+                              : 'U',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: isMine ? const Color(0xFF1D4ED8) : const Color(0xFF334155),
+                          ),
+                        ),
                       ),
-                      onPressed: () => _updateStatus(item, 'proses'),
-                      child: Text(
-                        'Proses >',
-                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text.rich(
+                              TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: item.namaKaryawan ?? 'Pengguna',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF1E293B),
+                                    ),
+                                  ),
+                                  if (isMine)
+                                    TextSpan(
+                                      text: ' (Anda)',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF2563EB),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              '${item.jabatanKaryawan ?? '-'}${item.cabangKaryawan != null ? ' • ${item.cabangKaryawan}' : ''}',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                color: const Color(0xFF64748B),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Action Button for Superadmin
+                      if (_isSuperadmin && item.status == 'antri') ...[
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2563EB),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          ),
+                          onPressed: () => _updateStatus(item, 'proses'),
+                          child: Text(
+                            'Proses >',
+                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+                          ),
+                        ),
+                      ] else if (_isSuperadmin && item.status == 'proses') ...[
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF059669),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          ),
+                          onPressed: () => _updateStatus(item, 'selesai'),
+                          child: Text(
+                            'Selesai ✓',
+                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                // User Approval Section (matching web Livewire design)
+                if (item.status == 'selesai') ...[
+                  if (isMine) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (item.isPendingApproval) ...[
+                            Text(
+                              'Apakah fitur/perbaikan ini sudah sesuai?',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF1E40AF),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF10B981),
+                                      padding: const EdgeInsets.symmetric(vertical: 9),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      elevation: 0,
+                                    ),
+                                    onPressed: () => _approvePengajuan(item),
+                                    child: Text(
+                                      'Sudah Sesuai',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFF43F5E),
+                                      padding: const EdgeInsets.symmetric(vertical: 9),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      elevation: 0,
+                                    ),
+                                    onPressed: () => _rejectPengajuan(item),
+                                    child: Text(
+                                      'Belum Sesuai',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ] else if (item.isApproved) ...[
+                            Row(
+                              children: [
+                                const Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 16),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Telah Disetujui',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF047857),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                  ] else if (_isSuperadmin && item.status == 'proses') ...[
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF059669),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                      ),
-                      onPressed: () => _updateStatus(item, 'selesai'),
-                      child: Text(
-                        'Selesai ✓',
-                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
-                      ),
+                  ] else if (item.isApproved) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const Icon(Icons.check_circle_outline_rounded, color: Color(0xFF059669), size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Telah disetujui pemohon',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF059669),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ],
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  void _showDetailPengajuanSheet(PengajuanFiturModel item) {
+    final bool isMine = (_currentUserId != null && item.karyawanId == _currentUserId);
+    final isFitur = item.isFitur;
+    final isAplikasi = item.isAplikasi;
+
+    final formattedDate = item.createdAt != null
+        ? DateFormat('d MMMM yyyy, HH:mm').format(item.createdAt!)
+        : '-';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).padding.bottom + 20,
+          ),
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.9,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag Handle
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFCBD5E1),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Detail Pengajuan',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: Color(0xFFF1F5F9)),
+
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Badges Row
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          // Status Badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: item.status == 'selesai'
+                                  ? const Color(0xFFECFDF5)
+                                  : (item.status == 'proses'
+                                      ? const Color(0xFFEFF6FF)
+                                      : const Color(0xFFFFFBEB)),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: item.status == 'selesai'
+                                    ? const Color(0xFFA7F3D0)
+                                    : (item.status == 'proses'
+                                        ? const Color(0xFFBFDBFE)
+                                        : const Color(0xFFFDE68A)),
+                              ),
+                            ),
+                            child: Text(
+                              item.statusLabel.toUpperCase(),
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: item.status == 'selesai'
+                                    ? const Color(0xFF047857)
+                                    : (item.status == 'proses'
+                                        ? const Color(0xFF1D4ED8)
+                                        : const Color(0xFFB45309)),
+                              ),
+                            ),
+                          ),
+                          // Jenis Badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isFitur ? const Color(0xFFECFDF5) : const Color(0xFFFFF1F2),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isFitur ? const Color(0xFFA7F3D0) : const Color(0xFFFECDD3),
+                              ),
+                            ),
+                            child: Text(
+                              item.jenisLabel,
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: isFitur ? const Color(0xFF047857) : const Color(0xFFBE123C),
+                              ),
+                            ),
+                          ),
+                          // Kategori Badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isAplikasi ? const Color(0xFFF5F3FF) : const Color(0xFFF0F9FF),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isAplikasi ? const Color(0xFFDDD6FE) : const Color(0xFFBAE6FD),
+                              ),
+                            ),
+                            child: Text(
+                              isAplikasi ? '📱 Aplikasi Mobile' : '🌐 Website',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: isAplikasi ? const Color(0xFF6D28D9) : const Color(0xFF0369A1),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Kendala Utama / Judul
+                      Text(
+                        'Kendala / Usulan Utama',
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        item.kendalaUtama,
+                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Deskripsi Detail
+                      Text(
+                        'Deskripsi Detail',
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: SelectableText(
+                          item.deskripsi,
+                          style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155), height: 1.5),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Info Pengaju
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Diajukan Oleh', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                                Text(
+                                  '${item.namaKaryawan ?? 'Pengguna'}${isMine ? ' (Anda)' : ''}',
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Jabatan & Cabang', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                                Text(
+                                  '${item.jabatanKaryawan ?? '-'}${item.cabangKaryawan != null ? ' • ${item.cabangKaryawan}' : ''}',
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF334155)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Waktu Pengajuan', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                                Text(
+                                  formattedDate,
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF334155)),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Lampiran Foto
+                      if (item.fotoHalamanUrl != null && item.fotoHalamanUrl!.isNotEmpty) ...[
+                        Text(
+                          'Lampiran Foto',
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+                        ),
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: () => _openDetailPhoto(item.fotoHalamanUrl!),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Stack(
+                              alignment: Alignment.bottomRight,
+                              children: [
+                                Image.network(
+                                  item.fotoHalamanUrl!,
+                                  width: double.infinity,
+                                  height: 200,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    height: 120,
+                                    color: const Color(0xFFF1F5F9),
+                                    child: const Center(child: Icon(Icons.broken_image_rounded, color: Colors.grey)),
+                                  ),
+                                ),
+                                Container(
+                                  margin: const EdgeInsets.all(8),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black54,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.zoom_in_rounded, size: 14, color: Colors.white),
+                                      const SizedBox(width: 4),
+                                      Text('Ketuk untuk perbesar', style: GoogleFonts.inter(fontSize: 10, color: Colors.white)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+
+                      // Approval Actions inside Bottom Sheet
+                      if (item.status == 'selesai' && isMine) ...[
+                        if (item.isPendingApproval) ...[
+                          Text(
+                            'Persetujuan Hasil Perbaikan',
+                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF10B981),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    elevation: 0,
+                                  ),
+                                  icon: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                                  label: Text(
+                                    'Sudah Sesuai',
+                                    style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white),
+                                  ),
+                                  onPressed: () {
+                                    Navigator.pop(ctx);
+                                    _approvePengajuan(item);
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFF43F5E),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    elevation: 0,
+                                  ),
+                                  icon: const Icon(Icons.cancel_rounded, color: Colors.white, size: 18),
+                                  label: Text(
+                                    'Belum Sesuai',
+                                    style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white),
+                                  ),
+                                  onPressed: () {
+                                    Navigator.pop(ctx);
+                                    _rejectPengajuan(item);
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ] else if (item.isApproved) ...[
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFECFDF5),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFA7F3D0)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.verified_rounded, color: Color(0xFF059669), size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Perbaikan ini telah Anda setujui',
+                                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12, color: const Color(0xFF047857)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+
+                      // Superadmin Change Status inside Bottom Sheet
+                      if (_isSuperadmin) ...[
+                        const SizedBox(height: 12),
+                        if (item.status == 'antri')
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2563EB),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                _updateStatus(item, 'proses');
+                              },
+                              child: Text(
+                                'Pindahkan ke Sedang Diproses >',
+                                style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white),
+                              ),
+                            ),
+                          )
+                        else if (item.status == 'proses')
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF059669),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                _updateStatus(item, 'selesai');
+                              },
+                              child: Text(
+                                'Tandai Selesai ✓',
+                                style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

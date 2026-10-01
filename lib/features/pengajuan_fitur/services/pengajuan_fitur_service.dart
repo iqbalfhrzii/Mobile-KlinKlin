@@ -45,6 +45,7 @@ class PengajuanFiturService {
         return {
           'success': true,
           'is_superadmin': data['is_superadmin'] == true,
+          'current_user_id': data['current_user_id'],
           'counts': counts,
           'antri': antriList,
           'proses': prosesList,
@@ -56,6 +57,7 @@ class PengajuanFiturService {
         'success': false,
         'message': data['message'] ?? 'Gagal memuat data pengajuan',
         'is_superadmin': false,
+        'current_user_id': null,
         'counts': {'antri': 0, 'proses': 0, 'selesai': 0},
         'antri': <PengajuanFiturModel>[],
         'proses': <PengajuanFiturModel>[],
@@ -66,6 +68,7 @@ class PengajuanFiturService {
         'success': false,
         'message': 'Terjadi kesalahan: $e',
         'is_superadmin': false,
+        'current_user_id': null,
         'counts': {'antri': 0, 'proses': 0, 'selesai': 0},
         'antri': <PengajuanFiturModel>[],
         'proses': <PengajuanFiturModel>[],
@@ -134,6 +137,52 @@ class PengajuanFiturService {
       return {
         'success': false,
         'message': 'Gagal mengubah status: $e',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> approve(int id) async {
+    try {
+      final response = await _dio.post('/pengajuan-fitur/$id/approve');
+
+      return {
+        'success': response.data['status'] == true,
+        'message': response.data['message'] ?? 'Pengajuan telah Anda setujui',
+      };
+    } catch (e) {
+      String errorMessage = 'Gagal menyetujui pengajuan';
+      if (e is DioException && e.response?.data != null) {
+        final resData = e.response!.data;
+        if (resData is Map && resData['message'] != null) {
+          errorMessage = resData['message'].toString();
+        }
+      }
+      return {
+        'success': false,
+        'message': errorMessage,
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> reject(int id) async {
+    try {
+      final response = await _dio.post('/pengajuan-fitur/$id/reject');
+
+      return {
+        'success': response.data['status'] == true,
+        'message': response.data['message'] ?? 'Pengajuan dikembalikan ke tahap proses',
+      };
+    } catch (e) {
+      String errorMessage = 'Gagal menolak pengajuan';
+      if (e is DioException && e.response?.data != null) {
+        final resData = e.response!.data;
+        if (resData is Map && resData['message'] != null) {
+          errorMessage = resData['message'].toString();
+        }
+      }
+      return {
+        'success': false,
+        'message': errorMessage,
       };
     }
   }

@@ -8,6 +8,7 @@ class PengajuanFiturModel {
   final String? fotoHalaman;
   final String? fotoHalamanUrl;
   final String status; // 'antri' | 'proses' | 'selesai'
+  final String userApproval; // 'pending' | 'approved' | 'rejected'
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final String? namaKaryawan;
@@ -24,6 +25,7 @@ class PengajuanFiturModel {
     this.fotoHalaman,
     this.fotoHalamanUrl,
     required this.status,
+    this.userApproval = 'pending',
     this.createdAt,
     this.updatedAt,
     this.namaKaryawan,
@@ -35,6 +37,10 @@ class PengajuanFiturModel {
   bool get isBug => jenis == 'pelaporan_bug';
   bool get isAplikasi => kategori == 'aplikasi';
   bool get isWebsite => kategori == 'website';
+
+  bool get isApproved => userApproval == 'approved';
+  bool get isRejected => userApproval == 'rejected';
+  bool get isPendingApproval => userApproval == 'pending';
 
   String get jenisLabel => isFitur ? 'Fitur Baru' : 'Pelaporan Bug';
   String get kategoriLabel => isAplikasi ? 'Aplikasi Mobile' : 'Website';
@@ -80,6 +86,7 @@ class PengajuanFiturModel {
       fotoHalaman: json['foto_halaman']?.toString(),
       fotoHalamanUrl: fotoUrl,
       status: json['status']?.toString() ?? 'antri',
+      userApproval: json['user_approval']?.toString() ?? 'pending',
       createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) : null,
       updatedAt: json['updated_at'] != null ? DateTime.tryParse(json['updated_at'].toString()) : null,
       namaKaryawan: karyawan?['nama']?.toString() ?? karyawan?['nama_lengkap']?.toString() ?? 'Pengguna',
