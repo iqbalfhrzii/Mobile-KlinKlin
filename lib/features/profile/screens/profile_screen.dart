@@ -13,6 +13,7 @@ import '../../../core/widgets/notification_list_sheet.dart';
 import '../../cleaner/tukar_libur/screens/tukar_libur_screen.dart';
 import '../../cleaner/tukar_libur/services/tukar_libur_service.dart';
 import '../../finance/screens/finance_pengaturan_ppn_screen.dart';
+import '../../pengajuan_fitur/screens/pengajuan_fitur_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -173,8 +174,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ]),
                     const SizedBox(height: 12),
                     _buildMenuSection('Tentang', [
-                      _MenuItem(Icons.info_outline_rounded, 'Versi Aplikasi', trailing: '1.0.12'),
-                      _MenuItem(Icons.help_outline_rounded, 'Bantuan', onTap: () {}),
+                      _MenuItem(Icons.info_outline_rounded, 'Versi Aplikasi', trailing: '1.0.17'),
+                      _MenuItem(Icons.bug_report_outlined, 'Pengajuan Fitur & Bug', onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const PengajuanFiturScreen()),
+                        );
+                      }),
                       _MenuItem(Icons.privacy_tip_outlined, 'Kebijakan Privasi', onTap: () {}),
                     ]),
                     const SizedBox(height: 16),
