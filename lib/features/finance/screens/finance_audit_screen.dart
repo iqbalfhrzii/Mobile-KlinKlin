@@ -5124,16 +5124,18 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
     String statusPembayaran = order.statusPembayaranLabel;
     String statusBonus = order.statusBonusLabel;
 
-    String mapPaymentMethodToDisplay(String raw) {
+    String mapPaymentMethodToDisplay(String raw, {String? notes}) {
       final s = raw.toLowerCase().trim();
-      if (s.contains('mandiri')) return 'Transfer Mandiri';
-      if (s.contains('bca') || s == 'transfer' || s == 'transfer bank') return 'Transfer BCA';
+      final n = (notes ?? '').toLowerCase().trim();
+      if (s == 'transfer_mandiri' || s.contains('mandiri') || n.contains('mandiri')) return 'Transfer Mandiri';
+      if (s == 'transfer_bca' || s.contains('bca') || n.contains('bca')) return 'Transfer BCA';
       if (s == 'qris') return 'QRIS';
       if (s == 'cash' || s == 'tunai') return 'Cash';
+      if (s == 'transfer' || s == 'transfer bank') return 'Transfer BCA';
       return 'Belum Dibayar';
     }
 
-    String selectedPaymentMethod = mapPaymentMethodToDisplay(order.paymentMethod);
+    String selectedPaymentMethod = mapPaymentMethodToDisplay(order.paymentMethod, notes: order.pembayaran?.catatanPembayaran);
 
     final customerNameCtrl = TextEditingController(text: order.customer.name);
     final customerPhoneCtrl = TextEditingController(text: order.customer.phone);
@@ -6204,15 +6206,17 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
                               backendStatusBonus = 'cancelled';
                             }
 
-                            String backendMetodePembayaran = 'transfer';
-                            if (selectedPaymentMethod == 'Transfer BCA' || selectedPaymentMethod == 'Transfer Mandiri') {
-                              backendMetodePembayaran = 'transfer';
+                            String backendMetodePembayaran = 'transfer_bca';
+                            if (selectedPaymentMethod == 'Transfer BCA') {
+                              backendMetodePembayaran = 'transfer_bca';
+                            } else if (selectedPaymentMethod == 'Transfer Mandiri') {
+                              backendMetodePembayaran = 'transfer_mandiri';
                             } else if (selectedPaymentMethod == 'Cash') {
                               backendMetodePembayaran = 'cash';
                             } else if (selectedPaymentMethod == 'QRIS') {
                               backendMetodePembayaran = 'qris';
                             } else {
-                              backendMetodePembayaran = 'transfer';
+                              backendMetodePembayaran = 'transfer_bca';
                             }
 
                             final data = {

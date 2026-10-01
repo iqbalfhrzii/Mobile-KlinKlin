@@ -213,33 +213,55 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
       }
       final allHistoryPesanans = uniqueHistoryMap.values.toList();
 
-      final startFilter = DateTime(startPeriod.year, startPeriod.month, startPeriod.day);
-      final endFilter = DateTime(endPeriod.year, endPeriod.month, endPeriod.day, 23, 59, 59, 999);
+      final startDateOnly = DateTime(startPeriod.year, startPeriod.month, startPeriod.day);
+      final endDateOnly = DateTime(endPeriod.year, endPeriod.month, endPeriod.day);
 
       final filteredHistoryPesanans = allHistoryPesanans.where((job) {
-        if (job['finished_at'] == null) {
+        DateTime? jobDate;
+        if (job['finished_at'] != null) {
+          jobDate = DateTime.tryParse(job['finished_at'].toString())?.toLocal();
+        }
+        if (jobDate == null) {
           final details = job['pesanan']?['details'] as List?;
           if (details != null && details.isNotEmpty && details[0]['tanggal_pengerjaan'] != null) {
-            final tgl = DateTime.tryParse(details[0]['tanggal_pengerjaan'].toString())?.toLocal();
-            if (tgl != null) {
-              return !tgl.isBefore(startFilter) && !tgl.isAfter(endFilter);
-            }
+            jobDate = DateTime.tryParse(details[0]['tanggal_pengerjaan'].toString())?.toLocal();
           }
-          return false;
         }
-        final finishedAt = DateTime.tryParse(job['finished_at'].toString())?.toLocal();
-        if (finishedAt == null) return false;
-        return !finishedAt.isBefore(startFilter) && !finishedAt.isAfter(endFilter);
+        if (jobDate == null && job['pesanan']?['tanggal_input'] != null) {
+          jobDate = DateTime.tryParse(job['pesanan']['tanggal_input'].toString())?.toLocal();
+        }
+        if (jobDate == null && job['started_at'] != null) {
+          jobDate = DateTime.tryParse(job['started_at'].toString())?.toLocal();
+        }
+        if (jobDate == null && job['created_at'] != null) {
+          jobDate = DateTime.tryParse(job['created_at'].toString())?.toLocal();
+        }
+        if (jobDate == null) return false;
+
+        final jobDateOnly = DateTime(jobDate.year, jobDate.month, jobDate.day);
+        return !jobDateOnly.isBefore(startDateOnly) && !jobDateOnly.isAfter(endDateOnly);
       }).toList();
 
       int bonusPeriod = 0;
       for (var job in filteredHistoryPesanans) {
-        final b = job['total_bonus'];
-        if (b is num) {
-          bonusPeriod += b.toInt();
-        } else if (b != null) {
-          bonusPeriod += (double.tryParse(b.toString()) ?? 0).toInt();
+        int b = 0;
+        final rawBonus = job['total_bonus'];
+        if (rawBonus is num) {
+          b = rawBonus.toInt();
+        } else if (rawBonus != null) {
+          b = (double.tryParse(rawBonus.toString()) ?? 0).toInt();
         }
+        if (b == 0 && job['bonuses'] is List) {
+          for (var item in job['bonuses']) {
+            final nom = item['nominal'];
+            if (nom is num) {
+              b += nom.toInt();
+            } else if (nom != null) {
+              b += (double.tryParse(nom.toString()) ?? 0).toInt();
+            }
+          }
+        }
+        bonusPeriod += b;
       }
 
       int todayCount = 0;
@@ -307,13 +329,16 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
             }
           }
 
-          if (jobDate != null && !jobDate.isBefore(startFilter) && !jobDate.isAfter(endFilter)) {
-            fallbackCompleted++;
-            final b = job['total_bonus'];
-            if (b is num) {
-              fallbackBonus += b.toInt();
-            } else if (b != null) {
-              fallbackBonus += (double.tryParse(b.toString()) ?? 0).toInt();
+          if (jobDate != null) {
+            final jobDateOnly = DateTime(jobDate.year, jobDate.month, jobDate.day);
+            if (!jobDateOnly.isBefore(startDateOnly) && !jobDateOnly.isAfter(endDateOnly)) {
+              fallbackCompleted++;
+              final b = job['total_bonus'];
+              if (b is num) {
+                fallbackBonus += b.toInt();
+              } else if (b != null) {
+                fallbackBonus += (double.tryParse(b.toString()) ?? 0).toInt();
+              }
             }
           }
         }

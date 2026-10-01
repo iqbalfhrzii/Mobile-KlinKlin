@@ -394,7 +394,23 @@ class OrderPayment {
   factory OrderPayment.fromJson(Map<String, dynamic> json) {
     return OrderPayment(
       id: json['id'] != null ? int.parse(json['id'].toString()) : 0,
-      metodePembayaran: json['metode_pembayaran'] ?? '-',
+      metodePembayaran: () {
+        final rawMetode = (json['metode_pembayaran'] ?? '-').toString();
+        final catatan = (json['catatan_pembayaran'] ?? '').toString();
+        final s = rawMetode.toLowerCase().trim();
+        final c = catatan.toLowerCase();
+
+        if (s == 'transfer_bca' || (s == 'transfer' && c.contains('bca'))) {
+          return 'Transfer BCA';
+        }
+        if (s == 'transfer_mandiri' || (s == 'transfer' && c.contains('mandiri'))) {
+          return 'Transfer Mandiri';
+        }
+        if (s == 'qris') return 'QRIS';
+        if (s == 'cash' || s == 'tunai') return 'Cash';
+        if (s == 'transfer') return 'Transfer';
+        return rawMetode;
+      }(),
       statusPembayaran: json['status_pembayaran'] ?? 'unpaid',
       buktiTransfer: () {
         final raw = json['bukti_transfer'];
@@ -854,7 +870,25 @@ class OrderModel {
       status: finalStatus,
       total: parseTotal(),
       subtotal: computedTotal > 0 ? computedTotal : (orderJson['subtotal'] != null ? (double.tryParse(orderJson['subtotal'].toString())?.toInt() ?? 0) : 0),
-      paymentMethod: (orderJson['pembayaran']?['metode_pembayaran'] ?? orderJson['metode_pembayaran'] ?? json['metode_pembayaran'] ?? '-').toString(),
+      paymentMethod: () {
+        final p = orderJson['pembayaran'] as Map<String, dynamic>?;
+        final rawMetode = (p?['metode_pembayaran'] ?? orderJson['metode_pembayaran'] ?? json['metode_pembayaran'] ?? '-').toString();
+        final catatan = (p?['catatan_pembayaran'] ?? orderJson['catatan_pembayaran'] ?? json['catatan_pembayaran'] ?? '').toString();
+        final s = rawMetode.toLowerCase().trim();
+        final c = catatan.toLowerCase();
+
+        if (s == 'transfer_bca' || (s == 'transfer' && c.contains('bca'))) {
+          return 'Transfer BCA';
+        }
+        if (s == 'transfer_mandiri' || (s == 'transfer' && c.contains('mandiri'))) {
+          return 'Transfer Mandiri';
+        }
+        if (s == 'qris') return 'QRIS';
+        if (s == 'cash' || s == 'tunai') return 'Cash';
+        if (s == 'transfer') return 'Transfer';
+        if (rawMetode == '-') return '-';
+        return rawMetode;
+      }(),
       paymentStatus: parsedPaymentStatus,
       notes: (orderJson['keterangan_order'] ?? json['keterangan_order'] ?? '').toString(),
       tanggalInput: () {

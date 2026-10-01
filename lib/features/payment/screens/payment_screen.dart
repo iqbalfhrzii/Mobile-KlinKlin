@@ -948,15 +948,13 @@ class _PaymentCard extends StatelessWidget {
                       Text(
                         order.paymentMethod == '-'
                             ? 'Belum dipilih'
-                            : order.paymentMethod
-                                  .replaceAll('_', ' ')
-                                  .split(' ')
-                                  .map(
-                                    (s) => s.isNotEmpty
-                                        ? '${s[0].toUpperCase()}${s.substring(1)}'
-                                        : '',
-                                  )
-                                  .join(' '),
+                            : (order.paymentMethod.toLowerCase() == 'transfer_bca' || order.paymentMethod.toLowerCase() == 'bca'
+                                ? 'Transfer BCA'
+                                : (order.paymentMethod.toLowerCase() == 'transfer_mandiri' || order.paymentMethod.toLowerCase() == 'mandiri'
+                                    ? 'Transfer Mandiri'
+                                    : (order.paymentMethod.toLowerCase() == 'qris'
+                                        ? 'QRIS'
+                                        : order.paymentMethod))),
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           color: AppColors.textMuted,

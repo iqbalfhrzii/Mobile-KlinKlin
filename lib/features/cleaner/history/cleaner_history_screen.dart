@@ -43,6 +43,47 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
     _fetchHistory();
   }
 
+  DateTime? _extractJobDate(dynamic job) {
+    if (job is! Map) return null;
+    if (job['finished_at'] != null) {
+      final dt = DateTime.tryParse(job['finished_at'].toString());
+      if (dt != null) return dt.toLocal();
+    }
+    final details = job['pesanan']?['details'] as List?;
+    if (details != null && details.isNotEmpty) {
+      for (var d in details) {
+        if (d['tanggal_pengerjaan'] != null) {
+          final dt = DateTime.tryParse(d['tanggal_pengerjaan'].toString());
+          if (dt != null) return dt.toLocal();
+        }
+      }
+    }
+    if (job['pesanan']?['tanggal_input'] != null) {
+      final dt = DateTime.tryParse(job['pesanan']['tanggal_input'].toString());
+      if (dt != null) return dt.toLocal();
+    }
+    if (job['started_at'] != null) {
+      final dt = DateTime.tryParse(job['started_at'].toString());
+      if (dt != null) return dt.toLocal();
+    }
+    if (job['created_at'] != null) {
+      final dt = DateTime.tryParse(job['created_at'].toString());
+      if (dt != null) return dt.toLocal();
+    }
+    return null;
+  }
+
+  num _calculateJobBonus(dynamic job) {
+    if (job is! Map) return 0;
+    num bonus = _parseNum(job['total_bonus']);
+    if (bonus == 0 && job['bonuses'] is List) {
+      for (var b in job['bonuses']) {
+        bonus += _parseNum(b['nominal']);
+      }
+    }
+    return bonus;
+  }
+
   Future<void> _fetchHistory() async {
     setState(() {
       _isLoading = true;
@@ -57,38 +98,53 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
         cur = DateTime(cur.year, cur.month + 1, 1);
       }
 
-      final List<dynamic> allPesanans = [];
       num totalBonus = 0;
 
       final results = await Future.wait(
         monthsToFetch.map((m) => _service.fetchHistory(month: m.month, year: m.year)),
       );
 
+      final Map<dynamic, dynamic> uniqueJobs = {};
       for (final data in results) {
-        if (data['pesanans'] != null) {
-          allPesanans.addAll(data['pesanans']);
+        if (data['pesanans'] is List) {
+          for (final job in data['pesanans']) {
+            if (job is Map) {
+              final id = job['pesanan_cleaner_id'] ?? job['id'] ?? job['pesanan_id'];
+              if (id != null) {
+                uniqueJobs[id] = job;
+              } else {
+                uniqueJobs[identityHashCode(job)] = job;
+              }
+            }
+          }
         }
       }
 
-      // Filter exactly by _startDate (00:00:00) and _endDate (23:59:59)
-      final startFilter = DateTime(_startDate.year, _startDate.month, _startDate.day);
-      final endFilter = DateTime(_endDate.year, _endDate.month, _endDate.day, 23, 59, 59);
+      final allPesanans = uniqueJobs.values.toList();
+
+      // Filter inklusif per tanggal kalender lokal (startDate <= jobDate <= endDate)
+      final startDateOnly = DateTime(_startDate.year, _startDate.month, _startDate.day);
+      final endDateOnly = DateTime(_endDate.year, _endDate.month, _endDate.day);
 
       final filteredPesanans = allPesanans.where((job) {
-        if (job['finished_at'] == null) return false;
-        final finishedAt = DateTime.parse(job['finished_at']).toLocal();
-        return finishedAt.isAfter(startFilter) && finishedAt.isBefore(endFilter);
+        final jobDate = _extractJobDate(job);
+        if (jobDate == null) return false;
+
+        job['finished_at'] ??= jobDate.toIso8601String();
+
+        final jobDateOnly = DateTime(jobDate.year, jobDate.month, jobDate.day);
+        return !jobDateOnly.isBefore(startDateOnly) && !jobDateOnly.isAfter(endDateOnly);
       }).toList();
       
-      // Calculate total bonus from filtered jobs
+      // Hitung total bonus dari seluruh riwayat pekerjaan yang difilter
       for (var job in filteredPesanans) {
-         totalBonus += _parseNum(job['total_bonus']);
+        totalBonus += _calculateJobBonus(job);
       }
       
-      // Sort newest first
+      // Urutkan pekerjaan terbaru di paling atas
       filteredPesanans.sort((a, b) {
-        final dateA = DateTime.parse(a['finished_at']).toLocal();
-        final dateB = DateTime.parse(b['finished_at']).toLocal();
+        final dateA = _extractJobDate(a) ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final dateB = _extractJobDate(b) ?? DateTime.fromMillisecondsSinceEpoch(0);
         return dateB.compareTo(dateA);
       });
 
@@ -482,9 +538,14 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
     final pesanan = job['pesanan'] ?? {};
     final pelanggan = pesanan['pelanggan'] ?? {};
     final namaPelanggan = pelanggan['nama_pelanggan'] ?? 'Unknown';
-    final finishedAt = job['finished_at'];
-    final jobBonus = _parseNum(job['total_bonus']);
+    final finishedAt = job['finished_at'] ?? _extractJobDate(job)?.toIso8601String();
+    final jobBonus = _calculateJobBonus(job);
     final List<dynamic> details = pesanan['details'] ?? [];
+
+    final statusPengerjaan = (job['status_pengerjaan'] ?? '').toString().toLowerCase();
+    final statusPesanan = (pesanan['status_pesanan'] ?? '').toString().toLowerCase();
+    final isFinished = statusPengerjaan == 'finished' || statusPesanan == 'completed' || statusPesanan == 'selesai';
+    final statusText = isFinished ? 'Selesai pada ${_formatDate(finishedAt)}' : 'Pekerjaan ${_formatDate(finishedAt)}';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -517,7 +578,7 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
                           Icon(Icons.check_circle_rounded, size: 16, color: AppColors.success),
                           const SizedBox(width: 8),
                           Text(
-                            'Selesai pada ${_formatDate(finishedAt)}',
+                            statusText,
                             style: GoogleFonts.inter(fontSize: 12, color: AppColors.success, fontWeight: FontWeight.w500),
                           ),
                         ],

@@ -75,6 +75,48 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
     }
   }
 
+  Future<void> _fetchMonthData(int month, int year) async {
+    try {
+      final dataRekan = await TukarLiburService.getRekanKerja(month: month, year: year);
+      if (!mounted) return;
+      setState(() {
+        final newLibur = dataRekan['libur_saya'] as List? ?? [];
+        final existingDates = _liburSaya.map((e) => e['tanggal']?.toString().split('T')[0]).toSet();
+        for (var item in newLibur) {
+          final t = item['tanggal']?.toString().split('T')[0];
+          if (t != null && !existingDates.contains(t)) {
+            _liburSaya.add(item);
+          }
+        }
+
+        final newRekans = dataRekan['rekan'] as List? ?? [];
+        for (var nr in newRekans) {
+          final matchIndex = _rekan.indexWhere((r) => r['id'] == nr['id']);
+          if (matchIndex != -1) {
+            final existingRekanLiburs = (_rekan[matchIndex]['jadwal_liburs'] as List? ?? []);
+            final existingRekanDates = existingRekanLiburs.map((e) => e['tanggal']?.toString().split('T')[0]).toSet();
+            for (var item in (nr['jadwal_liburs'] as List? ?? [])) {
+              final t = item['tanggal']?.toString().split('T')[0];
+              if (t != null && !existingRekanDates.contains(t)) {
+                existingRekanLiburs.add(item);
+              }
+            }
+            _rekan[matchIndex]['jadwal_liburs'] = existingRekanLiburs;
+          } else {
+            _rekan.add(nr);
+          }
+        }
+
+        if (_selectedRekan != null) {
+          final updated = _rekan.firstWhere((r) => r['id'] == _selectedRekan['id'], orElse: () => null);
+          if (updated != null) {
+            _selectedRekan = updated;
+          }
+        }
+      });
+    } catch (_) {}
+  }
+
   Future<void> _submitPengajuan() async {
     if (_selectedLiburSaya == null) {
       _showError('Pilih tanggal libur Anda yang ingin ditukar pada kalender');
@@ -313,7 +355,13 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
 
           _buildCalendarBox(
             currentMonth: _monthSaya,
-            onMonthChanged: (newM) => setState(() => _monthSaya = newM),
+            onMonthChanged: (newM) {
+              setState(() {
+                _monthSaya = newM;
+                _selectedLiburSaya = null;
+              });
+              _fetchMonthData(newM.month, newM.year);
+            },
             scheduleList: _liburSaya,
             selectedDateStr: _selectedLiburSaya?['tanggal'],
             highlightThemeColor: const Color(0xFF0284C7),
@@ -323,7 +371,7 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
             onSelectDate: (dateStr, item) {
               setState(() => _selectedLiburSaya = item);
             },
-            emptyMessage: 'Belum ada jadwal libur yang terdaftar untuk Anda di bulan ini.',
+            emptyMessage: 'Belum ada jadwal libur yang terdaftar untuk Anda di bulan ${_formatMonthYear(_monthSaya)}.',
           ),
 
           // Selected Card for Step 1
@@ -503,7 +551,13 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
 
               _buildCalendarBox(
                 currentMonth: _monthTarget,
-                onMonthChanged: (newM) => setState(() => _monthTarget = newM),
+                onMonthChanged: (newM) {
+                  setState(() {
+                    _monthTarget = newM;
+                    _selectedLiburTarget = null;
+                  });
+                  _fetchMonthData(newM.month, newM.year);
+                },
                 scheduleList: targetLiburs,
                 selectedDateStr: _selectedLiburTarget?['tanggal'],
                 highlightThemeColor: const Color(0xFF059669),
@@ -513,7 +567,7 @@ class _TukarLiburScreenState extends State<TukarLiburScreen> with SingleTickerPr
                 onSelectDate: (dateStr, item) {
                   setState(() => _selectedLiburTarget = item);
                 },
-                emptyMessage: '${_selectedRekan['nama']} belum memiliki jadwal libur di bulan ini.',
+                emptyMessage: '${_selectedRekan['nama']} belum memiliki jadwal libur di bulan ${_formatMonthYear(_monthTarget)}.',
               ),
 
               // Selected Card for Step 3

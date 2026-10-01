@@ -11,6 +11,7 @@ class PaymentService {
   Future<void> submitPayment({
     required String orderId,
     required String metodePembayaran,
+    String? catatanPembayaran,
     required int diskonPersen,
     required int ppn,
     required bool usePph,
@@ -42,6 +43,10 @@ class PaymentService {
         'total_setelah_diskon': totalSetelahDiskon,
         'total_akhir': totalAkhir,
       };
+
+      if (catatanPembayaran != null && catatanPembayaran.isNotEmpty) {
+        formMap['catatan_pembayaran'] = catatanPembayaran;
+      }
 
       if (files.isNotEmpty) {
         final f1 = files[0];

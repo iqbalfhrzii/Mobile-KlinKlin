@@ -156,11 +156,30 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
   }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {
+    final now = DateTime.now();
+    // Memperbolehkan pengajuan tanggal di masa lalu (misal izin/cuti yang terlewat)
+    final minDate = DateTime(2020, 1, 1);
+    final maxDate = DateTime(now.year + 2, 12, 31);
+
+    final firstDate = isStart
+        ? minDate
+        : (_startDate != null && _startDate!.isAfter(minDate) ? _startDate! : minDate);
+
+    DateTime initialDate = isStart
+        ? (_startDate ?? now)
+        : (_endDate ?? _startDate ?? now);
+
+    if (initialDate.isBefore(firstDate)) {
+      initialDate = firstDate;
+    } else if (initialDate.isAfter(maxDate)) {
+      initialDate = maxDate;
+    }
+
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: isStart ? (_startDate ?? DateTime.now()) : (_endDate ?? _startDate ?? DateTime.now()),
-      firstDate: DateTime.now().subtract(const Duration(days: 7)),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: maxDate,
     );
 
     if (picked != null) {
@@ -172,6 +191,9 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
           }
         } else {
           _endDate = picked;
+          if (_startDate != null && _startDate!.isAfter(_endDate!)) {
+            _startDate = _endDate;
+          }
         }
       });
     }

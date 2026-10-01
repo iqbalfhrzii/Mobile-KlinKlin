@@ -4,9 +4,13 @@ import '../../../../core/api/api_client.dart';
 class TukarLiburService {
   static final Dio _dio = ApiClient.instance;
 
-  static Future<Map<String, dynamic>> getRekanKerja() async {
+  static Future<Map<String, dynamic>> getRekanKerja({int? month, int? year}) async {
     try {
-      final response = await _dio.get('/cleaner/rekan-kerja');
+      final Map<String, dynamic> params = {};
+      if (month != null) params['month'] = month;
+      if (year != null) params['year'] = year;
+
+      final response = await _dio.get('/cleaner/rekan-kerja', queryParameters: params);
       final data = response.data;
       if (data is Map<String, dynamic> && data['data'] is Map<String, dynamic>) {
         return data['data'] as Map<String, dynamic>;

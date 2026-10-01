@@ -32,6 +32,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // Jadwal Libur Cleaner State
   List<dynamic> _jadwalLiburs = [];
   bool _isLoadingLibur = false;
+  DateTime _selectedMonthLibur = DateTime(DateTime.now().year, DateTime.now().month, 1);
 
   @override
   void initState() {
@@ -88,10 +89,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return r.contains('finance') || r.contains('admin') || r.contains('ceo') || r.contains('owner');
   }
 
-  Future<void> _loadJadwalLibur() async {
+  Future<void> _loadJadwalLibur([DateTime? monthDate]) async {
+    final targetMonth = monthDate ?? _selectedMonthLibur;
     setState(() => _isLoadingLibur = true);
     try {
-      final data = await TukarLiburService.getRekanKerja();
+      final data = await TukarLiburService.getRekanKerja(
+        month: targetMonth.month,
+        year: targetMonth.year,
+      );
       if (mounted) {
         setState(() {
           _jadwalLiburs = data['libur_saya'] ?? [];
@@ -120,13 +125,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  String _getCurrentMonthName() {
+  String _getCurrentMonthName([DateTime? date]) {
     final months = [
       'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
       'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
     ];
-    final now = DateTime.now();
-    return '${months[now.month - 1]} ${now.year}';
+    final target = date ?? _selectedMonthLibur;
+    return '${months[target.month - 1]} ${target.year}';
   }
 
   @override
@@ -344,8 +349,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // --- DEDICATED JADWAL LIBUR CARD UNTUK CLEANER ---
   Widget _buildJadwalLiburCard() {
-    final currentMonth = _getCurrentMonthName();
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -367,40 +370,90 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.event_available_rounded, color: AppColors.primary, size: 18),
                     ),
-                    child: const Icon(Icons.event_available_rounded, color: AppColors.primary, size: 18),
-                  ),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Jadwal Libur Saya',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF1E293B),
-                        ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Jadwal Libur Saya',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF1E293B),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              InkWell(
+                                onTap: _isLoadingLibur
+                                    ? null
+                                    : () {
+                                        final prev = DateTime(_selectedMonthLibur.year, _selectedMonthLibur.month - 1, 1);
+                                        setState(() => _selectedMonthLibur = prev);
+                                        _loadJadwalLibur(prev);
+                                      },
+                                borderRadius: BorderRadius.circular(6),
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Icon(Icons.chevron_left_rounded, size: 16, color: Color(0xFF475569)),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 6),
+                                child: Text(
+                                  _getCurrentMonthName(_selectedMonthLibur),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                              InkWell(
+                                onTap: _isLoadingLibur
+                                    ? null
+                                    : () {
+                                        final next = DateTime(_selectedMonthLibur.year, _selectedMonthLibur.month + 1, 1);
+                                        setState(() => _selectedMonthLibur = next);
+                                        _loadJadwalLibur(next);
+                                      },
+                                borderRadius: BorderRadius.circular(6),
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Icon(Icons.chevron_right_rounded, size: 16, color: Color(0xFF475569)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      Text(
-                        currentMonth,
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF64748B),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               InkWell(
                 onTap: () async {
                   await Navigator.push(context, MaterialPageRoute(builder: (_) => const TukarLiburScreen()));
@@ -462,7 +515,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Belum ada jadwal libur bulan ini.',
+                      'Belum ada jadwal libur bulan ${_getCurrentMonthName(_selectedMonthLibur)}.',
                       style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
                     ),
                   ),

@@ -769,15 +769,13 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
             'Metode Bayar',
             _o.paymentMethod == '-'
                 ? 'Belum dipilih'
-                : _o.paymentMethod
-                      .replaceAll('_', ' ')
-                      .split(' ')
-                      .map(
-                        (s) => s.isNotEmpty
-                            ? '${s[0].toUpperCase()}${s.substring(1)}'
-                            : '',
-                      )
-                      .join(' '),
+                : (_o.paymentMethod.toLowerCase() == 'transfer_bca' || _o.paymentMethod.toLowerCase() == 'bca'
+                    ? 'Transfer BCA'
+                    : (_o.paymentMethod.toLowerCase() == 'transfer_mandiri' || _o.paymentMethod.toLowerCase() == 'mandiri'
+                        ? 'Transfer Mandiri'
+                        : (_o.paymentMethod.toLowerCase() == 'qris'
+                            ? 'QRIS'
+                            : _o.paymentMethod))),
             icon: Icons.payment_rounded,
           ),
           const SizedBox(height: 10),
@@ -2803,8 +2801,13 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                               final svc = PaymentService();
 
                               String apiMethod;
-                              if (selectedMethod == 'Transfer BCA' || selectedMethod == 'Transfer Mandiri') {
-                                apiMethod = 'transfer';
+                              String? bankCatatan;
+                              if (selectedMethod == 'Transfer BCA') {
+                                apiMethod = 'transfer_bca';
+                                bankCatatan = 'Transfer BCA';
+                              } else if (selectedMethod == 'Transfer Mandiri') {
+                                apiMethod = 'transfer_mandiri';
+                                bankCatatan = 'Transfer Mandiri';
                               } else if (selectedMethod == 'QRIS') {
                                 apiMethod = 'qris';
                               } else {
@@ -2814,6 +2817,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                               await svc.submitPayment(
                                 orderId: _o.id,
                                 metodePembayaran: apiMethod,
+                                catatanPembayaran: bankCatatan,
                                 diskonPersen: diskonPersen,
                                 ppn: ppnPersen,
                                 usePph: applyPph,
