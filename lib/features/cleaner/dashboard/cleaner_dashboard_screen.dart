@@ -201,7 +201,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
         if (data is Map && data['pesanans'] != null && data['pesanans'] is List) {
           for (final job in data['pesanans']) {
             if (job is Map) {
-              final id = job['id'] ?? job['pesanan_id'] ?? job['pesanan']?['id'];
+              final id = job['pesanan_cleaner_id'] ?? job['id'] ?? job['pesanan_id'];
               if (id != null) {
                 uniqueHistoryMap[id] = job;
               } else {
@@ -216,52 +216,67 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
       final startDateOnly = DateTime(startPeriod.year, startPeriod.month, startPeriod.day);
       final endDateOnly = DateTime(endPeriod.year, endPeriod.month, endPeriod.day);
 
-      final filteredHistoryPesanans = allHistoryPesanans.where((job) {
-        DateTime? jobDate;
-        if (job['finished_at'] != null) {
-          jobDate = DateTime.tryParse(job['finished_at'].toString())?.toLocal();
+      bool jobMatchesRange(dynamic job) {
+        if (job is! Map) return false;
+        final List<DateTime> dates = [];
+        final detailDate = job['tanggal_pengerjaan'];
+        if (detailDate != null) {
+          final dt = DateTime.tryParse(detailDate.toString());
+          if (dt != null) dates.add(dt.toLocal());
         }
-        if (jobDate == null) {
-          final details = job['pesanan']?['details'] as List?;
-          if (details != null && details.isNotEmpty && details[0]['tanggal_pengerjaan'] != null) {
-            jobDate = DateTime.tryParse(details[0]['tanggal_pengerjaan'].toString())?.toLocal();
-          }
-        }
-        if (jobDate == null && job['pesanan']?['tanggal_input'] != null) {
-          jobDate = DateTime.tryParse(job['pesanan']['tanggal_input'].toString())?.toLocal();
-        }
-        if (jobDate == null && job['started_at'] != null) {
-          jobDate = DateTime.tryParse(job['started_at'].toString())?.toLocal();
-        }
-        if (jobDate == null && job['created_at'] != null) {
-          jobDate = DateTime.tryParse(job['created_at'].toString())?.toLocal();
-        }
-        if (jobDate == null) return false;
-
-        final jobDateOnly = DateTime(jobDate.year, jobDate.month, jobDate.day);
-        return !jobDateOnly.isBefore(startDateOnly) && !jobDateOnly.isAfter(endDateOnly);
-      }).toList();
-
-      int bonusPeriod = 0;
-      for (var job in filteredHistoryPesanans) {
-        int b = 0;
-        final rawBonus = job['total_bonus'];
-        if (rawBonus is num) {
-          b = rawBonus.toInt();
-        } else if (rawBonus != null) {
-          b = (double.tryParse(rawBonus.toString()) ?? 0).toInt();
-        }
-        if (b == 0 && job['bonuses'] is List) {
-          for (var item in job['bonuses']) {
-            final nom = item['nominal'];
-            if (nom is num) {
-              b += nom.toInt();
-            } else if (nom != null) {
-              b += (double.tryParse(nom.toString()) ?? 0).toInt();
+        final details = job['pesanan']?['details'] as List?;
+        if (details != null && details.isNotEmpty) {
+          for (var d in details) {
+            if (d is Map && d['tanggal_pengerjaan'] != null) {
+              final dt = DateTime.tryParse(d['tanggal_pengerjaan'].toString());
+              if (dt != null) dates.add(dt.toLocal());
             }
           }
         }
-        bonusPeriod += b;
+        if (dates.isNotEmpty) {
+          return dates.any((d) {
+            final dOnly = DateTime(d.year, d.month, d.day);
+            return !dOnly.isBefore(startDateOnly) && !dOnly.isAfter(endDateOnly);
+          });
+        }
+        DateTime? fallbackDate;
+        if (job['finished_at'] != null) {
+          fallbackDate = DateTime.tryParse(job['finished_at'].toString())?.toLocal();
+        }
+        fallbackDate ??= DateTime.tryParse((job['tanggal_input'] ?? job['pesanan']?['tanggal_input'] ?? '').toString())?.toLocal();
+        fallbackDate ??= DateTime.tryParse((job['created_at'] ?? '').toString())?.toLocal();
+        if (fallbackDate != null) {
+          final dOnly = DateTime(fallbackDate.year, fallbackDate.month, fallbackDate.day);
+          return !dOnly.isBefore(startDateOnly) && !dOnly.isAfter(endDateOnly);
+        }
+        return false;
+      }
+
+      int calcJobBonus(dynamic job) {
+        if (job is! Map) return 0;
+        int bonus = 0;
+        if (job['bonuses'] is List && (job['bonuses'] as List).isNotEmpty) {
+          for (var item in job['bonuses']) {
+            final nom = item['nominal'];
+            if (nom is num) {
+              bonus += nom.toInt();
+            } else if (nom != null) {
+              bonus += (double.tryParse(nom.toString()) ?? 0).toInt();
+            }
+          }
+        }
+        if (bonus > 0) return bonus;
+        final rawBonus = job['total_bonus'];
+        if (rawBonus is num) return rawBonus.toInt();
+        if (rawBonus != null) return (double.tryParse(rawBonus.toString()) ?? 0).toInt();
+        return 0;
+      }
+
+      final filteredHistoryPesanans = allHistoryPesanans.where(jobMatchesRange).toList();
+
+      int bonusPeriod = 0;
+      for (var job in filteredHistoryPesanans) {
+        bonusPeriod += calcJobBonus(job);
       }
 
       int todayCount = 0;
@@ -318,28 +333,9 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
           final status = job['status_pengerjaan'];
           if (status != 'finished') continue;
 
-          DateTime? jobDate;
-          if (job['finished_at'] != null) {
-            jobDate = DateTime.tryParse(job['finished_at'].toString())?.toLocal();
-          }
-          if (jobDate == null && job['pesanan'] != null && job['pesanan']['details'] != null) {
-            final details = job['pesanan']['details'] as List;
-            if (details.isNotEmpty && details[0]['tanggal_pengerjaan'] != null) {
-              jobDate = DateTime.tryParse(details[0]['tanggal_pengerjaan'].toString())?.toLocal();
-            }
-          }
-
-          if (jobDate != null) {
-            final jobDateOnly = DateTime(jobDate.year, jobDate.month, jobDate.day);
-            if (!jobDateOnly.isBefore(startDateOnly) && !jobDateOnly.isAfter(endDateOnly)) {
-              fallbackCompleted++;
-              final b = job['total_bonus'];
-              if (b is num) {
-                fallbackBonus += b.toInt();
-              } else if (b != null) {
-                fallbackBonus += (double.tryParse(b.toString()) ?? 0).toInt();
-              }
-            }
+          if (jobMatchesRange(job)) {
+            fallbackCompleted++;
+            fallbackBonus += calcJobBonus(job);
           }
         }
         bonusPeriod = fallbackBonus;
