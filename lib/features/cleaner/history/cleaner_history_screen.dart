@@ -43,95 +43,45 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
     _fetchHistory();
   }
 
-  List<DateTime> _extractAllJobDates(dynamic job) {
-    if (job is! Map) return [];
-    final List<DateTime> dates = [];
+  DateTime? _extractJobDate(dynamic job) {
+    if (job is! Map) return null;
 
-    // 1. Tanggal input pesanan (digunakan HRD untuk perhitungan bonus & tanggal invoice)
+    // 1. Tanggal input pesanan (utama, persis seperti sistem web HRD & nota invoice)
     final tanggalInput = job['tanggal_input'] ?? job['pesanan']?['tanggal_input'];
     if (tanggalInput != null) {
       final dt = DateTime.tryParse(tanggalInput.toString());
-      if (dt != null) dates.add(dt.toLocal());
+      if (dt != null) return dt.toLocal();
     }
 
-    // 2. Tanggal pengerjaan layanan
+    // 2. Fallback: tanggal pengerjaan jika tanggal input tidak tersedia
     final detailDate = job['tanggal_pengerjaan'];
     if (detailDate != null) {
       final dt = DateTime.tryParse(detailDate.toString());
-      if (dt != null) dates.add(dt.toLocal());
+      if (dt != null) return dt.toLocal();
     }
     final details = job['pesanan']?['details'] as List?;
     if (details != null && details.isNotEmpty) {
       for (var d in details) {
         if (d is Map && d['tanggal_pengerjaan'] != null) {
           final dt = DateTime.tryParse(d['tanggal_pengerjaan'].toString());
-          if (dt != null) dates.add(dt.toLocal());
+          if (dt != null) return dt.toLocal();
         }
       }
     }
 
-    // 3. Tanggal selesai (finished_at)
+    // 3. Fallback: finished_at
     if (job['finished_at'] != null) {
       final dt = DateTime.tryParse(job['finished_at'].toString());
-      if (dt != null) dates.add(dt.toLocal());
+      if (dt != null) return dt.toLocal();
     }
 
-    // 4. Tanggal bonus dibuat
-    final bonuses = job['bonuses'] as List?;
-    if (bonuses != null && bonuses.isNotEmpty) {
-      for (var b in bonuses) {
-        if (b is Map && b['created_at'] != null) {
-          final dt = DateTime.tryParse(b['created_at'].toString());
-          if (dt != null) dates.add(dt.toLocal());
-        }
-      }
-    }
-
-    // 5. Tanggal mulai & job dibuat
-    if (job['started_at'] != null) {
-      final dt = DateTime.tryParse(job['started_at'].toString());
-      if (dt != null) dates.add(dt.toLocal());
-    }
+    // 4. Fallback: created_at
     if (job['created_at'] != null) {
       final dt = DateTime.tryParse(job['created_at'].toString());
-      if (dt != null) dates.add(dt.toLocal());
+      if (dt != null) return dt.toLocal();
     }
 
-    return dates;
-  }
-
-  bool _jobMatchesDateRange(dynamic job, DateTime startDateOnly, DateTime endDateOnly) {
-    final dates = _extractAllJobDates(job);
-    if (dates.isEmpty) return false;
-
-    // Cocok jika SALAH SATU tanggal (tanggal order HRD, tanggal pengerjaan, selesai, atau bonus)
-    // berada dalam rentang filter tanggal yang dipilih
-    return dates.any((d) {
-      final dOnly = DateTime(d.year, d.month, d.day);
-      return !dOnly.isBefore(startDateOnly) && !dOnly.isAfter(endDateOnly);
-    });
-  }
-
-  DateTime? _getPrimaryJobDate(dynamic job, [DateTime? startFilter, DateTime? endFilter]) {
-    final allDates = _extractAllJobDates(job);
-    if (allDates.isEmpty) return null;
-
-    if (startFilter != null && endFilter != null) {
-      final startOnly = DateTime(startFilter.year, startFilter.month, startFilter.day);
-      final endOnly = DateTime(endFilter.year, endFilter.month, endFilter.day);
-
-      // Utamakan tanggal yang berada di dalam rentang filter aktif
-      final inRange = allDates.where((d) {
-        final dOnly = DateTime(d.year, d.month, d.day);
-        return !dOnly.isBefore(startOnly) && !dOnly.isAfter(endOnly);
-      }).toList();
-
-      if (inRange.isNotEmpty) {
-        return inRange.first;
-      }
-    }
-
-    return allDates.first;
+    return null;
   }
 
   num _calculateJobBonus(dynamic job) {
@@ -184,12 +134,15 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
 
       final allPesanans = uniqueJobs.values.toList();
 
-      // Filter inklusif per tanggal kalender lokal (startDate <= jobDate <= endDate)
+      // Filter inklusif per tanggal input pesanan (persis seperti di web HRD)
       final startDateOnly = DateTime(_startDate.year, _startDate.month, _startDate.day);
       final endDateOnly = DateTime(_endDate.year, _endDate.month, _endDate.day);
 
       final filteredPesanans = allPesanans.where((job) {
-        return _jobMatchesDateRange(job, startDateOnly, endDateOnly);
+        final jobDate = _extractJobDate(job);
+        if (jobDate == null) return false;
+        final jobDateOnly = DateTime(jobDate.year, jobDate.month, jobDate.day);
+        return !jobDateOnly.isBefore(startDateOnly) && !jobDateOnly.isAfter(endDateOnly);
       }).toList();
       
       // Hitung total bonus dari seluruh riwayat pekerjaan yang difilter
@@ -197,10 +150,10 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
         totalBonus += _calculateJobBonus(job);
       }
       
-      // Urutkan pekerjaan terbaru di paling atas berdasarkan tanggal relevan
+      // Urutkan pekerjaan terbaru di paling atas berdasarkan tanggal input pesanan
       filteredPesanans.sort((a, b) {
-        final dateA = _getPrimaryJobDate(a, _startDate, _endDate) ?? DateTime.fromMillisecondsSinceEpoch(0);
-        final dateB = _getPrimaryJobDate(b, _startDate, _endDate) ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final dateA = _extractJobDate(a) ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final dateB = _extractJobDate(b) ?? DateTime.fromMillisecondsSinceEpoch(0);
         return dateB.compareTo(dateA);
       });
 
@@ -237,20 +190,6 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
     }
   }
 
-  String _formatShortDate(dynamic dateVal) {
-    if (dateVal == null) return '-';
-    try {
-      DateTime dt;
-      if (dateVal is DateTime) {
-        dt = dateVal.toLocal();
-      } else {
-        dt = DateTime.parse(dateVal.toString()).toLocal();
-      }
-      return DateFormat('dd/MM/yyyy').format(dt);
-    } catch (_) {
-      return dateVal.toString();
-    }
-  }
 
   num _parseNum(dynamic value) {
     if (value == null) return 0;
@@ -610,8 +549,9 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
     final pelanggan = pesanan['pelanggan'] ?? {};
     final namaPelanggan = pelanggan['nama_pelanggan'] ?? 'Unknown';
     final nomorPesanan = pesanan['nomor_pesanan'] ?? pesanan['kode_display'] ?? '';
+    final jobDate = _extractJobDate(job);
     final finishedAt = job['finished_at'];
-    final tanggalInput = job['tanggal_input'] ?? pesanan['tanggal_input'];
+    final finishedAtText = finishedAt != null ? _formatDate(finishedAt.toString()) : null;
     final jobBonus = _calculateJobBonus(job);
     final List<dynamic> details = pesanan['details'] ?? [];
 
@@ -619,15 +559,10 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
     final statusPesanan = (pesanan['status_pesanan'] ?? '').toString().toLowerCase();
     final isFinished = statusPengerjaan == 'finished' || statusPesanan == 'completed' || statusPesanan == 'selesai';
     
-    String statusText;
-    if (finishedAt != null) {
-      statusText = isFinished ? 'Selesai: ${_formatDate(finishedAt.toString())}' : 'Pengerjaan: ${_formatDate(finishedAt.toString())}';
-    } else if (tanggalInput != null) {
-      statusText = 'Order: ${_formatDate(tanggalInput.toString())}';
-    } else {
-      final disp = _getPrimaryJobDate(job);
-      statusText = disp != null ? 'Pekerjaan: ${_formatDate(disp.toIso8601String())}' : 'Pekerjaan Selesai';
-    }
+    final dateDisplay = jobDate != null ? DateFormat('dd/MM/yyyy').format(jobDate) : '-';
+    final statusText = isFinished
+        ? (finishedAtText != null ? 'Selesai pada $finishedAtText' : 'Selesai • $dateDisplay')
+        : 'Pesanan • $dateDisplay';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -673,25 +608,22 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
                         namaPelanggan,
                         style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
                       ),
-                      if (nomorPesanan.toString().isNotEmpty || tanggalInput != null) ...[
-                        const SizedBox(height: 3),
-                        Wrap(
-                          spacing: 6,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            if (nomorPesanan.toString().isNotEmpty)
-                              Text(
-                                nomorPesanan.toString(),
-                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
-                              ),
-                            if (tanggalInput != null)
-                              Text(
-                                '•  Tgl Order: ${_formatShortDate(tanggalInput)}',
-                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.normal, color: const Color(0xFF64748B)),
-                              ),
-                          ],
-                        ),
-                      ],
+                      const SizedBox(height: 3),
+                      Wrap(
+                        spacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          if (nomorPesanan.toString().isNotEmpty)
+                            Text(
+                              nomorPesanan.toString(),
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+                            ),
+                          Text(
+                            '•  Tgl Order: $dateDisplay',
+                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF64748B)),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -723,6 +655,25 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (finishedAtText != null) ...[
+                  Row(
+                    children: [
+                      Icon(Icons.schedule_rounded, size: 14, color: AppColors.success),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Waktu Selesai: $finishedAtText',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF334155),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Divider(height: 1, thickness: 1, color: AppColors.border),
+                  const SizedBox(height: 12),
+                ],
                 Text(
                   'Layanan yang Dikerjakan:',
                   style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w500),
