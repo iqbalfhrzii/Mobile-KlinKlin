@@ -65,4 +65,5 @@ app.*.map.json
 *.jks
 *.p8
 *_base64.txt
+scratch/
 

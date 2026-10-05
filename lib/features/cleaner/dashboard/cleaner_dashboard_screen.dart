@@ -27,7 +27,8 @@ class CleanerDashboardScreen extends StatefulWidget {
   State<CleanerDashboardScreen> createState() => _CleanerDashboardScreenState();
 }
 
-class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with WidgetsBindingObserver {
+class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
+    with WidgetsBindingObserver {
   final CleanerJobService _service = CleanerJobService();
   String _userName = 'Cleaner';
   String? _userPhoto;
@@ -35,10 +36,10 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
   String _userBranch = '-';
   String _userStatusPegawai = '';
   bool _isKoor = false;
-  
+
   bool _isLoading = true;
   String _error = '';
-  
+
   int _todayJobsCount = 0;
   int _activeJobsCount = 0;
   int _inProgressJobsCount = 0;
@@ -94,7 +95,8 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
         _fetchData(isSilent: true);
         _startTimer();
       }
-    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       _stopTimer();
     }
   }
@@ -109,9 +111,14 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
       _userPhoto = prefs.getString('user_photo');
       _userRole = prefs.getString('user_role') ?? 'Cleaner';
       _userBranch = prefs.getString('user_branch') ?? '-';
-      _userStatusPegawai = prefs.getString('user_status_pegawai') ?? prefs.getString('user_status_karyawan') ?? '';
-      _isKoor = prefs.getBool('is_koor') ?? 
-          (_userRole.toLowerCase().contains('koor') || _userStatusPegawai.toLowerCase().contains('koor'));
+      _userStatusPegawai =
+          prefs.getString('user_status_pegawai') ??
+          prefs.getString('user_status_karyawan') ??
+          '';
+      _isKoor =
+          prefs.getBool('is_koor') ??
+          (_userRole.toLowerCase().contains('koor') ||
+              _userStatusPegawai.toLowerCase().contains('koor'));
     });
   }
 
@@ -147,20 +154,27 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
 
       // Jalankan fetch profil, fetch jobs aktif, & fetch history bonus secara PARALEL dengan timeout
       final meFuture = !isSilent
-          ? AuthService.getMe().timeout(const Duration(seconds: 8)).catchError((e) {
+          ? AuthService.getMe().timeout(const Duration(seconds: 8)).catchError((
+              e,
+            ) {
               debugPrint('Gagal fetch me: $e');
               return <String, dynamic>{};
             })
           : Future.value(<String, dynamic>{});
 
-      final jobsFuture = _service.fetchJobs().timeout(const Duration(seconds: 35));
+      final jobsFuture = _service.fetchJobs().timeout(
+        const Duration(seconds: 35),
+      );
 
-      final historyFuture = Future.wait(
-        monthsToFetch.map((m) => _service.fetchHistory(month: m.month, year: m.year)),
-      ).timeout(const Duration(seconds: 25)).catchError((e) {
-        debugPrint('Gagal fetch history untuk bonus dashboard: $e');
-        return <Map<String, dynamic>>[];
-      });
+      final historyFuture =
+          Future.wait(
+            monthsToFetch.map(
+              (m) => _service.fetchHistory(month: m.month, year: m.year),
+            ),
+          ).timeout(const Duration(seconds: 25)).catchError((e) {
+            debugPrint('Gagal fetch history untuk bonus dashboard: $e');
+            return <Map<String, dynamic>>[];
+          });
 
       final results = await Future.wait([meFuture, jobsFuture, historyFuture]);
       final meResponse = results[0] as Map<String, dynamic>;
@@ -172,11 +186,20 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
         final prefs = await SharedPreferences.getInstance();
         final cachedCustomName = prefs.getString('user_custom_name');
 
-        final roleName = me['jabatan'] is Map ? me['jabatan']['nama_jabatan'] ?? _userRole : _userRole;
-        final branchName = me['cabang'] is Map ? me['cabang']['nama_cabang'] ?? _userBranch : _userBranch;
-        final statusPeg = (me['status_karyawan'] ?? me['status_pegawai'] ?? _userStatusPegawai).toString();
-        final isKoorBool = (me['is_koor'] == true) || 
-            roleName.toString().toLowerCase().contains('koor') || 
+        final roleName = me['jabatan'] is Map
+            ? me['jabatan']['nama_jabatan'] ?? _userRole
+            : _userRole;
+        final branchName = me['cabang'] is Map
+            ? me['cabang']['nama_cabang'] ?? _userBranch
+            : _userBranch;
+        final statusPeg =
+            (me['status_karyawan'] ??
+                    me['status_pegawai'] ??
+                    _userStatusPegawai)
+                .toString();
+        final isKoorBool =
+            (me['is_koor'] == true) ||
+            roleName.toString().toLowerCase().contains('koor') ||
             statusPeg.toLowerCase().contains('koor');
 
         setState(() {
@@ -198,10 +221,13 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
       // Kumpulkan dan filter pekerjaan selesai sesuai rentang tanggal 28 - 27
       final Map<dynamic, dynamic> uniqueHistoryMap = {};
       for (final data in historyResults) {
-        if (data is Map && data['pesanans'] != null && data['pesanans'] is List) {
+        if (data is Map &&
+            data['pesanans'] != null &&
+            data['pesanans'] is List) {
           for (final job in data['pesanans']) {
             if (job is Map) {
-              final id = job['pesanan_cleaner_id'] ?? job['id'] ?? job['pesanan_id'];
+              final id =
+                  job['pesanan_cleaner_id'] ?? job['id'] ?? job['pesanan_id'];
               if (id != null) {
                 uniqueHistoryMap[id] = job;
               } else {
@@ -213,8 +239,16 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
       }
       final allHistoryPesanans = uniqueHistoryMap.values.toList();
 
-      final startDateOnly = DateTime(startPeriod.year, startPeriod.month, startPeriod.day);
-      final endDateOnly = DateTime(endPeriod.year, endPeriod.month, endPeriod.day);
+      final startDateOnly = DateTime(
+        startPeriod.year,
+        startPeriod.month,
+        startPeriod.day,
+      );
+      final endDateOnly = DateTime(
+        endPeriod.year,
+        endPeriod.month,
+        endPeriod.day,
+      );
 
       bool jobMatchesRange(dynamic job) {
         if (job is! Map) return false;
@@ -236,17 +270,29 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
         if (dates.isNotEmpty) {
           return dates.any((d) {
             final dOnly = DateTime(d.year, d.month, d.day);
-            return !dOnly.isBefore(startDateOnly) && !dOnly.isAfter(endDateOnly);
+            return !dOnly.isBefore(startDateOnly) &&
+                !dOnly.isAfter(endDateOnly);
           });
         }
         DateTime? fallbackDate;
         if (job['finished_at'] != null) {
-          fallbackDate = DateTime.tryParse(job['finished_at'].toString())?.toLocal();
+          fallbackDate = DateTime.tryParse(
+            job['finished_at'].toString(),
+          )?.toLocal();
         }
-        fallbackDate ??= DateTime.tryParse((job['tanggal_input'] ?? job['pesanan']?['tanggal_input'] ?? '').toString())?.toLocal();
-        fallbackDate ??= DateTime.tryParse((job['created_at'] ?? '').toString())?.toLocal();
+        fallbackDate ??= DateTime.tryParse(
+          (job['tanggal_input'] ?? job['pesanan']?['tanggal_input'] ?? '')
+              .toString(),
+        )?.toLocal();
+        fallbackDate ??= DateTime.tryParse(
+          (job['created_at'] ?? '').toString(),
+        )?.toLocal();
         if (fallbackDate != null) {
-          final dOnly = DateTime(fallbackDate.year, fallbackDate.month, fallbackDate.day);
+          final dOnly = DateTime(
+            fallbackDate.year,
+            fallbackDate.month,
+            fallbackDate.day,
+          );
           return !dOnly.isBefore(startDateOnly) && !dOnly.isAfter(endDateOnly);
         }
         return false;
@@ -268,11 +314,14 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
         if (bonus > 0) return bonus;
         final rawBonus = job['total_bonus'];
         if (rawBonus is num) return rawBonus.toInt();
-        if (rawBonus != null) return (double.tryParse(rawBonus.toString()) ?? 0).toInt();
+        if (rawBonus != null)
+          return (double.tryParse(rawBonus.toString()) ?? 0).toInt();
         return 0;
       }
 
-      final filteredHistoryPesanans = allHistoryPesanans.where(jobMatchesRange).toList();
+      final filteredHistoryPesanans = allHistoryPesanans
+          .where(jobMatchesRange)
+          .toList();
 
       int bonusPeriod = 0;
       for (var job in filteredHistoryPesanans) {
@@ -287,9 +336,14 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
 
       for (var job in jobs) {
         final pesanan = job['pesanan'] ?? {};
-        final statusPesanan = (pesanan['status_pesanan'] ?? '').toString().toLowerCase();
-        final statusUtama = (pesanan['status_order_utama'] ?? '').toString().toLowerCase();
-        final isCancelled = statusPesanan == 'cancelled' ||
+        final statusPesanan = (pesanan['status_pesanan'] ?? '')
+            .toString()
+            .toLowerCase();
+        final statusUtama = (pesanan['status_order_utama'] ?? '')
+            .toString()
+            .toLowerCase();
+        final isCancelled =
+            statusPesanan == 'cancelled' ||
             statusPesanan == 'waiting_cancel_approval' ||
             statusUtama == 'cancelled' ||
             pesanan['pembatalan'] != null ||
@@ -307,7 +361,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
         } else if (status == 'finished') {
           completedCount++;
         }
-        
+
         // Cek tanggal pengerjaan di pesanan.details untuk tugas hari ini
         if (job['pesanan'] != null && job['pesanan']['details'] != null) {
           final details = job['pesanan']['details'] as List;
@@ -316,7 +370,9 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
             if (tgl != null) {
               final jobDate = DateTime.tryParse(tgl.toString());
               if (jobDate != null) {
-                if (jobDate.year == now.year && jobDate.month == now.month && jobDate.day == now.day) {
+                if (jobDate.year == now.year &&
+                    jobDate.month == now.month &&
+                    jobDate.day == now.day) {
                   todayCount++;
                 }
               }
@@ -366,8 +422,11 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
         setState(() {
           if (!isSilent) {
             final errStr = e.toString();
-            if (errStr.contains('TimeoutException') || errStr.contains('Future not completed') || errStr.contains('timeout')) {
-              _error = 'Koneksi internet lambat. Ketuk Coba Lagi untuk memuat data tugas.';
+            if (errStr.contains('TimeoutException') ||
+                errStr.contains('Future not completed') ||
+                errStr.contains('timeout')) {
+              _error =
+                  'Koneksi internet lambat. Ketuk Coba Lagi untuk memuat data tugas.';
             } else {
               _error = e.toString().replaceAll('Exception: ', '');
             }
@@ -384,7 +443,19 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
   }
 
   static const _monthNames = [
-    '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+    '',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'Mei',
+    'Jun',
+    'Jul',
+    'Agu',
+    'Sep',
+    'Okt',
+    'Nov',
+    'Des',
   ];
 
   String _formatPayrollPeriod(DateTime start, DateTime end) {
@@ -414,7 +485,10 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
           Expanded(
             child: Text(
               _error.isNotEmpty ? _error : 'Gagal memperbarui data tugas.',
-              style: GoogleFonts.inter(fontSize: 12, color: Colors.amber.shade900),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: Colors.amber.shade900,
+              ),
             ),
           ),
           InkWell(
@@ -502,10 +576,10 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
     final greeting = hour < 12
         ? 'Selamat Pagi'
         : hour < 15
-            ? 'Selamat Siang'
-            : hour < 18
-                ? 'Selamat Sore'
-                : 'Selamat Malam';
+        ? 'Selamat Siang'
+        : hour < 18
+        ? 'Selamat Sore'
+        : 'Selamat Malam';
 
     return GradientHeader(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
@@ -520,10 +594,7 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Image.asset(
-                      'assets/images/logo.png',
-                      height: 22,
-                    ),
+                    Image.asset('assets/images/logo.png', height: 22),
                     const SizedBox(height: 6),
                     Text(
                       '$greeting,',
@@ -552,16 +623,25 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                       children: [
                         if (_userBranch != '-' && _userBranch.isNotEmpty)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.18),
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.25),
+                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.location_on_rounded, size: 11, color: Colors.white),
+                                const Icon(
+                                  Icons.location_on_rounded,
+                                  size: 11,
+                                  color: Colors.white,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   _userBranch,
@@ -575,16 +655,25 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                             ),
                           ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.25),
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.star_rounded, size: 11, color: Color(0xFFFDE047)),
+                              const Icon(
+                                Icons.star_rounded,
+                                size: 11,
+                                color: Color(0xFFFDE047),
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 _userRole,
@@ -599,19 +688,32 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                         ),
                         if (_isKoor)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF59E0B).withValues(alpha: 0.35),
+                              color: const Color(
+                                0xFFF59E0B,
+                              ).withValues(alpha: 0.35),
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFFDE68A)),
+                              border: Border.all(
+                                color: const Color(0xFFFDE68A),
+                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.verified_rounded, size: 11, color: Color(0xFFFDE047)),
+                                const Icon(
+                                  Icons.verified_rounded,
+                                  size: 11,
+                                  color: Color(0xFFFDE047),
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  _userStatusPegawai.isNotEmpty ? _userStatusPegawai : 'Cleaner Koor',
+                                  _userStatusPegawai.isNotEmpty
+                                      ? _userStatusPegawai
+                                      : 'Cleaner Koor',
                                   style: GoogleFonts.inter(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
@@ -659,9 +761,11 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                     _inProgressJobsCount > 0
                         ? Icons.play_circle_fill_rounded
                         : _todayJobsCount > 0
-                            ? Icons.assignment_rounded
-                            : Icons.tips_and_updates_rounded,
-                    color: _inProgressJobsCount > 0 ? const Color(0xFFFDE047) : Colors.white,
+                        ? Icons.assignment_rounded
+                        : Icons.tips_and_updates_rounded,
+                    color: _inProgressJobsCount > 0
+                        ? const Color(0xFFFDE047)
+                        : Colors.white,
                     size: 20,
                   ),
                 ),
@@ -674,8 +778,8 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                         _inProgressJobsCount > 0
                             ? 'Ada tugas sedang dikerjakan'
                             : _todayJobsCount > 0
-                                ? 'Ada $_todayJobsCount tugas untukmu hari ini!'
-                                : 'Belum ada tugas hari ini.',
+                            ? 'Ada $_todayJobsCount tugas untukmu hari ini!'
+                            : 'Belum ada tugas hari ini.',
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
@@ -687,8 +791,8 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                         _inProgressJobsCount > 0
                             ? 'Segera selesaikan dan upload foto bukti ya!'
                             : _todayJobsCount > 0
-                                ? 'Cek detail alamat dan mulai pengerjaan tepat waktu.'
-                                : 'Tetap standby & jaga kesehatan selalu!',
+                            ? 'Cek detail alamat dan mulai pengerjaan tepat waktu.'
+                            : 'Tetap standby & jaga kesehatan selalu!',
                         style: GoogleFonts.inter(
                           fontSize: 11.5,
                           color: Colors.white.withValues(alpha: 0.9),
@@ -702,11 +806,16 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                   InkWell(
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const CleanerJobListScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const CleanerJobListScreen(),
+                      ),
                     ),
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
@@ -768,49 +877,72 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
         icon: Icons.fingerprint_rounded,
         color: const Color(0xFFD97706),
         bgColor: const Color(0xFFFEF3C7),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AttendanceScreen())),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AttendanceScreen()),
+        ),
       ),
       _QuickActionItem(
         title: 'Cuti & Izin',
         icon: Icons.event_available_rounded,
         color: const Color(0xFF0284C7),
         bgColor: const Color(0xFFE0F2FE),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaveRequestScreen())),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const LeaveRequestScreen()),
+        ),
       ),
       _QuickActionItem(
         title: 'Tukar Libur',
         icon: Icons.sync_alt_rounded,
         color: const Color(0xFF7C3AED),
         bgColor: const Color(0xFFF3E8FF),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TukarLiburScreen())),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const TukarLiburScreen()),
+        ),
       ),
       _QuickActionItem(
         title: 'Riwayat',
         icon: Icons.history_rounded,
         color: const Color(0xFF059669),
         bgColor: const Color(0xFFECFDF5),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CleanerHistoryScreen())),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CleanerHistoryScreen()),
+        ),
       ),
       _QuickActionItem(
         title: 'Pengumuman',
         icon: Icons.campaign_rounded,
         color: const Color(0xFFE11D48),
         bgColor: const Color(0xFFFFF1F2),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPengumumanScreen())),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const OperasionalPengumumanScreen(),
+          ),
+        ),
       ),
       _QuickActionItem(
         title: 'Lapor Insiden',
         icon: Icons.healing_rounded,
         color: const Color(0xFFDC2626),
         bgColor: const Color(0xFFFEF2F2),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LaporKecelakaanScreen())),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const LaporKecelakaanScreen()),
+        ),
       ),
       _QuickActionItem(
         title: 'Data SIM',
         icon: Icons.badge_outlined,
         color: const Color(0xFF0284C7),
         bgColor: const Color(0xFFE0F2FE),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CleanerSimScreen())),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CleanerSimScreen()),
+        ),
       ),
       if (_isKoor)
         _QuickActionItem(
@@ -846,7 +978,12 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
           // Chunk items into rows of 3
           final rows = <List<_QuickActionItem>>[];
           for (var i = 0; i < actions.length; i += 3) {
-            rows.add(actions.sublist(i, (i + 3 > actions.length) ? actions.length : i + 3));
+            rows.add(
+              actions.sublist(
+                i,
+                (i + 3 > actions.length) ? actions.length : i + 3,
+              ),
+            );
           }
 
           final widgets = <Widget>[];
@@ -940,16 +1077,25 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.22),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.35),
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.stars_rounded, size: 13, color: Color(0xFFFDE047)),
+                          const Icon(
+                            Icons.stars_rounded,
+                            size: 13,
+                            color: Color(0xFFFDE047),
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             'FITUR KOORDINATOR',
@@ -969,7 +1115,11 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                         color: Colors.white.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.inventory_2_rounded, size: 18, color: Colors.white),
+                      child: const Icon(
+                        Icons.inventory_2_rounded,
+                        size: 18,
+                        color: Colors.white,
+                      ),
                     ),
                   ],
                 ),
@@ -995,7 +1145,10 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(10),
@@ -1019,7 +1172,11 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                             ),
                           ),
                           const SizedBox(width: 6),
-                          const Icon(Icons.arrow_forward_rounded, size: 14, color: Color(0xFF0369A1)),
+                          const Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 14,
+                            color: Color(0xFF0369A1),
+                          ),
                         ],
                       ),
                     ),
@@ -1050,7 +1207,11 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                     color: AppColors.primaryMid.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(Icons.dashboard_customize_rounded, size: 14, color: AppColors.primaryMid),
+                  child: const Icon(
+                    Icons.dashboard_customize_rounded,
+                    size: 14,
+                    color: AppColors.primaryMid,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -1093,7 +1254,9 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const CleanerJobListScreen(initialStatusFilter: 'assigned'),
+                    builder: (_) => const CleanerJobListScreen(
+                      initialStatusFilter: 'assigned',
+                    ),
                   ),
                 ),
               ),
@@ -1110,7 +1273,8 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const CleanerJobListScreen(isTodayOnly: true),
+                    builder: (_) =>
+                        const CleanerJobListScreen(isTodayOnly: true),
                   ),
                 ),
               ),
@@ -1131,7 +1295,9 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const CleanerJobListScreen(initialStatusFilter: 'in_progress'),
+                    builder: (_) => const CleanerJobListScreen(
+                      initialStatusFilter: 'in_progress',
+                    ),
                   ),
                 ),
               ),
@@ -1145,14 +1311,17 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                 icon: Icons.check_circle_rounded,
                 primaryColor: const Color(0xFF10B981),
                 bgColor: const Color(0xFFECFDF5),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const CleanerJobListScreen(initialStatusFilter: 'finished'),
-                  ),
-                ).then((_) {
-                  if (mounted) _fetchData(isSilent: true);
-                }),
+                onTap: () =>
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CleanerJobListScreen(
+                          initialStatusFilter: 'finished',
+                        ),
+                      ),
+                    ).then((_) {
+                      if (mounted) _fetchData(isSilent: true);
+                    }),
               ),
             ),
           ],
@@ -1202,7 +1371,10 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                   child: Icon(icon, size: 17, color: primaryColor),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2.5,
+                  ),
                   decoration: BoxDecoration(
                     color: bgColor,
                     borderRadius: BorderRadius.circular(6),
@@ -1247,22 +1419,19 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
 
   Widget _buildBonusCard() {
     return InkWell(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const CleanerHistoryScreen()),
-      ).then((_) {
-        if (mounted) _fetchData(isSilent: true);
-      }),
+      onTap: () =>
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CleanerHistoryScreen()),
+          ).then((_) {
+            if (mounted) _fetchData(isSilent: true);
+          }),
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [
-              Color(0xFFF59E0B),
-              Color(0xFFD97706),
-              Color(0xFFB45309),
-            ],
+            colors: [Color(0xFFF59E0B), Color(0xFFD97706), Color(0xFFB45309)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -1275,76 +1444,89 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
             ),
           ],
         ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            right: -12,
-            top: -16,
-            child: Icon(
-              Icons.stars_rounded,
-              size: 110,
-              color: Colors.white.withValues(alpha: 0.12),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              right: -12,
+              top: -16,
+              child: Icon(
+                Icons.stars_rounded,
+                size: 110,
+                color: Colors.white.withValues(alpha: 0.12),
+              ),
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.22),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 13),
-                        const SizedBox(width: 5),
-                        Text(
-                          'TOTAL BONUS BULANAN',
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                            letterSpacing: 0.4,
-                          ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.22),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.35),
                         ),
-                      ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.workspace_premium_rounded,
+                            color: Colors.white,
+                            size: 13,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            'TOTAL BONUS BULANAN',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                    const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 12,
+                      color: Colors.white70,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _formatRupiah(_bonusThisMonth),
+                  style: GoogleFonts.inter(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: -0.5,
                   ),
-                  const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.white70),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                _formatRupiah(_bonusThisMonth),
-                style: GoogleFonts.inter(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                  letterSpacing: -0.5,
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Akumulasi bonus periode ${_formatPayrollPeriod(_startDate, _endDate)}.',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: Colors.white.withValues(alpha: 0.9),
+                const SizedBox(height: 4),
+                Text(
+                  'Akumulasi bonus periode ${_formatPayrollPeriod(_startDate, _endDate)}.',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   // ================= 4. TUGAS AKTIF & MENDATANG =================
 
@@ -1363,7 +1545,11 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                     color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(Icons.schedule_rounded, size: 14, color: Color(0xFF2563EB)),
+                  child: const Icon(
+                    Icons.schedule_rounded,
+                    size: 14,
+                    color: Color(0xFF2563EB),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -1396,7 +1582,11 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                     color: Color(0xFFF1F5F9),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.check_circle_outline_rounded, size: 28, color: Color(0xFF94A3B8)),
+                  child: const Icon(
+                    Icons.check_circle_outline_rounded,
+                    size: 28,
+                    color: Color(0xFF94A3B8),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -1429,17 +1619,25 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
             String date = '-';
 
             if (p != null) {
-              if (p['pelanggan'] != null) custName = p['pelanggan']['nama_pelanggan'] ?? 'Pelanggan';
+              if (p['pelanggan'] != null)
+                custName = p['pelanggan']['nama_pelanggan'] ?? 'Pelanggan';
               if (p['alamat'] != null) address = p['alamat'];
               if (p['details'] != null && (p['details'] as List).isNotEmpty) {
-                serviceName = p['details'][0]['layanan']?['nama_layanan'] ?? 'Layanan Kebersihan';
-                time = p['details'][0]['jam_pengerjaan'] ?? p['details'][0]['waktu_pengerjaan'] ?? '-';
+                serviceName =
+                    p['details'][0]['layanan']?['nama_layanan'] ??
+                    'Layanan Kebersihan';
+                time =
+                    p['details'][0]['jam_pengerjaan'] ??
+                    p['details'][0]['waktu_pengerjaan'] ??
+                    '-';
                 date = p['details'][0]['tanggal_pengerjaan'] ?? '-';
               }
             }
             final status = job['status_pengerjaan'];
             final isProgress = status == 'in_progress';
-            final initial = custName.isNotEmpty ? custName[0].toUpperCase() : 'K';
+            final initial = custName.isNotEmpty
+                ? custName[0].toUpperCase()
+                : 'K';
 
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
@@ -1447,7 +1645,9 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: isProgress ? const Color(0xFFF59E0B) : const Color(0xFFE2E8F0),
+                  color: isProgress
+                      ? const Color(0xFFF59E0B)
+                      : const Color(0xFFE2E8F0),
                   width: isProgress ? 1.5 : 1,
                 ),
                 boxShadow: [
@@ -1478,8 +1678,14 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: isProgress
-                                      ? [const Color(0xFFF59E0B), const Color(0xFFD97706)]
-                                      : [AppColors.primaryMid, AppColors.primaryLight],
+                                      ? [
+                                          const Color(0xFFF59E0B),
+                                          const Color(0xFFD97706),
+                                        ]
+                                      : [
+                                          AppColors.primaryMid,
+                                          AppColors.primaryLight,
+                                        ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
@@ -1524,12 +1730,19 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3.5,
+                              ),
                               decoration: BoxDecoration(
-                                color: isProgress ? const Color(0xFFFEF3C7) : const Color(0xFFEFF6FF),
+                                color: isProgress
+                                    ? const Color(0xFFFEF3C7)
+                                    : const Color(0xFFEFF6FF),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                  color: isProgress ? const Color(0xFFFDE047) : const Color(0xFFBFDBFE),
+                                  color: isProgress
+                                      ? const Color(0xFFFDE047)
+                                      : const Color(0xFFBFDBFE),
                                 ),
                               ),
                               child: Text(
@@ -1537,7 +1750,9 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                                 style: GoogleFonts.inter(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w800,
-                                  color: isProgress ? const Color(0xFFB45309) : const Color(0xFF1D4ED8),
+                                  color: isProgress
+                                      ? const Color(0xFFB45309)
+                                      : const Color(0xFF1D4ED8),
                                 ),
                               ),
                             ),
@@ -1550,7 +1765,11 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                         // Address & Time
                         Row(
                           children: [
-                            const Icon(Icons.location_on_outlined, size: 14, color: Color(0xFF64748B)),
+                            const Icon(
+                              Icons.location_on_outlined,
+                              size: 14,
+                              color: Color(0xFF64748B),
+                            ),
                             const SizedBox(width: 5),
                             Expanded(
                               child: Text(
@@ -1568,10 +1787,16 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            const Icon(Icons.access_time_rounded, size: 14, color: Color(0xFF64748B)),
+                            const Icon(
+                              Icons.access_time_rounded,
+                              size: 14,
+                              color: Color(0xFF64748B),
+                            ),
                             const SizedBox(width: 5),
                             Text(
-                              time != '-' ? '$time ${TimezoneHelper.getTimezoneLabel(_userBranch)}' : 'Jadwal fleksibel',
+                              time != '-'
+                                  ? '$time ${TimezoneHelper.getTimezoneLabel(_userBranch)}'
+                                  : 'Jadwal fleksibel',
                               style: GoogleFonts.inter(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w600,
@@ -1580,7 +1805,10 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                             ),
                             if (date != '-') ...[
                               const SizedBox(width: 8),
-                              Text('•', style: TextStyle(color: Colors.grey.shade400)),
+                              Text(
+                                '•',
+                                style: TextStyle(color: Colors.grey.shade400),
+                              ),
                               const SizedBox(width: 8),
                               Text(
                                 date,
@@ -1601,17 +1829,25 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                     onTap: () async {
                       await Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => CleanerJobDetailScreen(job: job)),
+                        MaterialPageRoute(
+                          builder: (_) => CleanerJobDetailScreen(job: job),
+                        ),
                       );
                       _fetchData();
                     },
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(18)),
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(18),
+                    ),
                     child: Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 11),
                       decoration: BoxDecoration(
-                        color: isProgress ? const Color(0xFFFFFBEB) : const Color(0xFFF8FAFC),
-                        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(18)),
+                        color: isProgress
+                            ? const Color(0xFFFFFBEB)
+                            : const Color(0xFFF8FAFC),
+                        borderRadius: const BorderRadius.vertical(
+                          bottom: Radius.circular(18),
+                        ),
                         border: const Border(
                           top: BorderSide(color: Color(0xFFF1F5F9)),
                         ),
@@ -1620,17 +1856,25 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen> with Wi
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            isProgress ? Icons.play_arrow_rounded : Icons.arrow_forward_rounded,
+                            isProgress
+                                ? Icons.play_arrow_rounded
+                                : Icons.arrow_forward_rounded,
                             size: 16,
-                            color: isProgress ? const Color(0xFFD97706) : AppColors.primaryMid,
+                            color: isProgress
+                                ? const Color(0xFFD97706)
+                                : AppColors.primaryMid,
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            isProgress ? 'Lanjutkan Pengerjaan Tugas' : 'Buka Detail & Mulai Tugas',
+                            isProgress
+                                ? 'Lanjutkan Pengerjaan Tugas'
+                                : 'Buka Detail & Mulai Tugas',
                             style: GoogleFonts.inter(
                               fontSize: 12.5,
                               fontWeight: FontWeight.bold,
-                              color: isProgress ? const Color(0xFFD97706) : AppColors.primaryMid,
+                              color: isProgress
+                                  ? const Color(0xFFD97706)
+                                  : AppColors.primaryMid,
                             ),
                           ),
                         ],

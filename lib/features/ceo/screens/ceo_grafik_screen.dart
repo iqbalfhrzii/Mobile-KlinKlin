@@ -157,7 +157,7 @@ class _CeoGrafikScreenState extends State<CeoGrafikScreen>
       } else {
         // Bulan Ini default
         startDate = DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month, 1));
-        endDate = DateFormat('yyyy-MM-dd').format(now);
+        endDate = DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month + 1, 0));
       }
 
       // Fetch omzet and chat data simultaneously

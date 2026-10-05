@@ -687,20 +687,10 @@ class _FinanceAuditScreenState extends State<FinanceAuditScreen> {
       !o.tanggalInput.isBefore(todayStart) && !o.tanggalInput.isAfter(todayEnd)
     ).toList();
 
-    // Omzet = sum pembayaran.total_akhir where approved_at is today
-    // (matches web: Pemasukan::whereDate('tanggal_pemasukan', now())->sum('nominal'))
-    // Pemasukan is created with tanggal_pemasukan = now() at the moment finance clicks Approve
-    final omzetToday = _orders
-        .where((o) {
-          final approvedAt = o.pembayaran?.approvedAt;
-          if (approvedAt == null) return false;
-          if (o.pembayaran?.statusPembayaran != 'approved' && o.paymentStatus != 'approved') return false;
-          return !approvedAt.isBefore(todayStart) && !approvedAt.isAfter(todayEnd);
-        })
-        .fold<int>(0, (sum, o) {
-          final nominal = o.pembayaran?.total ?? o.total;
-          return sum + nominal;
-        });
+    // Omzet Hari Ini = Murni Subtotal - Diskon (tanpa PPN & PPh), acuan tanggal_input hari ini, status bukan draft/cancelled
+    final omzetToday = ordersToday
+        .where((o) => o.masukOmzet)
+        .fold<int>(0, (sum, o) => sum + o.totalOmzet);
 
     // Done count = pesanan berstatus utama Done hari ini
     // (matches web: Pesanan::where('status_order_utama', 'done')->whereDate('tanggal_input', now())->count())

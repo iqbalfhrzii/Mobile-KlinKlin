@@ -174,7 +174,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ]),
                     const SizedBox(height: 12),
                     _buildMenuSection('Tentang', [
-                      _MenuItem(Icons.info_outline_rounded, 'Versi Aplikasi', trailing: '1.0.17'),
+                      _MenuItem(Icons.info_outline_rounded, 'Versi Aplikasi', trailing: '1.0.19'),
                       _MenuItem(Icons.bug_report_outlined, 'Pengajuan Fitur & Bug', onTap: () {
                         Navigator.push(
                           context,

@@ -65,7 +65,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
         ).format(DateTime(now.year, now.month, 1));
         end = DateFormat(
           'yyyy-MM-dd',
-        ).format(now);
+        ).format(DateTime(now.year, now.month + 1, 0));
       } else if (_selectedFilter == 'Hari Ini') {
         start = DateFormat('yyyy-MM-dd').format(now);
         end = DateFormat('yyyy-MM-dd').format(now);
@@ -88,7 +88,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
           ).format(DateTime(now.year, now.month, 1));
           end = DateFormat(
             'yyyy-MM-dd',
-          ).format(now);
+          ).format(DateTime(now.year, now.month + 1, 0));
         }
       }
 

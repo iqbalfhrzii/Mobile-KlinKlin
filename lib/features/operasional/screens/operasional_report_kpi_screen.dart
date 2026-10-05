@@ -195,7 +195,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
 
       if (_selectedFilter == 'Bulan Ini') {
         start = DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month, 1));
-        end = DateFormat('yyyy-MM-dd').format(now);
+        end = DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month + 1, 0));
       } else if (_selectedFilter == 'Hari Ini') {
         start = DateFormat('yyyy-MM-dd').format(now);
         end = DateFormat('yyyy-MM-dd').format(now);
@@ -213,7 +213,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
           end = DateFormat('yyyy-MM-dd').format(_customEndDate!);
         } else {
           start = DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month, 1));
-          end = DateFormat('yyyy-MM-dd').format(now);
+          end = DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month + 1, 0));
         }
       }
 

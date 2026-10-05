@@ -581,6 +581,27 @@ class OrderModel {
 
   int get diskonAmount => ((baseSubtotal * diskonPersen) / 100).round();
   int get totalSetelahDiskon => (baseSubtotal - diskonAmount) > 0 ? (baseSubtotal - diskonAmount) : 0;
+  
+  /// Sesuai standar akuntansi: Omzet murni Subtotal - Diskon (TIDAK LAGI memasukkan PPN 11% / memotong PPh)
+  int get totalOmzet => totalSetelahDiskon;
+
+  /// Status order yang masuk hitungan omzet:
+  /// Masuk: pending, process, selesai/done (booked revenue)
+  /// Tidak masuk: draft & cancelled
+  bool get masukOmzet {
+    final s = statusUtamaRaw?.toLowerCase() ?? statusUtamaLabel.toLowerCase();
+    if (s == 'draft' || s == 'cancelled' || s == 'dibatalkan') {
+      return false;
+    }
+    if (status == OrderStatus.draft || status == OrderStatus.cancelled || status == OrderStatus.waitingCancelApproval) {
+      return false;
+    }
+    if (pembatalanId != null || paymentStatus.toLowerCase() == 'cancelled') {
+      return false;
+    }
+    return true;
+  }
+
   int get ppnPersen => ppn ?? (pembayaran?.ppn ?? 11);
   int get ppnAmount => (totalSetelahDiskon * (ppnPersen / 100)).round();
   int get pphPersen => pph ?? (pembayaran?.pph ?? 0);
