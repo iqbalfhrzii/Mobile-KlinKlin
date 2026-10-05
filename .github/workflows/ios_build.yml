@@ -103,6 +103,7 @@ jobs:
 
       - name: Upload iOS App Artifact
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: ios-app-release
           path: build/ios/ipa/*.ipa
