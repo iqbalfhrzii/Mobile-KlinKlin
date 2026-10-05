@@ -228,7 +228,7 @@ class CleanerJobService {
     }
   }
 
-  Future<Map<String, dynamic>> fetchHistory({int? month, int? year}) async {
+  Future<Map<String, dynamic>> fetchHistory({int? month, int? year, String? startDate, String? endDate}) async {
     final cleanerId = await _getCleanerId();
     if (cleanerId == null) throw Exception('Cleaner ID tidak ditemukan');
 
@@ -237,6 +237,8 @@ class CleanerJobService {
         '/cleaner/jobs/history',
         queryParameters: {
           'cleaner_id': cleanerId,
+          if (startDate != null) 'start_date': startDate,
+          if (endDate != null) 'end_date': endDate,
           if (month != null) 'month': month,
           if (year != null) 'year': year,
         },

@@ -219,20 +219,17 @@ class _CleanerDashboardScreenState extends State<CleanerDashboardScreen>
       }
 
       // Kumpulkan dan filter pekerjaan selesai sesuai rentang tanggal 28 - 27
-      final Map<dynamic, dynamic> uniqueHistoryMap = {};
+      final Map<String, dynamic> uniqueHistoryMap = {};
       for (final data in historyResults) {
         if (data is Map &&
             data['pesanans'] != null &&
             data['pesanans'] is List) {
           for (final job in data['pesanans']) {
             if (job is Map) {
-              final id =
-                  job['pesanan_cleaner_id'] ?? job['id'] ?? job['pesanan_id'];
-              if (id != null) {
-                uniqueHistoryMap[id] = job;
-              } else {
-                uniqueHistoryMap[identityHashCode(job)] = job;
-              }
+              final pcId = (job['pesanan_cleaner_id'] ?? job['id'])?.toString();
+              final pesananId = (job['pesanan_id'] ?? job['pesanan']?['id'])?.toString();
+              final key = pcId != null ? 'pc_$pcId' : (pesananId != null ? 'order_$pesananId' : identityHashCode(job).toString());
+              uniqueHistoryMap[key] = job;
             }
           }
         }

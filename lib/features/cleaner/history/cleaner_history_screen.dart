@@ -175,17 +175,15 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
         monthsToFetch.map((m) => _service.fetchHistory(month: m.month, year: m.year)),
       );
 
-      final Map<dynamic, dynamic> uniqueJobs = {};
+      final Map<String, dynamic> uniqueJobs = {};
       for (final data in results) {
         if (data['pesanans'] is List) {
           for (final job in data['pesanans']) {
             if (job is Map) {
-              final id = job['pesanan_cleaner_id'] ?? job['id'] ?? job['pesanan_id'];
-              if (id != null) {
-                uniqueJobs[id] = job;
-              } else {
-                uniqueJobs[identityHashCode(job)] = job;
-              }
+              final pcId = (job['pesanan_cleaner_id'] ?? job['id'])?.toString();
+              final pesananId = (job['pesanan_id'] ?? job['pesanan']?['id'])?.toString();
+              final key = pcId != null ? 'pc_$pcId' : (pesananId != null ? 'order_$pesananId' : identityHashCode(job).toString());
+              uniqueJobs[key] = job;
             }
           }
         }
