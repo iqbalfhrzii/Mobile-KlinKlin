@@ -46,6 +46,7 @@ class _GajiKaryawanFormBottomSheetState extends State<GajiKaryawanFormBottomShee
 
   bool _isLoadingMaster = true;
   bool _isSaving = false;
+  bool _isLoadingBonuses = false;
 
   List<CabangModel> _cabangs = [];
   List<KaryawanModel> _karyawans = [];
@@ -194,6 +195,17 @@ class _GajiKaryawanFormBottomSheetState extends State<GajiKaryawanFormBottomShee
     _selectedKaryawanId = g.karyawanId;
     _selectedKaryawan = g.karyawan;
 
+    if (_selectedKaryawan == null && _selectedKaryawanId != null && _karyawans.isNotEmpty) {
+      final matches = _karyawans.where((k) => k.id == _selectedKaryawanId);
+      if (matches.isNotEmpty) {
+        _selectedKaryawan = matches.first;
+        if (_selectedCabangId == null) {
+          _selectedCabangId = _selectedKaryawan?.cabangId;
+          _onCabangChanged(_selectedCabangId, resetKaryawan: false);
+        }
+      }
+    }
+
     _periodeBulan = g.periodeBulan ?? DateTime.now().month;
     _periodeTahun = g.periodeTahun ?? DateTime.now().year;
     _periodeTahunCtrl.text = _periodeTahun.toString();
@@ -267,6 +279,7 @@ class _GajiKaryawanFormBottomSheetState extends State<GajiKaryawanFormBottomShee
     });
 
     _applyMasterGajiForSelectedKaryawan();
+    _fetchDraftBonuses();
   }
 
   void _applyMasterGajiForSelectedKaryawan() {
@@ -278,6 +291,16 @@ class _GajiKaryawanFormBottomSheetState extends State<GajiKaryawanFormBottomShee
         _tunjanganKosCtrl.text = '0';
         _tunjanganKerjaCtrl.text = '0';
         _isBpjsAktif = false;
+        _bonusReviewCtrl.text = '0';
+        _bonusTglMerahCtrl.text = '0';
+        _totalKmCtrl.text = '0';
+        _totalDeepCleanCtrl.text = '0';
+        _totalSalonCtrl.text = '0';
+        _totalTipsCtrl.text = '0';
+        _totalParkirCtrl.text = '0';
+        _totalLemburCtrl.text = '0';
+        _totalUangMakanCtrl.text = '0';
+        _totalBonusLainnyaCtrl.text = '0';
       });
       _calculateAll();
       return;
@@ -362,6 +385,7 @@ class _GajiKaryawanFormBottomSheetState extends State<GajiKaryawanFormBottomShee
       }
     });
     _applyMasterGajiForSelectedKaryawan();
+    _fetchDraftBonuses();
   }
 
   void _calculateAll() {
@@ -415,6 +439,47 @@ class _GajiKaryawanFormBottomSheetState extends State<GajiKaryawanFormBottomShee
     if (picked != null) {
       onPicked(picked);
       _calculateAll();
+      _fetchDraftBonuses();
+    }
+  }
+
+  Future<void> _fetchDraftBonuses() async {
+    if (_selectedKaryawanId == null) return;
+    setState(() => _isLoadingBonuses = true);
+
+    try {
+      final params = {
+        'karyawan_id': _selectedKaryawanId,
+        'jenis_gaji': _jenisGaji,
+        'periode_bulan': _periodeBulan,
+        'periode_tahun': _periodeTahun,
+        'awal_periode': dateFormatter.format(_awalPeriode),
+        'akhir_periode': dateFormatter.format(_akhirPeriode),
+      };
+      if (_jenisGaji == 'harian') {
+        params['jumlah_hari_kerja'] = int.tryParse(_jumlahHariKerjaCtrl.text) ?? 1;
+      }
+
+      final draft = await _hrdService.generateDraftGajiKaryawan(params);
+      if (mounted) {
+        _bonusReviewCtrl.text = _formatAmount(draft.bonusReview);
+        _bonusTglMerahCtrl.text = _formatAmount(draft.bonusTanggalMerah);
+        _totalKmCtrl.text = _formatAmount(draft.totalKilometer);
+        _totalDeepCleanCtrl.text = _formatAmount(draft.totalDeepclean);
+        _totalSalonCtrl.text = _formatAmount(draft.totalSalon);
+        _totalTipsCtrl.text = _formatAmount(draft.totalTips);
+        _totalParkirCtrl.text = _formatAmount(draft.totalParkir);
+        _totalLemburCtrl.text = _formatAmount(draft.totalLembur);
+        _totalUangMakanCtrl.text = _formatAmount(draft.totalUangMakan);
+        _totalBonusLainnyaCtrl.text = _formatAmount(draft.totalBonusLainnya);
+        _calculateAll();
+      }
+    } catch (e) {
+      debugPrint('Error generating draft bonuses: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingBonuses = false);
+      }
     }
   }
 
@@ -1128,8 +1193,44 @@ class _GajiKaryawanFormBottomSheetState extends State<GajiKaryawanFormBottomShee
                                   data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
                                   child: ExpansionTile(
                                     tilePadding: EdgeInsets.zero,
-                                    title: Text('Komponen Total Bonus', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF047857))),
-                                    subtitle: Text('Akumulasi: ${currencyFormatter.format(_totalBonus)}', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                                    initiallyExpanded: _totalBonus > 0,
+                                    title: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text('Komponen Total Bonus', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF047857))),
+                                        ),
+                                        if (_selectedKaryawanId != null)
+                                          InkWell(
+                                            onTap: _isLoadingBonuses ? null : _fetchDraftBonuses,
+                                            borderRadius: BorderRadius.circular(6),
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  if (_isLoadingBonuses)
+                                                    const SizedBox(
+                                                      width: 12,
+                                                      height: 12,
+                                                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF047857)),
+                                                    )
+                                                  else
+                                                    const Icon(Icons.sync_rounded, size: 14, color: Color(0xFF047857)),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    _isLoadingBonuses ? 'Menghitung...' : 'Auto Hitung',
+                                                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF047857)),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    subtitle: Text(
+                                      _isLoadingBonuses ? 'Mengambil rincian bonus cleaner...' : 'Akumulasi: ${currencyFormatter.format(_totalBonus)}',
+                                      style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+                                    ),
                                     childrenPadding: const EdgeInsets.symmetric(vertical: 6),
                                     children: [
                                       _buildNumericInput('Bonus Review', _bonusReviewCtrl),
