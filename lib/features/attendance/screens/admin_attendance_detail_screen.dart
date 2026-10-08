@@ -647,17 +647,37 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                 ],
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: statusBg,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: statusBorder),
-              ),
-              child: Text(
-                status,
-                style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: statusColor),
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_currentDayItem.isShift2) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFDE68A)),
+                    ),
+                    child: Text(
+                      'Shift 2 (12:00-20:00)',
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFB45309)),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusBg,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: statusBorder),
+                  ),
+                  child: Text(
+                    status,
+                    style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: statusColor),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -729,11 +749,31 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                     style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: accentColor),
                   ),
                 ),
-                if (hasRecord)
+                if (hasRecord) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    margin: const EdgeInsets.only(right: 6),
+                    decoration: BoxDecoration(
+                      color: item.isShift2 ? const Color(0xFFFEF3C7) : Colors.white.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: item.isShift2 ? const Color(0xFFFDE68A) : Colors.black12,
+                      ),
+                    ),
+                    child: Text(
+                      item.isShift2 ? 'Shift 2' : 'Shift 1',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: item.isShift2 ? const Color(0xFFB45309) : const Color(0xFF475569),
+                      ),
+                    ),
+                  ),
                   Text(
                     '$timeStr $_tzLabel',
                     style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: accentColor),
                   ),
+                ],
               ],
             ),
           ),
@@ -1179,6 +1219,25 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
                 ),
 
                 // Status Badge & Arrow
+                if (group.isShift2) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFFDE68A)),
+                    ),
+                    child: Text(
+                      'Shift 2',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFFB45309),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                ],
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(

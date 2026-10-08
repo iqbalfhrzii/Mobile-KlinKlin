@@ -19,6 +19,8 @@ class EmployeeAttendanceSummary {
   final int terlambatCount;
   final int cutiLiburCount;
   final int tidakAbsenCount;
+  final int shift1Count;
+  final int shift2Count;
   final List<DailyAttendanceLog> dailyLogs;
 
   EmployeeAttendanceSummary({
@@ -28,6 +30,8 @@ class EmployeeAttendanceSummary {
     required this.terlambatCount,
     required this.cutiLiburCount,
     required this.tidakAbsenCount,
+    this.shift1Count = 0,
+    this.shift2Count = 0,
     required this.dailyLogs,
   });
 
@@ -70,6 +74,7 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
   List<CabangModel> _cabangList = [];
 
   String _selectedRole = 'cleaner'; // 'cleaner' | 'cs'
+  String _selectedShiftFilter = 'all'; // 'all', '1', '2'
   String _filterWaktu = 'bulan_ini'; // 'bulan_ini' (default), 'minggu_ini', 'bulan_lalu', 'hari_ini', 'custom'
 
   DateTime? _customStartDate;
@@ -279,6 +284,8 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
       int telat = 0;
       int cutiLibur = 0;
       int tidakAbsen = 0;
+      int shift1 = 0;
+      int shift2 = 0;
       final logs = <DailyAttendanceLog>[];
 
       for (final date in validDates) {
@@ -290,6 +297,11 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
         String status = 'Tidak Absen';
 
         if (inItem != null) {
+          if (inItem.isShift2) {
+            shift2++;
+          } else {
+            shift1++;
+          }
           final isLate = _isLate(inItem);
           if (isLate) {
             status = 'Telat';
@@ -326,6 +338,8 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
         terlambatCount: telat,
         cutiLiburCount: cutiLibur,
         tidakAbsenCount: tidakAbsen,
+        shift1Count: shift1,
+        shift2Count: shift2,
         dailyLogs: logs,
       ));
     }
@@ -353,6 +367,15 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
       list = list.where((item) => item.cutiLiburCount > 0).toList();
     } else if (_activeStatusMetricFilter == 'tidak_absen') {
       list = list.where((item) => item.tidakAbsenCount > 0).toList();
+    }
+
+    // Apply Shift Filter (Khusus Cleaner)
+    if (_selectedRole == 'cleaner' && _selectedShiftFilter != 'all') {
+      if (_selectedShiftFilter == '2') {
+        list = list.where((item) => item.shift2Count > 0).toList();
+      } else if (_selectedShiftFilter == '1') {
+        list = list.where((item) => item.shift1Count > 0).toList();
+      }
     }
 
     if (_searchQuery.trim().isNotEmpty) {
@@ -532,7 +555,10 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
                       icon: Icons.cleaning_services_rounded,
                       isSelected: _selectedRole == 'cleaner',
                       onTap: () {
-                        setState(() => _selectedRole = 'cleaner');
+                        setState(() {
+                          _selectedRole = 'cleaner';
+                          _selectedShiftFilter = 'all';
+                        });
                         _recalculateSummaries();
                       },
                     ),
@@ -544,7 +570,10 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
                       icon: Icons.headset_mic_rounded,
                       isSelected: _selectedRole == 'cs',
                       onTap: () {
-                        setState(() => _selectedRole = 'cs');
+                        setState(() {
+                          _selectedRole = 'cs';
+                          _selectedShiftFilter = 'all';
+                        });
                         _recalculateSummaries();
                       },
                     ),
@@ -795,6 +824,71 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
             ),
           ),
 
+          // 5b. Horizontal Shift Filter Pills (Khusus Cleaner)
+          if (_selectedRole == 'cleaner')
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.schedule_rounded, size: 12, color: Color(0xFF64748B)),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Shift:',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    _buildShiftPill(
+                      label: 'Semua Shift',
+                      isActive: _selectedShiftFilter == 'all',
+                      onTap: () {
+                        setState(() => _selectedShiftFilter = 'all');
+                        _applySearchFilter();
+                      },
+                    ),
+                    const SizedBox(width: 6),
+                    _buildShiftPill(
+                      label: 'Shift 1 (Reguler)',
+                      isActive: _selectedShiftFilter == '1',
+                      onTap: () {
+                        setState(() => _selectedShiftFilter = '1');
+                        _applySearchFilter();
+                      },
+                    ),
+                    const SizedBox(width: 6),
+                    _buildShiftPill(
+                      label: 'Shift 2 (12:00 - 20:00)',
+                      isActive: _selectedShiftFilter == '2',
+                      accentColor: const Color(0xFFD97706),
+                      onTap: () {
+                        setState(() => _selectedShiftFilter = '2');
+                        _applySearchFilter();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
           // 6. List of Employee Attendance Cards
           Expanded(
             child: _isLoading
@@ -873,6 +967,35 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShiftPill({
+    required String label,
+    required bool isActive,
+    required VoidCallback onTap,
+    Color? accentColor,
+  }) {
+    final activeColor = accentColor ?? const Color(0xFF2563EB);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive ? activeColor : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(20),
+          border: isActive ? Border.all(color: activeColor) : null,
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 11.5,
+            fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+            color: isActive ? Colors.white : const Color(0xFF475569),
+          ),
         ),
       ),
     );
@@ -1489,6 +1612,27 @@ class _EmployeeDetailModal extends StatelessWidget {
                   ),
                 ),
               ),
+              if (log.checkIn != null) ...[
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: log.checkIn!.isShift2 ? const Color(0xFFFEF3C7) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: log.checkIn!.isShift2 ? const Color(0xFFFDE68A) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: Text(
+                    log.checkIn!.isShift2 ? 'Shift 2' : 'Shift 1',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: log.checkIn!.isShift2 ? const Color(0xFFB45309) : const Color(0xFF475569),
+                    ),
+                  ),
+                ),
+              ],
 
               // Check-In Photo Badge/Button
               if (log.checkIn?.selfieViewUrl != null && log.checkIn!.selfieViewUrl!.isNotEmpty) ...[
