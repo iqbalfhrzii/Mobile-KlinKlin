@@ -51,6 +51,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   int _statTidakAbsen = 0;
   int _statIzinCutiLibur = 0;
 
+  // Shift 2 (12:00 - 20:00) khusus Cleaner (opsional jika order sepi)
+  // Rekomendasi otomatis: jika jam >= 11:00 default ke Shift 2, cleaner tetap bisa ubah manual
+  String _selectedShift = DateTime.now().hour >= 11 ? '2' : '1';
+
   @override
   void initState() {
     super.initState();
@@ -85,6 +89,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       if (mounted) {
         setState(() {
           _status = status;
+          if (status.hasCheckedIn && status.shift != null && status.shift!.isNotEmpty) {
+            _selectedShift = status.shift!;
+          } else if (!status.hasCheckedIn) {
+            _selectedShift = DateTime.now().hour >= 11 ? '2' : '1';
+          }
           _isLoading = false;
         });
       }
@@ -565,9 +574,50 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ),
             ],
           ),
-          content: Text(
-            'Apakah Anda yakin ingin mengirim data ${isCheckIn ? "Check-In" : "Check-Out"} sekarang?',
-            style: GoogleFonts.inter(fontSize: 13.5, color: AppColors.textDark),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Apakah Anda yakin ingin mengirim data ${isCheckIn ? "Check-In" : "Check-Out"} sekarang?',
+                style: GoogleFonts.inter(fontSize: 13.5, color: AppColors.textDark),
+              ),
+              if (_isCleaner && isCheckIn) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: _selectedShift == '2' ? const Color(0xFFFFFBEB) : const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: _selectedShift == '2' ? const Color(0xFFFDE68A) : const Color(0xFFBBF7D0),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.schedule_rounded,
+                        size: 15,
+                        color: _selectedShift == '2' ? const Color(0xFFD97706) : const Color(0xFF16A34A),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _selectedShift == '2'
+                              ? 'Shift 2 (12:00 - 20:00 • Order Sepi)'
+                              : 'Shift 1 (08:00 - 17:00 • Reguler)',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: _selectedShift == '2' ? const Color(0xFF92400E) : const Color(0xFF15803D),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
           ),
           actions: [
             TextButton(
@@ -599,6 +649,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         longitude: position.longitude,
         accuracy: position.accuracy,
         isMockLocation: isMock,
+        shift: _isCleaner && isCheckIn ? _selectedShift : null,
       );
 
       _showSuccess(isCheckIn ? 'Check-in berhasil disimpan!' : 'Check-out berhasil disimpan!');
@@ -747,6 +798,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        if (_isCleaner && _status?.hasCheckedIn != true) ...[
+                          _buildShiftSelector(),
+                          const SizedBox(height: 14),
+                        ],
                         _buildActionCards(),
                         const SizedBox(height: 14),
                         _buildScheduleAndLocationCard(),
@@ -832,6 +887,200 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // --- SHIFT SELECTOR (Khusus Cleaner jika belum Check-In) ---
+  Widget _buildShiftSelector() {
+    final bool isRecShift2 = DateTime.now().hour >= 11;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [AppColors.cardShadow],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.swap_horiz_rounded, color: Color(0xFF16A34A), size: 18),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Pilih Shift Kerja',
+                      style: GoogleFonts.inter(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    Text(
+                      'Shift 2 opsional jika orderan sepi',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isRecShift2 && _selectedShift == '2')
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFFBEB),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.auto_awesome_rounded, size: 11, color: Color(0xFFD97706)),
+                      const SizedBox(width: 3),
+                      Text(
+                        'Rekomendasi Jam',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF92400E),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              // Shift 1 Card
+              Expanded(
+                child: _buildShiftOptionCard(
+                  shiftValue: '1',
+                  title: 'Shift 1 (Reguler)',
+                  timeRange: '08:00 - 17:00',
+                  description: 'Jadwal Standar',
+                  icon: Icons.wb_sunny_rounded,
+                  activeColor: const Color(0xFF10B981),
+                  activeBg: const Color(0xFFF0FDF4),
+                ),
+              ),
+              const SizedBox(width: 10),
+              // Shift 2 Card
+              Expanded(
+                child: _buildShiftOptionCard(
+                  shiftValue: '2',
+                  title: 'Shift 2 (Khusus)',
+                  timeRange: '12:00 - 20:00',
+                  description: 'Saat Order Sepi',
+                  icon: Icons.nightlight_round,
+                  activeColor: const Color(0xFFF59E0B),
+                  activeBg: const Color(0xFFFFFBEB),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShiftOptionCard({
+    required String shiftValue,
+    required String title,
+    required String timeRange,
+    required String description,
+    required IconData icon,
+    required Color activeColor,
+    required Color activeBg,
+  }) {
+    final bool isSelected = _selectedShift == shiftValue;
+
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedShift = shiftValue;
+        });
+      },
+      borderRadius: BorderRadius.circular(14),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? activeBg : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? activeColor : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.8 : 1.0,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, size: 18, color: isSelected ? activeColor : const Color(0xFF94A3B8)),
+                if (isSelected)
+                  Icon(Icons.check_circle_rounded, size: 16, color: activeColor)
+                else
+                  Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? activeColor : AppColors.textDark,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              timeRange,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: isSelected ? AppColors.textDark : AppColors.textMuted,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              description,
+              style: GoogleFonts.inter(
+                fontSize: 9.5,
+                color: AppColors.textMuted,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1005,12 +1254,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   // --- 3. JADWAL & LOKASI CARD ---
   Widget _buildScheduleAndLocationCard() {
-    final rawJamMasuk = _status?.jamMasuk;
-    final rawJamPulang = _status?.jamPulang;
+    final bool isShift2 = _isCleaner && (
+      (_status?.hasCheckedIn == true && (_status?.shift == '2' || _status?.shift == 'shift_2')) ||
+      (_status?.hasCheckedIn != true && _selectedShift == '2')
+    );
+
+    final rawJamMasuk = isShift2 ? '12:00' : _status?.jamMasuk;
+    final rawJamPulang = isShift2 ? '20:00' : _status?.jamPulang;
     final toleransiMenit = _status?.toleransiTelatMenit ?? 15;
 
-    final jamMasuk = _parseScheduleTime(rawJamMasuk, fallback: '08:00');
-    final jamPulang = _parseScheduleTime(rawJamPulang, fallback: '17:00');
+    final jamMasuk = _parseScheduleTime(rawJamMasuk, fallback: isShift2 ? '12:00' : '08:00');
+    final jamPulang = _parseScheduleTime(rawJamPulang, fallback: isShift2 ? '20:00' : '17:00');
     final batasTelat = _calculateLateBoundary(jamMasuk, toleransiMenit);
 
     return Container(
@@ -1043,6 +1297,27 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   color: AppColors.textDark,
                 ),
               ),
+              if (_isCleaner) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isShift2 ? const Color(0xFFFEF3C7) : const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isShift2 ? const Color(0xFFFDE68A) : const Color(0xFFA7F3D0),
+                    ),
+                  ),
+                  child: Text(
+                    isShift2 ? 'Shift 2' : 'Shift 1',
+                    style: GoogleFonts.inter(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.bold,
+                      color: isShift2 ? const Color(0xFFB45309) : const Color(0xFF047857),
+                    ),
+                  ),
+                ),
+              ],
               const Spacer(),
               _buildRadiusBadge(),
             ],
@@ -1784,13 +2059,40 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        fullDate,
-                        style: GoogleFonts.inter(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              fullDate,
+                              style: GoogleFonts.inter(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textDark,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (group.isShift2) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF3C7),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFFDE68A)),
+                              ),
+                              child: Text(
+                                'Shift 2',
+                                style: GoogleFonts.inter(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFFB45309),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 6),
                       if (isAbsent)

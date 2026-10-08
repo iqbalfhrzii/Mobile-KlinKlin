@@ -58,6 +58,7 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
   String _selectedFilter = 'Bulan Ini';
   final List<String> _filters = [
     'Bulan Ini',
+    'Bulan Lalu',
     'Kemarin',
     'Hari Ini',
     'Besok',
@@ -145,9 +146,12 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
         start = DateFormat(
           'yyyy-MM-dd',
         ).format(DateTime(now.year, now.month, 1));
-        end = DateFormat(
-          'yyyy-MM-dd',
-        ).format(DateTime(now.year, now.month + 1, 0));
+        end = DateFormat('yyyy-MM-dd').format(now);
+      } else if (_selectedFilter == 'Bulan Lalu') {
+        final firstDayLastMonth = DateTime(now.year, now.month - 1, 1);
+        final lastDayLastMonth = DateTime(now.year, now.month, 0);
+        start = DateFormat('yyyy-MM-dd').format(firstDayLastMonth);
+        end = DateFormat('yyyy-MM-dd').format(lastDayLastMonth);
       } else if (_selectedFilter == 'Hari Ini') {
         start = DateFormat('yyyy-MM-dd').format(now);
         end = DateFormat('yyyy-MM-dd').format(now);
@@ -167,9 +171,7 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
           start = DateFormat(
             'yyyy-MM-dd',
           ).format(DateTime(now.year, now.month, 1));
-          end = DateFormat(
-            'yyyy-MM-dd',
-          ).format(DateTime(now.year, now.month + 1, 0));
+          end = DateFormat('yyyy-MM-dd').format(now);
         }
       }
 

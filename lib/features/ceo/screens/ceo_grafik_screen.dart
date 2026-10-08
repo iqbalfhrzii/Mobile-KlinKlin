@@ -31,6 +31,7 @@ class _CeoGrafikScreenState extends State<CeoGrafikScreen>
   String _selectedFilter = 'Bulan Ini';
   final List<String> _filters = [
     'Bulan Ini',
+    'Bulan Lalu',
     'Hari Ini',
     'Kemarin',
     'Kustom Tanggal',
@@ -142,7 +143,15 @@ class _CeoGrafikScreenState extends State<CeoGrafikScreen>
       String startDate;
       String endDate;
 
-      if (_selectedFilter == 'Hari Ini') {
+      if (_selectedFilter == 'Bulan Ini') {
+        startDate = DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month, 1));
+        endDate = DateFormat('yyyy-MM-dd').format(now);
+      } else if (_selectedFilter == 'Bulan Lalu') {
+        final firstDayLastMonth = DateTime(now.year, now.month - 1, 1);
+        final lastDayLastMonth = DateTime(now.year, now.month, 0);
+        startDate = DateFormat('yyyy-MM-dd').format(firstDayLastMonth);
+        endDate = DateFormat('yyyy-MM-dd').format(lastDayLastMonth);
+      } else if (_selectedFilter == 'Hari Ini') {
         startDate = DateFormat('yyyy-MM-dd').format(now);
         endDate = DateFormat('yyyy-MM-dd').format(now);
       } else if (_selectedFilter == 'Kemarin') {
@@ -157,7 +166,7 @@ class _CeoGrafikScreenState extends State<CeoGrafikScreen>
       } else {
         // Bulan Ini default
         startDate = DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month, 1));
-        endDate = DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month + 1, 0));
+        endDate = DateFormat('yyyy-MM-dd').format(now);
       }
 
       // Fetch omzet and chat data simultaneously

@@ -367,13 +367,20 @@ class _AdminAttendanceListScreenState extends State<AdminAttendanceListScreen> {
   }
 
   bool _isLate(AttendanceHistoryItem item) {
+    final bool isShift2 = item.isShift2;
     final timeStr = item.time;
     if (timeStr.contains(' ')) {
       final tParts = timeStr.split(' ').last.split(':');
       if (tParts.length >= 2) {
         final h = int.tryParse(tParts[0]) ?? 0;
         final m = int.tryParse(tParts[1]) ?? 0;
-        if (h > 8 || (h == 8 && m > 15)) return true;
+        if (isShift2) {
+          // Shift 2: Jam masuk 12:00, batas telat 12:15
+          if (h > 12 || (h == 12 && m > 15)) return true;
+        } else {
+          // Shift 1: Jam masuk 08:00, batas telat 08:15
+          if (h > 8 || (h == 8 && m > 15)) return true;
+        }
       }
     }
     return false;

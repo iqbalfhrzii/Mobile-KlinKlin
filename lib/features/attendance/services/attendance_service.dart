@@ -99,6 +99,8 @@ class AttendanceService {
         }
       } catch (_) {}
 
+      String? todayShift;
+
       // 2. Fetch today's attendance status from /absensi/saya (instan dengan parameter tanggal)
       try {
         final now = DateTime.now();
@@ -117,9 +119,11 @@ class AttendanceService {
             if (item['tipe'] == 'masuk') {
               hasCheckedIn = true;
               checkInTime = item['waktu_server'];
+              todayShift = item['shift']?.toString();
             } else if (item['tipe'] == 'pulang') {
               hasCheckedOut = true;
               checkOutTime = item['waktu_server'];
+              todayShift ??= item['shift']?.toString();
             }
           }
         }
@@ -140,6 +144,7 @@ class AttendanceService {
         jamMasuk: jamMasuk,
         toleransiTelatMenit: toleransiTelatMenit,
         jamPulang: jamPulang,
+        shift: todayShift,
       );
     } catch (e) {
       throw Exception('Terjadi kesalahan jaringan atau server: $e');
@@ -222,19 +227,24 @@ class AttendanceService {
     required double longitude,
     required double accuracy,
     required bool isMockLocation,
+    String? shift,
   }) async {
     try {
       String device = await getDeviceInfo();
       String endpoint = isCheckIn ? '/absensi/check-in' : '/absensi/check-out';
 
-      FormData formData = FormData.fromMap({
+      final mapData = <String, dynamic>{
         'latitude': latitude,
         'longitude': longitude,
         'akurasi_meter': accuracy,
         'is_mock_location': isMockLocation ? 1 : 0,
         'device_info': device,
         'selfie': await MultipartFile.fromFile(photoFile.path, filename: 'selfie_${DateTime.now().millisecondsSinceEpoch}.jpg'),
-      });
+      };
+      if (shift != null && shift.isNotEmpty) {
+        mapData['shift'] = shift;
+      }
+      FormData formData = FormData.fromMap(mapData);
 
       final response = await _dio.post(
         endpoint,

@@ -12,6 +12,7 @@ class AttendanceStatus {
   final String? jamMasuk;
   final int? toleransiTelatMenit;
   final String? jamPulang;
+  final String? shift;
 
   AttendanceStatus({
     required this.hasCheckedIn,
@@ -25,6 +26,7 @@ class AttendanceStatus {
     this.jamMasuk,
     this.toleransiTelatMenit,
     this.jamPulang,
+    this.shift,
   });
 
   factory AttendanceStatus.fromJson(Map<String, dynamic> json) {
@@ -40,6 +42,7 @@ class AttendanceStatus {
       jamMasuk: json['jam_masuk'],
       toleransiTelatMenit: json['toleransi_telat_menit'] != null ? int.tryParse(json['toleransi_telat_menit'].toString()) : null,
       jamPulang: json['jam_pulang'],
+      shift: json['shift']?.toString(),
     );
   }
 }
@@ -60,6 +63,7 @@ class AttendanceHistoryItem {
   final String? rawWaktuServer;
   final String? deviceInfo;
   final String? catatan;
+  final String? shift;
 
   AttendanceHistoryItem({
     required this.id,
@@ -77,6 +81,7 @@ class AttendanceHistoryItem {
     this.rawWaktuServer,
     this.deviceInfo,
     this.catatan,
+    this.shift,
   });
 
   bool get isCheckIn {
@@ -88,6 +93,8 @@ class AttendanceHistoryItem {
     final t = type.toLowerCase();
     return t == 'check_out' || t == 'pulang';
   }
+
+  bool get isShift2 => shift == '2';
 
   factory AttendanceHistoryItem.fromJson(Map<String, dynamic> json) {
     String? cName;
@@ -124,6 +131,7 @@ class AttendanceHistoryItem {
       rawWaktuServer: rawServer.toString().isNotEmpty ? rawServer.toString() : null,
       deviceInfo: json['device_info']?.toString(),
       catatan: json['alasan_penolakan']?.toString() ?? json['catatan']?.toString(),
+      shift: json['shift']?.toString(),
     );
   }
 
@@ -146,6 +154,7 @@ class GroupedAttendanceItem {
   final AttendanceHistoryItem? checkIn;
   final AttendanceHistoryItem? checkOut;
   final String? status;
+  final String? shift;
 
   GroupedAttendanceItem({
     required this.tanggal,
@@ -155,5 +164,8 @@ class GroupedAttendanceItem {
     this.checkIn,
     this.checkOut,
     this.status,
+    this.shift,
   });
+
+  bool get isShift2 => shift == '2' || checkIn?.shift == '2';
 }

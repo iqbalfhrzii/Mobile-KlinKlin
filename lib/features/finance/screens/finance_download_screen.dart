@@ -248,12 +248,53 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
     }
   }
 
-  int get _colCount => _tab == 'order' ? 12 : 4;
+  int get _colCount => _tab == 'order' ? 14 : 4;
 
-  // --- Generate CSV (12 kolom, 1 baris per service item, sama dengan web) ---
+  (int totalDetail, String ppnText, String financeStatusText) _calculateOrderRowValues(
+    OrderModel o,
+    ServiceItem svc,
+  ) {
+    // 1. Deteksi PPN dari pembayaran atau pesanan
+    final rawPpn = o.pembayaran?.ppn ?? o.ppn;
+    final bool hasPpn = rawPpn != null && rawPpn > 0;
+    final String ppnText = hasPpn ? 'Dengan PPN' : 'Tanpa PPN';
+    final double ppnRate = hasPpn ? (rawPpn == 1 ? 11.0 : rawPpn.toDouble()) : 0.0;
+
+    // 2. Status Finance
+    String financeStatusText = '-';
+    final rawFin = (o.pembayaran?.statusPembayaran ?? o.paymentStatus).toLowerCase();
+    if (rawFin == 'approved' || rawFin == 'disetujui') {
+      financeStatusText = 'Approved';
+    } else if (rawFin == 'rejected' || rawFin == 'ditolak') {
+      financeStatusText = 'Rejected';
+    } else if (rawFin.isNotEmpty && rawFin != '-') {
+      financeStatusText = rawFin[0].toUpperCase() + rawFin.substring(1).replaceAll('_', ' ');
+    }
+
+    // 3. Total Akhir Detail
+    int totalAkhirDetail;
+    if (o.pembayaran?.total != null && o.pembayaran!.total! > 0) {
+      final double totalOrderSubtotal = o.baseSubtotal > 0 ? o.baseSubtotal.toDouble() : 1.0;
+      final double ratio = svc.subtotal / totalOrderSubtotal;
+      totalAkhirDetail = o.services.length <= 1 
+          ? o.pembayaran!.total! 
+          : (o.pembayaran!.total! * ratio).round();
+    } else {
+      final double diskonRate = (o.discount ?? 0).toDouble();
+      final double pphRate = (o.pph ?? 0).toDouble();
+      final double setelahDiskon = svc.subtotal * (1.0 - (diskonRate / 100.0));
+      final double ppnNominal = (ppnRate > 0) ? (setelahDiskon * (ppnRate / 100.0)) : 0.0;
+      final double pphNominal = (pphRate > 0) ? (setelahDiskon * (pphRate / 100.0)) : 0.0;
+      totalAkhirDetail = (setelahDiskon + ppnNominal - pphNominal).round();
+    }
+
+    return (totalAkhirDetail, ppnText, financeStatusText);
+  }
+
+  // --- Generate CSV (14 kolom, 1 baris per service item, sama persis dengan web) ---
   String _generateCsvOrder(List<(OrderModel, ServiceItem)> rows) {
     final buffer = StringBuffer();
-    buffer.writeln('NAMA HARI,TANGGAL PENGERJAAN,NAMA CLEANER,JAM PENGERJAAN,NAMA CUSTOMER,ALAMAT CUSTOMER,NOMOR WA CUSTOMER,LAYANAN YANG DIPESAN,QTY,NOMINAL LAYANAN,METODE PEMBAYARAN,STATUS ORDER');
+    buffer.writeln('NAMA HARI,TANGGAL PENGERJAAN,NAMA CLEANER,JAM PENGERJAAN,NAMA CUSTOMER,ALAMAT CUSTOMER,NOMOR WA CUSTOMER,LAYANAN YANG DIPESAN,QTY,TOTAL,METODE PEMBAYARAN,STATUS ORDER,KETERANGAN PPN,STATUS FINANCE');
     for (final (o, svc) in rows) {
       final dt = _tryParseFlexibleDate(svc.tanggalPengerjaan);
       final namaHari = dt != null ? DateFormat('EEEE', 'id_ID').format(dt) : '-';
@@ -265,11 +306,12 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
       final noWa = o.customer.phone;
       final layanan = svc.name;
       final qty = svc.qty;
-      final nominal = svc.subtotal;
       final metode = o.paymentMethod.isNotEmpty && o.paymentMethod != '-'
           ? o.paymentMethod
           : (o.pembayaran?.metodePembayaran ?? '-');
       final status = o.statusPesananRaw;
+      final (totalDetail, ppnText, financeStatus) = _calculateOrderRowValues(o, svc);
+
       buffer.writeln([
         _toCsvCell(namaHari),
         _toCsvCell(tgl),
@@ -280,9 +322,11 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
         _toCsvCell(noWa),
         _toCsvCell(layanan),
         _toCsvCell(qty),
-        nominal.toString(),
+        totalDetail.toString(),
         _toCsvCell(metode),
         _toCsvCell(status),
+        _toCsvCell(ppnText),
+        _toCsvCell(financeStatus),
       ].join(','));
     }
     return buffer.toString();
@@ -329,9 +373,11 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
         TextCellValue('NOMOR WA CUSTOMER'),
         TextCellValue('LAYANAN YANG DIPESAN'),
         TextCellValue('QTY'),
-        TextCellValue('NOMINAL LAYANAN'),
+        TextCellValue('TOTAL'),
         TextCellValue('METODE PEMBAYARAN'),
         TextCellValue('STATUS ORDER'),
+        TextCellValue('KETERANGAN PPN'),
+        TextCellValue('STATUS FINANCE'),
       ]);
 
       for (final (o, svc) in _filteredOrderRows) {
@@ -344,6 +390,7 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
             ? o.paymentMethod
             : (o.pembayaran?.metodePembayaran ?? '-');
         final status = o.statusPesananRaw;
+        final (totalDetail, ppnText, financeStatus) = _calculateOrderRowValues(o, svc);
         
         sheet.appendRow([
           TextCellValue(namaHari),
@@ -355,9 +402,11 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
           TextCellValue(o.customer.phone.toString()),
           TextCellValue(svc.name.toString()),
           TextCellValue(svc.qty.toString()),
-          IntCellValue(svc.subtotal),
+          IntCellValue(totalDetail),
           TextCellValue(metode),
           TextCellValue(status),
+          TextCellValue(ppnText),
+          TextCellValue(financeStatus),
         ]);
       }
     } else {
@@ -1183,6 +1232,9 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
             final cleaners = o.cleaners.isEmpty ? '-' : o.cleaners.map((c) => c.name).join(', ');
             final jam = svc.waktuPengerjaan.isEmpty ? '-' : svc.waktuPengerjaan;
 
+            final (totalDetail, ppnText, financeStatus) = _calculateOrderRowValues(o, svc);
+            final bool hasPpn = ppnText == 'Dengan PPN';
+
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
               decoration: BoxDecoration(
@@ -1239,6 +1291,30 @@ class _FinanceDownloadScreenState extends State<FinanceDownloadScreen> {
                             Expanded(child: _buildPremiumInfoRow(Icons.access_time_filled_rounded, 'Jam', jam, const Color(0xFFD97706), const Color(0xFFFFFBEB))),
                             const SizedBox(width: 8),
                             Expanded(child: _buildPremiumInfoRow(Icons.payments_rounded, 'Via', o.paymentMethod.toUpperCase(), const Color(0xFF4F46E5), const Color(0xFFEEF2FF))),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildPremiumInfoRow(
+                                Icons.monetization_on_rounded,
+                                'Total',
+                                _currencyFormat.format(totalDetail),
+                                const Color(0xFF0F172A),
+                                const Color(0xFFF1F5F9),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildPremiumInfoRow(
+                                Icons.receipt_long_rounded,
+                                'PPN & Finance',
+                                '$ppnText • $financeStatus',
+                                hasPpn ? const Color(0xFFD97706) : const Color(0xFF64748B),
+                                hasPpn ? const Color(0xFFFFFBEB) : const Color(0xFFF8FAFC),
+                              ),
+                            ),
                           ],
                         ),
                       ],

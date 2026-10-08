@@ -56,6 +56,7 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
   String _selectedFilter = 'Bulan Ini';
   final List<String> _filters = [
     'Bulan Ini',
+    'Bulan Lalu',
     'Kemarin',
     'Hari Ini',
     'Besok',
@@ -110,9 +111,12 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
         start = DateFormat(
           'yyyy-MM-dd',
         ).format(DateTime(now.year, now.month, 1));
-        end = DateFormat(
-          'yyyy-MM-dd',
-        ).format(DateTime(now.year, now.month + 1, 0));
+        end = DateFormat('yyyy-MM-dd').format(now);
+      } else if (_selectedFilter == 'Bulan Lalu') {
+        final firstDayLastMonth = DateTime(now.year, now.month - 1, 1);
+        final lastDayLastMonth = DateTime(now.year, now.month, 0);
+        start = DateFormat('yyyy-MM-dd').format(firstDayLastMonth);
+        end = DateFormat('yyyy-MM-dd').format(lastDayLastMonth);
       } else if (_selectedFilter == 'Hari Ini') {
         start = DateFormat('yyyy-MM-dd').format(now);
         end = DateFormat('yyyy-MM-dd').format(now);
@@ -132,9 +136,7 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
           start = DateFormat(
             'yyyy-MM-dd',
           ).format(DateTime(now.year, now.month, 1));
-          end = DateFormat(
-            'yyyy-MM-dd',
-          ).format(DateTime(now.year, now.month + 1, 0));
+          end = DateFormat('yyyy-MM-dd').format(now);
         }
       }
 
@@ -516,6 +518,76 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
           SliverToBoxAdapter(
             child: Column(
               children: [
+                if (_data?['periode'] != null)
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      left: 16,
+                      right: 16,
+                      bottom: 10,
+                    ),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0F9FF),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: const Color(0xFFBAE6FD),
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.calendar_today_rounded,
+                                size: 12,
+                                color: Color(0xFF0284C7),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Periode Laporan: ${_formatDateBadge(_data!['periode']['start'])} - ${_formatDateBadge(_data!['periode']['end'])}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF0369A1),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.compare_arrows_rounded,
+                                size: 12,
+                                color: Color(0xFF0284C7),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Pembanding (-1 bln): ${_formatDateBadge(_data!['periode']['prev_start'])} - ${_formatDateBadge(_data!['periode']['prev_end'])}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFF0284C7),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
                 // Summary Cards
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -959,6 +1031,16 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
         ],
       ),
     );
+  }
+
+  String _formatDateBadge(dynamic dateStr) {
+    if (dateStr == null || dateStr.toString().isEmpty) return '-';
+    try {
+      final d = DateTime.parse(dateStr.toString());
+      return DateFormat('dd MMM yyyy').format(d);
+    } catch (_) {
+      return dateStr.toString();
+    }
   }
 
   Widget _buildTabOmzetCabang() {
