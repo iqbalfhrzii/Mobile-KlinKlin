@@ -154,8 +154,21 @@ class AttendanceService {
   Future<List<AttendanceHistoryItem>> getHistory({String? date, String? month}) async {
     try {
       final Map<String, dynamic> query = {};
-      if (date != null) query['tanggal'] = date;
-      if (month != null) query['bulan'] = month;
+      if (date != null && date.isNotEmpty) query['tanggal'] = date;
+      if (month != null && month.isNotEmpty) {
+        if (month.contains('-')) {
+          final parts = month.split('-');
+          if (parts.length >= 2) {
+            final y = int.tryParse(parts[0]);
+            final m = int.tryParse(parts[1]);
+            if (y != null) query['tahun'] = y;
+            if (m != null) query['bulan'] = m;
+          }
+        } else {
+          final m = int.tryParse(month);
+          if (m != null) query['bulan'] = m;
+        }
+      }
 
       final response = await _dio.get(
         '/absensi/saya',

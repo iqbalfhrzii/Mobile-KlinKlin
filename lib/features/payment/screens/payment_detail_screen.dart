@@ -2814,10 +2814,20 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                 apiMethod = 'cash';
                               }
 
+                              final userNote = noteCtrl.text.trim();
+                              String? combinedCatatan;
+                              if (bankCatatan != null && userNote.isNotEmpty) {
+                                combinedCatatan = '$bankCatatan - $userNote';
+                              } else if (bankCatatan != null) {
+                                combinedCatatan = bankCatatan;
+                              } else if (userNote.isNotEmpty) {
+                                combinedCatatan = userNote;
+                              }
+
                               await svc.submitPayment(
                                 orderId: _o.id,
                                 metodePembayaran: apiMethod,
-                                catatanPembayaran: bankCatatan,
+                                catatanPembayaran: combinedCatatan,
                                 diskonPersen: diskonPersen,
                                 ppn: ppnPersen,
                                 usePph: applyPph,
