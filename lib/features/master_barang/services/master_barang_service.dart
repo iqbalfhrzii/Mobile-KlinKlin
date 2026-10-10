@@ -195,7 +195,18 @@ class MasterBarangService {
     } catch (e) {
       if (e is DioException && e.response?.data != null) {
         final data = e.response!.data;
-        return {'success': false, 'message': data['message'] ?? 'Gagal: ${e.message}'};
+        String? msg;
+        if (data is Map) {
+          msg = data['message']?.toString();
+          if (msg == null && data['errors'] is Map) {
+            final errs = data['errors'] as Map;
+            final firstVal = errs.values.firstOrNull;
+            if (firstVal is List && firstVal.isNotEmpty) {
+              msg = firstVal.first.toString();
+            }
+          }
+        }
+        return {'success': false, 'message': msg ?? 'Gagal: ${e.message}'};
       }
       return {'success': false, 'message': 'Terjadi kesalahan: $e'};
     }
