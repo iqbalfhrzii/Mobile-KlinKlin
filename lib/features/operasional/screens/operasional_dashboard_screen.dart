@@ -244,8 +244,12 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
 
   Widget _buildContent() {
     final global = _data!['global'];
-    final growth = (global['growth'] as num).toDouble();
-    final isGrowthPos = growth >= 0;
+    final num omzetIniReal = (global['omzet_periode_ini_real'] ?? global['omzet_periode_ini'] as num? ?? 0);
+    final num omzetIniMurni = (global['omzet_periode_ini_murni'] ?? global['omzet_periode_ini'] as num? ?? 0);
+    final num omzetLaluReal = (global['omzet_periode_lalu_real'] ?? global['omzet_periode_lalu'] as num? ?? 0);
+    final num omzetLaluMurni = (global['omzet_periode_lalu_murni'] ?? global['omzet_periode_lalu'] as num? ?? 0);
+    final growthReal = ((global['growth_real'] ?? global['growth']) as num? ?? 0).toDouble();
+    final isGrowthPos = growthReal >= 0;
 
     return NestedScrollView(
       headerSliverBuilder: (context, innerBoxIsScrolled) {
@@ -253,24 +257,34 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
           SliverToBoxAdapter(
             child: Column(
               children: [
-                // Summary Cards
+                // Summary Cards: 2 Kartu Omzet Terpisah (Real Tagihan & Murni DPP)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
                       Expanded(
                         child: _buildSummaryCard(
-                          'OMZET PERIODE INI',
-                          _formatCurrency(global['omzet_periode_ini']),
-                          null,
+                          'OMZET REAL (TAGIHAN)',
+                          _formatCurrency(omzetIniReal),
+                          'Inc. PPN',
+                          valueColor: const Color(0xFF059669),
+                          badgeText: 'Tagihan',
+                          badgeColor: const Color(0xFFECFDF5),
+                          badgeTextColor: const Color(0xFF059669),
+                          subtitle: 'Realtime order aktif',
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: _buildSummaryCard(
-                          'OMZET PERIODE LALU',
-                          _formatCurrency(global['omzet_periode_lalu']),
-                          null,
+                          'OMZET MURNI (DPP)',
+                          _formatCurrency(omzetIniMurni),
+                          'Tanpa PPN',
+                          valueColor: AppColors.primary,
+                          badgeText: 'DPP',
+                          badgeColor: const Color(0xFFEFF6FF),
+                          badgeTextColor: AppColors.primary,
+                          subtitle: 'Nett pendapatan jasa',
                         ),
                       ),
                     ],
@@ -284,17 +298,30 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                       Expanded(
                         child: _buildSummaryCard(
                           'GROWTH VS LALU',
-                          _formatCurrency(
-                            global['omzet_periode_ini'] -
-                                global['omzet_periode_lalu'],
-                          ),
+                          _formatCurrency(omzetIniReal - omzetLaluReal),
                           isGrowthPos
-                              ? '+${growth.toStringAsFixed(1)}%'
-                              : '${growth.toStringAsFixed(1)}%',
+                              ? '+${growthReal.toStringAsFixed(1)}%'
+                              : '${growthReal.toStringAsFixed(1)}%',
                           valueColor: isGrowthPos ? Colors.green : Colors.red,
                         ),
                       ),
                       const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildSummaryCard(
+                          'OMZET PERIODE LALU',
+                          _formatCurrency(omzetLaluReal),
+                          null,
+                          subtitle: 'DPP: ${_formatCurrency(omzetLaluMurni)}',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
                       Expanded(
                         child: _buildSummaryCard(
                           'JUMLAH CANCEL',
@@ -433,7 +460,13 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
     String value,
     String? subValue, {
     Color valueColor = AppColors.textDark,
+    String? badgeText,
+    Color? badgeColor,
+    Color? badgeTextColor,
+    String? subtitle,
   }) {
+    final effectiveBadgeColor = badgeColor ?? valueColor.withValues(alpha: 0.1);
+    final effectiveBadgeTextColor = badgeTextColor ?? valueColor;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -451,13 +484,39 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textMuted,
-            ),
+          Row(
+            children: [
+              Flexible(
+                child: Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textMuted,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (badgeText != null) ...[
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+                  decoration: BoxDecoration(
+                    color: effectiveBadgeColor,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    badgeText,
+                    style: GoogleFonts.inter(
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w700,
+                      color: effectiveBadgeTextColor,
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
           const SizedBox(height: 6),
           Row(
@@ -482,7 +541,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: valueColor.withValues(alpha: 0.1),
+                    color: effectiveBadgeColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -490,13 +549,26 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                     style: GoogleFonts.inter(
                       fontSize: 9,
                       fontWeight: FontWeight.bold,
-                      color: valueColor,
+                      color: effectiveBadgeTextColor,
                     ),
                   ),
                 ),
               ],
             ],
           ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: GoogleFonts.inter(
+                fontSize: 9.5,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textMuted,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ],
       ),
     );
@@ -506,28 +578,37 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
     final list = _data!['omzet_per_cabang'] as List;
     if (list.isEmpty) return const Center(child: Text('Tidak ada data'));
 
-    double totalIni = 0;
-    double totalLalu = 0;
+    double totalIniMurni = 0;
+    double totalIniReal = 0;
+    double totalLaluMurni = 0;
+    double totalLaluReal = 0;
     double totalAds = 0;
     double totalOrganik = 0;
     double totalLama = 0;
 
     for (var item in list) {
-      totalIni += (item['periode_ini'] as num? ?? 0).toDouble();
-      totalLalu += (item['periode_lalu'] as num? ?? 0).toDouble();
+      final pIniMurni = ((item['periode_ini_murni'] ?? item['periode_ini']) as num? ?? 0).toDouble();
+      final pIniReal = ((item['periode_ini_real'] ?? item['periode_ini']) as num? ?? 0).toDouble();
+      final pLaluMurni = ((item['periode_lalu_murni'] ?? item['periode_lalu']) as num? ?? 0).toDouble();
+      final pLaluReal = ((item['periode_lalu_real'] ?? item['periode_lalu']) as num? ?? 0).toDouble();
+
+      totalIniMurni += pIniMurni;
+      totalIniReal += pIniReal;
+      totalLaluMurni += pLaluMurni;
+      totalLaluReal += pLaluReal;
       totalAds += (item['ads'] as num? ?? 0).toDouble();
       totalOrganik += (item['organik'] as num? ?? 0).toDouble();
       totalLama += (item['lama'] as num? ?? 0).toDouble();
     }
-    double totalGrowth = totalLalu > 0
-        ? ((totalIni - totalLalu) / totalLalu) * 100
-        : 0;
+    double totalGrowth = totalLaluReal > 0
+        ? ((totalIniReal - totalLaluReal) / totalLaluReal) * 100
+        : (totalLaluMurni > 0 ? ((totalIniMurni - totalLaluMurni) / totalLaluMurni) * 100 : 0);
     final isTotalPos = totalGrowth >= 0;
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // 🎯 GRAND TOTAL BANNER CARD
+        // 🎯 GRAND TOTAL BANNER CARD: Real (Tagihan) & Murni (DPP)
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
@@ -601,19 +682,106 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              // Dua omzet gabungan berdampingan: Real (Tagihan) & Murni (DPP)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Omzet Real (Tagihan)',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white.withValues(alpha: 0.85),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'Inc. PPN',
+                                style: GoogleFonts.inter(
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFFA7F3D0),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatCurrency(totalIniReal),
+                          style: GoogleFonts.inter(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Omzet Murni (DPP)',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white.withValues(alpha: 0.85),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'Tanpa PPN',
+                                style: GoogleFonts.inter(
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatCurrency(totalIniMurni),
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white.withValues(alpha: 0.95),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
               Text(
-                _formatCurrency(totalIni),
-                style: GoogleFonts.inter(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Periode Lalu: ${_formatCurrency(totalLalu)}',
-                style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
+                'Periode Lalu: ${_formatCurrency(totalLaluReal)} (DPP: ${_formatCurrency(totalLaluMurni)})',
+                style: GoogleFonts.inter(fontSize: 11, color: Colors.white70),
               ),
               const SizedBox(height: 16),
               Container(
@@ -650,11 +818,13 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
         ),
         const SizedBox(height: 10),
 
-        // 🏢 CABANG CARDS
+        // 🏢 CABANG CARDS: Tampilkan Real (Tagihan) & Murni (DPP)
         ...list.map((item) {
-          final pIni = (item['periode_ini'] as num? ?? 0).toDouble();
-          final pLalu = (item['periode_lalu'] as num? ?? 0).toDouble();
-          final growth = (item['growth'] as num? ?? 0).toDouble();
+          final pIniMurni = ((item['periode_ini_murni'] ?? item['periode_ini']) as num? ?? 0).toDouble();
+          final pIniReal = ((item['periode_ini_real'] ?? item['periode_ini']) as num? ?? 0).toDouble();
+          final pLaluMurni = ((item['periode_lalu_murni'] ?? item['periode_lalu']) as num? ?? 0).toDouble();
+          final pLaluReal = ((item['periode_lalu_real'] ?? item['periode_lalu']) as num? ?? 0).toDouble();
+          final growth = ((item['growth_real'] ?? item['growth']) as num? ?? 0).toDouble();
           final isPos = growth >= 0;
           final ads = (item['ads'] as num? ?? 0).toDouble();
           final organik = (item['organik'] as num? ?? 0).toDouble();
@@ -747,26 +917,58 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Omzet Periode Ini',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            color: AppColors.textMuted,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Omzet Real (Tagihan)',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFECFDF5),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  'Inc. PPN',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF059669),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _formatCurrency(pIni),
-                          style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
+                          const SizedBox(height: 2),
+                          Text(
+                            _formatCurrency(pIniReal),
+                            style: GoogleFonts.inter(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF059669),
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 2),
+                          Text(
+                            'DPP: ${_formatCurrency(pIniMurni)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
@@ -780,11 +982,19 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          _formatCurrency(pLalu),
+                          _formatCurrency(pLaluReal),
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: AppColors.textDark,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'DPP: ${_formatCurrency(pLaluMurni)}',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            color: AppColors.textMuted,
                           ),
                         ),
                       ],

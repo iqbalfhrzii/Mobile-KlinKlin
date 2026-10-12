@@ -553,10 +553,12 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
 
   Widget _buildContent() {
     final global = _data?['global'] ?? {};
-    final num omzetIni = _parseDouble(global['omzet_periode_ini']);
-    final num omzetLalu = _parseDouble(global['omzet_periode_lalu']);
-    final growth = _parseDouble(global['growth']);
-    final isGrowthPos = growth >= 0;
+    final num omzetIniReal = _parseDouble(global['omzet_periode_ini_real'] ?? global['omzet_periode_ini']);
+    final num omzetIniMurni = _parseDouble(global['omzet_periode_ini_murni'] ?? global['omzet_periode_ini']);
+    final num omzetLaluReal = _parseDouble(global['omzet_periode_lalu_real'] ?? global['omzet_periode_lalu']);
+    final num omzetLaluMurni = _parseDouble(global['omzet_periode_lalu_murni'] ?? global['omzet_periode_lalu']);
+    final growthReal = _parseDouble(global['growth_real'] ?? global['growth']);
+    final isGrowthPos = growthReal >= 0;
     final num cancelOrder = _parseInt(global['jumlah_cancel']);
 
     return NestedScrollView(
@@ -565,26 +567,36 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
           SliverToBoxAdapter(
             child: Column(
               children: [
-                // Summary Cards
+                // Summary Cards: 2 Kartu Omzet Terpisah (Real Tagihan & Murni DPP)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
                       Expanded(
                         child: _buildSummaryCard(
-                          'OMZET PERIODE INI',
-                          _formatCurrency(omzetIni, itemKey: 'omzet_periode_ini'),
-                          null,
-                          itemKey: 'omzet_periode_ini',
+                          'OMZET REAL (TAGIHAN)',
+                          _formatCurrency(omzetIniReal, itemKey: 'omzet_periode_ini_real'),
+                          'Inc. PPN',
+                          valueColor: const Color(0xFF059669),
+                          itemKey: 'omzet_periode_ini_real',
+                          badgeText: 'Tagihan',
+                          badgeColor: const Color(0xFFECFDF5),
+                          badgeTextColor: const Color(0xFF059669),
+                          subtitle: 'Realtime order aktif',
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: _buildSummaryCard(
-                          'OMZET PERIODE LALU',
-                          _formatCurrency(omzetLalu, itemKey: 'omzet_periode_lalu'),
-                          null,
-                          itemKey: 'omzet_periode_lalu',
+                          'OMZET MURNI (DPP)',
+                          _formatCurrency(omzetIniMurni, itemKey: 'omzet_periode_ini_murni'),
+                          'Tanpa PPN',
+                          valueColor: AppColors.primary,
+                          itemKey: 'omzet_periode_ini_murni',
+                          badgeText: 'DPP',
+                          badgeColor: const Color(0xFFEFF6FF),
+                          badgeTextColor: AppColors.primary,
+                          subtitle: 'Nett pendapatan jasa',
                         ),
                       ),
                     ],
@@ -598,15 +610,32 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
                       Expanded(
                         child: _buildSummaryCard(
                           'GROWTH VS LALU',
-                          _formatCurrency(omzetIni - omzetLalu, itemKey: 'growth_vs_lalu'),
+                          _formatCurrency(omzetIniReal - omzetLaluReal, itemKey: 'growth_vs_lalu'),
                           isGrowthPos
-                              ? '+${growth.toStringAsFixed(1)}%'
-                              : '${growth.toStringAsFixed(1)}%',
+                              ? '+${growthReal.toStringAsFixed(1)}%'
+                              : '${growthReal.toStringAsFixed(1)}%',
                           valueColor: isGrowthPos ? Colors.green : Colors.red,
                           itemKey: 'growth_vs_lalu',
                         ),
                       ),
                       const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildSummaryCard(
+                          'OMZET PERIODE LALU',
+                          _formatCurrency(omzetLaluReal, itemKey: 'omzet_periode_lalu'),
+                          null,
+                          itemKey: 'omzet_periode_lalu',
+                          subtitle: 'DPP: ${_formatCurrency(omzetLaluMurni, itemKey: 'omzet_periode_lalu')}',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
                       Expanded(
                         child: _buildSummaryCard(
                           'JUMLAH CANCEL',
@@ -882,7 +911,13 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
     String? subValue, {
     Color valueColor = AppColors.textDark,
     String? itemKey,
+    String? badgeText,
+    Color? badgeColor,
+    Color? badgeTextColor,
+    String? subtitle,
   }) {
+    final effectiveBadgeColor = badgeColor ?? valueColor.withValues(alpha: 0.1);
+    final effectiveBadgeTextColor = badgeTextColor ?? valueColor;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -906,16 +941,40 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
             child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    title,
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textMuted,
-                      letterSpacing: 0.2,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          title,
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textMuted,
+                            letterSpacing: 0.2,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (badgeText != null) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: effectiveBadgeColor,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            badgeText,
+                            style: GoogleFonts.inter(
+                              fontSize: 8.5,
+                              fontWeight: FontWeight.w700,
+                              color: effectiveBadgeTextColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 if (itemKey != null) ...[
@@ -951,7 +1010,7 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: valueColor.withValues(alpha: 0.1),
+                    color: effectiveBadgeColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -959,13 +1018,26 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
                     style: GoogleFonts.inter(
                       fontSize: 9,
                       fontWeight: FontWeight.bold,
-                      color: valueColor,
+                      color: effectiveBadgeTextColor,
                     ),
                   ),
                 ),
               ],
             ],
           ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: GoogleFonts.inter(
+                fontSize: 9.5,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textMuted,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ],
       ),
     );
@@ -1032,28 +1104,37 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
     final list = (_data?['omzet_per_cabang'] as List?) ?? [];
     if (list.isEmpty) return const Center(child: Text('Tidak ada data'));
 
-    double totalIni = 0;
-    double totalLalu = 0;
+    double totalIniMurni = 0;
+    double totalIniReal = 0;
+    double totalLaluMurni = 0;
+    double totalLaluReal = 0;
     double totalAds = 0;
     double totalOrganik = 0;
     double totalLama = 0;
 
     for (var item in list) {
-      totalIni += _parseDouble(item['periode_ini']);
-      totalLalu += _parseDouble(item['periode_lalu']);
+      final pIniMurni = _parseDouble(item['periode_ini_murni'] ?? item['periode_ini']);
+      final pIniReal = _parseDouble(item['periode_ini_real'] ?? item['periode_ini']);
+      final pLaluMurni = _parseDouble(item['periode_lalu_murni'] ?? item['periode_lalu']);
+      final pLaluReal = _parseDouble(item['periode_lalu_real'] ?? item['periode_lalu']);
+
+      totalIniMurni += pIniMurni;
+      totalIniReal += pIniReal;
+      totalLaluMurni += pLaluMurni;
+      totalLaluReal += pLaluReal;
       totalAds += _parseDouble(item['ads']);
       totalOrganik += _parseDouble(item['organik']);
       totalLama += _parseDouble(item['lama']);
     }
-    double totalGrowth = totalLalu > 0
-        ? ((totalIni - totalLalu) / totalLalu) * 100
-        : 0;
+    double totalGrowth = totalLaluReal > 0
+        ? ((totalIniReal - totalLaluReal) / totalLaluReal) * 100
+        : (totalLaluMurni > 0 ? ((totalIniMurni - totalLaluMurni) / totalLaluMurni) * 100 : 0);
     final isTotalPos = totalGrowth >= 0;
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // 🎯 GRAND TOTAL BANNER CARD
+        // 🎯 GRAND TOTAL BANNER CARD: Real (Tagihan) & Murni (DPP)
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
@@ -1136,19 +1217,106 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              // Dua omzet gabungan berdampingan: Real (Tagihan) & Murni (DPP)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Omzet Real (Tagihan)',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white.withValues(alpha: 0.85),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'Inc. PPN',
+                                style: GoogleFonts.inter(
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFFA7F3D0),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatCurrency(totalIniReal, itemKey: 'total_omzet_gabungan'),
+                          style: GoogleFonts.inter(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Omzet Murni (DPP)',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white.withValues(alpha: 0.85),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'Tanpa PPN',
+                                style: GoogleFonts.inter(
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatCurrency(totalIniMurni, itemKey: 'total_omzet_gabungan'),
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white.withValues(alpha: 0.95),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
               Text(
-                _formatCurrency(totalIni, itemKey: 'total_omzet_gabungan'),
-                style: GoogleFonts.inter(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Periode Lalu: ${_formatCurrency(totalLalu, itemKey: 'total_omzet_gabungan')}',
-                style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
+                'Periode Lalu: ${_formatCurrency(totalLaluReal, itemKey: 'total_omzet_gabungan')} (DPP: ${_formatCurrency(totalLaluMurni, itemKey: 'total_omzet_gabungan')})',
+                style: GoogleFonts.inter(fontSize: 11, color: Colors.white70),
               ),
               const SizedBox(height: 16),
               Container(
@@ -1191,11 +1359,13 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
         ),
         const SizedBox(height: 10),
 
-        // 🏢 CABANG CARDS
+        // 🏢 CABANG CARDS: Tampilkan Real (Tagihan) & Murni (DPP)
         ...list.map((item) {
-          final pIni = _parseDouble(item['periode_ini']);
-          final pLalu = _parseDouble(item['periode_lalu']);
-          final growth = _parseDouble(item['growth']);
+          final pIniMurni = _parseDouble(item['periode_ini_murni'] ?? item['periode_ini']);
+          final pIniReal = _parseDouble(item['periode_ini_real'] ?? item['periode_ini']);
+          final pLaluMurni = _parseDouble(item['periode_lalu_murni'] ?? item['periode_lalu']);
+          final pLaluReal = _parseDouble(item['periode_lalu_real'] ?? item['periode_lalu']);
+          final growth = _parseDouble(item['growth_real'] ?? item['growth']);
           final isPos = growth >= 0;
           final ads = _parseDouble(item['ads']);
           final organik = _parseDouble(item['organik']);
@@ -1288,26 +1458,58 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Omzet Periode Ini',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            color: AppColors.textMuted,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Omzet Real (Tagihan)',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFECFDF5),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  'Inc. PPN',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF059669),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _formatCurrency(pIni),
-                          style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
+                          const SizedBox(height: 2),
+                          Text(
+                            _formatCurrency(pIniReal),
+                            style: GoogleFonts.inter(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF059669),
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 2),
+                          Text(
+                            'DPP: ${_formatCurrency(pIniMurni)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
@@ -1321,11 +1523,19 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          _formatCurrency(pLalu),
+                          _formatCurrency(pLaluReal),
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: AppColors.textDark,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'DPP: ${_formatCurrency(pLaluMurni)}',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            color: AppColors.textMuted,
                           ),
                         ),
                       ],

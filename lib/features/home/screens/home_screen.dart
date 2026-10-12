@@ -50,9 +50,13 @@ class _HomeScreenState extends State<HomeScreen> {
   DateTime? _customEndDate;
 
   int _omzetPeriode = 0;
+  int _omzetPeriodeMurni = 0;
+  int _omzetPeriodeReal = 0;
   int _jumlahOrderPeriode = 0;
   double _rataRataOrder = 0;
+  double _rataRataOrderReal = 0;
   int _persentaseTarget = 0;
+  int _persentaseTargetReal = 0;
   int _omzetToday = 0;
   int _targetOmzet = 130000000;
   int _ordersToday = 0;
@@ -99,27 +103,38 @@ class _HomeScreenState extends State<HomeScreen> {
         if (mounted && dbData.isNotEmpty) {
           _dashboardData = dbData;
 
-          dynamic rawOmzet;
-          if (dbData['total_omzet'] != null || dbData['omzet'] != null) {
-            rawOmzet = dbData['total_omzet'] ?? dbData['omzet'];
+          dynamic rawOmzetMurni;
+          dynamic rawOmzetReal;
+
+          if (dbData['total_omzet_murni'] != null || dbData['total_omzet'] != null) {
+            rawOmzetMurni = dbData['total_omzet_murni'] ?? dbData['omzet_murni'] ?? dbData['total_omzet'] ?? dbData['omzet'];
+            rawOmzetReal = dbData['total_omzet_real'] ?? dbData['omzet_real'] ?? rawOmzetMurni;
           } else if (_selectedOmzetPeriode == 'hari_ini') {
-            rawOmzet = dbData['omzet_hari_ini'] ?? 0;
+            rawOmzetMurni = dbData['omzet_hari_ini_murni'] ?? dbData['omzet_hari_ini'] ?? 0;
+            rawOmzetReal = dbData['omzet_hari_ini_real'] ?? rawOmzetMurni;
           } else if (_selectedOmzetPeriode == 'kemarin') {
-            rawOmzet = dbData['omzet_kemarin'] ?? 0;
+            rawOmzetMurni = dbData['omzet_kemarin_murni'] ?? dbData['omzet_kemarin'] ?? 0;
+            rawOmzetReal = dbData['omzet_kemarin_real'] ?? rawOmzetMurni;
           } else if (_selectedOmzetPeriode == 'bulan_lalu') {
-            rawOmzet = dbData['omzet_bulan_lalu'] ?? 0;
+            rawOmzetMurni = dbData['omzet_bulan_lalu_murni'] ?? dbData['omzet_bulan_lalu'] ?? 0;
+            rawOmzetReal = dbData['omzet_bulan_lalu_real'] ?? rawOmzetMurni;
           } else {
-            rawOmzet = dbData['omzet_bulan_ini'] ?? 0;
+            rawOmzetMurni = dbData['omzet_bulan_ini_murni'] ?? dbData['omzet_bulan_ini'] ?? 0;
+            rawOmzetReal = dbData['omzet_bulan_ini_real'] ?? rawOmzetMurni;
           }
-          final omzetVal = rawOmzet is int ? rawOmzet : (double.tryParse(rawOmzet.toString())?.round() ?? 0);
+
+          final omzetMurniVal = rawOmzetMurni is int ? rawOmzetMurni : (double.tryParse(rawOmzetMurni.toString())?.round() ?? 0);
+          final omzetRealVal = rawOmzetReal is int ? rawOmzetReal : (double.tryParse(rawOmzetReal.toString())?.round() ?? (omzetMurniVal * 1.11).round());
 
           final rawJumlah = dbData['jumlah_order'] ?? 0;
           final jumlahVal = rawJumlah is int ? rawJumlah : (int.tryParse(rawJumlah.toString()) ?? 0);
 
-          final rawRata = dbData['rata_rata_order'] ?? 0;
+          final rawRata = dbData['rata_rata_order_murni'] ?? dbData['rata_rata_order'] ?? 0;
           final rataVal = rawRata is double ? rawRata : (double.tryParse(rawRata.toString()) ?? 0.0);
+          final rawRataReal = dbData['rata_rata_order_real'] ?? 0;
+          final rataRealVal = rawRataReal is double ? rawRataReal : (double.tryParse(rawRataReal.toString()) ?? (jumlahVal > 0 ? (omzetRealVal / jumlahVal) : 0.0));
 
-          final rawOmzetHari = dbData['omzet_hari_ini'] ?? 0;
+          final rawOmzetHari = dbData['omzet_hari_ini_murni'] ?? dbData['omzet_hari_ini'] ?? 0;
           final omzetHariVal = rawOmzetHari is int ? rawOmzetHari : (double.tryParse(rawOmzetHari.toString())?.round() ?? 0);
 
           final rawTarget = dbData['target_omzet'] ?? 130000000;
@@ -127,14 +142,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
           final rawPct = dbData['persentase_target'] ?? 0;
           final pctVal = rawPct is int ? rawPct : (int.tryParse(rawPct.toString()) ?? 0);
+          final pctRealVal = targetVal > 0 ? ((omzetRealVal / targetVal) * 100).round().clamp(0, 100) : 0;
 
           setState(() {
-            _omzetPeriode = omzetVal;
+            _omzetPeriode = omzetMurniVal;
+            _omzetPeriodeMurni = omzetMurniVal;
+            _omzetPeriodeReal = omzetRealVal;
             _jumlahOrderPeriode = jumlahVal;
             _rataRataOrder = rataVal;
+            _rataRataOrderReal = rataRealVal;
             _omzetToday = omzetHariVal;
             _targetOmzet = targetVal;
             _persentaseTarget = pctVal;
+            _persentaseTargetReal = pctRealVal;
 
             _ordersToday = dbData['pesanan_hari_ini'] ?? 0;
             _waiting = dbData['menunggu_approve'] ?? 0;
@@ -567,23 +587,28 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildOmzetCard() {
-    final omzet = _omzetPeriode;
+    final omzetReal = _omzetPeriodeReal > 0 ? _omzetPeriodeReal : (_omzetPeriode * 1.11).round();
+    final omzetMurni = _omzetPeriodeMurni > 0 ? _omzetPeriodeMurni : _omzetPeriode;
     final target = _targetOmzet > 0 ? _targetOmzet : 130000000;
-    final pct = _persentaseTarget > 0 ? _persentaseTarget : (target > 0 ? (((omzet / target) * 100).round()).clamp(0, 100) : 0);
-    final double pctProgress = (pct / 100.0).clamp(0.0, 1.0);
+    
+    final pctReal = _persentaseTargetReal > 0 ? _persentaseTargetReal : (target > 0 ? (((omzetReal / target) * 100).round()).clamp(0, 100) : 0);
+    final double pctProgressReal = (pctReal / 100.0).clamp(0.0, 1.0);
 
-    String periodeTitle = 'OMZET BULAN BERJALAN';
+    final pctMurni = _persentaseTarget > 0 ? _persentaseTarget : (target > 0 ? (((omzetMurni / target) * 100).round()).clamp(0, 100) : 0);
+    final double pctProgressMurni = (pctMurni / 100.0).clamp(0.0, 1.0);
+
+    String periodeTitle = 'BULAN BERJALAN';
     if (_selectedOmzetPeriode == 'hari_ini') {
-      periodeTitle = 'OMZET HARI INI';
+      periodeTitle = 'HARI INI';
     } else if (_selectedOmzetPeriode == 'kemarin') {
-      periodeTitle = 'OMZET KEMARIN';
+      periodeTitle = 'KEMARIN';
     } else if (_selectedOmzetPeriode == 'bulan_lalu') {
-      periodeTitle = 'OMZET BULAN LALU';
+      periodeTitle = 'BULAN LALU';
     } else if (_selectedOmzetPeriode == 'custom') {
       if (_customStartDate != null && _customEndDate != null) {
         periodeTitle = '${DateFormat('dd/MM').format(_customStartDate!)} - ${DateFormat('dd/MM').format(_customEndDate!)}';
       } else {
-        periodeTitle = 'OMZET CUSTOM';
+        periodeTitle = 'CUSTOM';
       }
     }
 
@@ -597,274 +622,405 @@ class _HomeScreenState extends State<HomeScreen> {
           : 'Custom'},
     ];
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.primaryLight, AppColors.primary],
-        ),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.35),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Filter Chips
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: filters.map((f) {
-                final isSelected = _selectedOmzetPeriode == f['key'];
-                return Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: InkWell(
-                    onTap: () async {
-                      if (f['key'] == 'custom') {
-                        final picked = await showDateRangePicker(
-                          context: context,
-                          firstDate: DateTime(2023),
-                          lastDate: DateTime(2030),
-                          initialDateRange: _customStartDate != null && _customEndDate != null
-                              ? DateTimeRange(start: _customStartDate!, end: _customEndDate!)
-                              : DateTimeRange(
-                                  start: DateTime.now().subtract(const Duration(days: 7)),
-                                  end: DateTime.now(),
-                                ),
-                          builder: (context, child) {
-                            return Theme(
-                              data: Theme.of(context).copyWith(
-                                colorScheme: const ColorScheme.light(
-                                  primary: AppColors.primary,
-                                  onPrimary: Colors.white,
-                                  surface: Colors.white,
-                                  onSurface: AppColors.textDark,
-                                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Filter Chips Bar
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: filters.map((f) {
+              final isSelected = _selectedOmzetPeriode == f['key'];
+              return Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: InkWell(
+                  onTap: () async {
+                    if (f['key'] == 'custom') {
+                      final picked = await showDateRangePicker(
+                        context: context,
+                        firstDate: DateTime(2023),
+                        lastDate: DateTime(2030),
+                        initialDateRange: _customStartDate != null && _customEndDate != null
+                            ? DateTimeRange(start: _customStartDate!, end: _customEndDate!)
+                            : DateTimeRange(
+                                start: DateTime.now().subtract(const Duration(days: 7)),
+                                end: DateTime.now(),
                               ),
-                              child: child!,
-                            );
-                          },
-                        );
-                        if (picked != null) {
-                          setState(() {
-                            _selectedOmzetPeriode = 'custom';
-                            _customStartDate = picked.start;
-                            _customEndDate = picked.end;
-                            _isLoadingOmzet = true;
-                          });
-                          _loadStats();
-                        }
-                      } else {
-                        if (_selectedOmzetPeriode != f['key']) {
-                          setState(() {
-                            _selectedOmzetPeriode = f['key']!;
-                            _isLoadingOmzet = true;
-                          });
-                          _loadStats();
-                        }
+                        builder: (context, child) {
+                          return Theme(
+                            data: Theme.of(context).copyWith(
+                              colorScheme: const ColorScheme.light(
+                                primary: AppColors.primary,
+                                onPrimary: Colors.white,
+                                surface: Colors.white,
+                                onSurface: AppColors.textDark,
+                              ),
+                            ),
+                            child: child!,
+                          );
+                        },
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          _selectedOmzetPeriode = 'custom';
+                          _customStartDate = picked.start;
+                          _customEndDate = picked.end;
+                          _isLoadingOmzet = true;
+                        });
+                        _loadStats();
                       }
-                    },
-                    borderRadius: BorderRadius.circular(20),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.25),
-                          width: 1,
-                        ),
+                    } else {
+                      if (_selectedOmzetPeriode != f['key']) {
+                        setState(() {
+                          _selectedOmzetPeriode = f['key']!;
+                          _isLoadingOmzet = true;
+                        });
+                        _loadStats();
+                      }
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(20),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.primary : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected ? AppColors.primary : AppColors.border,
+                        width: 1,
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (f['key'] == 'custom') ...[
-                            Icon(
-                              Icons.calendar_month_rounded,
-                              size: 13,
-                              color: isSelected ? AppColors.primary : Colors.white,
-                            ),
-                            const SizedBox(width: 4),
-                          ],
-                          Text(
-                            f['label']!,
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                              color: isSelected ? AppColors.primary : Colors.white,
-                            ),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: AppColors.primary.withValues(alpha: 0.25),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              )
+                            ]
+                          : [],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (f['key'] == 'custom') ...[
+                          Icon(
+                            Icons.calendar_month_rounded,
+                            size: 13,
+                            color: isSelected ? Colors.white : AppColors.textMuted,
                           ),
+                          const SizedBox(width: 4),
                         ],
+                        Text(
+                          f['label']!,
+                          style: GoogleFonts.inter(
+                            fontSize: 11.5,
+                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isSelected ? Colors.white : AppColors.textDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // KARTU 1: OMZET REAL (TAGIHAN CUSTOMER)
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF059669), Color(0xFF047857)],
+            ),
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF047857).withValues(alpha: 0.35),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.receipt_long_rounded, color: Colors.white, size: 13),
+                        const SizedBox(width: 4),
+                        Text(
+                          'OMZET REAL $periodeTitle',
+                          style: GoogleFonts.inter(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF34D399).withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF34D399).withValues(alpha: 0.4)),
+                    ),
+                    child: Text(
+                      'INCLUDE PPN',
+                      style: GoogleFonts.inter(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFFA7F3D0),
                       ),
                     ),
                   ),
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.4),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.trending_up_rounded,
-                                color: Color(0xFF34D399),
-                                size: 13,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                periodeTitle,
-                                style: GoogleFonts.inter(
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF34D399),
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (_jumlahOrderPeriode > 0)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '$_jumlahOrderPeriode order',
-                              style: GoogleFonts.inter(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        _formatRupiah(omzet),
-                        style: GoogleFonts.inter(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                    ),
-                  ],
+                ],
+              ),
+              const SizedBox(height: 12),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  _formatRupiah(omzetReal),
+                  style: GoogleFonts.inter(
+                    fontSize: 27,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: -0.5,
+                  ),
                 ),
               ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Rata-rata Order',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        color: Colors.white.withValues(alpha: 0.7),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        _formatRupiah(_rataRataOrder.round()),
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
+              const SizedBox(height: 4),
               Text(
-                'Target Bulanan: ${_formatRupiah(target)}',
+                'Total tagihan riil invoice customer setelah Diskon & PPN/PPh',
                 style: GoogleFonts.inter(
-                  fontSize: 12,
+                  fontSize: 10.5,
                   color: Colors.white.withValues(alpha: 0.8),
                 ),
               ),
-              Text(
-                '$pct%',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF34D399),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Target: ${_formatRupiah(target)}',
+                    style: GoogleFonts.inter(
+                      fontSize: 11.5,
+                      color: Colors.white.withValues(alpha: 0.85),
+                    ),
+                  ),
+                  Text(
+                    '$pctReal%',
+                    style: GoogleFonts.inter(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFFA7F3D0),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: pctProgressReal,
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
+                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF34D399)),
+                  minHeight: 7,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: pctProgress,
-              backgroundColor: Colors.white.withValues(alpha: 0.15),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                Color(0xFF10B981),
-              ),
-              minHeight: 8,
+        ),
+
+        const SizedBox(height: 12),
+
+        // KARTU 2: OMZET MURNI (DPP TANPA PPN)
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.primaryLight, AppColors.primary],
             ),
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.35),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-        ],
-      ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.clean_hands_rounded, color: Colors.white, size: 13),
+                        const SizedBox(width: 4),
+                        Text(
+                          'OMZET MURNI (DPP)',
+                          style: GoogleFonts.inter(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'NETT JASA',
+                      style: GoogleFonts.inter(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            _formatRupiah(omzetMurni),
+                            style: GoogleFonts.inter(
+                              fontSize: 25,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Pendapatan jasa bersih perusahaan sebelum pajak',
+                          style: GoogleFonts.inter(
+                            fontSize: 10.5,
+                            color: Colors.white.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Rata-rata Order',
+                          style: GoogleFonts.inter(
+                            fontSize: 9.5,
+                            color: Colors.white.withValues(alpha: 0.7),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            _formatRupiah(_rataRataOrder.round()),
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Target DPP: ${_formatRupiah(target)}',
+                    style: GoogleFonts.inter(
+                      fontSize: 11.5,
+                      color: Colors.white.withValues(alpha: 0.85),
+                    ),
+                  ),
+                  Text(
+                    '$pctMurni%',
+                    style: GoogleFonts.inter(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: pctProgressMurni,
+                  backgroundColor: Colors.white.withValues(alpha: 0.15),
+                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                  minHeight: 7,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
