@@ -131,7 +131,11 @@ jobs:
           echo "Mengunggah file ke App Store Connect..."
 
           # Upload ke App Store Connect
-          xcrun altool --upload-app -f "$IPA_PATH" -t ios --apiKey "$APPSTORE_KEY_ID" --apiIssuer "$APPSTORE_ISSUER_ID" --show-progress
+          xcrun altool --upload-app -f "$IPA_PATH" -t ios --apiKey "$APPSTORE_KEY_ID" --apiIssuer "$APPSTORE_ISSUER_ID" --show-progress 2>&1 | tee upload.log
+          if grep -qi "UPLOAD FAILED" upload.log; then
+            echo "Error: Upload to App Store Connect failed!"
+            exit 1
+          fi
 
       - name: Clean up Keychain & API Keys
         if: always()
