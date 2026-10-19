@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -136,16 +137,25 @@ class FcmService {
         // Realtime refresh bell badge and vibration
         NotificationService.instance.refreshUnreadCount();
 
-        if (message.notification != null && navigatorKey?.currentContext != null) {
+        final notifTitle = message.notification?.title ?? message.data['title']?.toString() ?? 'Notifikasi Baru';
+        final notifBody = message.notification?.body ?? message.data['body']?.toString() ?? message.data['message']?.toString();
+
+        if (navigatorKey?.currentContext != null) {
+          // Play sound and haptic vibration for incoming foreground notification
+          try {
+            SystemSound.play(SystemSoundType.alert);
+            HapticFeedback.heavyImpact();
+          } catch (_) {}
+
           final type = (message.data['type'] ?? '').toString();
           
           IconData iconData = Icons.notifications_active_rounded;
           Color iconColor = const Color(0xFF38BDF8);
 
-          if (type.contains('pembayaran_besar') || (message.notification?.title ?? '').toLowerCase().contains('1 jt') || (message.notification?.body ?? '').toLowerCase().contains('1 jt')) {
+          if (type.contains('pembayaran_besar') || notifTitle.toLowerCase().contains('1 jt') || (notifBody ?? '').toLowerCase().contains('1 jt')) {
             iconData = Icons.monetization_on_rounded;
             iconColor = const Color(0xFFF59E0B);
-          } else if (type.contains('batal') || type.contains('cancel') || screen.contains('audit') || (message.notification?.title ?? '').toLowerCase().contains('batal')) {
+          } else if (type.contains('batal') || type.contains('cancel') || screen.contains('audit') || notifTitle.toLowerCase().contains('batal')) {
             iconData = Icons.cancel_rounded;
             iconColor = const Color(0xFFEF4444);
           } else if (type.contains('pengumuman')) {
@@ -196,8 +206,8 @@ class FcmService {
           }
 
           _showTopBanner(
-            title: message.notification!.title ?? 'Notifikasi Baru',
-            body: message.notification!.body,
+            title: notifTitle,
+            body: notifBody,
             iconData: iconData,
             iconColor: iconColor,
             onTap: () => _handleMessage(message),

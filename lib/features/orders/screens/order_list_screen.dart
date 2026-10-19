@@ -188,15 +188,10 @@ class _OrderListScreenState extends State<OrderListScreen> {
         );
       }
 
-      final isSingleDate = _periodFilter == 'weekly_date' ||
-          _periodFilter == 'hari_ini' ||
-          _periodFilter == 'kemarin' ||
-          _periodFilter == 'besok';
-
-      // Ambil data spesifik tanggal/bulan secara instan (<100ms, perPage: 25/50)
+      // Ambil data spesifik tanggal/bulan secara instan (1 request ringan perPage: 30)
       final initialOrders = await _orderService.fetchOrders(
-        fetchAllPages: isSingleDate,
-        perPage: isSingleDate ? 50 : 25,
+        fetchAllPages: false,
+        perPage: 30,
         statusPesanan: _statusFilter != 'Semua' ? _statusFilter : null,
         startDate: startStr,
         endDate: endStr,

@@ -61,7 +61,7 @@ class OrderService {
         firstParams['page'] = 1;
       }
 
-      final response = await _dio.get('/pesanan', queryParameters: firstParams).timeout(const Duration(seconds: 15));
+      final response = await _dio.get('/pesanan', queryParameters: firstParams).timeout(const Duration(seconds: 45));
       final rawBody = response.data;
       var responseData = rawBody['data'] ?? rawBody;
 

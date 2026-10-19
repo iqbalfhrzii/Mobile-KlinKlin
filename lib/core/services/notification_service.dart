@@ -1,12 +1,28 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../api/api_client.dart';
 import '../data/notification_model.dart';
 
 class NotificationService {
   static final NotificationService instance = NotificationService._internal();
-  NotificationService._internal();
+  NotificationService._internal() {
+    startPeriodicPolling();
+  }
 
   static final ValueNotifier<int> unreadCountNotifier = ValueNotifier<int>(0);
+  Timer? _pollingTimer;
+
+  void startPeriodicPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      refreshUnreadCount();
+    });
+  }
+
+  void stopPeriodicPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+  }
 
   Future<List<NotificationItem>> fetchNotifications() async {
     try {

@@ -184,7 +184,10 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
 
     if (picked != null) {
       setState(() {
-        if (isStart) {
+        if (_leaveType == 'izin_setengah_hari') {
+          _startDate = picked;
+          _endDate = picked;
+        } else if (isStart) {
           _startDate = picked;
           if (_endDate != null && _endDate!.isBefore(_startDate!)) {
             _endDate = _startDate;
@@ -222,8 +225,12 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (_leaveType == 'izin_setengah_hari') {
+      _endDate = _startDate;
+    }
+
     if (_startDate == null || _endDate == null) {
-      SnackbarUtils.showError(context, 'Pilih tanggal mulai dan selesai');
+      SnackbarUtils.showError(context, _leaveType == 'izin_setengah_hari' ? 'Pilih tanggal izin' : 'Pilih tanggal mulai dan selesai');
       return;
     }
 
@@ -465,6 +472,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
 
   IconData _getTypeIcon(String? type) {
     final t = (type ?? '').toLowerCase();
+    if (t.contains('setengah')) return Icons.hourglass_bottom_rounded;
     if (t.contains('khusus')) return Icons.star_rounded;
     if (t.contains('sakit')) return Icons.medical_services_rounded;
     if (t.contains('cuti')) return Icons.beach_access_rounded;
@@ -474,6 +482,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
 
   Color _getTypeColor(String? type) {
     final t = (type ?? '').toLowerCase();
+    if (t.contains('setengah')) return const Color(0xFF6366F1);
     if (t.contains('khusus')) return const Color(0xFF7C3AED);
     if (t.contains('sakit')) return const Color(0xFFEA580C);
     if (t.contains('cuti')) return const Color(0xFF0284C7);
@@ -483,6 +492,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
 
   String _getTypeLabel(String? type, {String? subType, String? alasan}) {
     final t = (type ?? '').toLowerCase();
+    if (t.contains('setengah')) return 'IZIN ½ HARI (BEBAS ABSEN KELUAR)';
     if (t.contains('khusus')) {
       if (subType != null && subType.isNotEmpty) return 'CUTI KHUSUS ($subType)';
       if (alasan != null && alasan.contains('[Cuti Khusus:')) {
@@ -818,6 +828,17 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
             const SizedBox(height: 10),
 
             _buildLeaveTypeCard(
+              value: 'izin_setengah_hari',
+              title: 'Izin ½ Hari (Pulang Cepat / Bebas Absen Pulang)',
+              subtitle: 'Pulang lebih awal karena urusan mendadak / sakit di tengah kerja',
+              icon: Icons.hourglass_bottom_rounded,
+              activeColor: const Color(0xFF6366F1),
+              activeBg: const Color(0xFFEEF2FF),
+              tagText: 'Bebas Absen Keluar ✨',
+            ),
+            const SizedBox(height: 10),
+
+            _buildLeaveTypeCard(
               value: 'cuti_khusus',
               title: 'Cuti Khusus (Melahirkan, Menikah, dll)',
               subtitle: 'Melahirkan, Menikah, Khitanan, dll',
@@ -886,6 +907,29 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                             ),
                           ],
                         ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (_leaveType == 'izin_setengah_hari') ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEEF2FF),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFC7D2FE)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline_rounded, color: Color(0xFF6366F1), size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Izin Setengah Hari berlaku untuk hari ini (1 tanggal). Anda tetap dapat absen masuk di pagi hari, dan dibebaskan dari absen keluar / check-out setelah disetujui HRD.',
+                        style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF3730A3), height: 1.4),
                       ),
                     ),
                   ],
@@ -981,7 +1025,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                       ),
                     ),
                     child: Text(
-                      'Durasi: $_selectedDurationDays Hari',
+                      _leaveType == 'izin_setengah_hari' ? 'Durasi: ½ Hari' : 'Durasi: $_selectedDurationDays Hari',
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -995,85 +1039,122 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
             ),
             const SizedBox(height: 8),
 
-            Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: () => _selectDate(context, true),
+            if (_leaveType == 'izin_setengah_hari')
+              InkWell(
+                onTap: () => _selectDate(context, true),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: _startDate != null ? AppColors.primary : const Color(0xFFCBD5E1)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    border: Border.all(color: _startDate != null ? const Color(0xFF6366F1) : const Color(0xFFCBD5E1)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Tanggal Izin (1 Hari)', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B))),
+                      const SizedBox(height: 4),
+                      Row(
                         children: [
-                          Text('Tanggal Mulai', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B))),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.primary),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  _startDate != null ? DateFormat('d MMM yyyy', 'id_ID').format(_startDate!) : 'Pilih Tanggal',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    fontWeight: _startDate != null ? FontWeight.w600 : FontWeight.normal,
-                                    color: _startDate != null ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
-                                  ),
-                                ),
+                          const Icon(Icons.calendar_today_rounded, size: 16, color: Color(0xFF6366F1)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _startDate != null ? DateFormat('d MMM yyyy', 'id_ID').format(_startDate!) : 'Pilih Tanggal',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: _startDate != null ? FontWeight.w600 : FontWeight.normal,
+                                color: _startDate != null ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
                               ),
-                            ],
+                            ),
                           ),
                         ],
                       ),
-                    ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: InkWell(
-                    onTap: () => _selectDate(context, false),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: _endDate != null ? AppColors.primary : const Color(0xFFCBD5E1)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Tanggal Selesai', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B))),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.primary),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  _endDate != null ? DateFormat('d MMM yyyy', 'id_ID').format(_endDate!) : 'Pilih Tanggal',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    fontWeight: _endDate != null ? FontWeight.w600 : FontWeight.normal,
-                                    color: _endDate != null ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _selectDate(context, true),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: _startDate != null ? AppColors.primary : const Color(0xFFCBD5E1)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Tanggal Mulai', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B))),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.primary),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _startDate != null ? DateFormat('d MMM yyyy', 'id_ID').format(_startDate!) : 'Pilih Tanggal',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      fontWeight: _startDate != null ? FontWeight.w600 : FontWeight.normal,
+                                      color: _startDate != null ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _selectDate(context, false),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: _endDate != null ? AppColors.primary : const Color(0xFFCBD5E1)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Tanggal Selesai', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B))),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.primary),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _endDate != null ? DateFormat('d MMM yyyy', 'id_ID').format(_endDate!) : 'Pilih Tanggal',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      fontWeight: _endDate != null ? FontWeight.w600 : FontWeight.normal,
+                                      color: _endDate != null ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
 
             if (_leaveType == 'cuti' && _selectedDurationDays > _sisaCuti) ...[
               const SizedBox(height: 8),
@@ -2048,7 +2129,14 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
     final isSelected = _leaveType == value;
 
     return InkWell(
-      onTap: () => setState(() => _leaveType = value),
+      onTap: () {
+        setState(() {
+          _leaveType = value;
+          if (value == 'izin_setengah_hari') {
+            _endDate = _startDate;
+          }
+        });
+      },
       borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.all(14),

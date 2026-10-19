@@ -101,6 +101,12 @@ class AttendanceService {
 
       String? todayShift;
 
+      bool hasIzinPulang = false;
+      String? izinJenis;
+      String? izinKeterangan;
+      bool isLiburHariIni = false;
+      bool hasAksesLembur = false;
+
       // 2. Fetch today's attendance status from /absensi/saya (instan dengan parameter tanggal)
       try {
         final now = DateTime.now();
@@ -114,7 +120,19 @@ class AttendanceService {
           ),
         );
         if (response.statusCode == 200) {
-          final List data = response.data['data'] ?? [];
+          if (response.data is Map) {
+            hasIzinPulang = response.data['has_izin_pulang'] == true;
+            isLiburHariIni = response.data['is_libur_hari_ini'] == true;
+            hasAksesLembur = response.data['has_akses_lembur'] == true;
+            if (response.data['izin_hari_ini'] is Map) {
+              izinJenis = response.data['izin_hari_ini']['jenis']?.toString();
+              izinKeterangan = response.data['izin_hari_ini']['alasan']?.toString();
+            }
+          }
+
+          final List data = (response.data is Map && response.data['data'] is List)
+              ? response.data['data']
+              : [];
           for (var item in data) {
             if (item['tipe'] == 'masuk') {
               hasCheckedIn = true;
@@ -128,6 +146,49 @@ class AttendanceService {
           }
         }
       } catch (_) {}
+
+      // Fallback check from getMyJadwalLiburs if isLiburHariIni is false
+      if (!isLiburHariIni) {
+        try {
+          final liburs = await getMyJadwalLiburs();
+          final now = DateTime.now();
+          final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+          if (liburs.contains(todayStr)) {
+            isLiburHariIni = true;
+          }
+        } catch (_) {}
+      }
+
+      // Fallback check from getMyLeaves if hasIzinPulang is false
+      if (!hasIzinPulang) {
+        try {
+          final leaves = await getMyLeaves();
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+          for (var l in leaves) {
+            final st = (l['status'] ?? '').toString().toLowerCase();
+            final jn = (l['jenis'] ?? '').toString().toLowerCase();
+            if (st == 'disetujui' && (jn == 'izin' || jn == 'izin_setengah_hari')) {
+              final startStr = l['tanggal_mulai']?.toString();
+              final endStr = l['tanggal_selesai']?.toString();
+              if (startStr != null && endStr != null) {
+                final s = DateTime.tryParse(startStr);
+                final e = DateTime.tryParse(endStr);
+                if (s != null && e != null) {
+                  final start = DateTime(s.year, s.month, s.day);
+                  final end = DateTime(e.year, e.month, e.day);
+                  if (!today.isBefore(start) && !today.isAfter(end)) {
+                    hasIzinPulang = true;
+                    izinJenis = jn;
+                    izinKeterangan = l['alasan']?.toString();
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        } catch (_) {}
+      }
 
       // Fallback branchName from preferences if still null
       branchName ??= prefs.getString('user_cabang_name') ?? prefs.getString('user_branch') ?? 'Kantor Cabang';
@@ -145,6 +206,11 @@ class AttendanceService {
         toleransiTelatMenit: toleransiTelatMenit,
         jamPulang: jamPulang,
         shift: todayShift,
+        hasIzinPulang: hasIzinPulang,
+        izinJenis: izinJenis,
+        izinKeterangan: izinKeterangan,
+        isLiburHariIni: isLiburHariIni,
+        hasAksesLembur: hasAksesLembur,
       );
     } catch (e) {
       throw Exception('Terjadi kesalahan jaringan atau server: $e');

@@ -228,18 +228,21 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
         if (existing != null && (existing.checkIn != null || existing.checkOut != null)) {
           // --- 1. Karyawan Hadir (Ada Check-in atau Check-out) ---
-          String itemStatus = 'Tepat Waktu';
+          final bool isLemburLibur = myLiburs.contains(dStr);
+          String itemStatus = isLemburLibur ? 'Lembur' : 'Tepat Waktu';
           if (existing.checkIn != null) {
             masuk++;
             final inTime = _parseTimeOnly(existing.checkIn!.time);
             if (_isTimeAfter(inTime, lateBoundary)) {
               telat++;
-              itemStatus = 'Telat';
+              itemStatus = isLemburLibur ? 'Telat & Lembur' : 'Telat';
             } else if (existing.checkOut != null) {
-              itemStatus = 'Lengkap';
+              itemStatus = isLemburLibur ? 'Lembur Selesai' : 'Lengkap';
+            } else {
+              itemStatus = isLemburLibur ? 'Lembur' : 'Tepat Waktu';
             }
           } else {
-            itemStatus = 'Pulang Cepat';
+            itemStatus = isLemburLibur ? 'Lembur (Pulang Cepat)' : 'Pulang Cepat';
           }
 
           if (existing.checkOut != null) {
@@ -506,6 +509,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Future<void> _handleAbsensi(bool isCheckIn) async {
     if (_isProcessing) return;
 
+    if (!isCheckIn && _status?.hasIzinPulang == true) {
+      final label = _status?.izinJenis == 'izin_setengah_hari' ? 'izin setengah hari' : 'izin';
+      _showError('Anda memiliki $label yang disetujui HRD, sehingga tidak dapat melakukan absen keluar.');
+      return;
+    }
+
     final hasPerms = await _checkPermissions();
     if (!hasPerms) return;
 
@@ -544,10 +553,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         MaterialPageRoute(builder: (_) => const CameraScreen()),
       );
 
+      if (!mounted) return;
+
       if (photoFile == null) {
         setState(() => _isProcessing = false);
         return;
       }
+
+      final bool isLemburLibur = isCheckIn && _status?.isLiburHariIni == true;
 
       final confirm = await showDialog<bool>(
         context: context,
@@ -558,18 +571,26 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: isCheckIn ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7),
+                  color: isLemburLibur
+                      ? const Color(0xFFF3E8FF)
+                      : (isCheckIn ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7)),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  isCheckIn ? Icons.login_rounded : Icons.logout_rounded,
-                  color: isCheckIn ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                  isLemburLibur
+                      ? Icons.bolt_rounded
+                      : (isCheckIn ? Icons.login_rounded : Icons.logout_rounded),
+                  color: isLemburLibur
+                      ? const Color(0xFF7C3AED)
+                      : (isCheckIn ? const Color(0xFF10B981) : const Color(0xFFF59E0B)),
                   size: 20,
                 ),
               ),
               const SizedBox(width: 12),
               Text(
-                'Konfirmasi ${isCheckIn ? "Check-In" : "Check-Out"}',
+                isLemburLibur
+                    ? 'Konfirmasi Masuk Lembur'
+                    : 'Konfirmasi ${isCheckIn ? "Check-In" : "Check-Out"}',
                 style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16),
               ),
             ],
@@ -579,7 +600,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Apakah Anda yakin ingin mengirim data ${isCheckIn ? "Check-In" : "Check-Out"} sekarang?',
+                isLemburLibur
+                    ? 'Hari ini terdaftar sebagai jadwal libur Anda. Apakah Anda yakin ingin mengirim absensi masuk lembur sekarang?'
+                    : 'Apakah Anda yakin ingin mengirim data ${isCheckIn ? "Check-In" : "Check-Out"} sekarang?',
                 style: GoogleFonts.inter(fontSize: 13.5, color: AppColors.textDark),
               ),
               if (_isCleaner && isCheckIn) ...[
@@ -627,11 +650,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
               style: ElevatedButton.styleFrom(
-                backgroundColor: isCheckIn ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                backgroundColor: isLemburLibur
+                    ? const Color(0xFF7C3AED)
+                    : (isCheckIn ? const Color(0xFF10B981) : const Color(0xFFF59E0B)),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 elevation: 0,
               ),
-              child: Text('Kirim Absen', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: Text(
+                isLemburLibur ? 'Kirim Absen Lembur' : 'Kirim Absen',
+                style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
@@ -800,6 +828,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       children: [
                         if (_isCleaner && _status?.hasCheckedIn != true) ...[
                           _buildShiftSelector(),
+                          const SizedBox(height: 14),
+                        ],
+                        if (_status?.hasIzinPulang == true) ...[
+                          _buildIzinPulangBanner(),
+                          const SizedBox(height: 14),
+                        ],
+                        if (_status?.isLiburHariIni == true) ...[
+                          _buildLemburLiburBanner(),
                           const SizedBox(height: 14),
                         ],
                         _buildActionCards(),
@@ -1089,8 +1125,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Widget _buildActionCards() {
     final bool hasCheckedIn = _status?.hasCheckedIn == true;
     final bool hasCheckedOut = _status?.hasCheckedOut == true;
-    final bool canCheckIn = !hasCheckedIn;
-    final bool canCheckOut = hasCheckedIn && !hasCheckedOut;
+    final bool hasIzinPulang = _status?.hasIzinPulang == true;
+    final String? izinJenis = _status?.izinJenis;
+    final bool isIzinSetengahHari = izinJenis == 'izin_setengah_hari';
+    final bool isLiburHariIni = _status?.isLiburHariIni == true;
+
+    final bool canCheckIn = !hasCheckedIn && !(hasIzinPulang && !isIzinSetengahHari);
+    final bool canCheckOut = hasCheckedIn && !hasCheckedOut && !hasIzinPulang;
 
     final inTimeFormatted = _parseTimeOnly(_status?.checkInTime);
     final outTimeFormatted = _parseTimeOnly(_status?.checkOutTime);
@@ -1100,14 +1141,22 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         // Check-In Card
         Expanded(
           child: _buildSingleActionCard(
-            label: hasCheckedIn ? 'Sudah Check-In' : 'Check-In',
-            sublabel: hasCheckedIn ? '$inTimeFormatted $_branchTimezoneLabel' : 'Absen Masuk',
+            label: hasCheckedIn
+                ? (isLiburHariIni ? 'Sudah Check-In (Lembur)' : 'Sudah Check-In')
+                : (isLiburHariIni ? 'Masuk Lembur' : 'Check-In'),
+            sublabel: hasCheckedIn
+                ? '$inTimeFormatted $_branchTimezoneLabel'
+                : (isLiburHariIni ? 'Lembur di Hari Libur' : 'Absen Masuk'),
             timePill: hasCheckedIn ? inTimeFormatted : null,
-            icon: hasCheckedIn ? Icons.check_circle_rounded : Icons.login_rounded,
+            icon: hasCheckedIn
+                ? Icons.check_circle_rounded
+                : (isLiburHariIni ? Icons.bolt_rounded : Icons.login_rounded),
             isCompleted: hasCheckedIn,
             isActive: canCheckIn && !_isProcessing,
-            primaryColor: const Color(0xFF10B981),
-            activeGradient: const [Color(0xFF10B981), Color(0xFF059669)],
+            primaryColor: isLiburHariIni ? const Color(0xFF8B5CF6) : const Color(0xFF10B981),
+            activeGradient: isLiburHariIni
+                ? const [Color(0xFF8B5CF6), Color(0xFF7C3AED)]
+                : const [Color(0xFF10B981), Color(0xFF059669)],
             onTap: (canCheckIn && !_isProcessing) ? () => _handleAbsensi(true) : null,
           ),
         ),
@@ -1115,20 +1164,189 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         // Check-Out Card
         Expanded(
           child: _buildSingleActionCard(
-            label: hasCheckedOut ? 'Sudah Check-Out' : 'Check-Out',
+            label: hasCheckedOut
+                ? (isLiburHariIni ? 'Selesai Lembur' : 'Sudah Check-Out')
+                : (hasIzinPulang
+                    ? (isIzinSetengahHari ? 'Izin ½ Hari' : 'Izin HRD')
+                    : (isLiburHariIni ? 'Pulang Lembur' : 'Check-Out')),
             sublabel: hasCheckedOut
                 ? '$outTimeFormatted $_branchTimezoneLabel'
-                : (hasCheckedIn ? 'Absen Pulang' : 'Belum Masuk'),
+                : (hasIzinPulang
+                    ? 'Disetujui HRD (Bebas Absen)'
+                    : (hasCheckedIn ? (isLiburHariIni ? 'Selesai Lembur' : 'Absen Pulang') : 'Belum Masuk')),
             timePill: hasCheckedOut ? outTimeFormatted : null,
-            icon: hasCheckedOut ? Icons.check_circle_rounded : Icons.logout_rounded,
-            isCompleted: hasCheckedOut,
+            icon: hasCheckedOut
+                ? Icons.check_circle_rounded
+                : (hasIzinPulang ? Icons.verified_rounded : Icons.logout_rounded),
+            isCompleted: hasCheckedOut || hasIzinPulang,
             isActive: canCheckOut && !_isProcessing,
-            primaryColor: const Color(0xFFF59E0B),
-            activeGradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+            primaryColor: hasIzinPulang
+                ? const Color(0xFF6366F1)
+                : (isLiburHariIni ? const Color(0xFF8B5CF6) : const Color(0xFFF59E0B)),
+            activeGradient: hasIzinPulang
+                ? const [Color(0xFF6366F1), Color(0xFF4F46E5)]
+                : (isLiburHariIni
+                    ? const [Color(0xFF8B5CF6), Color(0xFF6D28D9)]
+                    : const [Color(0xFFF59E0B), Color(0xFFD97706)]),
             onTap: (canCheckOut && !_isProcessing) ? () => _handleAbsensi(false) : null,
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildLemburLiburBanner() {
+    if (_status?.isLiburHariIni != true) return const SizedBox.shrink();
+    final bool hasCheckedIn = _status?.hasCheckedIn == true;
+    final bool hasAkses = _status?.hasAksesLembur == true;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAF5FF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE9D5FF), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF8B5CF6).withOpacity(0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3E8FF),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              hasCheckedIn ? Icons.verified_rounded : Icons.bolt_rounded,
+              color: const Color(0xFF7E22CE),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      hasCheckedIn ? 'Sedang Lembur di Hari Libur' : 'Hari Ini Jadwal Libur',
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13.5,
+                        color: const Color(0xFF581C87),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE9D5FF),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        hasCheckedIn ? 'Aktif' : (hasAkses ? 'Akses Lembur HRD' : 'Lembur'),
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF6B21A8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  hasCheckedIn
+                      ? 'Anda telah melakukan absen masuk lembur untuk jadwal libur hari ini.'
+                      : (hasAkses
+                          ? 'HRD telah memberikan akses lembur. Anda dapat melakukan absen masuk lembur kapan saja hari ini.'
+                          : 'Hari ini adalah jadwal libur Anda. Jika Anda bertugas lembur, silakan tekan tombol Masuk Lembur di bawah.'),
+                  style: GoogleFonts.inter(
+                    fontSize: 11.5,
+                    color: const Color(0xFF7E22CE),
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIzinPulangBanner() {
+    final isSetengahHari = _status?.izinJenis == 'izin_setengah_hari';
+    final title = isSetengahHari ? 'Izin ½ Hari Disetujui HRD' : 'Izin Kerja Disetujui HRD';
+    final desc = isSetengahHari
+        ? 'Anda telah diizinkan pulang lebih awal. Tidak perlu dan tidak dapat melakukan absen keluar.'
+        : 'Anda memiliki izin resmi dari HRD hari ini.';
+    final reason = _status?.izinKeterangan;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEEF2FF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFC7D2FE)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF6366F1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.verified_rounded, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF3730A3),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  desc,
+                  style: GoogleFonts.inter(
+                    fontSize: 11.5,
+                    color: const Color(0xFF4F46E5),
+                    height: 1.35,
+                  ),
+                ),
+                if (reason != null && reason.trim().isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Alasan: "$reason"',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic,
+                      color: const Color(0xFF4338CA),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1239,7 +1457,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     style: GoogleFonts.inter(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w500,
-                      color: isActive ? Colors.white.withValues(alpha: 0.85) : const Color(0xFF94A3B8),
+                      color: isActive
+                          ? Colors.white.withValues(alpha: 0.85)
+                          : (isCompleted ? primaryColor.withValues(alpha: 0.85) : const Color(0xFF94A3B8)),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -2178,7 +2398,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _renderStatusPill(String status) {
-    if (status == 'Belum Absen') {
+    if (status.contains('Lembur')) {
+      return _buildStatusPill(status, const Color(0xFF7C3AED), const Color(0xFFF3E8FF));
+    } else if (status == 'Belum Absen') {
       return _buildStatusPill('Belum Absen', const Color(0xFFD97706), const Color(0xFFFEF3C7));
     } else if (status == 'Tidak Absen') {
       return _buildStatusPill('Tidak Absen', const Color(0xFFDC2626), const Color(0xFFFEF2F2));

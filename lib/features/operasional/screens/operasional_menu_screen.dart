@@ -118,21 +118,21 @@ class OperasionalMenuScreen extends StatelessWidget {
             },
           ),
           _MenuItem(
-            icon: Icons.category_rounded,
-            title: 'Master Barang',
-            iconColor: const Color(0xFF0284C7),
-            bgColor: const Color(0xFFE0F2FE),
-            onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const MasterBarangScreen()));
-            },
-          ),
-          _MenuItem(
             icon: Icons.inventory_2_rounded,
             title: 'Ringkasan Barang',
             iconColor: const Color(0xFF0D9488),
             bgColor: const Color(0xFFCCFBF1),
             onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => const OperasionalRingkasanBarangScreen()));
+            },
+          ),
+          _MenuItem(
+            icon: Icons.category_rounded,
+            title: 'Master Barang',
+            iconColor: const Color(0xFF0284C7),
+            bgColor: const Color(0xFFE0F2FE),
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const MasterBarangScreen()));
             },
           ),
           _MenuItem(

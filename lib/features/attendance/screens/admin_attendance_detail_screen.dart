@@ -159,18 +159,22 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
         final existing = grouped[dStr];
 
         if (existing != null && (existing.checkIn != null || existing.checkOut != null)) {
-          String itemStatus = 'Tepat Waktu';
+          final backendStatus = backendStatusMap[dStr] ?? '';
+          final bool isLembur = backendStatus.contains('Lembur');
+          String itemStatus = isLembur ? 'Lembur' : 'Tepat Waktu';
           if (existing.checkIn != null) {
             masuk++;
             final inTime = _parseTimeOnly(existing.checkIn!.time);
             if (_isLate(inTime, _jamMasukStandard, _toleransiTelatMenit)) {
               telat++;
-              itemStatus = 'Telat';
+              itemStatus = isLembur ? 'Telat & Lembur' : 'Telat';
             } else if (existing.checkOut != null) {
-              itemStatus = 'Lengkap';
+              itemStatus = isLembur ? 'Lembur Selesai' : 'Lengkap';
+            } else {
+              itemStatus = isLembur ? 'Lembur' : 'Tepat Waktu';
             }
           } else {
-            itemStatus = 'Pulang Cepat';
+            itemStatus = isLembur ? 'Lembur (Pulang Cepat)' : 'Pulang Cepat';
           }
 
           if (existing.checkOut != null) {
@@ -1049,6 +1053,7 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
     final status = group.status ?? 'Tepat Waktu';
     final bool isAbsent = status == 'Tidak Absen';
     final bool isNotYet = status == 'Belum Absen';
+    final bool isLembur = status.contains('Lembur');
     final bool isHolidayOrLeave = status.contains('Libur') || status.contains('Cuti') || status.contains('Izin');
     final bool isSelectedDate = group.tanggal == _inspectedDateStr;
 
@@ -1058,7 +1063,13 @@ class _AdminAttendanceDetailScreenState extends State<AdminAttendanceDetailScree
     Color statusBg = const Color(0xFFECFDF5);
     Color statusBorder = const Color(0xFFA7F3D0);
 
-    if (isAbsent) {
+    if (isLembur) {
+      dateBgColor = const Color(0xFFFAF5FF);
+      dateTextColor = const Color(0xFF7C3AED);
+      statusColor = const Color(0xFF7C3AED);
+      statusBg = const Color(0xFFF3E8FF);
+      statusBorder = const Color(0xFFDDD6FE);
+    } else if (isAbsent) {
       dateBgColor = const Color(0xFFFEF2F2);
       dateTextColor = const Color(0xFFDC2626);
       statusColor = const Color(0xFFDC2626);

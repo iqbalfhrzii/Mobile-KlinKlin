@@ -88,6 +88,31 @@ class HrdJadwalLiburService {
     }
   }
 
+  static Future<Map<String, dynamic>> toggleLembur({
+    required int karyawanId,
+    required String tanggal,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/hrd/jadwal-libur/toggle-lembur',
+        data: {
+          'karyawan_id': karyawanId,
+          'tanggal': tanggal,
+        },
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      return {'status': true, 'message': 'Akses lembur berhasil diperbarui'};
+    } catch (e) {
+      if (e is DioException && e.response?.data is Map) {
+        final msg = e.response?.data['message'] ?? 'Gagal memperbarui akses lembur';
+        throw Exception(msg);
+      }
+      throw Exception('Gagal memperbarui akses lembur: $e');
+    }
+  }
+
   static Future<Map<String, dynamic>> generatePola({
     required int cabangId,
     required int month,

@@ -13,6 +13,11 @@ class AttendanceStatus {
   final int? toleransiTelatMenit;
   final String? jamPulang;
   final String? shift;
+  final bool hasIzinPulang;
+  final String? izinJenis;
+  final String? izinKeterangan;
+  final bool isLiburHariIni;
+  final bool hasAksesLembur;
 
   AttendanceStatus({
     required this.hasCheckedIn,
@@ -27,6 +32,11 @@ class AttendanceStatus {
     this.toleransiTelatMenit,
     this.jamPulang,
     this.shift,
+    this.hasIzinPulang = false,
+    this.izinJenis,
+    this.izinKeterangan,
+    this.isLiburHariIni = false,
+    this.hasAksesLembur = false,
   });
 
   factory AttendanceStatus.fromJson(Map<String, dynamic> json) {
@@ -43,6 +53,11 @@ class AttendanceStatus {
       toleransiTelatMenit: json['toleransi_telat_menit'] != null ? int.tryParse(json['toleransi_telat_menit'].toString()) : null,
       jamPulang: json['jam_pulang'],
       shift: json['shift']?.toString(),
+      hasIzinPulang: json['has_izin_pulang'] == true,
+      izinJenis: json['izin_hari_ini']?['jenis']?.toString(),
+      izinKeterangan: json['izin_hari_ini']?['alasan']?.toString(),
+      isLiburHariIni: json['is_libur_hari_ini'] == true,
+      hasAksesLembur: json['has_akses_lembur'] == true,
     );
   }
 }

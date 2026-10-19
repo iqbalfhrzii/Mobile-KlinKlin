@@ -145,6 +145,138 @@ class _HrdJadwalLiburScreenState extends State<HrdJadwalLiburScreen> {
     }
   }
 
+  Future<void> _handleToggleLembur(int karyawanId, String dateStr) async {
+    try {
+      final res = await HrdJadwalLiburService.toggleLembur(
+        karyawanId: karyawanId,
+        tanggal: dateStr,
+      );
+
+      if (mounted) {
+        final msg = res['message'] ?? 'Akses lembur berhasil diperbarui';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: const Color(0xFF7C3AED),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        _fetchData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengubah akses lembur: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showCleanerLiburActionSheet({
+    required int karyawanId,
+    required String nama,
+    required String tanggal,
+    required bool isLembur,
+  }) async {
+    String formattedDate = tanggal;
+    try {
+      final dt = DateTime.parse(tanggal);
+      const dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+      final dayName = dayNames[dt.weekday - 1];
+      formattedDate = '$dayName, ${dt.day} ${_monthName(dt.month)} ${dt.year}';
+    } catch (_) {}
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                nama,
+                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                'Jadwal Libur: $formattedDate',
+                style: GoogleFonts.inter(fontSize: 12.5, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3E8FF),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.bolt_rounded, color: Color(0xFF7C3AED)),
+                ),
+                title: Text(
+                  isLembur ? 'Cabut Akses Lembur' : 'Beri Akses Lembur',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                subtitle: Text(
+                  isLembur
+                      ? 'Nonaktifkan hak absen lembur cleaner di hari ini'
+                      : 'Izinkan cleaner tetap bisa masuk & absen lembur di hari libur',
+                  style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey.shade600),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _handleToggleLembur(karyawanId, tanggal);
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.delete_outline_rounded, color: Colors.red.shade600),
+                ),
+                title: Text(
+                  'Hapus Jadwal Libur',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.red.shade700),
+                ),
+                subtitle: Text(
+                  'Hapus hari libur ini agar menjadi hari kerja biasa',
+                  style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey.shade600),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _confirmDeleteLibur(karyawanId: karyawanId, nama: nama, tanggal: tanggal);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _confirmDeleteLibur({
     required int karyawanId,
     required String nama,
@@ -948,13 +1080,18 @@ class _HrdJadwalLiburScreenState extends State<HrdJadwalLiburScreen> {
                   final type = item['type']?.toString() ?? 'libur_biasa';
                   final isCuti = type == 'cuti';
                   final isTukar = type == 'tukar_libur';
+                  final bool isLembur = item['is_lembur'] == true;
 
                   Color badgeColor = const Color(0xFF2563EB);
                   Color badgeBg = const Color(0xFFEFF6FF);
                   Color badgeBorder = const Color(0xFFBFDBFE);
-                  String badgeText = 'Libur Biasa';
+                  String badgeText = isLembur ? '⚡ Lembur' : 'Libur Biasa';
 
-                  if (isTukar) {
+                  if (isLembur) {
+                    badgeColor = const Color(0xFF7C3AED);
+                    badgeBg = const Color(0xFFF3E8FF);
+                    badgeBorder = const Color(0xFFDDD6FE);
+                  } else if (isTukar) {
                     badgeColor = const Color(0xFFD97706);
                     badgeBg = const Color(0xFFFFFBEB);
                     badgeBorder = const Color(0xFFFDE68A);
@@ -1010,7 +1147,41 @@ class _HrdJadwalLiburScreenState extends State<HrdJadwalLiburScreen> {
                             ],
                           ),
                         ),
-                        if (!isCuti)
+                        if (!isCuti) ...[
+                          InkWell(
+                            onTap: () => _handleToggleLembur(kId, selectedDateStr),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: isLembur ? const Color(0xFFF3E8FF) : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isLembur ? const Color(0xFFDDD6FE) : const Color(0xFFCBD5E1),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.bolt_rounded,
+                                    size: 14,
+                                    color: isLembur ? const Color(0xFF7C3AED) : const Color(0xFF64748B),
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    isLembur ? 'Lembur On' : 'Beri Lembur',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: isLembur ? const Color(0xFF7C3AED) : const Color(0xFF475569),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
                           InkWell(
                             onTap: () => _confirmDeleteLibur(
                               karyawanId: kId,
@@ -1035,6 +1206,7 @@ class _HrdJadwalLiburScreenState extends State<HrdJadwalLiburScreen> {
                               ),
                             ),
                           ),
+                        ],
                       ],
                     ),
                   );
@@ -1199,34 +1371,38 @@ class _HrdJadwalLiburScreenState extends State<HrdJadwalLiburScreen> {
                           final type = (dItem['type'] ?? 'libur_biasa').toString();
                           final isCuti = type == 'cuti';
                           final isTukar = type == 'tukar_libur';
+                          final bool isLembur = dItem['is_lembur'] == true;
 
-                          Color chipColor = const Color(0xFF2563EB);
-                          Color chipBg = const Color(0xFFEFF6FF);
-                          Color chipBorder = const Color(0xFFBFDBFE);
+                          Color chipColor = isLembur ? const Color(0xFF7C3AED) : const Color(0xFF2563EB);
+                          Color chipBg = isLembur ? const Color(0xFFF3E8FF) : const Color(0xFFEFF6FF);
+                          Color chipBorder = isLembur ? const Color(0xFFDDD6FE) : const Color(0xFFBFDBFE);
 
-                          if (isTukar) {
-                            chipColor = const Color(0xFFD97706);
-                            chipBg = const Color(0xFFFFFBEB);
-                            chipBorder = const Color(0xFFFDE68A);
-                          } else if (isCuti) {
-                            chipColor = const Color(0xFF059669);
-                            chipBg = const Color(0xFFECFDF5);
-                            chipBorder = const Color(0xFFA7F3D0);
+                          if (!isLembur) {
+                            if (isTukar) {
+                              chipColor = const Color(0xFFD97706);
+                              chipBg = const Color(0xFFFFFBEB);
+                              chipBorder = const Color(0xFFFDE68A);
+                            } else if (isCuti) {
+                              chipColor = const Color(0xFF059669);
+                              chipBg = const Color(0xFFECFDF5);
+                              chipBorder = const Color(0xFFA7F3D0);
+                            }
                           }
 
                           String formattedChip = dateStr;
                           try {
                             final parsed = DateTime.parse(dateStr);
-                            formattedChip = '${parsed.day} ${_monthName(parsed.month).substring(0, 3)}';
+                            formattedChip = '${parsed.day} ${_monthName(parsed.month).substring(0, 3)}${isLembur ? " ⚡" : ""}';
                           } catch (_) {}
 
                           return InkWell(
                             onTap: isCuti
                                 ? null
-                                : () => _confirmDeleteLibur(
+                                : () => _showCleanerLiburActionSheet(
                                       karyawanId: kId,
                                       nama: nama,
                                       tanggal: dateStr,
+                                      isLembur: isLembur,
                                     ),
                             borderRadius: BorderRadius.circular(8),
                             child: Container(
@@ -1245,7 +1421,7 @@ class _HrdJadwalLiburScreenState extends State<HrdJadwalLiburScreen> {
                                   ),
                                   if (!isCuti) ...[
                                     const SizedBox(width: 4),
-                                    Icon(Icons.close_rounded, size: 12, color: chipColor),
+                                    Icon(Icons.more_horiz_rounded, size: 13, color: chipColor),
                                   ],
                                 ],
                               ),

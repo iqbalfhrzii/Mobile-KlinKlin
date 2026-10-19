@@ -944,6 +944,9 @@ class _OperasionalSimScreenState extends State<OperasionalSimScreen> {
         final jenisSim = item['jenis_sim'] ?? 'SIM';
         final nomorSim = item['nomor_sim'] ?? '-';
 
+        final fotoPath = (item['foto_sim'] ?? item['file_sim'] ?? item['foto'])?.toString();
+        final hasFoto = fotoPath != null && fotoPath.trim().isNotEmpty;
+
         final expired = _isExpired(berlakuRaw);
         final expiringSoon = _isExpiringSoon(berlakuRaw);
 
@@ -1109,6 +1112,103 @@ class _OperasionalSimScreenState extends State<OperasionalSimScreen> {
                                 ],
                               ),
                             ),
+
+                            // Preview Foto SIM on front card
+                            if (hasFoto) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: InkWell(
+                                        onTap: () {
+                                          FileAttachmentPreview.showPreview(
+                                            context,
+                                            filePath: fotoPath,
+                                            title: 'Foto SIM - $namaKaryawan',
+                                          );
+                                        },
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            Image.network(
+                                              FileAttachmentPreview.getFullUrl(fotoPath),
+                                              width: 70,
+                                              height: 52,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) => Container(
+                                                width: 70,
+                                                height: 52,
+                                                color: Colors.grey.shade200,
+                                                child: const Icon(Icons.broken_image_rounded, size: 24, color: Colors.grey),
+                                              ),
+                                              loadingBuilder: (context, child, loadingProgress) {
+                                                if (loadingProgress == null) return child;
+                                                return Container(
+                                                  width: 70,
+                                                  height: 52,
+                                                  color: Colors.grey.shade100,
+                                                  child: const Center(
+                                                    child: SizedBox(
+                                                      width: 16,
+                                                      height: 16,
+                                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                            Container(
+                                              width: 70,
+                                              height: 52,
+                                              color: Colors.black.withValues(alpha: 0.15),
+                                              child: const Icon(Icons.zoom_in_rounded, color: Colors.white, size: 20),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Foto / Berkas SIM',
+                                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Ketuk untuk memperbesar foto',
+                                            style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.download_rounded, color: Color(0xFF2563EB), size: 22),
+                                      tooltip: 'Unduh Berkas SIM',
+                                      onPressed: () {
+                                        final fullUrl = FileAttachmentPreview.getFullUrl(fotoPath);
+                                        FileAttachmentPreview.downloadAndSaveFile(
+                                          context: context,
+                                          fileUrl: fullUrl,
+                                          fileName: 'SIM_${namaKaryawan.replaceAll(' ', '_')}_$nomorSim.jpg',
+                                          title: 'Foto SIM $namaKaryawan',
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -1124,6 +1224,42 @@ class _OperasionalSimScreenState extends State<OperasionalSimScreen> {
                   child: Row(
                     children: [
                       const Spacer(),
+
+                      // Download Button (Labelled Pill)
+                      if (hasFoto) ...[
+                        InkWell(
+                          onTap: () {
+                            final fullUrl = FileAttachmentPreview.getFullUrl(fotoPath);
+                            FileAttachmentPreview.downloadAndSaveFile(
+                              context: context,
+                              fileUrl: fullUrl,
+                              fileName: 'SIM_${namaKaryawan.replaceAll(' ', '_')}_$nomorSim.jpg',
+                              title: 'Foto SIM $namaKaryawan',
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.download_rounded, size: 14, color: Color(0xFF2563EB)),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'Unduh Foto',
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF2563EB)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
 
                       // Edit Button (Labelled Pill)
                       InkWell(
