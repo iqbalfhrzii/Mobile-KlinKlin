@@ -395,16 +395,19 @@ class OrderPayment {
     return OrderPayment(
       id: json['id'] != null ? int.parse(json['id'].toString()) : 0,
       metodePembayaran: () {
+        final rawLabel = (json['metode_label'] ?? '').toString().trim();
+        if (rawLabel.isNotEmpty && rawLabel != '-') return rawLabel;
+
         final rawMetode = (json['metode_pembayaran'] ?? '-').toString();
         final catatan = (json['catatan_pembayaran'] ?? '').toString();
         final s = rawMetode.toLowerCase().trim();
         final c = catatan.toLowerCase();
 
-        if (s == 'transfer_bca' || (s == 'transfer' && c.contains('bca'))) {
-          return 'Transfer BCA';
+        if (s == 'transfer_bca' || s == 'bca' || (s == 'transfer' && c.contains('bca'))) {
+          return 'BCA';
         }
-        if (s == 'transfer_mandiri' || (s == 'transfer' && c.contains('mandiri'))) {
-          return 'Transfer Mandiri';
+        if (s == 'transfer_mandiri' || s == 'mandiri' || (s == 'transfer' && c.contains('mandiri'))) {
+          return 'Mandiri';
         }
         if (s == 'qris') return 'QRIS';
         if (s == 'cash' || s == 'tunai') return 'Cash';
@@ -899,16 +902,19 @@ class OrderModel {
       subtotal: computedTotal > 0 ? computedTotal : (orderJson['subtotal'] != null ? (double.tryParse(orderJson['subtotal'].toString())?.toInt() ?? 0) : 0),
       paymentMethod: () {
         final p = orderJson['pembayaran'] as Map<String, dynamic>?;
+        final rawLabel = (p?['metode_label'] ?? orderJson['metode_label'] ?? json['metode_label'] ?? '').toString().trim();
+        if (rawLabel.isNotEmpty && rawLabel != '-') return rawLabel;
+
         final rawMetode = (p?['metode_pembayaran'] ?? orderJson['metode_pembayaran'] ?? json['metode_pembayaran'] ?? '-').toString();
         final catatan = (p?['catatan_pembayaran'] ?? orderJson['catatan_pembayaran'] ?? json['catatan_pembayaran'] ?? '').toString();
         final s = rawMetode.toLowerCase().trim();
         final c = catatan.toLowerCase();
 
-        if (s == 'transfer_bca' || (s == 'transfer' && c.contains('bca'))) {
-          return 'Transfer BCA';
+        if (s == 'transfer_bca' || s == 'bca' || (s == 'transfer' && c.contains('bca'))) {
+          return 'BCA';
         }
-        if (s == 'transfer_mandiri' || (s == 'transfer' && c.contains('mandiri'))) {
-          return 'Transfer Mandiri';
+        if (s == 'transfer_mandiri' || s == 'mandiri' || (s == 'transfer' && c.contains('mandiri'))) {
+          return 'Mandiri';
         }
         if (s == 'qris') return 'QRIS';
         if (s == 'cash' || s == 'tunai') return 'Cash';
