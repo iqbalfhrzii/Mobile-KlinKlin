@@ -36,10 +36,42 @@ class PdfInvoiceService {
     }
 
     // 2. Format values
-    final branchName = (order.customer.area.isNotEmpty
-            ? order.customer.area
-            : 'SURABAYA')
-        .toUpperCase();
+    final rawBranch = order.cabangNama.isNotEmpty
+        ? order.cabangNama
+        : (order.customer.area.isNotEmpty ? order.customer.area : 'SURABAYA');
+    final branchName = rawBranch.toUpperCase();
+
+    String branchAddress = order.cabangAlamat.trim();
+    String branchPhone = order.cabangNoTelp.trim();
+
+    if (branchAddress.isEmpty) {
+      final nameUpper = branchName.toUpperCase();
+      if (nameUpper.contains('GRESIK')) {
+        branchAddress = 'Jl. Mirah No.26, Suci, Kec. Manyar, Kabupaten Gresik, Jawa Timur 61151';
+      } else if (nameUpper.contains('MALANG')) {
+        branchAddress = 'Jl. Kenanga Indah Gg. 1 No.21a, Jatimulyo, Kec. Lowokwaru, Kota Malang, Jawa Timur 65141';
+      } else if (nameUpper.contains('GIANYAR')) {
+        branchAddress = 'Perum Grahasari, Jl. Mulawarman No.Blok B2, Abianbase, Gianyar, Gianyar Regency, Bali 80515';
+      } else if (nameUpper.contains('KEDIRI')) {
+        branchAddress = 'Grand View Bence No.12A, Pakunden, Kec. Pesantren, Kota Kediri, Jawa Timur 64131';
+      } else if (nameUpper.contains('BOJONEGORO')) {
+        branchAddress = 'Gg. Buntu IV No.23, Pohagung, Campurejo, Kec. Bojonegoro, Kabupaten Bojonegoro, Jawa Timur 62119';
+      } else if (nameUpper.contains('SAMARINDA')) {
+        branchAddress = 'Jalan Merdeka 5 No.48 RT.91 Kelurahan Sungai Pinang Dalam, Pelita, Kec. Sungai Pinang, Kota Samarinda, Kalimantan Timur 75242';
+      } else if (nameUpper.contains('BALIKPAPAN')) {
+        branchAddress = 'KO Bangun Reksa Asri A/41 A/41, RT.018/RW.00, Kelurahan Graha Indah, Kec. Balikpapan Utara, Kota Balikpapan, Kalimantan Timur 76136';
+      } else if (nameUpper.contains('DENPASAR')) {
+        branchAddress = 'Jl. Dewata Gg. VII No.9, Sidakarya, Denpasar Selatan, Kota Denpasar, Bali 80224';
+      } else if (nameUpper.contains('TABANAN')) {
+        branchAddress = 'Jl. Mawar Jl. Beji, Delod Peken, Kec. Tabanan, Kabupaten Tabanan, Bali 82121, Indonesia';
+      } else {
+        branchAddress = 'Jl. Mojo Kidul No.23, Mojo, Kec. Gubeng, Surabaya, Jawa Timur 60285';
+      }
+    }
+
+    if (branchPhone.isEmpty) {
+      branchPhone = '08977475656';
+    }
 
     final invoiceNumber = order.nomorPesanan.isNotEmpty
         ? order.nomorPesanan
@@ -174,7 +206,7 @@ class PdfInvoiceService {
                           ),
                           pw.SizedBox(height: 6),
                           pw.Text(
-                            'Jl. Mojo Kidul No.23, Mojo, Kec. Gubeng, Surabaya, Jawa Timur 60285',
+                            branchAddress,
                             style: pw.TextStyle(
                               fontSize: 8.5,
                               color: lightBlueText,
@@ -183,7 +215,7 @@ class PdfInvoiceService {
                           ),
                           pw.SizedBox(height: 2),
                           pw.Text(
-                            'Telp: 08977475656  |  Website: www.klinklin.co.id',
+                            'Telp: $branchPhone  |  Website: www.klinklin.co.id',
                             style: pw.TextStyle(
                               fontSize: 8.5,
                               fontWeight: pw.FontWeight.bold,

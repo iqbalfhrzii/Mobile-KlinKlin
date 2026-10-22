@@ -437,6 +437,8 @@ class OrderModel {
     this.nomorPesanan = '',
     required this.cabangId,
     this.cabangNama = '',
+    this.cabangAlamat = '',
+    this.cabangNoTelp = '',
     required this.customer,
     this.chatDari = ChatSource.organik,
     this.tipeCustomer = CustomerType.baru,
@@ -474,6 +476,8 @@ class OrderModel {
   String nomorPesanan;
   String cabangId;
   String cabangNama;
+  String cabangAlamat;
+  String cabangNoTelp;
   OrderCustomer customer;
   ChatSource chatDari;
   CustomerType tipeCustomer;
@@ -883,6 +887,8 @@ class OrderModel {
       nomorPesanan: orderJson['nomor_pesanan']?.toString() ?? orderJson['id']?.toString() ?? '',
       cabangId: orderJson['cabang_id']?.toString() ?? json['cabang_id']?.toString() ?? '',
       cabangNama: (cabangData is Map ? (cabangData['nama_cabang'] ?? cabangData['nama'])?.toString() : null) ?? orderJson['cabang_nama']?.toString() ?? json['cabang_nama']?.toString() ?? '',
+      cabangAlamat: (cabangData is Map ? cabangData['alamat']?.toString() : null) ?? orderJson['cabang_alamat']?.toString() ?? json['cabang_alamat']?.toString() ?? '',
+      cabangNoTelp: (cabangData is Map ? (cabangData['no_telp'] ?? cabangData['no_wa'])?.toString() : null) ?? orderJson['cabang_no_telp']?.toString() ?? json['cabang_no_telp']?.toString() ?? '',
       customer: OrderCustomer.fromJson(customerData, orderJson),
       chatDari: _parseChatSource(orderJson['chat_dari'] ?? json['chat_dari']),
       tipeCustomer: _parseCustomerType(orderJson['tipe_customer'] ?? json['tipe_customer']),
