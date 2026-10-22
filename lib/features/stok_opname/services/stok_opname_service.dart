@@ -1,7 +1,30 @@
+import 'package:dio/dio.dart' as dio;
 import '../../../core/api/api_client.dart';
 
 class StokOpnameService {
   static final _dio = ApiClient.instance;
+
+  static String _extractDioError(dynamic e) {
+    if (e is dio.DioException && e.response?.data != null) {
+      final resData = e.response!.data;
+      if (resData is Map) {
+        if (resData['message'] != null && resData['message'].toString().isNotEmpty) {
+          return resData['message'].toString();
+        }
+        if (resData['errors'] != null && resData['errors'] is Map) {
+          final errorsMap = resData['errors'] as Map;
+          if (errorsMap.isNotEmpty) {
+            final firstVal = errorsMap.values.first;
+            if (firstVal is List && firstVal.isNotEmpty) {
+              return firstVal.first.toString();
+            }
+            return firstVal.toString();
+          }
+        }
+      }
+    }
+    return e.toString();
+  }
 
   static Future<List<dynamic>> getSessions({int? cabangId}) async {
     try {
@@ -92,7 +115,7 @@ class StokOpnameService {
       }
       return {'success': false, 'message': response.data['message'] ?? 'Gagal menyimpan item'};
     } catch (e) {
-      return {'success': false, 'message': 'Terjadi kesalahan: $e'};
+      return {'success': false, 'message': _extractDioError(e)};
     }
   }
 
@@ -104,7 +127,7 @@ class StokOpnameService {
       }
       return {'success': false, 'message': response.data['message'] ?? 'Gagal menyimpan opname BHP'};
     } catch (e) {
-      return {'success': false, 'message': 'Terjadi kesalahan: $e'};
+      return {'success': false, 'message': _extractDioError(e)};
     }
   }
 

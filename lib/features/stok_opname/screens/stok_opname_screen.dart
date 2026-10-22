@@ -796,6 +796,34 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
                                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sesi opname belum aktif')));
                                       return;
                                     }
+                                    if (!isBhpMode && detectedItem == null) {
+                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Silakan scan atau masukkan Kode QR yang valid terlebih dahulu'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    if (isBhpMode && activeBhp == null) {
+                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Pilih atau tentukan item BHP yang ingin diopname'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    if (selectedFoto == null && (currentFotoUrl == null || currentFotoUrl!.isEmpty)) {
+                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Wajib mengambil atau mengunggah foto aktual item'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      return;
+                                    }
+
                                     setStateModal(() => isSaving = true);
                                     try {
                                       final formData = dio.FormData.fromMap({
@@ -815,14 +843,32 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
                                           ),
                                       });
 
-                                      if (isBhpMode) {
-                                        await StokOpnameService.submitBhpOpname(formData);
-                                      } else {
-                                        await StokOpnameService.submitItem(formData);
-                                      }
+                                      final res = isBhpMode
+                                          ? await StokOpnameService.submitBhpOpname(formData)
+                                          : await StokOpnameService.submitItem(formData);
 
-                                      if (ctx.mounted) Navigator.pop(ctx);
-                                      _fetchSession();
+                                      if (res['success'] == true) {
+                                        if (ctx.mounted) Navigator.pop(ctx);
+                                        _fetchSession();
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(res['message'] ?? 'Berhasil menyimpan data opname'),
+                                              backgroundColor: Colors.green.shade700,
+                                            ),
+                                          );
+                                        }
+                                      } else {
+                                        setStateModal(() => isSaving = false);
+                                        if (ctx.mounted) {
+                                          ScaffoldMessenger.of(ctx).showSnackBar(
+                                            SnackBar(
+                                              content: Text(res['message'] ?? 'Gagal menyimpan data opname'),
+                                              backgroundColor: Colors.red.shade700,
+                                            ),
+                                          );
+                                        }
+                                      }
                                     } catch (e) {
                                       setStateModal(() => isSaving = false);
                                       if (ctx.mounted) {
