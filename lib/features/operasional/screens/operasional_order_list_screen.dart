@@ -65,7 +65,7 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
     try {
       // In Operasional, we want to fetch all branches if they are a superadmin.
       // fetchOrders by default fetches all if no cabangId is specified and role isn't CS.
-      final data = await _orderService.fetchOrders();
+      final data = await _orderService.fetchOrders(perPage: 100);
       setState(() {
         _orders = data;
       });
@@ -501,23 +501,38 @@ class _OperasionalOrderListScreenState extends State<OperasionalOrderListScreen>
   Widget _buildTable() {
     final data = _filteredOrders;
     if (data.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      return RefreshIndicator(
+        onRefresh: _fetchData,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            Icon(Icons.search_off_rounded, size: 64, color: Colors.grey.shade400),
-            const SizedBox(height: 16),
-            Text('Tidak ada pesanan ditemukan.', style: GoogleFonts.inter(fontSize: 16, color: Colors.grey.shade600)),
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.45,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.search_off_rounded, size: 64, color: Colors.grey.shade400),
+                    const SizedBox(height: 16),
+                    Text('Tidak ada pesanan ditemukan.', style: GoogleFonts.inter(fontSize: 16, color: Colors.grey.shade600)),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: data.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) => _buildOrderCard(data[index]),
+    return RefreshIndicator(
+      onRefresh: _fetchData,
+      child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        itemCount: data.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, index) => _buildOrderCard(data[index]),
+      ),
     );
   }
 

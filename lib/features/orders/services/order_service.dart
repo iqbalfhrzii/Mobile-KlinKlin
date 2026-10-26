@@ -31,7 +31,7 @@ class OrderService {
       final prefs = await SharedPreferences.getInstance();
       final userCabangId = prefs.getInt('user_cabang_id');
       final role = (prefs.getString('user_role') ?? '').toLowerCase();
-      final isGlobal = role.contains('superadmin') || role.contains('ceo') || role.contains('owner') || role.contains('marketing');
+      final isGlobal = role.contains('superadmin') || role.contains('ceo') || role.contains('owner') || role.contains('marketing') || role.contains('operasional');
 
       if (cabangId == null && userCabangId != null && userCabangId > 0 && !isGlobal) {
         cabangId = userCabangId;
