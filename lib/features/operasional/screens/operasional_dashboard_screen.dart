@@ -264,7 +264,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                     children: [
                       Expanded(
                         child: _buildSummaryCard(
-                          'OMZET REAL (TAGIHAN)',
+                          'OMZET REAL',
                           _formatCurrency(omzetIniReal),
                           'Inc. PPN',
                           valueColor: const Color(0xFF059669),
@@ -277,7 +277,7 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                       const SizedBox(width: 8),
                       Expanded(
                         child: _buildSummaryCard(
-                          'OMZET MURNI (DPP)',
+                          'OMZET MURNI',
                           _formatCurrency(omzetIniMurni),
                           'Tanpa PPN',
                           valueColor: AppColors.primary,
@@ -522,15 +522,18 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
           Row(
             children: [
               Expanded(
-                child: Text(
-                  value,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: valueColor,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: valueColor,
+                    ),
+                    maxLines: 1,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (subValue != null) ...[
@@ -691,17 +694,19 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 4,
+                          runSpacing: 2,
                           children: [
                             Text(
-                              'Omzet Real (Tagihan)',
+                              'Omzet Real',
                               style: GoogleFonts.inter(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white.withValues(alpha: 0.85),
                               ),
                             ),
-                            const SizedBox(width: 6),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                               decoration: BoxDecoration(
@@ -720,12 +725,16 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                           ],
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          _formatCurrency(totalIniReal),
-                          style: GoogleFonts.inter(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            _formatCurrency(totalIniReal),
+                            style: GoogleFonts.inter(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ],
@@ -736,17 +745,19 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 4,
+                          runSpacing: 2,
                           children: [
                             Text(
-                              'Omzet Murni (DPP)',
+                              'Omzet Murni',
                               style: GoogleFonts.inter(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white.withValues(alpha: 0.85),
                               ),
                             ),
-                            const SizedBox(width: 6),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                               decoration: BoxDecoration(
@@ -765,12 +776,16 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                           ],
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          _formatCurrency(totalIniMurni),
-                          style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white.withValues(alpha: 0.95),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            _formatCurrency(totalIniMurni),
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white.withValues(alpha: 0.95),
+                            ),
                           ),
                         ),
                       ],
@@ -779,9 +794,13 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                 ],
               ),
               const SizedBox(height: 8),
-              Text(
-                'Periode Lalu: ${_formatCurrency(totalLaluReal)} (DPP: ${_formatCurrency(totalLaluMurni)})',
-                style: GoogleFonts.inter(fontSize: 11, color: Colors.white70),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Periode Lalu: ${_formatCurrency(totalLaluReal)} (DPP: ${_formatCurrency(totalLaluMurni)})',
+                  style: GoogleFonts.inter(fontSize: 11, color: Colors.white70),
+                ),
               ),
               const SizedBox(height: 16),
               Container(
@@ -851,31 +870,38 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              Icons.storefront_rounded,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
                           ),
-                          child: Icon(
-                            Icons.storefront_rounded,
-                            color: AppColors.primary,
-                            size: 20,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              item['nama_cabang']?.toString().toUpperCase() ?? '',
+                              style: GoogleFonts.inter(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textDark,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          item['nama_cabang']?.toString().toUpperCase() ?? '',
-                          style: GoogleFonts.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textDark,
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -921,17 +947,18 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 4,
                             children: [
                               Text(
-                                'Omzet Real (Tagihan)',
+                                'Omzet Real',
                                 style: GoogleFonts.inter(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                   color: AppColors.textMuted,
                                 ),
                               ),
-                              const SizedBox(width: 4),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                                 decoration: BoxDecoration(
@@ -950,26 +977,35 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                             ],
                           ),
                           const SizedBox(height: 2),
-                          Text(
-                            _formatCurrency(pIniReal),
-                            style: GoogleFonts.inter(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF059669),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              _formatCurrency(pIniReal),
+                              style: GoogleFonts.inter(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF059669),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 2),
-                          Text(
-                            'DPP: ${_formatCurrency(pIniMurni)}',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primary,
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'DPP: ${_formatCurrency(pIniMurni)}',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
@@ -981,20 +1017,28 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          _formatCurrency(pLaluReal),
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textDark,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            _formatCurrency(pLaluReal),
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textDark,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          'DPP: ${_formatCurrency(pLaluMurni)}',
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            color: AppColors.textMuted,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            'DPP: ${_formatCurrency(pLaluMurni)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: AppColors.textMuted,
+                            ),
                           ),
                         ),
                       ],
@@ -1044,12 +1088,15 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
           ),
         ),
         const SizedBox(height: 2),
-        Text(
-          value,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ],
@@ -1065,12 +1112,16 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
           style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
         ),
         const SizedBox(height: 2),
-        Text(
-          value,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: color,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
         ),
       ],
@@ -1588,12 +1639,17 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                         ],
                       ),
                     ),
-                    Text(
-                      _formatCurrency(totalOmzet),
-                      style: GoogleFonts.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
+                    const SizedBox(width: 8),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        _formatCurrency(totalOmzet),
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ),
                   ],
@@ -1791,14 +1847,15 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
     Color color,
   ) {
     Color badgeColor;
-    if (rank == 1)
+    if (rank == 1) {
       badgeColor = const Color(0xFFEAA100); // Gold
-    else if (rank == 2)
+    } else if (rank == 2) {
       badgeColor = const Color(0xFF9E9E9E); // Silver
-    else if (rank == 3)
+    } else if (rank == 3) {
       badgeColor = const Color(0xFFCD7F32); // Bronze
-    else
+    } else {
       badgeColor = Colors.grey.shade300;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1850,12 +1907,17 @@ class _OperasionalDashboardScreenState extends State<OperasionalDashboardScreen>
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Text(
-                value,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: color,
+              const SizedBox(width: 8),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  value,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
                 ),
               ),
             ],
