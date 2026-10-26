@@ -2595,10 +2595,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
                   color: bgColor,
                   borderRadius: BorderRadius.circular(6),
@@ -2608,11 +2607,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(icon, size: 13, color: accentColor),
-                    const SizedBox(width: 5),
+                    const SizedBox(width: 4),
                     Text(
                       title,
                       style: GoogleFonts.inter(
-                        fontSize: 11,
+                        fontSize: 10.5,
                         fontWeight: FontWeight.bold,
                         color: accentColor,
                       ),
@@ -2620,13 +2619,20 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   ],
                 ),
               ),
+              const SizedBox(width: 6),
               if (timestamp != '-')
-                Text(
-                  timestamp,
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: const Color(0xFF64748B),
-                    fontWeight: FontWeight.w500,
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      timestamp,
+                      style: GoogleFonts.inter(
+                        fontSize: 10.5,
+                        color: const Color(0xFF64748B),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                 ),
             ],
