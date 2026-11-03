@@ -237,7 +237,7 @@ class OrderCustomer {
 
     return OrderCustomer(
       id: cMap['id']?.toString() ?? '',
-      name: cMap['nama_pelanggan']?.toString() ?? '-',
+      name: (cMap['nama_pelanggan']?.toString() ?? '-').replaceAll(RegExp(r'\s+'), ' ').trim(),
       phone: cMap['no_wa']?.toString() ?? '-',
       address: cMap['alamat']?.toString() ?? '-',
       area: cabang['nama_cabang']?.toString() ?? 'Cabang',
@@ -348,7 +348,7 @@ class OrderCleaner {
     return OrderCleaner(
       id: cleaner['id']?.toString() ?? json['id']?.toString() ?? '',
       pesananCleanerId: json['id']?.toString() ?? '',
-      name: cleaner['nama']?.toString() ?? '-',
+      name: (cleaner['nama']?.toString() ?? '-').replaceAll(RegExp(r'\s+'), ' ').trim(),
       rating: cleaner['rating'] != null ? double.tryParse(cleaner['rating'].toString()) ?? 0.0 : 0.0,
       statusPengerjaan: _parseCleanerWorkStatus(json['status_pengerjaan']?.toString()),
       bonuses: parsedBonuses,
