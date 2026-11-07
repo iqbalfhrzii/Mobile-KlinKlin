@@ -1400,7 +1400,7 @@ class _HomeScreenState extends State<HomeScreen> {
         icon: Icons.brush_outlined,
         iconColor: const Color(0xFFE11D48),
         bgColor: const Color(0xFFFFE4E6),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPermintaanDesignScreen(department: 'cs'))),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OperasionalPermintaanDesignScreen())),
       ),
       _MenuGridItem(
         title: 'Penawaran',
