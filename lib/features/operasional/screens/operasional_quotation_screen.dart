@@ -1841,7 +1841,72 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                               );
                             }
 
-                            // Belum ACC Operasional -> Tombol terkunci dengan label informatif
+                            // Jika user adalah Operasional / Admin dan status belum di-ACC -> Tampilkan Fast Button Setujui & Tolak
+                            if (_isOperasionalOrAdmin && !isDitolak) {
+                              return Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Fast Button: Setujui
+                                  InkWell(
+                                    onTap: () => _openApprovalDialog(item, 'Disetujui'),
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF16A34A),
+                                        borderRadius: BorderRadius.circular(8),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(0xFF16A34A).withValues(alpha: 0.25),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 1),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.check_rounded, size: 13, color: Colors.white),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Setujui',
+                                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+
+                                  // Fast Button: Tolak
+                                  InkWell(
+                                    onTap: () => _openApprovalDialog(item, 'Ditolak'),
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFEF2F2),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: const Color(0xFFFECACA)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.close_rounded, size: 13, color: Color(0xFFDC2626)),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Tolak',
+                                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFDC2626)),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }
+
+                            // Belum ACC Operasional (Role Non-Operasional / CS) -> Tombol terkunci dengan label informatif
                             return InkWell(
                               onTap: () {
                                 ScaffoldMessenger.of(context).showSnackBar(
