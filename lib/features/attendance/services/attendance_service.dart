@@ -128,6 +128,19 @@ class AttendanceService {
               izinJenis = response.data['izin_hari_ini']['jenis']?.toString();
               izinKeterangan = response.data['izin_hari_ini']['alasan']?.toString();
             }
+
+            // Gunakan flag eksplisit dari backend jika tersedia
+            if (response.data['has_checked_in_today'] == true) {
+              hasCheckedIn = true;
+              checkInTime = response.data['today_check_in_time']?.toString();
+              if (response.data['today_shift'] != null) {
+                todayShift = response.data['today_shift'].toString();
+              }
+            }
+            if (response.data['has_checked_out_today'] == true) {
+              hasCheckedOut = true;
+              checkOutTime = response.data['today_check_out_time']?.toString();
+            }
           }
 
           final List data = (response.data is Map && response.data['data'] is List)

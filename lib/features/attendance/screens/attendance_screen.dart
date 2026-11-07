@@ -110,7 +110,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             branchName: savedBranch,
             branchLat: null,
             branchLng: null,
-            maxRadiusMeter: 50.0,
+            maxRadiusMeter: 100.0,
             jamMasuk: '08:00',
             jamPulang: '17:00',
             toleransiTelatMenit: 15,
@@ -484,24 +484,34 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       return await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 15),
+          timeLimit: Duration(seconds: 10),
         ),
       );
     } catch (_) {
-      // 2. Fallback 1: Gunakan posisi terakhir yang tercatat di perangkat (instan & handal saat GPS lambat mengunci satelit)
-      final lastPos = await Geolocator.getLastKnownPosition();
-      if (lastPos != null) return lastPos;
-
-      // 3. Fallback 2: Coba sekali lagi dengan akurasi medium (Wi-Fi / Cell tower)
+      // 2. Fallback 1: Coba dengan akurasi medium (Wi-Fi / Cell tower) - instan mengunci lokasi indoor
       try {
         return await Geolocator.getCurrentPosition(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.medium,
-            timeLimit: Duration(seconds: 8),
+            timeLimit: Duration(seconds: 6),
           ),
         );
       } catch (_) {
-        return null;
+        // 3. Fallback 2: Gunakan posisi terakhir yang tercatat di perangkat
+        final lastPos = await Geolocator.getLastKnownPosition();
+        if (lastPos != null) return lastPos;
+
+        // 4. Fallback 3: Coba dengan akurasi low
+        try {
+          return await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.low,
+              timeLimit: Duration(seconds: 5),
+            ),
+          );
+        } catch (_) {
+          return null;
+        }
       }
     }
   }
@@ -542,8 +552,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           position.latitude, position.longitude, 
           _status!.branchLat!, _status!.branchLng!
         );
-        final maxRadius = _status?.maxRadiusMeter ?? 50.0;
-        if (distance > maxRadius) {
+        final maxRadius = _status?.maxRadiusMeter ?? 100.0;
+        final accuracy = position.accuracy;
+        // Berikan buffer toleransi akurasi GPS indoor (jitter) hingga setengah nilai akurasi
+        final effectiveDistance = distance - (accuracy * 0.5);
+
+        if (distance > maxRadius && effectiveDistance > maxRadius) {
           throw Exception('Anda berada di luar radius kantor (${distance.toStringAsFixed(1)}m / ${maxRadius.toStringAsFixed(0)}m).');
         }
       }
@@ -1670,8 +1684,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       _currentPosition!.latitude, _currentPosition!.longitude,
       _status!.branchLat!, _status!.branchLng!
     );
-    final maxRadius = _status?.maxRadiusMeter ?? 50.0;
-    final isInside = distance <= maxRadius;
+    final maxRadius = _status?.maxRadiusMeter ?? 100.0;
+    final accuracy = _currentPosition!.accuracy;
+    final effectiveDistance = distance - (accuracy * 0.5);
+    final isInside = distance <= maxRadius || effectiveDistance <= maxRadius;
 
     return InkWell(
       onTap: _fetchLocation,
