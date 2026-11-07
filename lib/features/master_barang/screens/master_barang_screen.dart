@@ -988,9 +988,6 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
       return;
     }
 
-    final baseUrl = ApiClient.baseUrl.replaceAll('/api', '');
-    final url = '$baseUrl/master-barang/print-qr?ids=${ids.join(',')}';
-
     if (singleItem != null) {
       final qrCode = (singleItem['kode_qr'] ?? '').toString();
       final barangName = (singleItem['barang']?['nama_barang'] ?? 'Barang').toString();
@@ -1120,20 +1117,12 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                     const SizedBox(width: 10),
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () async {
-                          final uri = Uri.parse(url);
-                          if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri, mode: LaunchMode.externalApplication);
-                          } else {
-                            if (ctx.mounted) {
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                const SnackBar(content: Text('Tidak dapat membuka halaman cetak PDF')),
-                              );
-                            }
-                          }
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _showPrintOptionsSheet(ids);
                         },
                         icon: const Icon(Icons.print_outlined, size: 16, color: Colors.white),
-                        label: Text('Print PDF', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                        label: Text('Pilih Ukuran & Print', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryMid,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -1150,17 +1139,158 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
         ),
       );
     } else {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Tidak dapat membuka halaman cetak PDF')),
-          );
-        }
-      }
+      _showPrintOptionsSheet(ids);
     }
+  }
+
+  Future<void> _showPrintOptionsSheet(List<int> ids) async {
+    String selectedSize = 'sedang';
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryMid.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.print_outlined, color: AppColors.primaryMid, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Pilih Ukuran Cetak QR', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                        Text('Mencetak ${ids.length} QR Code kolektif', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+                      ],
+                    ),
+                  ),
+                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                ],
+              ),
+              const Divider(height: 20),
+              Text('Pilih Ukuran Label Stiker:', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+              const SizedBox(height: 10),
+              ...[
+                {'val': 'sedang', 'title': 'Sedang (5 × 5 cm)', 'desc': 'Kertas A4 / Stiker Sheet (3 kolom). Standar aset.', 'badge': 'Rekomendasi'},
+                {'val': 'kecil', 'title': 'Kecil (3.5 × 3.5 cm)', 'desc': 'Kertas A4 / Stiker Sheet (5 kolom). Untuk botol chemical & perkakas kecil.'},
+                {'val': 'besar', 'title': 'Besar (7.5 × 7.5 cm)', 'desc': 'Kertas A4 / Stiker Sheet (2 kolom). Untuk kulkas, CCTV, inventaris besar.'},
+                {'val': 'thermal_50x30', 'title': 'Thermal Roll (50 × 30 mm)', 'desc': 'Printer thermal barcode label continuous roll.', 'badge': 'Thermal'},
+              ].map((opt) {
+                final isSelected = selectedSize == opt['val'];
+                return InkWell(
+                  onTap: () => setSheetState(() => selectedSize = opt['val']!),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.primaryMid.withValues(alpha: 0.05) : Colors.white,
+                      border: Border.all(color: isSelected ? AppColors.primaryMid : const Color(0xFFE2E8F0), width: isSelected ? 1.5 : 1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                          color: isSelected ? AppColors.primaryMid : Colors.grey.shade400,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(opt['title']!, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                                  if (opt['badge'] != null) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: opt['badge'] == 'Rekomendasi' ? Colors.green.shade100 : Colors.blue.shade100,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        opt['badge']!,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: opt['badge'] == 'Rekomendasi' ? Colors.green.shade800 : Colors.blue.shade800,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(opt['desc']!, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    final baseUrl = ApiClient.baseUrl.replaceAll('/api', '');
+                    final url = '$baseUrl/master-barang/print-qr?ids=${ids.join(',')}&size=$selectedSize';
+                    final uri = Uri.parse(url);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    } else {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Tidak dapat membuka halaman cetak PDF')),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.print_outlined, size: 18, color: Colors.white),
+                  label: Text('Cetak Sekarang (PDF)', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryMid,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildDetailRow(String label, String value, {Color? badgeColor}) {
