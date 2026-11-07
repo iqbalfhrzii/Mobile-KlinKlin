@@ -14,6 +14,11 @@ import 'ceo_spend_ads_screen.dart';
 import 'ceo_transaksi_besar_screen.dart';
 import '../../hrd/screens/gaji_karyawan/gaji_karyawan_list_screen.dart';
 import '../../hrd/screens/insentif/insentif_cleaner_list_screen.dart';
+import '../../operasional/screens/operasional_data_kecelakaan_screen.dart';
+import '../../operasional/screens/operasional_kesehatan_berkala_screen.dart';
+import '../../operasional/screens/operasional_tanda_terima_apd_screen.dart';
+import '../../operasional/screens/operasional_layanan_kesehatan_screen.dart';
+import '../../operasional/screens/operasional_sim_screen.dart';
 
 class CeoMenuScreen extends StatelessWidget {
   const CeoMenuScreen({super.key});
@@ -203,6 +208,84 @@ class CeoMenuScreen extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => const InsentifCleanerListScreen(showHeader: true),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      _MenuSection(
+        title: 'HSE & Keselamatan Kerja',
+        subtitle: 'K3, kesehatan, APD & sertifikasi',
+        sectionIcon: Icons.health_and_safety_rounded,
+        sectionColor: const Color(0xFFDC2626),
+        items: [
+          _MenuItem(
+            icon: Icons.warning_amber_rounded,
+            title: 'Data Kecelakaan',
+            iconColor: const Color(0xFFDC2626),
+            bgColor: const Color(0xFFFEE2E2),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const OperasionalDataKecelakaanScreen(),
+                ),
+              );
+            },
+          ),
+          _MenuItem(
+            icon: Icons.favorite_rounded,
+            title: 'Kesehatan Berkala',
+            iconColor: const Color(0xFFE11D48),
+            bgColor: const Color(0xFFFFE4E6),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const OperasionalKesehatanBerkalaScreen(),
+                ),
+              );
+            },
+          ),
+          _MenuItem(
+            icon: Icons.shield_rounded,
+            title: 'Tanda Terima APD',
+            iconColor: const Color(0xFF059669),
+            bgColor: const Color(0xFFD1FAE5),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const OperasionalTandaTerimaApdScreen(),
+                ),
+              );
+            },
+          ),
+          _MenuItem(
+            icon: Icons.local_hospital_rounded,
+            title: 'Layanan Kesehatan',
+            iconColor: const Color(0xFF0284C7),
+            bgColor: const Color(0xFFE0F2FE),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const OperasionalLayananKesehatanScreen(),
+                ),
+              );
+            },
+          ),
+          _MenuItem(
+            icon: Icons.badge_rounded,
+            title: 'Surat Izin Mengemudi',
+            iconColor: const Color(0xFF7C3AED),
+            bgColor: const Color(0xFFF3E8FF),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const OperasionalSimScreen(),
                 ),
               );
             },
