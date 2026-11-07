@@ -1145,6 +1145,10 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
 
   Future<void> _showPrintOptionsSheet(List<int> ids) async {
     String selectedSize = 'sedang';
+    bool showBrand = true;
+    bool showName = true;
+    bool showCode = true;
+    bool showBranch = true;
 
     await showModalBottomSheet(
       context: context,
@@ -1152,15 +1156,17 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheetState) => Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.88,
+          ),
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const SizedBox(height: 12),
               Center(
                 child: Container(
                   width: 40,
@@ -1168,126 +1174,237 @@ class _MasterBarangScreenState extends State<MasterBarangScreen> with SingleTick
                   decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
                 ),
               ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryMid.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 12, 0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryMid.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.print_outlined, color: AppColors.primaryMid, size: 20),
                     ),
-                    child: Icon(Icons.print_outlined, color: AppColors.primaryMid, size: 20),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Pilih Ukuran Cetak QR', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                        Text('Mencetak ${ids.length} QR Code kolektif', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
-                      ],
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Pilih Ukuran Cetak QR', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                          Text('Mencetak ${ids.length} QR Code kolektif', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+                        ],
+                      ),
                     ),
-                  ),
-                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
-                ],
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                  ],
+                ),
               ),
-              const Divider(height: 20),
-              Text('Pilih Ukuran Label Stiker:', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-              const SizedBox(height: 10),
-              ...[
-                {'val': 'sedang', 'title': 'Sedang (5 × 5 cm)', 'desc': 'Kertas A4 / Stiker Sheet (3 kolom). Standar aset.', 'badge': 'Rekomendasi'},
-                {'val': 'kecil', 'title': 'Kecil (3.5 × 3.5 cm)', 'desc': 'Kertas A4 / Stiker Sheet (5 kolom). Untuk botol chemical & perkakas kecil.'},
-                {'val': 'besar', 'title': 'Besar (7.5 × 7.5 cm)', 'desc': 'Kertas A4 / Stiker Sheet (2 kolom). Untuk kulkas, CCTV, inventaris besar.'},
-                {'val': 'thermal_50x30', 'title': 'Thermal Roll (50 × 30 mm)', 'desc': 'Printer thermal barcode label continuous roll.', 'badge': 'Thermal'},
-              ].map((opt) {
-                final isSelected = selectedSize == opt['val'];
-                return InkWell(
-                  onTap: () => setSheetState(() => selectedSize = opt['val']!),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: isSelected ? AppColors.primaryMid.withValues(alpha: 0.05) : Colors.white,
-                      border: Border.all(color: isSelected ? AppColors.primaryMid : const Color(0xFFE2E8F0), width: isSelected ? 1.5 : 1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-                          color: isSelected ? AppColors.primaryMid : Colors.grey.shade400,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(opt['title']!, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                                  if (opt['badge'] != null) ...[
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                      decoration: BoxDecoration(
-                                        color: opt['badge'] == 'Rekomendasi' ? Colors.green.shade100 : Colors.blue.shade100,
-                                        borderRadius: BorderRadius.circular(4),
+              const Divider(height: 16),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Pilih Ukuran Label Stiker:', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                      const SizedBox(height: 10),
+                      ...[
+                        {'val': 'sedang', 'title': 'Sedang (5 × 5 cm)', 'desc': 'Kertas A4 / Stiker Sheet (3 kolom). Standar aset.', 'badge': 'Rekomendasi'},
+                        {'val': 'kecil', 'title': 'Kecil (3.5 × 3.5 cm)', 'desc': 'Kertas A4 / Stiker Sheet (5 kolom). Untuk botol chemical & perkakas kecil.'},
+                        {'val': 'besar', 'title': 'Besar (7.5 × 7.5 cm)', 'desc': 'Kertas A4 / Stiker Sheet (2 kolom). Untuk kulkas, CCTV, inventaris besar.'},
+                        {'val': 'thermal_50x30', 'title': 'Thermal Roll (50 × 30 mm)', 'desc': 'Printer thermal barcode label continuous roll.', 'badge': 'Thermal'},
+                        {'val': 'thermal_40x40', 'title': 'Thermal Persegi (40 × 40 mm)', 'desc': 'Printer thermal roll stiker kotak.', 'badge': 'Thermal'},
+                      ].map((opt) {
+                        final isSelected = selectedSize == opt['val'];
+                        return InkWell(
+                          onTap: () => setSheetState(() => selectedSize = opt['val']!),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isSelected ? AppColors.primaryMid.withValues(alpha: 0.05) : Colors.white,
+                              border: Border.all(color: isSelected ? AppColors.primaryMid : const Color(0xFFE2E8F0), width: isSelected ? 1.5 : 1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                                  color: isSelected ? AppColors.primaryMid : Colors.grey.shade400,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(opt['title']!, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                                          if (opt['badge'] != null) ...[
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                              decoration: BoxDecoration(
+                                                color: opt['badge'] == 'Rekomendasi' ? Colors.green.shade100 : Colors.blue.shade100,
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                opt['badge']!,
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: opt['badge'] == 'Rekomendasi' ? Colors.green.shade800 : Colors.blue.shade800,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
-                                      child: Text(
-                                        opt['badge']!,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                          color: opt['badge'] == 'Rekomendasi' ? Colors.green.shade800 : Colors.blue.shade800,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              const SizedBox(height: 2),
-                              Text(opt['desc']!, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                            ],
+                                      const SizedBox(height: 2),
+                                      Text(opt['desc']!, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    Navigator.pop(ctx);
-                    final baseUrl = ApiClient.baseUrl.replaceAll('/api', '');
-                    final url = '$baseUrl/master-barang/print-qr?ids=${ids.join(',')}&size=$selectedSize';
-                    final uri = Uri.parse(url);
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
-                    } else {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Tidak dapat membuka halaman cetak PDF')),
                         );
+                      }),
+                      const SizedBox(height: 12),
+                      const Divider(height: 1),
+                      const SizedBox(height: 12),
+                      Text('Informasi Pada Label:', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildCheckboxTile(
+                              title: 'Header KlinKlin',
+                              value: showBrand,
+                              onTap: () => setSheetState(() => showBrand = !showBrand),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildCheckboxTile(
+                              title: 'Nama Barang',
+                              value: showName,
+                              onTap: () => setSheetState(() => showName = !showName),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildCheckboxTile(
+                              title: 'Kode QR Teks',
+                              value: showCode,
+                              onTap: () => setSheetState(() => showCode = !showCode),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildCheckboxTile(
+                              title: 'Nama Cabang',
+                              value: showBranch,
+                              onTap: () => setSheetState(() => showBranch = !showBranch),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      final baseUrl = ApiClient.baseUrl.replaceAll('/api', '');
+                      final brandParam = showBrand ? '1' : '0';
+                      final nameParam = showName ? '1' : '0';
+                      final codeParam = showCode ? '1' : '0';
+                      final branchParam = showBranch ? '1' : '0';
+                      final url = '$baseUrl/master-barang/print-qr?ids=${ids.join(',')}&size=$selectedSize&brand=$brandParam&name=$nameParam&code=$codeParam&branch=$branchParam';
+                      final uri = Uri.parse(url);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      } else {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Tidak dapat membuka halaman cetak PDF')),
+                          );
+                        }
                       }
-                    }
-                  },
-                  icon: const Icon(Icons.print_outlined, size: 18, color: Colors.white),
-                  label: Text('Cetak Sekarang (PDF)', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryMid,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    },
+                    icon: const Icon(Icons.print_outlined, size: 18, color: Colors.white),
+                    label: Text('Cetak Sekarang (PDF)', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryMid,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                   ),
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCheckboxTile({
+    required String title,
+    required bool value,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        decoration: BoxDecoration(
+          color: value ? AppColors.primaryMid.withValues(alpha: 0.06) : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: value ? AppColors.primaryMid.withValues(alpha: 0.4) : const Color(0xFFE2E8F0),
+            width: value ? 1.2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              value ? Icons.check_box : Icons.check_box_outline_blank,
+              size: 19,
+              color: value ? AppColors.primaryMid : Colors.grey.shade400,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: value ? FontWeight.w600 : FontWeight.normal,
+                  color: value ? AppColors.textDark : AppColors.textMuted,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ),
     );
