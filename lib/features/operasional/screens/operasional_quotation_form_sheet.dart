@@ -180,18 +180,35 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
     }
   }
 
+  double _parseNumber(String text) {
+    if (text.trim().isEmpty) return 0;
+    String clean = text.replaceAll('Rp', '').replaceAll(' ', '').trim();
+    if (clean.contains('.') && clean.contains(',')) {
+      clean = clean.replaceAll('.', '').replaceAll(',', '.');
+    } else if (clean.contains('.')) {
+      final parts = clean.split('.');
+      if (parts.length > 2 || (parts.length == 2 && parts[1].length == 3)) {
+        clean = clean.replaceAll('.', '');
+      }
+    } else if (clean.contains(',')) {
+      clean = clean.replaceAll(',', '.');
+    }
+    return double.tryParse(clean) ?? 0;
+  }
+
   double get _subtotal {
     double total = 0;
     for (var item in _rincian) {
-      double qty = double.tryParse(item['qty'].text) ?? 0;
-      double harga = double.tryParse(item['harga'].text) ?? 0;
+      double qty = _parseNumber(item['qty'].text);
+      if (qty == 0 && item['qty'].text.trim().isEmpty) qty = 1;
+      double harga = _parseNumber(item['harga'].text);
       total += (qty * harga);
     }
     return total;
   }
 
   double get _grandTotal {
-    double diskon = double.tryParse(_diskonController.text) ?? 0;
+    double diskon = _parseNumber(_diskonController.text);
     double dasar = (_subtotal - diskon).clamp(0, double.infinity);
     double ppnVal = _usePpn ? dasar * 0.11 : 0;
     double pphVal = _usePph ? dasar * 0.02 : 0;
@@ -229,8 +246,8 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
 
     final rincianList = validRincian.map((e) => {
       'deskripsi': e['deskripsi'].text.trim(),
-      'qty': double.tryParse(e['qty'].text) ?? 1,
-      'harga': double.tryParse(e['harga'].text) ?? 0,
+      'qty': _parseNumber(e['qty'].text) > 0 ? _parseNumber(e['qty'].text) : 1,
+      'harga': _parseNumber(e['harga'].text),
     }).toList();
 
     final data = {
@@ -242,7 +259,7 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
       'alamat': _alamatController.text.trim(),
       'job_location': _sameAsCustomerAddress ? _alamatController.text.trim() : _jobLocationController.text.trim(),
       'alat_chemical_klinklin': _alatChemical ? 1 : 0,
-      'diskon': double.tryParse(_diskonController.text) ?? 0,
+      'diskon': _parseNumber(_diskonController.text),
       'ppn': _usePpn ? 11 : 0,
       'pph': _usePph ? 2 : 0,
       'rincian': rincianList,
@@ -600,9 +617,9 @@ class _OperasionalQuotationFormSheetState extends State<OperasionalQuotationForm
                     itemCount: _rincian.length,
                     itemBuilder: (context, index) {
                       final item = _rincian[index];
-                      final qty = double.tryParse(item['qty'].text) ?? 0;
-                      final harga = double.tryParse(item['harga'].text) ?? 0;
-                      final rowTotal = qty * harga;
+                      final qty = _parseNumber(item['qty'].text);
+                      final harga = _parseNumber(item['harga'].text);
+                      final rowTotal = (qty > 0 ? qty : 1) * harga;
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),

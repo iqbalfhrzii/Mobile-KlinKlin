@@ -58,12 +58,32 @@ class PdfQuotationService {
       }
     }
 
-    final num subtotal = num.tryParse(quotation['subtotal_calc']?.toString() ?? quotation['subtotal']?.toString() ?? '0') ?? 0;
+    num subtotal = num.tryParse(quotation['subtotal_calc']?.toString() ?? quotation['subtotal']?.toString() ?? '0') ?? 0;
+    if (subtotal == 0 && rincianList.isNotEmpty) {
+      for (var r in rincianList) {
+        if (r is Map) {
+          final num q = num.tryParse(r['qty']?.toString() ?? '1') ?? 1;
+          final num h = num.tryParse(r['harga']?.toString() ?? '0') ?? 0;
+          subtotal += (q * h);
+        }
+      }
+    }
+
     final num diskon = num.tryParse(quotation['diskon']?.toString() ?? '0') ?? 0;
     final num ppnPersen = num.tryParse(quotation['ppn']?.toString() ?? '0') ?? 0;
-    final num ppnNominal = num.tryParse(quotation['ppn_nominal_calc']?.toString() ?? quotation['ppn_nominal']?.toString() ?? '0') ?? 0;
+    num ppnNominal = num.tryParse(quotation['ppn_nominal_calc']?.toString() ?? quotation['ppn_nominal']?.toString() ?? '0') ?? 0;
+    if (ppnNominal == 0 && ppnPersen > 0) {
+      final num dasar = (subtotal - diskon).clamp(0, double.infinity);
+      ppnNominal = dasar * (ppnPersen / 100);
+    }
+
     final num pphPersen = num.tryParse(quotation['pph']?.toString() ?? '0') ?? 0;
-    final num pphNominal = num.tryParse(quotation['pph_nominal_calc']?.toString() ?? quotation['pph_nominal']?.toString() ?? '0') ?? 0;
+    num pphNominal = num.tryParse(quotation['pph_nominal_calc']?.toString() ?? quotation['pph_nominal']?.toString() ?? '0') ?? 0;
+    if (pphNominal == 0 && pphPersen > 0) {
+      final num dasar = (subtotal - diskon).clamp(0, double.infinity);
+      pphNominal = dasar * (pphPersen / 100);
+    }
+
     final num grandTotal = num.tryParse(quotation['grand_total_calc']?.toString() ?? quotation['grand_total']?.toString() ?? '0') ??
         (subtotal - diskon + ppnNominal - pphNominal);
 
