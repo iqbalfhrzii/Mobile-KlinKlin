@@ -36,6 +36,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
   String? _authToken;
   String _userRole = '';
   bool _isOperasional = false;
+  Map<String, dynamic>? _jadwalData;
 
   final List<Map<String, dynamic>> _categories = [
     {
@@ -73,7 +74,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
     super.initState();
     _loadAuthToken();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchSession();
+      _fetchSession(autoSelectOpenSession: true);
     });
   }
 
@@ -115,7 +116,29 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
     return '${months[dt.month - 1]} ${dt.year}';
   }
 
-  Future<void> _fetchSession() async {
+  String _formatSessionSub(String tipe) {
+    final j = _jadwalData?[tipe];
+    if (j != null && j['tanggal_mulai'] != null && j['tanggal_selesai'] != null) {
+      try {
+        final start = DateTime.parse(j['tanggal_mulai'].toString());
+        final end = DateTime.parse(j['tanggal_selesai'].toString());
+        return '${start.day} - ${end.day} ${DateFormat('MMM').format(end)}';
+      } catch (_) {}
+    }
+    return tipe == 'tengah_bulan' ? 'Awal Bln' : 'Akhir Bln';
+  }
+
+  String _formatDateShort(dynamic dateStr) {
+    if (dateStr == null) return '-';
+    try {
+      final dt = DateTime.parse(dateStr.toString());
+      return DateFormat('dd/MM/yyyy').format(dt);
+    } catch (_) {
+      return dateStr.toString();
+    }
+  }
+
+  Future<void> _fetchSession({bool autoSelectOpenSession = false}) async {
     if (_activePeriode.isEmpty) return;
 
     setState(() {
@@ -128,26 +151,55 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final cabangId = prefs.getInt('user_cabang_id') ?? 1;
+      final targetPeriode = '$_filterTahun-$_filterBulan';
 
       // 1. Fetch BHP purchases for this month & branch
-      final bhps = await StokOpnameService.getBhps(
+      final bhpsFuture = StokOpnameService.getBhps(
         bulan: int.tryParse(_filterBulan),
         tahun: int.tryParse(_filterTahun),
         cabangId: cabangId,
       );
 
       // 2. Fetch Sessions
-      final sessions = await StokOpnameService.getSessions(cabangId: cabangId);
-      _allMonthSessions = sessions;
+      final sessionsFuture = StokOpnameService.getSessions(
+        cabangId: cabangId,
+        periodeBulan: targetPeriode,
+      );
 
-      final targetPeriode = '$_filterTahun-$_filterBulan';
+      // 3. Fetch Jadwal Operasional
+      final jadwalFuture = StokOpnameService.getJadwal(periodeBulan: targetPeriode);
+
+      final results = await Future.wait([bhpsFuture, sessionsFuture, jadwalFuture]);
+      final bhps = results[0] as List<dynamic>;
+      final sessions = results[1] as List<dynamic>;
+      final jadwalData = results[2] as Map<String, dynamic>?;
+
+      _allMonthSessions = sessions;
+      _jadwalData = jadwalData;
+
+      final bool isAwalOpen = jadwalData?['tengah_bulan']?['is_open'] == true;
+      final bool isAkhirOpen = jadwalData?['akhir_bulan']?['is_open'] == true;
+
+      // Smart auto select session:
+      // If autoSelectOpenSession is true (e.g. initial load or changing month),
+      // or if current selection is not open but the other is open:
+      if (autoSelectOpenSession || (!_isOperasional && !isAwalOpen && isAkhirOpen && _activePeriode == 'tengah_bulan')) {
+        if (!isAwalOpen && isAkhirOpen) {
+          _activePeriode = 'akhir_bulan';
+        } else if (isAwalOpen && !isAkhirOpen) {
+          _activePeriode = 'tengah_bulan';
+        }
+      }
+
+      final bool isCurrentSessionOpen = _isOperasional || (_activePeriode == 'tengah_bulan' ? isAwalOpen : isAkhirOpen);
+
       var session = sessions.firstWhere(
         (s) => s['periode_bulan'] == targetPeriode && s['tipe_sesi'] == _activePeriode,
         orElse: () => null,
       );
 
-      // Auto start draft session if not yet started (only for CS/Branch, not Operasional)
-      if (session == null && !_isOperasional) {
+      // Auto start draft session ONLY IF Operasional has officially opened this session!
+      if (session == null && !_isOperasional && isCurrentSessionOpen) {
         final req = {
           'cabang_id': cabangId,
           'periode_bulan': targetPeriode,
@@ -200,14 +252,45 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
       (session) => session['periode_bulan'] == targetPeriode && session['tipe_sesi'] == tipeSesi,
       orElse: () => null,
     );
-    if (s == null) {
-      return {'label': 'Belum Ada', 'isSelesai': false, 'exists': false};
+    final j = _jadwalData?[tipeSesi];
+    final bool isOpen = j?['is_open'] == true;
+    final String jStatus = j?['status'] ?? 'belum_diatur';
+    final bool isSelesai = (s?['status'] ?? '').toString().toLowerCase() == 'selesai';
+
+    String label;
+    Color color;
+    Color dotColor;
+
+    if (isSelesai) {
+      label = 'Selesai';
+      color = const Color(0xFF15803D);
+      dotColor = const Color(0xFF16A34A);
+    } else if (isOpen) {
+      label = 'Dibuka';
+      color = const Color(0xFF0284C7);
+      dotColor = const Color(0xFF0284C7);
+    } else if (jStatus == 'ditutup') {
+      label = 'Ditutup';
+      color = const Color(0xFFDC2626);
+      dotColor = const Color(0xFFDC2626);
+    } else if (jStatus == 'belum_dimulai') {
+      label = 'Belum Mulai';
+      color = const Color(0xFFD97706);
+      dotColor = const Color(0xFFD97706);
+    } else {
+      label = 'Belum Dibuka';
+      color = const Color(0xFF64748B);
+      dotColor = const Color(0xFFCBD5E1);
     }
-    final isSelesai = (s['status'] ?? '').toString().toLowerCase() == 'selesai';
+
     return {
-      'label': isSelesai ? 'Selesai' : 'Sedang Berjalan',
+      'label': label,
       'isSelesai': isSelesai,
-      'exists': true,
+      'isOpen': isOpen,
+      'color': color,
+      'dotColor': dotColor,
+      'exists': s != null,
+      'jadwal': j,
     };
   }
 
@@ -282,6 +365,21 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
   }
 
   Future<void> _hapusDetail(int detailId, String confirmMessage) async {
+    final bool isAwalOpen = _jadwalData?['tengah_bulan']?['is_open'] == true;
+    final bool isAkhirOpen = _jadwalData?['akhir_bulan']?['is_open'] == true;
+    final bool isCurrentSessionOpen = _isOperasional || (_activePeriode == 'tengah_bulan' ? isAwalOpen : isAkhirOpen);
+
+    if (!isCurrentSessionOpen) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Sesi ${_activePeriode == 'tengah_bulan' ? 'Awal Bulan' : 'Akhir Bulan'} telah ditutup atau belum dibuka oleh Operasional.'),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final confirm = await AppConfirmationDialog.show(
       context,
       title: 'Konfirmasi Hapus',
@@ -325,6 +423,21 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
   }
 
   void _openInputModal({dynamic detailItem, dynamic bhpItem, String? initialQr}) {
+    final bool isAwalOpen = _jadwalData?['tengah_bulan']?['is_open'] == true;
+    final bool isAkhirOpen = _jadwalData?['akhir_bulan']?['is_open'] == true;
+    final bool isCurrentSessionOpen = _isOperasional || (_activePeriode == 'tengah_bulan' ? isAwalOpen : isAkhirOpen);
+
+    if (!isCurrentSessionOpen) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Sesi ${_activePeriode == 'tengah_bulan' ? 'Awal Bulan' : 'Akhir Bulan'} belum dibuka atau telah ditutup oleh Operasional.'),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final bool isBhpMode = _activeKategori == 'BHP' || bhpItem != null;
     final isSelesai = (_activeSession?['status'] ?? '').toString().toLowerCase() == 'selesai';
 
@@ -905,8 +1018,12 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isAwalOpen = _jadwalData?['tengah_bulan']?['is_open'] == true;
+    final bool isAkhirOpen = _jadwalData?['akhir_bulan']?['is_open'] == true;
+    final bool isCurrentSessionOpen = _isOperasional || (_activePeriode == 'tengah_bulan' ? isAwalOpen : isAkhirOpen);
+
     final isSelesai = (_activeSession?['status'] ?? '').toString().toLowerCase() == 'selesai';
-    final isReadOnly = isSelesai || _isOperasional;
+    final isReadOnly = isSelesai || _isOperasional || !isCurrentSessionOpen;
     final hasItems = _details.isNotEmpty;
 
     return Scaffold(
@@ -963,7 +1080,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
                             _filterBulan = DateFormat('MM').format(picked);
                             _filterTahun = DateFormat('yyyy').format(picked);
                           });
-                          _fetchSession();
+                          _fetchSession(autoSelectOpenSession: true);
                         }
                       },
                       borderRadius: BorderRadius.circular(20),
@@ -997,6 +1114,10 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
 
           // 2. Integrated Hero Overview & Session Switcher Card
           _buildHeroOverviewCard(isReadOnly),
+
+          // 2b. Schedule Lock Banner (if current session is not open)
+          if (!isCurrentSessionOpen)
+            _buildScheduleLockBanner(),
 
           // 3. Category Horizontal Pills Selector
           _buildCategoryPillsBar(),
@@ -1085,8 +1206,81 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
     );
   }
 
+  // --- SCHEDULE LOCK BANNER ---
+  Widget _buildScheduleLockBanner() {
+    final currentJadwal = _jadwalData?[_activePeriode];
+    final status = currentJadwal?['status'] ?? 'belum_diatur';
+    final periodeName = _activePeriode == 'tengah_bulan' ? 'Opname Awal Bulan' : 'Opname Akhir Bulan';
+
+    Color bgColor;
+    Color borderColor;
+    Color textColor;
+    IconData icon;
+    String title;
+    String message;
+
+    if (status == 'ditutup') {
+      bgColor = const Color(0xFFFEF2F2);
+      borderColor = const Color(0xFFFECACA);
+      textColor = const Color(0xFF991B1B);
+      icon = Icons.lock_clock_rounded;
+      title = 'Sesi Telah Ditutup';
+      final tglSelesai = currentJadwal?['tanggal_selesai'] != null ? _formatDateShort(currentJadwal?['tanggal_selesai']) : '-';
+      message = 'Batas waktu pengisian $periodeName telah berakhir ($tglSelesai). Anda tidak dapat menambah atau mengubah checklist.';
+    } else if (status == 'belum_dimulai') {
+      bgColor = const Color(0xFFFFFBEB);
+      borderColor = const Color(0xFFFDE68A);
+      textColor = const Color(0xFF92400E);
+      icon = Icons.schedule_rounded;
+      title = 'Sesi Belum Dimulai';
+      final tglMulai = currentJadwal?['tanggal_mulai'] != null ? _formatDateShort(currentJadwal?['tanggal_mulai']) : '-';
+      final tglSelesai = currentJadwal?['tanggal_selesai'] != null ? _formatDateShort(currentJadwal?['tanggal_selesai']) : '-';
+      message = 'Sesi dijadwalkan dibuka oleh Operasional pada $tglMulai s/d $tglSelesai.';
+    } else {
+      bgColor = const Color(0xFFF8FAFC);
+      borderColor = const Color(0xFFE2E8F0);
+      textColor = const Color(0xFF475569);
+      icon = Icons.lock_outline_rounded;
+      title = 'Sesi Belum Dibuka oleh Operasional';
+      message = 'Tim Operasional belum membuka jadwal untuk $periodeName pada bulan ini. Anda hanya dapat mengisi sesi yang sedang dibuka oleh Operasional.';
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 2, 16, 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: textColor),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: textColor),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  message,
+                  style: GoogleFonts.inter(fontSize: 10.5, height: 1.35, color: textColor.withValues(alpha: 0.9)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // --- HERO OVERVIEW & SESSION SWITCHER ---
-  Widget _buildHeroOverviewCard(bool isSelesai) {
+  Widget _buildHeroOverviewCard(bool isReadOnly) {
     final statusAwal = _getSessionStatus('tengah_bulan');
     final statusAkhir = _getSessionStatus('akhir_bulan');
 
@@ -1124,7 +1318,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
                   child: _buildSessionTab(
                     value: 'tengah_bulan',
                     title: 'Awal Bulan',
-                    sub: 'Tgl 15',
+                    sub: _formatSessionSub('tengah_bulan'),
                     status: statusAwal,
                   ),
                 ),
@@ -1132,7 +1326,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
                   child: _buildSessionTab(
                     value: 'akhir_bulan',
                     title: 'Akhir Bulan',
-                    sub: 'Tgl 30',
+                    sub: _formatSessionSub('akhir_bulan'),
                     status: statusAkhir,
                   ),
                 ),
@@ -1188,8 +1382,8 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
     required Map<String, dynamic> status,
   }) {
     final isSelected = _activePeriode == value;
-    final bool isSelesai = status['isSelesai'] == true;
-    final bool exists = status['exists'] == true;
+    final Color dotColor = status['dotColor'] as Color? ?? const Color(0xFFCBD5E1);
+    final Color textColor = status['color'] as Color? ?? const Color(0xFF64748B);
 
     return InkWell(
       onTap: () {
@@ -1239,10 +1433,10 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 5,
-                  height: 5,
+                  width: 6,
+                  height: 6,
                   decoration: BoxDecoration(
-                    color: isSelesai ? const Color(0xFF16A34A) : (exists ? const Color(0xFFEAB308) : const Color(0xFFCBD5E1)),
+                    color: dotColor,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -1252,7 +1446,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
                   style: GoogleFonts.inter(
                     fontSize: 9.5,
                     fontWeight: FontWeight.w700,
-                    color: isSelesai ? const Color(0xFF15803D) : (exists ? const Color(0xFFB45309) : const Color(0xFF64748B)),
+                    color: textColor,
                   ),
                 ),
               ],
@@ -1388,7 +1582,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
   }
 
   // --- ITEM LIST VIEW ---
-  Widget _buildItemListView(String kategoriKode, bool isSelesai) {
+  Widget _buildItemListView(String kategoriKode, bool isReadOnly) {
     final filtered = _getItemsForCategory(kategoriKode);
     final catMap = _categories.firstWhere((c) => c['code'] == kategoriKode, orElse: () => _categories.first);
     final fullName = '${catMap['label']} ($kategoriKode)';
@@ -1417,9 +1611,11 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
               ),
               const SizedBox(height: 5),
               Text(
-                kategoriKode == 'BHP'
-                    ? 'Belum ada data pembelian barang habis pakai pada bulan ini.'
-                    : 'Gunakan tombol Scan QR atau Input Manual di bawah untuk menambahkan item checklist.',
+                isReadOnly
+                    ? 'Tidak ada data checklist atau sesi belum dibuka oleh Operasional.'
+                    : (kategoriKode == 'BHP'
+                        ? 'Belum ada data pembelian barang habis pakai pada bulan ini.'
+                        : 'Gunakan tombol Scan QR atau Input Manual di bawah untuk menambahkan item checklist.'),
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(color: const Color(0xFF64748B), fontSize: 12, height: 1.4),
               ),
@@ -1436,13 +1632,13 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
       itemBuilder: (context, index) {
         final item = filtered[index];
         final bool isBhp = kategoriKode == 'BHP';
-        return isBhp ? _buildBhpCard(item, isSelesai) : _buildAlatCard(item, isSelesai);
+        return isBhp ? _buildBhpCard(item, isReadOnly) : _buildAlatCard(item, isReadOnly);
       },
     );
   }
 
   // --- ALAT CARD (MSN, CLA, INV) ---
-  Widget _buildAlatCard(dynamic item, bool isSelesai) {
+  Widget _buildAlatCard(dynamic item, bool isReadOnly) {
     final itemFisik = item['item_fisik'] ?? {};
     final barang = itemFisik['barang'] ?? item['barang'] ?? {};
     final waktu = item['created_at'] != null
@@ -1570,7 +1766,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
                 style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF475569), fontStyle: FontStyle.italic),
               ),
             ),
-          ],          if (!isSelesai) ...[
+          ],          if (!isReadOnly) ...[
             const SizedBox(height: 10),
             const Divider(height: 1, color: Color(0xFFF1F5F9)),
             const SizedBox(height: 6),
@@ -1612,7 +1808,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
   }
 
   // --- BHP CARD (100% Web Parity) ---
-  Widget _buildBhpCard(dynamic bhp, bool isSelesai) {
+  Widget _buildBhpCard(dynamic bhp, bool isReadOnly) {
     final detail = _getBhpDetail(bhp);
     final String kodeBhp = bhp['kode_pembelian'] ?? '-';
     final String namaBarang = bhp['nama_barang'] ?? 'BHP Item';
@@ -1751,7 +1947,7 @@ class _StokOpnameScreenState extends State<StokOpnameScreen> {
             Text('Catatan: $catatan', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B), fontStyle: FontStyle.italic)),
           ],
 
-          if (!isSelesai) ...[
+          if (!isReadOnly) ...[
             const SizedBox(height: 10),
             const Divider(height: 1, color: Color(0xFFF1F5F9)),
             const SizedBox(height: 6),

@@ -26,11 +26,14 @@ class StokOpnameService {
     return e.toString();
   }
 
-  static Future<List<dynamic>> getSessions({int? cabangId}) async {
+  static Future<List<dynamic>> getSessions({int? cabangId, String? periodeBulan}) async {
     try {
       String url = '/stok-opname';
-      if (cabangId != null) {
-        url += '?cabang_id=$cabangId';
+      final List<String> params = [];
+      if (cabangId != null) params.add('cabang_id=$cabangId');
+      if (periodeBulan != null && periodeBulan.isNotEmpty) params.add('periode_bulan=$periodeBulan');
+      if (params.isNotEmpty) {
+        url += '?${params.join('&')}';
       }
       final response = await _dio.get(url);
       if (response.statusCode == 200) {
@@ -47,6 +50,25 @@ class StokOpnameService {
     }
   }
 
+  static Future<Map<String, dynamic>?> getJadwal({String? periodeBulan}) async {
+    try {
+      String url = '/stok-opname/jadwal';
+      if (periodeBulan != null && periodeBulan.isNotEmpty) {
+        url += '?periode_bulan=$periodeBulan';
+      }
+      final response = await _dio.get(url);
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data;
+        if (data['success'] == true && data['data'] != null) {
+          return data['data'] as Map<String, dynamic>;
+        }
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<Map<String, dynamic>?> startSession(Map<String, dynamic> requestData) async {
     try {
       final response = await _dio.post('/stok-opname/start', data: requestData);
@@ -58,7 +80,7 @@ class StokOpnameService {
       }
       return null;
     } catch (e) {
-      throw Exception('startSession error: $e');
+      return null;
     }
   }
 
