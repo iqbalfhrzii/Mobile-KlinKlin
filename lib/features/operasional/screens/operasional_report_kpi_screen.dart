@@ -157,31 +157,6 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
     });
   }
 
-  void _onOrderPeriodeChanged(String filter) async {
-    if (filter == 'Rentang Waktu') {
-      final picked = await showDateRangePicker(
-        context: context,
-        firstDate: DateTime(2020),
-        lastDate: DateTime(2030),
-      );
-      if (picked != null) {
-        setState(() {
-          _selectedOrderPeriode = filter;
-          _orderCustomStartDate = picked.start;
-          _orderCustomEndDate = picked.end;
-        });
-        _fetchOrders();
-      }
-    } else {
-      setState(() {
-        _selectedOrderPeriode = filter;
-        _orderCustomStartDate = null;
-        _orderCustomEndDate = null;
-      });
-      _fetchOrders();
-    }
-  }
-
   Future<void> _fetchKpiData() async {
     setState(() {
       _isLoading = true;
@@ -1046,38 +1021,6 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildLegendItem(Color color, String title, String subtitle) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 5),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              title,
-              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: color),
-            ),
-            Text(
-              subtitle,
-              style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF64748B), fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-      ],
     );
   }
 
