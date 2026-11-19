@@ -131,8 +131,11 @@ jobs:
           echo "Mengunggah file ke App Store Connect..."
 
           # Upload ke App Store Connect
+          set -o pipefail
           xcrun altool --upload-app -f "$IPA_PATH" -t ios --apiKey "$APPSTORE_KEY_ID" --apiIssuer "$APPSTORE_ISSUER_ID" --show-progress 2>&1 | tee upload.log
-          if grep -qi "UPLOAD FAILED" upload.log; then
+          UPLOAD_EXIT_CODE=${PIPESTATUS[0]}
+
+          if [ $UPLOAD_EXIT_CODE -ne 0 ] || grep -qiE "ERROR:|UPLOAD FAILED" upload.log; then
             echo "Error: Upload to App Store Connect failed!"
             exit 1
           fi
