@@ -23,8 +23,8 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
   String _error = '';
   Map<String, dynamic>? _data;
 
-  // Sorting for KPI Tab (Matching Web Livewire ReportKpiPage)
-  String _sortField = 'kpi_omzet';
+  // Sorting for KPI Tab (Matching Web CapaianPage: default urut omzet dicapai tertinggi ke terendah)
+  String _sortField = 'omzet_dicapai';
   bool _sortAsc = false;
 
   void _onSort(String field) {
@@ -385,8 +385,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
             builder: (context) {
               final double targetAmanGlobal = (_data!['target_aman_global'] is num)
                   ? (_data!['target_aman_global'] as num).toDouble()
-                  : 68.0;
-              final double kuningMin = (targetAmanGlobal - 20.0).clamp(0.0, 100.0);
+                  : 100.0;
 
               final periode = _data!['periode'] as Map<String, dynamic>?;
               final String startDateStr = _formatIndoDate(periode?['start']?.toString());
@@ -553,7 +552,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
                         children: [
                           _buildIndicatorPill(
                             label: 'Hijau',
-                            range: '≥ ${targetAmanGlobal.toStringAsFixed(1)}%',
+                            range: '≥ 100%',
                             bgColor: const Color(0xFFECFDF5),
                             borderColor: const Color(0xFFA7F3D0),
                             textColor: const Color(0xFF059669),
@@ -561,7 +560,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
                           const SizedBox(width: 6),
                           _buildIndicatorPill(
                             label: 'Kuning',
-                            range: '≥ ${kuningMin.toStringAsFixed(1)}%',
+                            range: '≥ 70%',
                             bgColor: const Color(0xFFFFFBEB),
                             borderColor: const Color(0xFFFDE68A),
                             textColor: const Color(0xFFD97706),
@@ -569,7 +568,7 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
                           const SizedBox(width: 6),
                           _buildIndicatorPill(
                             label: 'Merah',
-                            range: '< ${kuningMin.toStringAsFixed(1)}%',
+                            range: '< 70%',
                             bgColor: const Color(0xFFFFF1F2),
                             borderColor: const Color(0xFFFECDD3),
                             textColor: const Color(0xFFE11D48),
@@ -601,11 +600,11 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
 
   Widget _buildSortChips() {
     final sortOptions = [
+      {'field': 'omzet_dicapai', 'label': 'Omzet Dicapai'},
       {'field': 'kpi_omzet', 'label': 'KPI Omzet'},
       {'field': 'cabang_nama', 'label': 'Cabang'},
       {'field': 'target_aman', 'label': 'Target Aman'},
       {'field': 'growth', 'label': 'Growth'},
-      {'field': 'omzet_dicapai', 'label': 'Omzet Dicapai'},
       {'field': 'target_omzet', 'label': 'Target Omzet'},
     ];
 
@@ -696,8 +695,10 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
       }
 
       int comparison;
-      if (valA is num && valB is num) {
-        comparison = valA.compareTo(valB);
+      final numA = num.tryParse(valA.toString());
+      final numB = num.tryParse(valB.toString());
+      if (numA != null && numB != null) {
+        comparison = numA.compareTo(numB);
       } else {
         comparison = valA.toString().compareTo(valB.toString());
       }
@@ -712,20 +713,24 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
       itemBuilder: (context, index) {
         final item = list[index];
         final kpiOmzet = (item['kpi_omzet'] as num).toDouble();
-        final targetAman = (item['target_aman'] as num).toDouble();
+        final targetAman = (item['target_aman'] != null && (item['target_aman'] as num) > 0)
+            ? (item['target_aman'] as num).toDouble()
+            : 100.0;
         final growth = (item['growth'] as num).toDouble();
 
         Color statusColor;
         Color statusBgColor;
         IconData statusIcon;
 
-        final double kuningThreshold = (targetAman - 20.0).clamp(0.0, 100.0);
-
-        if (kpiOmzet >= targetAman) {
+        // Mengikuti acuan website Operasional (Capaian & Kinerja):
+        // Hijau: >= 100% (Target aman tercapai)
+        // Kuning: >= 70% (Kurang s/d 30%)
+        // Merah: < 70% (Kurang > 30%)
+        if (kpiOmzet >= 100.0) {
           statusColor = const Color(0xFF059669); // Emerald Green
           statusBgColor = const Color(0xFFECFDF5);
           statusIcon = Icons.trending_up_rounded;
-        } else if (kpiOmzet >= kuningThreshold) {
+        } else if (kpiOmzet >= 70.0) {
           statusColor = const Color(0xFFD97706); // Amber / Yellow
           statusBgColor = const Color(0xFFFEF3C7);
           statusIcon = Icons.trending_flat_rounded;
@@ -881,7 +886,9 @@ class _OperasionalReportKpiScreenState extends State<OperasionalReportKpiScreen>
                         ),
                       ),
                       Text(
-                        '${(item['target_aman'] as num).toDouble().toStringAsFixed(1)}%',
+                        targetAman == targetAman.roundToDouble()
+                            ? '${targetAman.toInt()}%'
+                            : '${targetAman.toStringAsFixed(1)}%',
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
