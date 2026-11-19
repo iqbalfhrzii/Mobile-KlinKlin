@@ -37,7 +37,7 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
   String _userRole = '';
   int? _userCabangId;
   String _userCabangName = '';
-  bool _isOperasionalOrAdmin = true;
+  bool _isOperasionalOrAdmin = false;
 
   final ScrollController _scrollController = ScrollController();
 
@@ -382,11 +382,31 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
     return dasar + ppnNom - pphNom;
   }
 
+  bool _isQuotationApproved(dynamic quotation) {
+    if (quotation == null) return false;
+    final map = quotation is Map<String, dynamic> ? quotation : Map<String, dynamic>.from(quotation);
+    if (map['can_download'] == false) return false;
+    if (map['can_download'] == true) return true;
+
+    final status = (map['status'] ?? '').toString().trim().toLowerCase();
+    if (status.contains('menunggu') || status.contains('dibuat') || status.contains('pending') || status.contains('tolak')) {
+      return false;
+    }
+    return status == 'disetujui' || status == 'approved';
+  }
+
+  bool _isQuotationRejected(dynamic quotation) {
+    if (quotation == null) return false;
+    final map = quotation is Map<String, dynamic> ? quotation : Map<String, dynamic>.from(quotation);
+    final status = (map['status'] ?? '').toString().trim().toLowerCase();
+    return status.contains('tolak') || status == 'rejected';
+  }
+
   Color _getStatusColor(String? status) {
-    final s = (status ?? 'Menunggu').toLowerCase();
-    if (s.contains('setuju') || s == 'disetujui') {
+    final s = (status ?? 'Menunggu').trim().toLowerCase();
+    if (s == 'disetujui' || s == 'approved') {
       return const Color(0xFF16A34A); // Emerald Green
-    } else if (s.contains('tolak') || s == 'ditolak') {
+    } else if (s.contains('tolak') || s == 'rejected') {
       return const Color(0xFFDC2626); // Red
     } else {
       return const Color(0xFFD97706); // Amber Orange
@@ -394,18 +414,17 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
   }
 
   Future<void> _downloadOrPrintInvoice(dynamic quotation) async {
-    final status = (quotation['status'] ?? '').toString().toLowerCase();
-    final isApproved = status.contains('setuju');
-    if (!isApproved) {
+    if (!_isQuotationApproved(quotation)) {
       if (mounted) {
+        final isRejected = _isQuotationRejected(quotation);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              status.contains('tolak')
+              isRejected
                   ? 'Quotation ditolak Operasional dan tidak dapat dicetak.'
-                  : 'Quotation belum disetujui (ACC) oleh Operasional. Tidak dapat di-download.',
+                  : 'Quotation belum diperiksa/disetujui (ACC) oleh Operasional. Tidak dapat di-download.',
             ),
-            backgroundColor: status.contains('tolak') ? const Color(0xFFDC2626) : const Color(0xFFD97706),
+            backgroundColor: isRejected ? const Color(0xFFDC2626) : const Color(0xFFD97706),
           ),
         );
       }
@@ -429,18 +448,17 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
   }
 
   Future<void> _shareToWhatsApp(dynamic quotation) async {
-    final status = (quotation['status'] ?? '').toString().toLowerCase();
-    final isApproved = status.contains('setuju');
-    if (!isApproved) {
+    if (!_isQuotationApproved(quotation)) {
       if (mounted) {
+        final isRejected = _isQuotationRejected(quotation);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              status.contains('tolak')
+              isRejected
                   ? 'Quotation ditolak Operasional dan tidak dapat dikirim.'
-                  : 'Quotation belum disetujui (ACC) oleh Operasional. Tidak dapat dikirim via WhatsApp.',
+                  : 'Quotation belum diperiksa/disetujui (ACC) oleh Operasional. Tidak dapat dikirim via WhatsApp.',
             ),
-            backgroundColor: status.contains('tolak') ? const Color(0xFFDC2626) : const Color(0xFFD97706),
+            backgroundColor: isRejected ? const Color(0xFFDC2626) : const Color(0xFFD97706),
           ),
         );
       }
@@ -915,130 +933,162 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     child: Builder(
                       builder: (context) {
-                        final bool isApproved = (item['status'] ?? '').toString().toLowerCase().contains('setuju');
-                        final isMenunggu = item['status'] == 'Menunggu' || item['status'] == 'Dibuat' || item['status'] == 'Pending';
+                        final bool isApproved = _isQuotationApproved(item);
+                        final bool isDitolak = _isQuotationRejected(item);
+                        final bool isMenunggu = !isApproved && !isDitolak;
+
                         return Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (!isApproved) ...[
+                            if (isApproved) ...[
+                              // HANYA JIKA SUDAH DISETUJUI OPERASIONAL: Tampilkan Cetak PDF & Kirim WA
+                              Row(
+                                children: [
+                                  // 1. Cetak PDF Button
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        _downloadOrPrintInvoice(item);
+                                      },
+                                      icon: const Icon(Icons.picture_as_pdf_rounded, size: 16, color: Colors.white),
+                                      label: Text(
+                                        'Cetak PDF',
+                                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF16A34A),
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+
+                                  // 2. Share WA Button
+                                  InkWell(
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      _shareToWhatsApp(item);
+                                    },
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFDCFCE7),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: const Color(0xFF86EFAC)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.chat_rounded, size: 15, color: Color(0xFF16A34A)),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Kirim WA',
+                                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF15803D)),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  // 3. Edit Data Button (Hanya Operasional / Admin)
+                                  if (_isOperasionalOrAdmin) ...[
+                                    const SizedBox(width: 8),
+                                    OutlinedButton.icon(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        _openForm(item);
+                                      },
+                                      icon: const Icon(Icons.edit_outlined, size: 15, color: AppColors.primaryMid),
+                                      label: Text(
+                                        'Edit',
+                                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                                        side: const BorderSide(color: AppColors.primaryMid),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ] else ...[
+                              // SEBELUM DI-ACC OPERASIONAL: TIDAK ADA FITUR DOWNLOAD (PDF) & KIRIM (WA)
                               Container(
                                 width: double.infinity,
                                 margin: const EdgeInsets.only(bottom: 10),
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFEF3C7),
+                                  color: isDitolak ? const Color(0xFFFEF2F2) : const Color(0xFFFEF3C7),
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0xFFFDE68A)),
+                                  border: Border.all(color: isDitolak ? const Color(0xFFFECACA) : const Color(0xFFFDE68A)),
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.info_outline_rounded, size: 15, color: Color(0xFFD97706)),
+                                    Icon(
+                                      isDitolak ? Icons.cancel_outlined : Icons.lock_clock_rounded,
+                                      size: 16,
+                                      color: isDitolak ? const Color(0xFFDC2626) : const Color(0xFFD97706),
+                                    ),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        item['status'] == 'Ditolak'
-                                            ? 'Quotation ditolak Operasional.'
-                                            : 'Quotation belum disetujui (ACC) Operasional. Cetak PDF & Kirim WA belum tersedia.',
-                                        style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF92400E), fontWeight: FontWeight.w500),
+                                        isDitolak
+                                            ? 'Quotation telah ditolak oleh Operasional.'
+                                            : 'Quotation belum diperiksa oleh Operasional. Fitur download PDF dan kirim WhatsApp akan aktif setelah diperiksa dan disetujui (ACC).',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          color: isDitolak ? const Color(0xFF991B1B) : const Color(0xFF92400E),
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                            ],
-                            Row(
-                              children: [
-                                // 1. Cetak PDF Button
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: isApproved
-                                        ? () {
-                                            Navigator.pop(context);
-                                            _downloadOrPrintInvoice(item);
-                                          }
-                                        : () {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(
-                                                content: Text('Quotation belum disetujui (ACC) oleh Operasional. Tidak dapat mencetak PDF.'),
-                                                backgroundColor: Color(0xFFD97706),
-                                              ),
-                                            );
-                                          },
-                                    icon: Icon(isApproved ? Icons.picture_as_pdf_rounded : Icons.lock_outline_rounded, size: 16, color: isApproved ? Colors.white : const Color(0xFF94A3B8)),
-                                    label: Text(
-                                      isApproved ? 'Cetak PDF' : 'Cetak PDF (Terkunci)',
-                                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: isApproved ? Colors.white : const Color(0xFF64748B)),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: isApproved ? const Color(0xFF16A34A) : const Color(0xFFF1F5F9),
-                                      foregroundColor: isApproved ? Colors.white : const Color(0xFF64748B),
-                                      padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 11),
+                                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      ),
+                                      child: Text(
+                                        'Tutup',
+                                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF475569)),
+                                      ),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-
-                                // 2. Share WA Button
-                                InkWell(
-                                  onTap: isApproved
-                                      ? () {
-                                          Navigator.pop(context);
-                                          _shareToWhatsApp(item);
-                                        }
-                                      : () {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Quotation belum disetujui (ACC) oleh Operasional. Tidak dapat dikirim ke customer.'),
-                                              backgroundColor: Color(0xFFD97706),
-                                            ),
-                                          );
-                                        },
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                                    decoration: BoxDecoration(
-                                      color: isApproved ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(color: isApproved ? const Color(0xFF86EFAC) : const Color(0xFFE2E8F0)),
+                                  if (_isOperasionalOrAdmin) ...[
+                                    const SizedBox(width: 8),
+                                    OutlinedButton.icon(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        _openForm(item);
+                                      },
+                                      icon: const Icon(Icons.edit_outlined, size: 15, color: AppColors.primaryMid),
+                                      label: Text(
+                                        'Edit',
+                                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                                        side: const BorderSide(color: AppColors.primaryMid),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      ),
                                     ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(isApproved ? Icons.chat_rounded : Icons.lock_outline_rounded, size: 15, color: isApproved ? const Color(0xFF16A34A) : const Color(0xFF94A3B8)),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          'Kirim WA',
-                                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: isApproved ? const Color(0xFF15803D) : const Color(0xFF64748B)),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                // 3. Edit Data Button (Hanya Operasional / Admin)
-                                if (_isOperasionalOrAdmin) ...[
-                                  const SizedBox(width: 8),
-                                  OutlinedButton.icon(
-                                    onPressed: () {
-                                      Navigator.pop(context);
-                                      _openForm(item);
-                                    },
-                                    icon: const Icon(Icons.edit_outlined, size: 15, color: AppColors.primaryMid),
-                                    label: Text(
-                                      'Edit',
-                                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryMid),
-                                    ),
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                                      side: const BorderSide(color: AppColors.primaryMid),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                    ),
-                                  ),
+                                  ],
                                 ],
-                              ],
-                            ),
+                              ),
+                            ],
                     if (isMenunggu && _isOperasionalOrAdmin) ...[
                       const SizedBox(height: 10),
                       Row(
@@ -1324,7 +1374,7 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
       final s = (q['status'] ?? '').toString().toLowerCase();
       return s.contains('menunggu') || s == 'pending' || s == 'dibuat';
     }).length;
-    final approvedCount = _quotations.where((q) => (q['status'] ?? '').toString().toLowerCase().contains('setuju')).length;
+    final approvedCount = _quotations.where((q) => _isQuotationApproved(q)).length;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -1779,9 +1829,8 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                         // Check approval
                         Builder(
                           builder: (context) {
-                            final statusStr = (item['status'] ?? 'Menunggu').toString();
-                            final bool isApproved = statusStr.toLowerCase().contains('setuju');
-                            final bool isDitolak = statusStr.toLowerCase().contains('tolak');
+                            final bool isApproved = _isQuotationApproved(item);
+                            final bool isDitolak = _isQuotationRejected(item);
 
                             if (isApproved) {
                               return Row(
@@ -1906,7 +1955,7 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                               );
                             }
 
-                            // Belum ACC Operasional (Role Non-Operasional / CS) -> Tombol terkunci dengan label informatif
+                            // Belum ACC Operasional (Role Non-Operasional / CS) -> Tombol terkunci dengan label informatif (TIDAK ADA PDF & WA)
                             return InkWell(
                               onTap: () {
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -1914,7 +1963,7 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                                     content: Text(
                                       isDitolak
                                           ? 'Quotation ditolak Operasional.'
-                                          : 'Quotation belum disetujui (ACC) oleh Operasional. Download & WA belum tersedia.',
+                                          : 'Quotation belum disetujui (ACC) oleh Operasional. Fitur download PDF dan kirim WhatsApp belum tersedia.',
                                     ),
                                     backgroundColor: isDitolak ? const Color(0xFFDC2626) : const Color(0xFFD97706),
                                   ),
@@ -1950,6 +1999,32 @@ class _OperasionalQuotationScreenState extends State<OperasionalQuotationScreen>
                               ),
                             );
                           },
+                        ),
+                        const Spacer(),
+
+                        // Detail Button (Labelled Pill) - Dapat diakses CS & Operasional
+                        InkWell(
+                          onTap: () => _showDetailModal(item),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.visibility_outlined, size: 13, color: Color(0xFF475569)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Detail',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF475569)),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                         if (_isOperasionalOrAdmin) ...[
                           const Spacer(),
