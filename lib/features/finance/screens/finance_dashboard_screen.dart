@@ -2346,14 +2346,15 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
     Color color,
   ) {
     Color badgeColor;
-    if (rank == 1)
+    if (rank == 1) {
       badgeColor = const Color(0xFFEAA100); // Gold
-    else if (rank == 2)
+    } else if (rank == 2) {
       badgeColor = const Color(0xFF9E9E9E); // Silver
-    else if (rank == 3)
+    } else if (rank == 3) {
       badgeColor = const Color(0xFFCD7F32); // Bronze
-    else
+    } else {
       badgeColor = Colors.grey.shade300;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -2684,6 +2685,16 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
   Widget _buildRingkasanKpiCard(Map<String, dynamic> item) {
     final omzet = ((item['omzet_dicapai'] ?? item['omzet'] ?? item['periode_ini']) as num? ?? 0).toDouble();
     final namaCabang = item['nama_cabang']?.toString().toUpperCase() ?? '';
+    final totalNilaiKpi = ((item['total_nilai_kpi'] ?? item['total_capaian']) as num? ?? 0).toDouble();
+    final targetNilaiKpi = ((item['target_total_kpi'] ?? item['target_nilai_kpi']) as num? ?? 0).toDouble();
+    final effectiveTarget = targetNilaiKpi > 0 ? targetNilaiKpi : 100.0;
+    final isTargetReached = totalNilaiKpi >= effectiveTarget;
+
+    final targetText = targetNilaiKpi > 0
+        ? (targetNilaiKpi == targetNilaiKpi.roundToDouble()
+            ? targetNilaiKpi.toInt().toString()
+            : targetNilaiKpi.toStringAsFixed(1))
+        : '—';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -2734,15 +2745,15 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50,
+                  color: isTargetReached ? Colors.green.shade50 : Colors.red.shade50,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '0%',
+                  '${totalNilaiKpi.toStringAsFixed(1)}%',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Colors.red.shade700,
+                    color: isTargetReached ? Colors.green.shade700 : Colors.red.shade700,
                   ),
                 ),
               ),
@@ -2787,11 +2798,11 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen>
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '—',
+                    targetText,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textMuted,
+                      color: AppColors.textDark,
                     ),
                   ),
                 ],

@@ -2733,6 +2733,16 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
   Widget _buildRingkasanKpiCard(Map<String, dynamic> item) {
     final omzet = _parseDouble(item['omzet_dicapai'] ?? item['omzet'] ?? item['periode_ini']);
     final namaCabang = item['nama_cabang']?.toString().toUpperCase() ?? '';
+    final totalNilaiKpi = _parseDouble(item['total_nilai_kpi'] ?? item['total_capaian']);
+    final targetNilaiKpi = _parseDouble(item['target_total_kpi'] ?? item['target_nilai_kpi']);
+    final effectiveTarget = targetNilaiKpi > 0 ? targetNilaiKpi : 100.0;
+    final isTargetReached = totalNilaiKpi >= effectiveTarget;
+
+    final targetText = targetNilaiKpi > 0
+        ? (targetNilaiKpi == targetNilaiKpi.roundToDouble()
+            ? targetNilaiKpi.toInt().toString()
+            : targetNilaiKpi.toStringAsFixed(1))
+        : '—';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -2783,15 +2793,15 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50,
+                  color: isTargetReached ? Colors.green.shade50 : Colors.red.shade50,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '0%',
+                  '${totalNilaiKpi.toStringAsFixed(1)}%',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Colors.red.shade700,
+                    color: isTargetReached ? Colors.green.shade700 : Colors.red.shade700,
                   ),
                 ),
               ),
@@ -2836,11 +2846,11 @@ class _CeoDashboardScreenState extends State<CeoDashboardScreen>
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '—',
+                    targetText,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textMuted,
+                      color: AppColors.textDark,
                     ),
                   ),
                 ],
